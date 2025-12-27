@@ -1,0 +1,75 @@
+{
+  "id": "ceres",
+  "nom": "Ceres",
+  "images": [
+    "/maps/ceres/Ceres.png"
+  ],
+  "postes": [
+    {
+      "id": "poste1",
+      "nom": "Poste 1",
+      "x": 57.5,
+      "y": 5.9,
+      "zone": {
+        "x1": 22.3,
+        "y1": 1.9,
+        "x2": 77.1,
+        "y2": 18.5
+      }
+    },
+    {
+      "id": "poste2",
+      "nom": "Poste 2",
+      "x": 25.8,
+      "y": 27.5,
+      "zone": {
+        "x1": 22.3,
+        "y1": 18.9,
+        "x2": 77.2,
+        "y2": 46.4
+      }
+    },
+    {
+      "id": "poste3",
+      "nom": "Poste 3",
+      "x": 53,
+      "y": 77,
+      "zone": {
+        "x1": 22.3,
+        "y1": 46.9,
+        "x2": 77.2,
+        "y2": 80.2
+      }
+    },
+    {
+      "id": "poste4",
+      "nom": "Poste 4",
+      "x": 42.1,
+      "y": 93.5,
+      "zone": {
+        "x1": 22.3,
+        "y1": 80.5,
+        "x2": 62.5,
+        "y2": 98.9
+      }
+    }
+  ],
+  "joueurs": {
+    "player1": [
+      "poste1"
+    ],
+    "player2": [
+      "poste2",
+      "poste1"
+    ],
+    "player3": [
+      "poste2"
+    ],
+    "player4": [],
+    "player5": [
+      "poste2",
+      "poste3",
+      "poste4"
+    ]
+  }
+}
