@@ -20,13 +20,19 @@ const emit = defineEmits<{
   'cancel': [];
 }>();
 
-// Liste des postes disponibles
-const postes = [
-  { id: 'poste1', nom: 'Poste 1' },
-  { id: 'poste2', nom: 'Poste 2' },
-  { id: 'poste3', nom: 'Poste 3' },
-  { id: 'poste4', nom: 'Poste 4' },
-];
+// Liste des postes disponibles (depuis la map actuelle ou fallback)
+const postes = computed(() => {
+  if (props.map && props.map.postes.length > 0) {
+    return props.map.postes.map(p => ({ id: p.id, nom: p.nom }));
+  }
+  // Fallback si pas de map
+  return [
+    { id: 'poste1', nom: 'Poste 1' },
+    { id: 'poste2', nom: 'Poste 2' },
+    { id: 'poste3', nom: 'Poste 3' },
+    { id: 'poste4', nom: 'Poste 4' },
+  ];
+});
 
 // Système de vérification de l'équilibre de l'effectif
 interface BalanceCheck {
@@ -44,7 +50,7 @@ const balanceCheck = computed<BalanceCheck>(() => {
   // Pour chaque poste, trouver les joueurs qui le couvrent
   const posteToPlayers: Record<string, string[]> = {};
 
-  for (const poste of postes) {
+  for (const poste of postes.value) {
     posteToPlayers[poste.id] = [];
     for (const [playerId, playerPostes] of Object.entries(props.map.joueurs)) {
       if (playerPostes.includes(poste.id)) {
@@ -59,7 +65,7 @@ const balanceCheck = computed<BalanceCheck>(() => {
   // Règle 1 : Vérifier si un poste est tenu par moins de 2 joueurs
   for (const [posteId, players] of Object.entries(posteToPlayers)) {
     if (players.length < 2) {
-      const poste = postes.find(p => p.id === posteId);
+      const poste = postes.value.find(p => p.id === posteId);
       const posteName = poste?.nom || posteId;
       if (players.length === 0) {
         errorMessages.push(`${posteName} n'a aucun joueur`);
@@ -77,7 +83,7 @@ const balanceCheck = computed<BalanceCheck>(() => {
       if (playerPostes.length === 0) {
         errorMessages.push(`${playerName} n'a aucun poste`);
       } else {
-        const poste = postes.find(p => p.id === playerPostes[0]);
+        const poste = postes.value.find(p => p.id === playerPostes[0]);
         const posteName = poste?.nom || playerPostes[0];
         errorMessages.push(`${playerName} n'a que ${posteName}`);
       }
@@ -104,7 +110,7 @@ const balanceCheck = computed<BalanceCheck>(() => {
     pairToPostes[pairKey].push(posteId);
   }
 
-  // Trouver les violations de la règle 2 (paires qui couvrent plusieurs postes)
+  // Trouver les violations de la règle 3 (paires qui couvrent plusieurs postes)
   for (const [pairKey, posteIds] of Object.entries(pairToPostes)) {
     if (posteIds.length > 1) {
       const pair = pairKey.split('-');
@@ -113,7 +119,7 @@ const balanceCheck = computed<BalanceCheck>(() => {
         return joueur?.nom || pid;
       });
       const posteNames = posteIds.map(pid => {
-        const poste = postes.find(p => p.id === pid);
+        const poste = postes.value.find(p => p.id === pid);
         return poste?.nom || pid;
       });
       errorMessages.push(`${posteNames.join(' et ')} sont couverts uniquement par ${playerNames.join(' et ')}`);

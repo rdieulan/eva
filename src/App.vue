@@ -8,7 +8,7 @@ import type { MapConfig } from './types';
 
 const selectedMapId = ref<string | null>(null);
 const selectedJoueurId = ref<string | null>(null);
-const activePostes = ref<string[]>(['poste1', 'poste2', 'poste3', 'poste4']);
+const activePostes = ref<string[]>([]);
 const editMode = ref(false);
 const isLoading = ref(true);
 
@@ -47,34 +47,24 @@ function selectJoueur(joueurId: string | null) {
   const newJoueurId = selectedJoueurId.value === joueurId ? null : joueurId;
   selectedJoueurId.value = newJoueurId;
 
-  // Mettre à jour les postes actifs en fonction du joueur sélectionné
-  if (newJoueurId && currentMap.value) {
-    const joueurPostes = currentMap.value.joueurs[newJoueurId] || [];
-    activePostes.value = [...joueurPostes];
-  } else {
-    // Aucun joueur sélectionné = tous les postes actifs
-    activePostes.value = ['poste1', 'poste2', 'poste3', 'poste4'];
-  }
+  // Réinitialiser la sélection de poste quand on change de joueur
+  activePostes.value = [];
 }
 
-// Toggle un poste actif/inactif
+// Toggle un poste actif/inactif (un seul à la fois)
 function togglePoste(posteId: string) {
-  const index = activePostes.value.indexOf(posteId);
-  if (index === -1) {
-    activePostes.value.push(posteId);
+  if (activePostes.value.includes(posteId)) {
+    // Désélectionner si déjà sélectionné
+    activePostes.value = [];
   } else {
-    activePostes.value.splice(index, 1);
+    // Sélectionner ce poste uniquement
+    activePostes.value = [posteId];
   }
 }
 
 // Quand on change de map, réinitialiser les postes actifs
 watch(selectedMapId, () => {
-  if (selectedJoueurId.value && currentMap.value) {
-    const joueurPostes = currentMap.value.joueurs[selectedJoueurId.value] || [];
-    activePostes.value = [...joueurPostes];
-  } else {
-    activePostes.value = ['poste1', 'poste2', 'poste3', 'poste4'];
-  }
+  activePostes.value = [];
 });
 
 function toggleEditMode() {
@@ -93,21 +83,10 @@ function handleMapUpdate(updatedMap: MapConfig) {
 }
 
 // Quand on modifie l'association joueur/poste en mode édition
-function handlePlayerPosteChanged(playerId: string, posteId: string, associated: boolean) {
-  // Si le joueur sélectionné est celui qui a été modifié, mettre à jour les postes actifs
-  if (selectedJoueurId.value === playerId) {
-    if (associated) {
-      // Ajouter le poste aux postes actifs
-      if (!activePostes.value.includes(posteId)) {
-        activePostes.value.push(posteId);
-      }
-    } else {
-      // Retirer le poste des postes actifs
-      const index = activePostes.value.indexOf(posteId);
-      if (index !== -1) {
-        activePostes.value.splice(index, 1);
-      }
-    }
+function handlePlayerPosteChanged(_playerId: string, posteId: string, associated: boolean) {
+  // Si le poste sélectionné est dissocié, le désélectionner
+  if (!associated && activePostes.value.includes(posteId)) {
+    activePostes.value = [];
   }
 }
 

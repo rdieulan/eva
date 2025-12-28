@@ -7,7 +7,7 @@
   "postes": [
     {
       "id": "poste1",
-      "nom": "Poste 1",
+      "nom": "Open/Fosse",
       "x": 35.9,
       "y": 40.9,
       "zone": {
@@ -53,7 +53,7 @@
     },
     {
       "id": "poste2",
-      "nom": "Poste 2",
+      "nom": "Open/Fosse/Close",
       "x": 59.5,
       "y": 87.5,
       "zone": {
@@ -117,7 +117,7 @@
     },
     {
       "id": "poste3",
-      "nom": "Poste 3",
+      "nom": "Close/Fosse",
       "x": 57.9,
       "y": 86.7,
       "zone": {
@@ -199,7 +199,7 @@
     },
     {
       "id": "poste4",
-      "nom": "Poste 4",
+      "nom": "Close",
       "x": 30.9,
       "y": 86.6,
       "zone": {
