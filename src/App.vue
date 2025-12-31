@@ -47,8 +47,17 @@ function selectJoueur(joueurId: string | null) {
   const newJoueurId = selectedJoueurId.value === joueurId ? null : joueurId;
   selectedJoueurId.value = newJoueurId;
 
-  // Réinitialiser la sélection de poste quand on change de joueur
-  activePostes.value = [];
+  // Conserver le poste sélectionné s'il est associé au nouveau joueur
+  const currentPoste = activePostes.value[0];
+  if (currentPoste && newJoueurId && currentMap.value) {
+    const joueurPostes = currentMap.value.joueurs[newJoueurId] || [];
+    if (!joueurPostes.includes(currentPoste)) {
+      // Le poste n'est pas associé au nouveau joueur, le désélectionner
+      activePostes.value = [];
+    }
+    // Sinon, on conserve la sélection
+  }
+  // Si aucun joueur sélectionné, on conserve le poste actif (tous les postes sont accessibles)
 }
 
 // Toggle un poste actif/inactif (un seul à la fois)
@@ -60,6 +69,12 @@ function togglePoste(posteId: string) {
     // Sélectionner ce poste uniquement
     activePostes.value = [posteId];
   }
+}
+
+// Réinitialiser toutes les sélections
+function resetSelection() {
+  selectedJoueurId.value = null;
+  activePostes.value = [];
 }
 
 // Quand on change de map, réinitialiser les postes actifs
@@ -83,9 +98,9 @@ function handleMapUpdate(updatedMap: MapConfig) {
 }
 
 // Quand on modifie l'association joueur/poste en mode édition
-function handlePlayerPosteChanged(_playerId: string, posteId: string, associated: boolean) {
-  // Si le poste sélectionné est dissocié, le désélectionner
-  if (!associated && activePostes.value.includes(posteId)) {
+function handlePlayerPosteChanged(playerId: string, posteId: string, associated: boolean) {
+  // Si le poste sélectionné est dissocié ET que c'est le joueur actuellement sélectionné, désélectionner le poste
+  if (!associated && activePostes.value.includes(posteId) && selectedJoueurId.value === playerId) {
     activePostes.value = [];
   }
 }
@@ -150,6 +165,7 @@ function cancelEdit() {
         :joueurs="joueurs"
         :selectedJoueurId="selectedJoueurId"
         :map="currentMap"
+        :maps="maps"
         :activePostes="activePostes"
         :editMode="editMode"
         :isLoading="isLoading"
@@ -158,6 +174,7 @@ function cancelEdit() {
         @toggle-edit="toggleEditMode"
         @save="saveChanges"
         @cancel="cancelEdit"
+        @reset="resetSelection"
       />
 
       <div class="main-content">

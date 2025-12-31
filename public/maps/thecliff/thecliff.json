@@ -1,18 +1,95 @@
-﻿{
+{
   "id": "thecliff",
   "nom": "The Cliff",
-  "images": ["/maps/thecliff/TheCliff.png"],
+  "images": [
+    "/maps/thecliff/TheCliff.png"
+  ],
   "postes": [
-    { "id": "poste1", "nom": "Poste 1", "x": 25, "y": 25, "zone": { "x1": 15, "y1": 15, "x2": 35, "y2": 35 } },
-    { "id": "poste2", "nom": "Poste 2", "x": 75, "y": 25, "zone": { "x1": 65, "y1": 15, "x2": 85, "y2": 35 } },
-    { "id": "poste3", "nom": "Poste 3", "x": 25, "y": 75, "zone": { "x1": 15, "y1": 65, "x2": 35, "y2": 85 } },
-    { "id": "poste4", "nom": "Poste 4", "x": 75, "y": 75, "zone": { "x1": 65, "y1": 65, "x2": 85, "y2": 85 } }
+    {
+      "id": "poste1",
+      "nom": "Long",
+      "x": 25,
+      "y": 25,
+      "zone": {
+        "x1": 15,
+        "y1": 15,
+        "x2": 35,
+        "y2": 35
+      }
+    },
+    {
+      "id": "poste2",
+      "nom": "Bunker",
+      "x": 75,
+      "y": 25,
+      "zone": {
+        "x1": 65,
+        "y1": 15,
+        "x2": 85,
+        "y2": 35
+      }
+    },
+    {
+      "id": "poste3",
+      "nom": "Mid",
+      "x": 25,
+      "y": 75,
+      "zone": {
+        "polygons": [
+          [
+            {
+              "x": 18.2,
+              "y": 66.8
+            },
+            {
+              "x": 38.2,
+              "y": 66.8
+            },
+            {
+              "x": 38.2,
+              "y": 86.8
+            },
+            {
+              "x": 18.2,
+              "y": 86.8
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "id": "poste4",
+      "nom": "Short",
+      "x": 75,
+      "y": 75,
+      "zone": {
+        "x1": 65,
+        "y1": 65,
+        "x2": 85,
+        "y2": 85
+      }
+    }
   ],
   "joueurs": {
-    "player1": ["poste1", "poste3"],
-    "player2": ["poste2", "poste4"],
-    "player3": ["poste1", "poste2"],
-    "player4": ["poste3", "poste4"],
-    "player5": ["poste2", "poste3"]
+    "player1": [
+      "poste1",
+      "poste3"
+    ],
+    "player2": [
+      "poste2",
+      "poste4"
+    ],
+    "player3": [
+      "poste1",
+      "poste2"
+    ],
+    "player4": [
+      "poste3",
+      "poste4"
+    ],
+    "player5": [
+      "poste2",
+      "poste3"
+    ]
   }
 }

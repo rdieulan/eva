@@ -7,7 +7,7 @@
   "postes": [
     {
       "id": "poste1",
-      "nom": "Poste 1",
+      "nom": "Elec",
       "x": 57.5,
       "y": 5.9,
       "zone": {
@@ -19,7 +19,7 @@
     },
     {
       "id": "poste2",
-      "nom": "Poste 2",
+      "nom": "Reac",
       "x": 25.8,
       "y": 27.5,
       "zone": {
@@ -31,7 +31,7 @@
     },
     {
       "id": "poste3",
-      "nom": "Poste 3",
+      "nom": "Reac/Mid",
       "x": 53,
       "y": 77,
       "zone": {
@@ -43,7 +43,7 @@
     },
     {
       "id": "poste4",
-      "nom": "Poste 4",
+      "nom": "Elec/Mid",
       "x": 42.1,
       "y": 93.5,
       "zone": {
@@ -56,20 +56,24 @@
   ],
   "joueurs": {
     "player1": [
-      "poste1"
+      "poste1",
+      "poste4"
     ],
     "player2": [
       "poste2",
-      "poste1"
+      "poste3"
     ],
     "player3": [
-      "poste2"
-    ],
-    "player4": [],
-    "player5": [
-      "poste2",
       "poste3",
       "poste4"
+    ],
+    "player4": [
+      "poste2",
+      "poste4"
+    ],
+    "player5": [
+      "poste2",
+      "poste3"
     ]
   }
 }

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { MapConfig } from '../types';
+import { checkMapBalance } from '../data/config';
 
 defineProps<{
   maps: MapConfig[];
@@ -9,6 +10,10 @@ defineProps<{
 const emit = defineEmits<{
   select: [mapId: string];
 }>();
+
+function isMapBalanced(map: MapConfig): boolean {
+  return checkMapBalance(map).isBalanced;
+}
 </script>
 
 <template>
@@ -18,7 +23,11 @@ const emit = defineEmits<{
       <li
         v-for="map in maps"
         :key="map.id"
-        :class="{ active: selectedMapId === map.id }"
+        :class="{
+          active: selectedMapId === map.id,
+          balanced: isMapBalanced(map),
+          unbalanced: !isMapBalanced(map)
+        }"
         @click="emit('select', map.id)"
       >
         {{ map.nom }}
@@ -55,18 +64,40 @@ const emit = defineEmits<{
   border-radius: 6px;
   margin-bottom: 0.5rem;
   transition: all 0.2s;
-  color: #ccc;
+  color: #888;
+}
+
+.map-list li.balanced {
+  color: #4ade80;
+}
+
+.map-list li.unbalanced {
+  color: #ff6b6b;
 }
 
 .map-list li:hover {
   background: #2a2a4a;
-  color: #fff;
+}
+
+.map-list li.balanced:hover {
+  color: #6ee7a0;
+}
+
+.map-list li.unbalanced:hover {
+  color: #ff8a8a;
 }
 
 .map-list li.active {
   background: #4a4a8a;
-  color: #fff;
   font-weight: 600;
+}
+
+.map-list li.active.balanced {
+  color: #4ade80;
+}
+
+.map-list li.active.unbalanced {
+  color: #ff6b6b;
 }
 </style>
 

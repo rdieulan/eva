@@ -1,16 +1,20 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { posteColors, joueurs as allJoueurs } from '../data/config';
+import { computed, ref } from 'vue';
+import { posteColors, checkMapBalance } from '../data/config';
 import type { MapConfig, Joueur } from '../types';
+import RotationCalculator from './RotationCalculator.vue';
 
 const props = defineProps<{
   joueurs: Joueur[];
   selectedJoueurId: string | null;
   map: MapConfig | null;
+  maps: MapConfig[];
   activePostes: string[];
   editMode: boolean;
   isLoading: boolean;
 }>();
+
+const showCalculator = ref(false);
 
 const emit = defineEmits<{
   'select-joueur': [joueurId: string | null];
@@ -18,6 +22,7 @@ const emit = defineEmits<{
   'toggle-edit': [];
   'save': [];
   'cancel': [];
+  'reset': [];
 }>();
 
 // Liste des postes disponibles (depuis la map actuelle ou fallback)
@@ -45,94 +50,15 @@ const balanceCheck = computed<BalanceCheck>(() => {
     return { isBalanced: true, messages: ['Effectif équilibré'] };
   }
 
-  const errorMessages: string[] = [];
+  const result = checkMapBalance(props.map);
 
-  // Pour chaque poste, trouver les joueurs qui le couvrent
-  const posteToPlayers: Record<string, string[]> = {};
-
-  for (const poste of postes.value) {
-    posteToPlayers[poste.id] = [];
-    for (const [playerId, playerPostes] of Object.entries(props.map.joueurs)) {
-      if (playerPostes.includes(poste.id)) {
-        const players = posteToPlayers[poste.id];
-        if (players) {
-          players.push(playerId);
-        }
-      }
-    }
-  }
-
-  // Règle 1 : Vérifier si un poste est tenu par moins de 2 joueurs
-  for (const [posteId, players] of Object.entries(posteToPlayers)) {
-    if (players.length < 2) {
-      const poste = postes.value.find(p => p.id === posteId);
-      const posteName = poste?.nom || posteId;
-      if (players.length === 0) {
-        errorMessages.push(`${posteName} n'a aucun joueur`);
-      } else {
-        const playerName = allJoueurs.find(j => j.id === players[0])?.nom || players[0];
-        errorMessages.push(`${posteName} n'a que ${playerName}`);
-      }
-    }
-  }
-
-  // Règle 2 : Vérifier si un joueur ne couvre qu'un seul poste
-  for (const [playerId, playerPostes] of Object.entries(props.map.joueurs)) {
-    if (playerPostes.length < 2) {
-      const playerName = allJoueurs.find(j => j.id === playerId)?.nom || playerId;
-      if (playerPostes.length === 0) {
-        errorMessages.push(`${playerName} n'a aucun poste`);
-      } else {
-        const poste = postes.value.find(p => p.id === playerPostes[0]);
-        const posteName = poste?.nom || playerPostes[0];
-        errorMessages.push(`${playerName} n'a que ${posteName}`);
-      }
-    }
-  }
-
-  // Règle 3 : Trouver les postes couverts par exactement 2 joueurs
-  const postesWithTwoPlayers: { posteId: string; players: string[] }[] = [];
-
-  for (const [posteId, players] of Object.entries(posteToPlayers)) {
-    if (players.length === 2) {
-      postesWithTwoPlayers.push({ posteId, players: players.sort() });
-    }
-  }
-
-  // Vérifier si deux postes partagent la même paire de joueurs
-  const pairToPostes: Record<string, string[]> = {};
-
-  for (const { posteId, players } of postesWithTwoPlayers) {
-    const pairKey = players.join('-');
-    if (!pairToPostes[pairKey]) {
-      pairToPostes[pairKey] = [];
-    }
-    pairToPostes[pairKey].push(posteId);
-  }
-
-  // Trouver les violations de la règle 3 (paires qui couvrent plusieurs postes)
-  for (const [pairKey, posteIds] of Object.entries(pairToPostes)) {
-    if (posteIds.length > 1) {
-      const pair = pairKey.split('-');
-      const playerNames = pair.map(pid => {
-        const joueur = allJoueurs.find(j => j.id === pid);
-        return joueur?.nom || pid;
-      });
-      const posteNames = posteIds.map(pid => {
-        const poste = postes.value.find(p => p.id === pid);
-        return poste?.nom || pid;
-      });
-      errorMessages.push(`${posteNames.join(' et ')} sont couverts uniquement par ${playerNames.join(' et ')}`);
-    }
-  }
-
-  if (errorMessages.length === 0) {
+  if (result.isBalanced) {
     return { isBalanced: true, messages: ['Effectif équilibré'] };
   }
 
   return {
     isBalanced: false,
-    messages: errorMessages,
+    messages: result.errors,
   };
 });
 
@@ -163,12 +89,42 @@ function togglePoste(posteId: string) {
 function getPosteColor(posteId: string): string {
   return posteColors[posteId] || '#888';
 }
+
+// Vérifie si un joueur est associé au poste sélectionné (pour highlight)
+function isJoueurHighlighted(joueurId: string): boolean {
+  if (props.activePostes.length === 0 || !props.map) return false;
+  const selectedPosteId = props.activePostes[0] as string;
+  const joueurPostes: string[] = props.map.joueurs[joueurId] ?? [];
+  return joueurPostes.includes(selectedPosteId);
+}
 </script>
 
 <template>
   <header class="top-bar">
     <!-- Section gauche - Messages -->
     <div class="section-left">
+      <!-- Icône calculateur -->
+      <button
+        class="btn-calculator"
+        @click="showCalculator = true"
+        title="Ouvrir le calculateur de rotation"
+      >
+        <svg viewBox="0 0 24 24" class="calculator-icon">
+          <!-- Clipboard -->
+          <path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1s-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1z"/>
+          <!-- X marks -->
+          <path d="M7 12l1.5-1.5M8.5 10.5L7 9M7 9l1.5 1.5M8.5 10.5L7 12" stroke="currentColor" stroke-width="1.5" fill="none"/>
+          <path d="M7 17l1.5-1.5M8.5 15.5L7 14M7 14l1.5 1.5M8.5 15.5L7 17" stroke="currentColor" stroke-width="1.5" fill="none"/>
+          <path d="M16 12l1.5-1.5M17.5 10.5L16 9M16 9l1.5 1.5M17.5 10.5L16 12" stroke="currentColor" stroke-width="1.5" fill="none"/>
+          <path d="M16 17l1.5-1.5M17.5 15.5L16 14M16 14l1.5 1.5M17.5 15.5L16 17" stroke="currentColor" stroke-width="1.5" fill="none"/>
+          <!-- Circles (players) -->
+          <circle cx="12" cy="10" r="1.5"/>
+          <circle cx="12" cy="15" r="1.5"/>
+          <!-- Arrows -->
+          <path d="M10 11.5l-1.5 1.5M14 11.5l1.5 1.5" stroke="currentColor" stroke-width="1" fill="none"/>
+        </svg>
+      </button>
+
       <div
         class="balance-messages"
         :class="{ 'is-balanced': balanceCheck.isBalanced, 'is-unbalanced': !balanceCheck.isBalanced }"
@@ -186,34 +142,53 @@ function getPosteColor(posteId: string): string {
 
     <!-- Section centrale - Joueurs + Postes -->
     <div class="section-center">
-      <!-- Cartouches joueurs -->
-      <nav class="player-bar">
-        <button
-          v-for="joueur in joueurs"
-          :key="joueur.id"
-          :class="{ active: selectedJoueurId === joueur.id }"
-          @click="toggleJoueur(joueur.id)"
-        >
-          {{ joueur.nom }}
-        </button>
-      </nav>
+      <!-- Bloc cartouches -->
+      <div class="cartouches-wrapper">
+        <!-- Cartouches joueurs -->
+        <nav class="player-bar">
+          <button
+            v-for="joueur in joueurs"
+            :key="joueur.id"
+            :class="{
+              active: selectedJoueurId === joueur.id,
+              highlighted: isJoueurHighlighted(joueur.id)
+            }"
+            @click="toggleJoueur(joueur.id)"
+          >
+            {{ joueur.nom }}
+          </button>
+        </nav>
 
-      <!-- Cartouches postes -->
-      <nav class="poste-bar">
+        <!-- Cartouches postes -->
+        <nav class="poste-bar">
+          <button
+            v-for="poste in postes"
+            :key="poste.id"
+            :class="{
+              active: isPosteActive(poste.id),
+              disabled: !isPosteAssociated(poste.id)
+            }"
+            :style="{ '--poste-color': getPosteColor(poste.id) }"
+            :disabled="!isPosteAssociated(poste.id)"
+            @click="togglePoste(poste.id)"
+          >
+            {{ poste.nom }}
+          </button>
+        </nav>
+      </div>
+
+      <!-- Bloc reset -->
+      <div class="reset-wrapper">
         <button
-          v-for="poste in postes"
-          :key="poste.id"
-          :class="{
-            active: isPosteActive(poste.id),
-            disabled: !isPosteAssociated(poste.id)
-          }"
-          :style="{ '--poste-color': getPosteColor(poste.id) }"
-          :disabled="!isPosteAssociated(poste.id)"
-          @click="togglePoste(poste.id)"
+          class="btn-reset"
+          @click="$emit('reset')"
+          title="Réinitialiser la sélection"
         >
-          {{ poste.nom }}
+          <svg viewBox="0 0 24 24" class="reset-icon">
+            <path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+          </svg>
         </button>
-      </nav>
+      </div>
     </div>
 
     <!-- Section droite - Boutons édition -->
@@ -234,6 +209,14 @@ function getPosteColor(posteId: string): string {
       </div>
     </div>
   </header>
+
+  <!-- Modale calculateur de rotation -->
+  <RotationCalculator
+    v-if="showCalculator"
+    :maps="maps"
+    :joueurs="joueurs"
+    @close="showCalculator = false"
+  />
 </template>
 
 <style scoped>
@@ -249,7 +232,40 @@ function getPosteColor(posteId: string): string {
   flex: 1;
   display: flex;
   align-items: center;
+  gap: 0.75rem;
   padding: 0.5rem 1rem;
+}
+
+.btn-calculator {
+  width: 44px;
+  height: 44px;
+  border: none;
+  background: #2a2a4a;
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.btn-calculator:hover {
+  background: #3a3a5a;
+  transform: scale(1.05);
+}
+
+.calculator-icon {
+  width: 100%;
+  height: 100%;
+  fill: #4ade80;
+  color: #4ade80;
+}
+
+.btn-calculator:hover .calculator-icon {
+  fill: #6ee7a0;
+  color: #6ee7a0;
 }
 
 .balance-messages {
@@ -278,9 +294,9 @@ function getPosteColor(posteId: string): string {
 }
 
 .balance-messages.is-balanced {
-  color: #4ecdc4;
-  background: rgba(78, 205, 196, 0.1);
-  border: 1px solid rgba(78, 205, 196, 0.3);
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.3);
 }
 
 .balance-messages.is-unbalanced {
@@ -289,12 +305,48 @@ function getPosteColor(posteId: string): string {
   border: 1px solid rgba(255, 107, 107, 0.3);
 }
 
+
 .section-center {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 0.25rem;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
   padding: 0.4rem 1rem;
+}
+
+.cartouches-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.reset-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+.btn-reset {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reset-icon {
+  width: 32px;
+  height: 32px;
+  fill: #888;
+  transition: transform 0.3s, fill 0.2s;
+}
+
+.btn-reset:hover .reset-icon {
+  fill: #fff;
+  transform: rotate(90deg);
 }
 
 .section-right {
@@ -336,6 +388,17 @@ function getPosteColor(posteId: string): string {
   color: #fff;
   box-shadow: 0 0 8px rgba(100, 100, 200, 0.3);
 }
+
+.player-bar button.highlighted {
+  border-color: white;
+}
+
+.player-bar button.highlighted.active {
+  background: linear-gradient(135deg, #4a4a8a 0%, rgba(74, 222, 128, 0.3) 100%);
+  border-color: white;
+  color: #fff;
+}
+
 
 /* Postes */
 .poste-bar {

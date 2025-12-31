@@ -37,6 +37,8 @@ const svgRef = ref<SVGSVGElement | null>(null);
 // État pour le panneau d'édition des joueurs
 const editingPosteId = ref<string | null>(null);
 const editPanelPosition = ref({ x: 0, y: 0 });
+const editingPosteName_input = ref(false);
+const tempPosteName = ref('');
 
 // Reset l'étage quand on change de map
 watch(() => props.map.id, () => {
@@ -308,12 +310,71 @@ function openPlayerEditPanel(event: MouseEvent, posteId: string) {
   event.stopPropagation();
 
   editingPosteId.value = posteId;
-  editPanelPosition.value = { x: event.clientX, y: event.clientY };
+
+  // Calculer la position du panneau en tenant compte des bords de l'écran
+  const panelHeight = 250; // Hauteur approximative du panneau
+  const panelWidth = 180; // Largeur approximative du panneau
+  const margin = 20; // Marge par rapport aux bords
+
+  let x = event.clientX;
+  let y = event.clientY;
+
+  // Ajuster si le panneau dépasse en bas
+  if (y + panelHeight + margin > window.innerHeight) {
+    y = event.clientY - panelHeight - 10; // Afficher au-dessus du clic
+  }
+
+  // Ajuster si le panneau dépasse à droite
+  if (x + panelWidth / 2 + margin > window.innerWidth) {
+    x = window.innerWidth - panelWidth / 2 - margin;
+  }
+
+  // Ajuster si le panneau dépasse à gauche
+  if (x - panelWidth / 2 < margin) {
+    x = panelWidth / 2 + margin;
+  }
+
+  // Ajuster si le panneau dépasse en haut
+  if (y < margin) {
+    y = margin;
+  }
+
+  editPanelPosition.value = { x, y };
 }
 
 // Ferme le panneau d'édition
 function closePlayerEditPanel() {
   editingPosteId.value = null;
+  editingPosteName_input.value = false;
+}
+
+// Active le mode édition du nom de poste
+function startEditingPosteName() {
+  if (!editingPosteId.value) return;
+  const poste = props.map.postes.find(p => p.id === editingPosteId.value);
+  tempPosteName.value = poste?.nom || '';
+  editingPosteName_input.value = true;
+}
+
+// Sauvegarde le nouveau nom du poste
+function savePosteName() {
+  if (!editingPosteId.value || !tempPosteName.value.trim()) {
+    editingPosteName_input.value = false;
+    return;
+  }
+
+  const updatedMap = JSON.parse(JSON.stringify(props.map)) as MapConfig;
+  const poste = updatedMap.postes.find(p => p.id === editingPosteId.value);
+  if (poste) {
+    poste.nom = tempPosteName.value.trim();
+    emit('update:map', updatedMap);
+  }
+  editingPosteName_input.value = false;
+}
+
+// Annule l'édition du nom
+function cancelEditingPosteName() {
+  editingPosteName_input.value = false;
 }
 
 // Vérifie si un joueur est associé à un poste
@@ -513,9 +574,31 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
         :style="{ left: editPanelPosition.x + 'px', top: editPanelPosition.y + 'px' }"
       >
         <div class="panel-header">
-          <span class="panel-title" :style="{ color: getPosteColor(editingPosteId) }">
+          <!-- Mode affichage du nom (cliquable pour éditer) -->
+          <span
+            v-if="!editingPosteName_input"
+            class="panel-title editable"
+            :style="{ color: getPosteColor(editingPosteId) }"
+            @click="startEditingPosteName"
+            title="Cliquer pour modifier le nom"
+          >
             {{ editingPosteName }}
+            <span class="edit-hint">✎</span>
           </span>
+          <!-- Mode édition du nom -->
+          <div v-else class="name-edit-wrapper">
+            <input
+              v-model="tempPosteName"
+              class="name-input"
+              :style="{ color: getPosteColor(editingPosteId) }"
+              @keyup.enter="savePosteName"
+              @keyup.escape="cancelEditingPosteName"
+              ref="nameInputRef"
+              autofocus
+            />
+            <button class="name-save" @click="savePosteName">✓</button>
+            <button class="name-cancel" @click="cancelEditingPosteName">✕</button>
+          </div>
           <button class="panel-close" @click="closePlayerEditPanel">✕</button>
         </div>
         <div class="panel-content">
@@ -760,6 +843,74 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
 .panel-title {
   font-weight: 600;
   font-size: 0.9rem;
+}
+
+.panel-title.editable {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  transition: opacity 0.2s;
+}
+
+.panel-title.editable:hover {
+  opacity: 0.8;
+}
+
+.panel-title .edit-hint {
+  font-size: 0.7rem;
+  opacity: 0.5;
+}
+
+.panel-title.editable:hover .edit-hint {
+  opacity: 1;
+}
+
+.name-edit-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.name-input {
+  background: #252540;
+  border: 1px solid #444;
+  border-radius: 3px;
+  padding: 0.2rem 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  width: 100px;
+  outline: none;
+}
+
+.name-input:focus {
+  border-color: #666;
+}
+
+.name-save, .name-cancel {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.1rem 0.3rem;
+  font-size: 0.8rem;
+  border-radius: 3px;
+  transition: all 0.15s;
+}
+
+.name-save {
+  color: #4ade80;
+}
+
+.name-save:hover {
+  background: rgba(74, 222, 128, 0.2);
+}
+
+.name-cancel {
+  color: #ff6b6b;
+}
+
+.name-cancel:hover {
+  background: rgba(255, 107, 107, 0.2);
 }
 
 .panel-close {
