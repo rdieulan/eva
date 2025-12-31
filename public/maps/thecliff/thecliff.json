@@ -77,19 +77,20 @@
     ],
     "player2": [
       "poste2",
-      "poste4"
+      "poste4",
+      "poste3"
     ],
     "player3": [
-      "poste1",
-      "poste2"
-    ],
-    "player4": [
       "poste3",
       "poste4"
     ],
+    "player4": [
+      "poste4",
+      "poste2"
+    ],
     "player5": [
-      "poste2",
-      "poste3"
+      "poste3",
+      "poste4"
     ]
   }
 }

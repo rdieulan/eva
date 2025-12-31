@@ -92,6 +92,14 @@ export function checkMapBalance(map: MapConfig): { isBalanced: boolean; errors: 
     }
   }
 
+  // Règle 4 : Vérifier si un joueur couvre plus de 2 postes
+  for (const [playerId, playerPostes] of Object.entries(map.joueurs)) {
+    if (playerPostes.length > 2) {
+      const playerName = joueurs.find(j => j.id === playerId)?.nom || playerId;
+      errors.push(`${playerName} a ${playerPostes.length} postes (max 2)`);
+    }
+  }
+
   // Règle 3 : Trouver les postes couverts par exactement 2 joueurs
   const postesWithTwoPlayers: { posteId: string; players: string[] }[] = [];
 

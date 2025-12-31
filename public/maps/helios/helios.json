@@ -51,10 +51,26 @@
       "x": 75,
       "y": 25,
       "zone": {
-        "x1": 65,
-        "y1": 15,
-        "x2": 85,
-        "y2": 35
+        "polygons": [
+          [
+            {
+              "x": 61.2,
+              "y": 16.3
+            },
+            {
+              "x": 81.2,
+              "y": 16.3
+            },
+            {
+              "x": 81.2,
+              "y": 36.3
+            },
+            {
+              "x": 61.2,
+              "y": 36.3
+            }
+          ]
+        ]
       },
       "etage": 1
     }
@@ -62,15 +78,16 @@
   "joueurs": {
     "player1": [
       "poste1",
-      "poste3"
+      "poste4"
     ],
     "player2": [
       "poste2",
-      "poste4"
+      "poste4",
+      "poste3"
     ],
     "player3": [
-      "poste1",
-      "poste2"
+      "poste2",
+      "poste3"
     ],
     "player4": [
       "poste3",
@@ -78,7 +95,7 @@
     ],
     "player5": [
       "poste2",
-      "poste3"
+      "poste1"
     ]
   }
 }
