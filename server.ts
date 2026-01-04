@@ -1,4 +1,5 @@
-import express, { Request, Response } from 'express';
+import express from 'express';
+import type { Request, Response } from 'express';
 import cors from 'cors';
 import { promises as fs } from 'fs';
 import path from 'path';
@@ -11,8 +12,8 @@ import {
   changePassword,
   authMiddleware,
   adminMiddleware,
-  AuthRequest
 } from './src/server/auth';
+import type { AuthRequest } from './src/server/auth';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
