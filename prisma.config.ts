@@ -1,11 +1,14 @@
-import path from 'node:path';
-import { defineConfig } from 'prisma/config';
+import 'dotenv/config';
+import type { PrismaConfig } from 'prisma';
+import { env } from 'prisma/config';
 
-export default defineConfig({
-  schema: path.join(__dirname, 'prisma', 'schema.prisma'),
-
-  datasource: {
-    url: process.env.DATABASE_URL || 'postgresql://eva_user:eva_secret_password@localhost:5432/eva_db',
+export default {
+  schema: 'prisma/schema.prisma',
+  migrations: {
+    path: 'prisma/migrations',
   },
-});
+  datasource: {
+    url: env('DATABASE_URL'),
+  },
+} satisfies PrismaConfig;
 

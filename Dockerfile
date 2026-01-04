@@ -35,7 +35,7 @@ COPY --from=builder /app/src ./src
 
 USER appuser
 
-EXPOSE 3000
+EXPOSE 3001
 
 CMD ["sh", "-c", "npx prisma db push --skip-generate && node --import tsx server.ts"]
 
