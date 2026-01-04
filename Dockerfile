@@ -37,5 +37,5 @@ USER appuser
 
 EXPOSE 3001
 
-CMD ["sh", "-c", "npx prisma db push --skip-generate && npm run db:seed && node --import tsx server.ts"]
+CMD ["sh", "-c", "npx prisma db push --skip-generate && node --import tsx server.ts"]
 
