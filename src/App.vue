@@ -1,207 +1,41 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
-import MapList from './components/MapList.vue';
-import TopBar from './components/TopBar.vue';
-import MapViewer from './components/MapViewer.vue';
-import { loadAllMaps, joueurs } from './data/config';
-import type { MapConfig } from './types';
+import { computed, watch } from 'vue';
+import { useRoute } from 'vue-router';
+import TopBar from './components/layout/TopBar.vue';
+import { useAuth } from './composables/useAuth';
 
-const selectedMapId = ref<string | null>(null);
-const selectedJoueurId = ref<string | null>(null);
-const activePostes = ref<string[]>([]);
-const editMode = ref(false);
-const isLoading = ref(true);
+const { isAuthenticated, user, initAuth } = useAuth();
 
-// Maps chargées depuis les fichiers JSON
-const maps = ref<MapConfig[]>([]);
+const route = useRoute();
 
-// Copie modifiable des maps pour l'édition
-const editableMaps = ref<MapConfig[]>([]);
+// Vérifier l'authentification à chaque changement de route
+watch(() => route.path, () => {
+  initAuth();
+}, { immediate: true });
 
-// Charger les maps au démarrage
-onMounted(async () => {
-  try {
-    maps.value = await loadAllMaps();
-    editableMaps.value = JSON.parse(JSON.stringify(maps.value));
-    const firstMap = maps.value[0];
-    if (firstMap) {
-      selectedMapId.value = firstMap.id;
-    }
-  } catch (error) {
-    console.error('Erreur lors du chargement des maps:', error);
-  } finally {
-    isLoading.value = false;
-  }
-});
+// Nom de l'utilisateur pour la TopBar
+const userName = computed(() => user.value?.nom);
 
-const currentMap = computed(() => {
-  const source = editMode.value ? editableMaps.value : maps.value;
-  return source.find(m => m.id === selectedMapId.value) || null;
-});
-
-function selectMap(mapId: string) {
-  selectedMapId.value = mapId;
-}
-
-function selectJoueur(joueurId: string | null) {
-  const newJoueurId = selectedJoueurId.value === joueurId ? null : joueurId;
-  selectedJoueurId.value = newJoueurId;
-
-  // Conserver le poste sélectionné s'il est associé au nouveau joueur
-  const currentPoste = activePostes.value[0];
-  if (currentPoste && newJoueurId && currentMap.value) {
-    const joueurPostes = currentMap.value.joueurs[newJoueurId] || [];
-    if (!joueurPostes.includes(currentPoste)) {
-      // Le poste n'est pas associé au nouveau joueur, le désélectionner
-      activePostes.value = [];
-    }
-    // Sinon, on conserve la sélection
-  }
-  // Si aucun joueur sélectionné, on conserve le poste actif (tous les postes sont accessibles)
-}
-
-// Toggle un poste actif/inactif (un seul à la fois)
-function togglePoste(posteId: string) {
-  if (activePostes.value.includes(posteId)) {
-    // Désélectionner si déjà sélectionné
-    activePostes.value = [];
-  } else {
-    // Sélectionner ce poste uniquement
-    activePostes.value = [posteId];
-  }
-}
-
-// Réinitialiser toutes les sélections
-function resetSelection() {
-  selectedJoueurId.value = null;
-  activePostes.value = [];
-}
-
-// Quand on change de map, réinitialiser les postes actifs
-watch(selectedMapId, () => {
-  activePostes.value = [];
-});
-
-function toggleEditMode() {
-  if (!editMode.value) {
-    // Entrer en mode édition : copier les maps actuelles
-    editableMaps.value = JSON.parse(JSON.stringify(maps.value));
-  }
-  editMode.value = !editMode.value;
-}
-
-function handleMapUpdate(updatedMap: MapConfig) {
-  const index = editableMaps.value.findIndex(m => m.id === updatedMap.id);
-  if (index !== -1) {
-    editableMaps.value[index] = updatedMap;
-  }
-}
-
-// Quand on modifie l'association joueur/poste en mode édition
-function handlePlayerPosteChanged(playerId: string, posteId: string, associated: boolean) {
-  // Si le poste sélectionné est dissocié ET que c'est le joueur actuellement sélectionné, désélectionner le poste
-  if (!associated && activePostes.value.includes(posteId) && selectedJoueurId.value === playerId) {
-    activePostes.value = [];
-  }
-}
-
-async function saveChanges() {
-  const mapToSave = editableMaps.value.find(m => m.id === selectedMapId.value);
-  if (!mapToSave) return;
-
-  try {
-    const response = await fetch(`http://localhost:3001/api/maps/${mapToSave.id}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(mapToSave),
-    });
-
-    const result = await response.json();
-
-    if (result.success) {
-      // Mettre à jour les maps en mémoire
-      const index = maps.value.findIndex(m => m.id === mapToSave.id);
-      if (index !== -1) {
-        maps.value[index] = JSON.parse(JSON.stringify(mapToSave));
-      }
-      alert(`✅ Map "${mapToSave.nom}" sauvegardée !`);
-    } else {
-      throw new Error(result.message);
-    }
-  } catch (error) {
-    console.error('Erreur:', error);
-    // Fallback: télécharger le fichier si le serveur n'est pas disponible
-    const json = JSON.stringify(mapToSave, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${mapToSave.id}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-
-    alert(`⚠️ Serveur non disponible.\n\nLe fichier a été téléchargé.\nPlacez-le dans: public/maps/${mapToSave.id}/${mapToSave.id}.json\n\nPour activer la sauvegarde directe, lancez:\nnode server.js`);
-  }
-}
-
-function cancelEdit() {
-  editableMaps.value = JSON.parse(JSON.stringify(maps.value));
-  editMode.value = false;
-}
+// Détermine si on doit afficher la TopBar (pas sur la page login)
+const showTopBar = computed(() => route.name !== 'login');
 </script>
 
 <template>
   <div class="app">
-    <!-- État de chargement -->
-    <div v-if="isLoading" class="loading">
-      Chargement des maps...
-    </div>
+    <!-- TopBar globale avec section dynamique -->
+    <TopBar
+      v-if="showTopBar"
+      :isAuthenticated="isAuthenticated"
+      :userName="userName"
+    >
+      <!-- Le contenu dynamique sera injecté par chaque page via teleport -->
+      <div id="topbar-dynamic-content" class="dynamic-content"></div>
+    </TopBar>
 
-    <template v-else>
-      <!-- Barre supérieure unifiée -->
-      <TopBar
-        :joueurs="joueurs"
-        :selectedJoueurId="selectedJoueurId"
-        :map="currentMap"
-        :maps="maps"
-        :activePostes="activePostes"
-        :editMode="editMode"
-        :isLoading="isLoading"
-        @select-joueur="selectJoueur"
-        @toggle-poste="togglePoste"
-        @toggle-edit="toggleEditMode"
-        @save="saveChanges"
-        @cancel="cancelEdit"
-        @reset="resetSelection"
-      />
-
-      <div class="main-content">
-        <!-- Liste des maps à gauche -->
-        <MapList
-          :maps="maps"
-          :selectedMapId="selectedMapId"
-          @select="selectMap"
-        />
-
-        <!-- Viewer de la map au centre -->
-        <MapViewer
-          v-if="currentMap"
-          :map="currentMap"
-          :joueurs="joueurs"
-          :selectedJoueurId="selectedJoueurId"
-          :activePostes="activePostes"
-          :editMode="editMode"
-          @update:map="handleMapUpdate"
-          @player-poste-changed="handlePlayerPosteChanged"
-        />
-
-        <div v-else class="no-map">
-          Sélectionnez une map
-        </div>
-      </div>
-    </template>
+    <!-- Contenu des pages -->
+    <main class="page-content" :class="{ 'no-topbar': !showTopBar }">
+      <RouterView />
+    </main>
   </div>
 </template>
 
@@ -215,28 +49,21 @@ function cancelEdit() {
   overflow: hidden;
 }
 
-.main-content {
+.dynamic-content {
+  display: flex;
+  flex: 1;
+  align-items: stretch;
+  width: 100%;
+}
+
+.page-content {
   display: flex;
   flex: 1;
   overflow: hidden;
   min-height: 0;
 }
 
-.no-map {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #666;
-  font-size: 1.5rem;
-}
-
-.loading {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #888;
-  font-size: 1.5rem;
+.page-content.no-topbar {
+  height: 100vh;
 }
 </style>

@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: eva_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: eva_user
+      POSTGRES_PASSWORD: eva_secret_password
+      POSTGRES_DB: eva_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eva_user -d eva_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: eva_app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://eva_user:eva_secret_password@postgres:5432/eva_db
+      JWT_SECRET: votre_secret_jwt_a_changer
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
