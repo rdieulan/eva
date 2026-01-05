@@ -32,11 +32,10 @@ COPY --from=builder /app/package.json ./
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/server.ts ./
 COPY --from=builder /app/src ./src
-COPY --from=builder /app/scripts ./scripts
 
 USER appuser
 
 EXPOSE 3001
 
-CMD ["sh", "-c", "npx prisma db push --force-reset && npx tsx prisma/seed.ts && node --import tsx server.ts"]
+CMD ["sh", "-c", "npx prisma db push && node --import tsx server.ts"]
 
