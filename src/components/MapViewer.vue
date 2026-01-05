@@ -1,98 +1,98 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import type { MapConfig, Joueur, Point } from '../types';
-import { posteColors } from '../data/config';
+import type { MapConfig, Player, Point, Assignment } from '../types';
+import { assignmentColors, getPlayerAssignments } from '../data/config';
 import { getZonePolygons } from '../types';
 
 const props = defineProps<{
   map: MapConfig;
-  joueurs: Joueur[];
-  selectedJoueurId: string | null;
-  activePostes: string[];
+  players: Player[];
+  selectedPlayerId: string | null;
+  activeAssignments: number[];
   editMode?: boolean;
 }>();
 
 const emit = defineEmits<{
   'update:map': [map: MapConfig];
-  'player-poste-changed': [playerId: string, posteId: string, associated: boolean];
+  'player-assignment-changed': [playerId: string, assignmentId: number, associated: boolean];
 }>();
 
-// État du chargement de l'image
+// Image loading state
 const imageLoaded = ref(false);
 const imageRef = ref<HTMLImageElement | null>(null);
 const imageRatio = ref(1);
 
-// Étage actuel pour les maps multi-étages
-const currentEtage = ref(0);
+// Current floor for multi-floor maps
+const currentFloor = ref(0);
 
-// État pour le drag & drop en mode édition
+// Drag & drop state in edit mode
 const dragging = ref<{
-  type: 'poste' | 'zone-move' | 'zone-point';
-  posteId: string;
+  type: 'assignment' | 'zone-move' | 'zone-point';
+  assignmentId: number;
   polygonIndex?: number;
   pointIndex?: number;
 } | null>(null);
 const svgRef = ref<SVGSVGElement | null>(null);
 
-// État pour le panneau d'édition des joueurs
-const editingPosteId = ref<string | null>(null);
+// Player editing panel state
+const editingAssignmentId = ref<number | null>(null);
 const editPanelPosition = ref({ x: 0, y: 0 });
-const editingPosteName_input = ref(false);
-const tempPosteName = ref('');
+const editingAssignmentName_input = ref(false);
+const tempAssignmentName = ref('');
 
-// Reset l'étage quand on change de map
+// Reset floor when map changes
 watch(() => props.map.id, () => {
-  currentEtage.value = 0;
+  currentFloor.value = 0;
   imageLoaded.value = false;
 });
 
-// Gestion du chargement de l'image
+// Image load handling
 function onImageLoad(event: Event) {
   const img = event.target as HTMLImageElement;
   imageRef.value = img;
-  // Ratio pour compenser la déformation du SVG (width / height)
+  // Ratio to compensate for SVG deformation (width / height)
   imageRatio.value = img.naturalWidth / img.naturalHeight;
   imageLoaded.value = true;
 }
 
-// Nombre d'étages de la map
+// Number of floors in the map
 const hasMultipleFloors = computed(() => props.map.images.length > 1);
 
-// Image actuelle
-const currentImage = computed(() => props.map.images[currentEtage.value]);
+// Current image
+const currentImage = computed(() => props.map.images[currentFloor.value]);
 
-// Reset imageLoaded quand on change d'étage
+// Reset imageLoaded when floor changes
 watch(currentImage, () => {
   imageLoaded.value = false;
 });
 
-// Postes visibles sur l'étage actuel
-const visiblePostes = computed(() => {
-  if (!hasMultipleFloors.value) return props.map.postes;
-  return props.map.postes.filter(p => p.etage === undefined || p.etage === currentEtage.value);
+// Visible assignments on current floor
+const visibleAssignments = computed(() => {
+  if (!hasMultipleFloors.value) return props.map.assignments;
+  return props.map.assignments.filter((p: Assignment) => p.floor === undefined || p.floor === currentFloor.value);
 });
 
-// Postes des autres étages (pour affichage fantôme quand joueur sélectionné)
-const ghostPostes = computed(() => {
-  if (!hasMultipleFloors.value || !props.selectedJoueurId) return [];
-  return props.map.postes
-    .filter(p => p.etage !== undefined && p.etage !== currentEtage.value)
-    .filter(p => props.activePostes.includes(p.id));
+// Ghost assignments from other floors (for display when player is selected)
+const ghostAssignments = computed(() => {
+  if (!hasMultipleFloors.value || !props.selectedPlayerId) return [];
+  return props.map.assignments
+    .filter((p: Assignment) => p.floor !== undefined && p.floor !== currentFloor.value)
+    .filter((p: Assignment) => props.activeAssignments.includes(p.id));
 });
 
-// Récupère la couleur d'un poste
-function getPosteColor(posteId: string): string {
-  return posteColors[posteId] || '#888';
+// Get assignment color
+function getAssignmentColor(assignmentId: number): string {
+  return assignmentColors[assignmentId] || '#888';
 }
 
-// Vérifie si un poste est actif
-function isPosteActive(posteId: string): boolean {
-  return props.activePostes.includes(posteId);
+// Check if an assignment is active
+function isAssignmentActive(assignmentId: number): boolean {
+  return props.activeAssignments.includes(assignmentId);
 }
 
-// === Mode édition ===
+// === Edit mode ===
 
-// Convertit les coordonnées de la souris en coordonnées SVG (0-100)
+// Convert mouse coordinates to SVG coordinates (0-100)
 function getSvgCoords(event: MouseEvent): { x: number; y: number } {
   if (!svgRef.value) return { x: 0, y: 0 };
 
@@ -105,103 +105,103 @@ function getSvgCoords(event: MouseEvent): { x: number; y: number } {
   return { x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) };
 }
 
-// Démarre le drag d'une pastille
-function startDragPoste(event: MouseEvent, posteId: string) {
+// Start drag on a position marker
+function startDragAssignment(event: MouseEvent, assignmentId: number) {
   if (!props.editMode) return;
   event.preventDefault();
   event.stopPropagation();
-  dragging.value = { type: 'poste', posteId };
+  dragging.value = { type: 'assignment', assignmentId };
 }
 
-// Démarre le drag d'une zone (déplacement)
-function startDragZone(event: MouseEvent, posteId: string, polygonIndex: number = 0) {
+// Start dragging a zone (move)
+function startDragZone(event: MouseEvent, assignmentId: number, polygonIndex: number = 0) {
   if (!props.editMode) return;
   event.preventDefault();
   event.stopPropagation();
-  dragging.value = { type: 'zone-move', posteId, polygonIndex };
+  dragging.value = { type: 'zone-move', assignmentId, polygonIndex };
 }
 
-// Démarre le drag d'un point de zone
-function startDragZonePoint(event: MouseEvent, posteId: string, polygonIndex: number, pointIndex: number) {
+// Start dragging a zone point
+function startDragZonePoint(event: MouseEvent, assignmentId: number, polygonIndex: number, pointIndex: number) {
   if (!props.editMode) return;
   event.preventDefault();
   event.stopPropagation();
-  dragging.value = { type: 'zone-point', posteId, polygonIndex, pointIndex };
+  dragging.value = { type: 'zone-point', assignmentId, polygonIndex, pointIndex };
 }
 
-// Ajoute un point sur un côté du polygone
-function addPointOnEdge(event: MouseEvent, posteId: string, polygonIndex: number, edgeIndex: number) {
+// Add a point on a polygon edge
+function addPointOnEdge(event: MouseEvent, assignmentId: number, polygonIndex: number, edgeIndex: number) {
   if (!props.editMode) return;
   event.preventDefault();
   event.stopPropagation();
 
   const coords = getSvgCoords(event);
-  const posteIndex = props.map.postes.findIndex(p => p.id === posteId);
-  if (posteIndex === -1) return;
+  const assignmentIndex = props.map.assignments.findIndex(p => p.id === assignmentId);
+  if (assignmentIndex === -1) return;
 
   const updatedMap = JSON.parse(JSON.stringify(props.map)) as MapConfig;
-  const poste = updatedMap.postes[posteIndex];
-  if (!poste) return;
+  const targetAssignment = updatedMap.assignments[assignmentIndex];
+  if (!targetAssignment) return;
 
-  // Convertir en multi-zone si nécessaire
-  const polygons = getZonePolygons(poste.zone);
+  // Convert to multi-zone if necessary
+  const polygons = getZonePolygons(targetAssignment.zone);
   const targetPolygon = polygons[polygonIndex];
   if (!targetPolygon) return;
 
-  // Insérer le nouveau point après l'index du côté
+  // Insert new point after edge index
   const newPoint: Point = {
     x: Math.round(coords.x * 10) / 10,
     y: Math.round(coords.y * 10) / 10
   };
   targetPolygon.splice(edgeIndex + 1, 0, newPoint);
 
-  poste.zone = { polygons };
+  targetAssignment.zone = { polygons };
   emit('update:map', updatedMap);
 
-  // Commencer à drag le nouveau point
-  dragging.value = { type: 'zone-point', posteId, polygonIndex, pointIndex: edgeIndex + 1 };
+  // Start dragging the new point
+  dragging.value = { type: 'zone-point', assignmentId, polygonIndex, pointIndex: edgeIndex + 1 };
 }
 
-// Supprime un point du polygone (minimum 3 points)
-function removePoint(event: MouseEvent, posteId: string, polygonIndex: number, pointIndex: number) {
+// Remove a point from polygon (minimum 3 points)
+function removePoint(event: MouseEvent, assignmentId: number, polygonIndex: number, pointIndex: number) {
   if (!props.editMode) return;
   event.preventDefault();
   event.stopPropagation();
 
-  const posteIndex = props.map.postes.findIndex(p => p.id === posteId);
-  if (posteIndex === -1) return;
+  const assignmentIndex = props.map.assignments.findIndex(p => p.id === assignmentId);
+  if (assignmentIndex === -1) return;
 
   const updatedMap = JSON.parse(JSON.stringify(props.map)) as MapConfig;
-  const poste = updatedMap.postes[posteIndex];
-  if (!poste) return;
+  const targetAssignment = updatedMap.assignments[assignmentIndex];
+  if (!targetAssignment) return;
 
-  const polygons = getZonePolygons(poste.zone);
+  const polygons = getZonePolygons(targetAssignment.zone);
   const targetPolygon = polygons[polygonIndex];
-  if (!targetPolygon || targetPolygon.length <= 3) return; // Minimum 3 points pour un polygone
+  if (!targetPolygon || targetPolygon.length <= 3) return; // Minimum 3 points for a polygon
 
   targetPolygon.splice(pointIndex, 1);
-  poste.zone = { polygons };
+  targetAssignment.zone = { polygons };
   emit('update:map', updatedMap);
 }
 
-// Ajoute un nouveau morceau de zone (polygone rectangle par défaut)
-function addZonePolygon(event: MouseEvent, posteId: string) {
+// Add a new zone piece (rectangle polygon by default)
+function addZonePolygon(event: MouseEvent, assignmentId: number) {
   if (!props.editMode) return;
   event.preventDefault();
   event.stopPropagation();
 
   const coords = getSvgCoords(event);
-  const posteIndex = props.map.postes.findIndex(p => p.id === posteId);
-  if (posteIndex === -1) return;
+  const assignmentIndex = props.map.assignments.findIndex(p => p.id === assignmentId);
+  if (assignmentIndex === -1) return;
 
   const updatedMap = JSON.parse(JSON.stringify(props.map)) as MapConfig;
-  const poste = updatedMap.postes[posteIndex];
-  if (!poste) return;
+  const targetAssignment = updatedMap.assignments[assignmentIndex];
+  if (!targetAssignment) return;
 
-  // Récupérer les polygones existants
-  const polygons = getZonePolygons(poste.zone);
+  // Get existing polygons
+  const polygons = getZonePolygons(targetAssignment.zone);
 
-  // Créer un nouveau rectangle centré sur le clic
+  // Create new rectangle centered on click
   const size = 5;
   const newPolygon: Point[] = [
     { x: Math.round((coords.x - size) * 10) / 10, y: Math.round((coords.y - size) * 10) / 10 },
@@ -211,72 +211,72 @@ function addZonePolygon(event: MouseEvent, posteId: string) {
   ];
 
   polygons.push(newPolygon);
-  poste.zone = { polygons };
+  targetAssignment.zone = { polygons };
   emit('update:map', updatedMap);
 }
 
-// Supprime un morceau de zone entier (si plus d'un polygone)
-function removeZonePolygon(event: MouseEvent, posteId: string, polygonIndex: number) {
+// Remove an entire zone piece (if more than one polygon)
+function removeZonePolygon(event: MouseEvent, assignmentId: number, polygonIndex: number) {
   if (!props.editMode) return;
   event.preventDefault();
   event.stopPropagation();
 
-  const posteIndex = props.map.postes.findIndex(p => p.id === posteId);
-  if (posteIndex === -1) return;
+  const assignmentIndex = props.map.assignments.findIndex(p => p.id === assignmentId);
+  if (assignmentIndex === -1) return;
 
   const updatedMap = JSON.parse(JSON.stringify(props.map)) as MapConfig;
-  const poste = updatedMap.postes[posteIndex];
-  if (!poste) return;
+  const targetAssignment = updatedMap.assignments[assignmentIndex];
+  if (!targetAssignment) return;
 
-  const polygons = getZonePolygons(poste.zone);
-  if (polygons.length <= 1) return; // Au moins un polygone doit rester
+  const polygons = getZonePolygons(targetAssignment.zone);
+  if (polygons.length <= 1) return; // At least one polygon must remain
 
   polygons.splice(polygonIndex, 1);
-  poste.zone = { polygons };
+  targetAssignment.zone = { polygons };
   emit('update:map', updatedMap);
 }
 
-// Gère le mouvement pendant le drag
+// Handle mouse movement during drag
 function handleMouseMove(event: MouseEvent) {
   if (!dragging.value || !props.editMode) return;
 
   const coords = getSvgCoords(event);
-  const posteIndex = props.map.postes.findIndex(p => p.id === dragging.value!.posteId);
-  if (posteIndex === -1) return;
+  const assignmentIndex = props.map.assignments.findIndex(p => p.id === dragging.value!.assignmentId);
+  if (assignmentIndex === -1) return;
 
   const updatedMap = JSON.parse(JSON.stringify(props.map)) as MapConfig;
-  const poste = updatedMap.postes[posteIndex];
-  if (!poste) return;
+  const targetAssignment = updatedMap.assignments[assignmentIndex];
+  if (!targetAssignment) return;
 
-  if (dragging.value.type === 'poste') {
-    // Déplacer la pastille
-    poste.x = Math.round(coords.x * 10) / 10;
-    poste.y = Math.round(coords.y * 10) / 10;
+  if (dragging.value.type === 'assignment') {
+    // Move the marker
+    targetAssignment.x = Math.round(coords.x * 10) / 10;
+    targetAssignment.y = Math.round(coords.y * 10) / 10;
   } else if (dragging.value.type === 'zone-move') {
-    // Déplacer un polygone spécifique de la zone
-    const polygons = getZonePolygons(poste.zone);
+    // Move a specific polygon of the zone
+    const polygons = getZonePolygons(targetAssignment.zone);
     const polygonIndex = dragging.value.polygonIndex ?? 0;
     const points = polygons[polygonIndex];
     if (!points) return;
 
-    // Calculer le centre actuel
+    // Calculate current center
     const centerX = points.reduce((sum, p) => sum + p.x, 0) / points.length;
     const centerY = points.reduce((sum, p) => sum + p.y, 0) / points.length;
 
-    // Calculer le décalage
+    // Calculate offset
     const dx = coords.x - centerX;
     const dy = coords.y - centerY;
 
-    // Appliquer le décalage à tous les points du polygone
+    // Apply offset to all polygon points
     polygons[polygonIndex] = points.map(p => ({
       x: Math.round((p.x + dx) * 10) / 10,
       y: Math.round((p.y + dy) * 10) / 10,
     }));
 
-    poste.zone = { polygons };
+    targetAssignment.zone = { polygons };
   } else if (dragging.value.type === 'zone-point' && dragging.value.pointIndex !== undefined) {
-    // Déplacer un point spécifique
-    const polygons = getZonePolygons(poste.zone);
+    // Move a specific point
+    const polygons = getZonePolygons(targetAssignment.zone);
     const polygonIndex = dragging.value.polygonIndex ?? 0;
     const points = polygons[polygonIndex];
     const pointIndex = dragging.value.pointIndex;
@@ -287,54 +287,54 @@ function handleMouseMove(event: MouseEvent) {
         y: Math.round(coords.y * 10) / 10,
       };
       polygons[polygonIndex] = points;
-      poste.zone = { polygons };
+      targetAssignment.zone = { polygons };
     }
   }
 
   emit('update:map', updatedMap);
 }
 
-// Arrête le drag
+// Stop dragging
 function handleMouseUp() {
   dragging.value = null;
 }
 
-// Ouvre le panneau d'édition des joueurs pour un poste
-function openPlayerEditPanel(event: MouseEvent, posteId: string) {
+// Open player edit panel for an assignment
+function openPlayerEditPanel(event: MouseEvent, assignmentId: number) {
   if (!props.editMode) return;
 
-  // Ne pas ouvrir si on était en train de drag
+  // Don't open if we were dragging
   if (dragging.value) return;
 
   event.preventDefault();
   event.stopPropagation();
 
-  editingPosteId.value = posteId;
+  editingAssignmentId.value = assignmentId;
 
-  // Calculer la position du panneau en tenant compte des bords de l'écran
-  const panelHeight = 250; // Hauteur approximative du panneau
-  const panelWidth = 180; // Largeur approximative du panneau
-  const margin = 20; // Marge par rapport aux bords
+  // Calculate panel position accounting for screen edges
+  const panelHeight = 250; // Approximate panel height
+  const panelWidth = 180; // Approximate panel width
+  const margin = 20; // Margin from edges
 
   let x = event.clientX;
   let y = event.clientY;
 
-  // Ajuster si le panneau dépasse en bas
+  // Adjust if panel overflows bottom
   if (y + panelHeight + margin > window.innerHeight) {
-    y = event.clientY - panelHeight - 10; // Afficher au-dessus du clic
+    y = event.clientY - panelHeight - 10; // Show above click
   }
 
-  // Ajuster si le panneau dépasse à droite
+  // Adjust if panel overflows right
   if (x + panelWidth / 2 + margin > window.innerWidth) {
     x = window.innerWidth - panelWidth / 2 - margin;
   }
 
-  // Ajuster si le panneau dépasse à gauche
+  // Adjust if panel overflows left
   if (x - panelWidth / 2 < margin) {
     x = panelWidth / 2 + margin;
   }
 
-  // Ajuster si le panneau dépasse en haut
+  // Adjust if panel overflows top
   if (y < margin) {
     y = margin;
   }
@@ -342,85 +342,87 @@ function openPlayerEditPanel(event: MouseEvent, posteId: string) {
   editPanelPosition.value = { x, y };
 }
 
-// Ferme le panneau d'édition
+// Close edit panel
 function closePlayerEditPanel() {
-  editingPosteId.value = null;
-  editingPosteName_input.value = false;
+  editingAssignmentId.value = null;
+  editingAssignmentName_input.value = false;
 }
 
-// Active le mode édition du nom de poste
+// Start editing assignment name
 function startEditingPosteName() {
-  if (!editingPosteId.value) return;
-  const poste = props.map.postes.find(p => p.id === editingPosteId.value);
-  tempPosteName.value = poste?.nom || '';
-  editingPosteName_input.value = true;
+  if (!editingAssignmentId.value) return;
+  const poste = props.map.assignments.find(p => p.id === editingAssignmentId.value);
+  tempAssignmentName.value = poste?.name || '';
+  editingAssignmentName_input.value = true;
 }
 
-// Sauvegarde le nouveau nom du poste
-function savePosteName() {
-  if (!editingPosteId.value || !tempPosteName.value.trim()) {
-    editingPosteName_input.value = false;
+// Save new assignment name
+function saveAssignmentName() {
+  if (!editingAssignmentId.value || !tempAssignmentName.value.trim()) {
+    editingAssignmentName_input.value = false;
     return;
   }
 
   const updatedMap = JSON.parse(JSON.stringify(props.map)) as MapConfig;
-  const poste = updatedMap.postes.find(p => p.id === editingPosteId.value);
-  if (poste) {
-    poste.nom = tempPosteName.value.trim();
+  const targetAssignment = updatedMap.assignments.find(p => p.id === editingAssignmentId.value);
+  if (targetAssignment) {
+    targetAssignment.name = tempAssignmentName.value.trim();
     emit('update:map', updatedMap);
   }
-  editingPosteName_input.value = false;
+  editingAssignmentName_input.value = false;
 }
 
-// Annule l'édition du nom
-function cancelEditingPosteName() {
-  editingPosteName_input.value = false;
+// Cancel name editing
+function cancelEditingAssignmentName() {
+  editingAssignmentName_input.value = false;
 }
 
-// Vérifie si un joueur est associé à un poste
-function isPlayerAssociatedToPoste(playerId: string, posteId: string): boolean {
-  const playerPostes = props.map.joueurs[playerId];
-  return playerPostes ? playerPostes.includes(posteId) : false;
+// Check if a player is associated to an assignment
+function isPlayerAssociatedToAssignment(playerId: string, assignmentId: number): boolean {
+  const playerAssignments = getPlayerAssignments(props.map, playerId);
+  return playerAssignments.includes(assignmentId);
 }
 
-// Toggle l'association d'un joueur à un poste
-function togglePlayerPosteAssociation(playerId: string, posteId: string) {
+// Toggle player-assignment association
+function togglePlayerAssignmentAssociation(playerId: string, assignmentId: number) {
   const updatedMap = JSON.parse(JSON.stringify(props.map)) as MapConfig;
 
-  if (!updatedMap.joueurs[playerId]) {
-    updatedMap.joueurs[playerId] = [];
+  // Find or create player assignment entry
+  let playerAssignment = updatedMap.players.find(p => p.userId === playerId);
+  if (!playerAssignment) {
+    playerAssignment = { userId: playerId, assignmentIds: [] };
+    updatedMap.players.push(playerAssignment);
   }
 
-  const playerPostes = updatedMap.joueurs[playerId];
-  const index = playerPostes.indexOf(posteId);
+  const index = playerAssignment.assignmentIds.indexOf(assignmentId);
 
   let associated: boolean;
   if (index === -1) {
-    playerPostes.push(posteId);
+    playerAssignment.assignmentIds.push(assignmentId);
     associated = true;
   } else {
-    playerPostes.splice(index, 1);
+    playerAssignment.assignmentIds.splice(index, 1);
     associated = false;
   }
 
   emit('update:map', updatedMap);
-  emit('player-poste-changed', playerId, posteId, associated);
+  emit('player-assignment-changed', playerId, assignmentId, associated);
 }
 
-// Récupère le nom du poste en cours d'édition
+// Get assignment name being edited
 const editingPosteName = computed(() => {
-  if (!editingPosteId.value) return '';
-  const poste = props.map.postes.find(p => p.id === editingPosteId.value);
-  return poste?.nom || editingPosteId.value;
+  if (!editingAssignmentId.value) return '';
+  const poste = props.map.assignments.find(p => p.id === editingAssignmentId.value);
+  return poste?.name || editingAssignmentId.value;
 });
 
-// Génère le path SVG d'un polygone à partir des points
+// Generate SVG path from polygon points
 function getPolygonPathFromPoints(points: Point[]): string {
   if (points.length < 3) return '';
   return points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ') + ' Z';
 }
 
-// Génère les données pour les côtés d'un polygone (pour ajouter des points)
+// Generate edge data for a polygon (to add points)
 function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number; y2: number; midX: number; midY: number }[] {
   const edges: { x1: number; y1: number; x2: number; y2: number; midX: number; midY: number }[] = [];
 
@@ -443,28 +445,28 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
 
 <template>
   <div class="map-viewer">
-    <!-- Sélecteur d'étage pour les maps multi-étages -->
+    <!-- Floor selector for multi-floor maps -->
     <div v-if="hasMultipleFloors" class="floor-selector">
       <button
         v-for="(image, index) in map.images"
         :key="image"
-        :class="{ active: currentEtage === index }"
-        @click="currentEtage = index"
+        :class="{ active: currentFloor === index }"
+        @click="currentFloor = index"
       >
         {{ index === 0 ? 'RDC' : `Étage ${index}` }}
       </button>
     </div>
 
-    <!-- Image de la map -->
+    <!-- Map image -->
     <div class="map-container">
       <img
         :src="currentImage"
-        :alt="map.nom"
+        :alt="map.name"
         class="map-image"
         @load="onImageLoad"
       />
 
-      <!-- Layer SVG pour les overlays - même viewBox que les coordonnées en % -->
+      <!-- SVG layer for overlays - same viewBox as coordinates in % -->
       <svg
         v-if="imageLoaded"
         ref="svgRef"
@@ -476,33 +478,33 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
         @mouseup="handleMouseUp"
         @mouseleave="handleMouseUp"
       >
-        <!-- Zones de contrôle des postes actifs de l'étage actuel -->
-        <g v-for="poste in visiblePostes.filter(p => isPosteActive(p.id))" :key="'zone-' + poste.id">
-          <!-- Tous les polygones de la zone -->
+        <!-- Control zones for active assignments on current floor -->
+        <g v-for="assignment in visibleAssignments.filter((p: Assignment) => isAssignmentActive(p.id))" :key="'zone-' + assignment.id">
+          <!-- All polygons of the zone -->
           <g
-            v-for="(polygon, polygonIndex) in getZonePolygons(poste.zone)"
+            v-for="(polygon, polygonIndex) in getZonePolygons(assignment.zone)"
             :key="'polygon-' + polygonIndex"
           >
             <path
               :d="getPolygonPathFromPoints(polygon)"
               class="zone active"
               :class="{ editable: editMode }"
-              :style="{ '--zone-color': getPosteColor(poste.id) }"
-              @mousedown="startDragZone($event, poste.id, polygonIndex)"
-              @contextmenu="openPlayerEditPanel($event, poste.id)"
-              @dblclick="editMode && addZonePolygon($event, poste.id)"
+              :style="{ '--zone-color': getAssignmentColor(assignment.id) }"
+              @mousedown="startDragZone($event, assignment.id, polygonIndex)"
+              @contextmenu="openPlayerEditPanel($event, assignment.id)"
+              @dblclick="editMode && addZonePolygon($event, assignment.id)"
             />
-            <!-- Poignées des points en mode édition -->
+            <!-- Point handles in edit mode -->
             <template v-if="editMode">
-              <!-- Indicateur de suppression de polygone (si plus d'un) -->
+              <!-- Polygon removal indicator (if more than one) -->
               <text
-                v-if="getZonePolygons(poste.zone).length > 1"
-                :x="polygon.reduce((s, p) => s + p.x, 0) / polygon.length"
-                :y="polygon.reduce((s, p) => s + p.y, 0) / polygon.length"
+                v-if="getZonePolygons(assignment.zone).length > 1"
+                :x="polygon.reduce((s: number, p: Point) => s + p.x, 0) / polygon.length"
+                :y="polygon.reduce((s: number, p: Point) => s + p.y, 0) / polygon.length"
                 class="remove-polygon-btn"
-                @click="removeZonePolygon($event, poste.id, polygonIndex)"
+                @click="removeZonePolygon($event, assignment.id, polygonIndex)"
               >✕</text>
-              <!-- Points du polygone -->
+              <!-- Polygon points -->
               <circle
                 v-for="(point, pointIndex) in polygon"
                 :key="'point-' + pointIndex"
@@ -510,10 +512,10 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
                 :cy="point.y"
                 r="1.2"
                 class="point-handle"
-                @mousedown="startDragZonePoint($event, poste.id, polygonIndex, pointIndex)"
-                @contextmenu.prevent="removePoint($event, poste.id, polygonIndex, pointIndex)"
+                @mousedown="startDragZonePoint($event, assignment.id, polygonIndex, pointIndex)"
+                @contextmenu.prevent="removePoint($event, assignment.id, polygonIndex, pointIndex)"
               />
-              <!-- Boutons pour ajouter des points sur les côtés -->
+              <!-- Buttons to add points on edges -->
               <circle
                 v-for="(edge, edgeIndex) in getPolygonEdges(polygon)"
                 :key="'add-point-' + edgeIndex"
@@ -521,106 +523,106 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
                 :cy="edge.midY"
                 r="0.8"
                 class="add-point-handle"
-                @mousedown="addPointOnEdge($event, poste.id, polygonIndex, edgeIndex)"
+                @mousedown="addPointOnEdge($event, assignment.id, polygonIndex, edgeIndex)"
               />
             </template>
           </g>
         </g>
 
-        <!-- Zones fantômes (autres étages) -->
-        <g v-for="poste in ghostPostes" :key="'ghost-zone-' + poste.id">
+        <!-- Ghost zones (other floors) -->
+        <g v-for="assignment in ghostAssignments" :key="'ghost-zone-' + assignment.id">
           <path
-            v-for="(polygon, polygonIndex) in getZonePolygons(poste.zone)"
+            v-for="(polygon, polygonIndex) in getZonePolygons(assignment.zone)"
             :key="'ghost-polygon-' + polygonIndex"
             :d="getPolygonPathFromPoints(polygon)"
             class="zone ghost"
-            :style="{ '--zone-color': getPosteColor(poste.id) }"
+            :style="{ '--zone-color': getAssignmentColor(assignment.id) }"
           />
         </g>
 
 
-        <!-- Pastilles des postes actifs de l'étage actuel -->
-        <g v-for="poste in visiblePostes.filter(p => isPosteActive(p.id))" :key="'poste-' + poste.id">
+        <!-- Active assignment markers on current floor -->
+        <g v-for="assignment in visibleAssignments.filter((p: Assignment) => isAssignmentActive(p.id))" :key="'marker-' + assignment.id">
           <ellipse
-            :cx="poste.x"
-            :cy="poste.y"
+            :cx="assignment.x"
+            :cy="assignment.y"
             :rx="1.5"
             :ry="1.5 * imageRatio"
-            class="poste active"
+            class="marker active"
             :class="{ editable: editMode }"
-            :style="{ '--poste-color': getPosteColor(poste.id) }"
-            @mousedown="startDragPoste($event, poste.id)"
-            @contextmenu="openPlayerEditPanel($event, poste.id)"
+            :style="{ '--assignment-color': getAssignmentColor(assignment.id) }"
+            @mousedown="startDragAssignment($event, assignment.id)"
+            @contextmenu="openPlayerEditPanel($event, assignment.id)"
           />
         </g>
 
-        <!-- Pastilles fantômes (autres étages) -->
-        <g v-for="poste in ghostPostes" :key="'ghost-poste-' + poste.id">
+        <!-- Ghost markers (other floors) -->
+        <g v-for="assignment in ghostAssignments" :key="'ghost-marker-' + assignment.id">
           <ellipse
-            :cx="poste.x"
-            :cy="poste.y"
+            :cx="assignment.x"
+            :cy="assignment.y"
             :rx="1.5"
             :ry="1.5 * imageRatio"
-            class="poste ghost"
-            :style="{ '--poste-color': getPosteColor(poste.id) }"
+            class="marker ghost"
+            :style="{ '--assignment-color': getAssignmentColor(assignment.id) }"
           />
         </g>
       </svg>
 
-      <!-- Panneau d'édition des joueurs associés -->
+      <!-- Player edit panel -->
       <div
-        v-if="editMode && editingPosteId"
+        v-if="editMode && editingAssignmentId"
         class="player-edit-panel"
         :style="{ left: editPanelPosition.x + 'px', top: editPanelPosition.y + 'px' }"
       >
         <div class="panel-header">
-          <!-- Mode affichage du nom (cliquable pour éditer) -->
+          <!-- Name display mode (clickable to edit) -->
           <span
-            v-if="!editingPosteName_input"
+            v-if="!editingAssignmentName_input"
             class="panel-title editable"
-            :style="{ color: getPosteColor(editingPosteId) }"
+            :style="{ color: getAssignmentColor(editingAssignmentId) }"
             @click="startEditingPosteName"
-            title="Cliquer pour modifier le nom"
+            title="Click to edit name"
           >
             {{ editingPosteName }}
             <span class="edit-hint">✎</span>
           </span>
-          <!-- Mode édition du nom -->
+          <!-- Name edit mode -->
           <div v-else class="name-edit-wrapper">
             <input
-              v-model="tempPosteName"
+              v-model="tempAssignmentName"
               class="name-input"
-              :style="{ color: getPosteColor(editingPosteId) }"
-              @keyup.enter="savePosteName"
-              @keyup.escape="cancelEditingPosteName"
+              :style="{ color: getAssignmentColor(editingAssignmentId) }"
+              @keyup.enter="saveAssignmentName"
+              @keyup.escape="cancelEditingAssignmentName"
               ref="nameInputRef"
               autofocus
             />
-            <button class="name-save" @click="savePosteName">✓</button>
-            <button class="name-cancel" @click="cancelEditingPosteName">✕</button>
+            <button class="name-save" @click="saveAssignmentName">✓</button>
+            <button class="name-cancel" @click="cancelEditingAssignmentName">✕</button>
           </div>
           <button class="panel-close" @click="closePlayerEditPanel">✕</button>
         </div>
         <div class="panel-content">
           <label
-            v-for="joueur in joueurs"
-            :key="joueur.id"
+            v-for="player in players"
+            :key="player.id"
             class="player-checkbox"
-            :class="{ checked: isPlayerAssociatedToPoste(joueur.id, editingPosteId) }"
+            :class="{ checked: isPlayerAssociatedToAssignment(player.id, editingAssignmentId) }"
           >
             <input
               type="checkbox"
-              :checked="isPlayerAssociatedToPoste(joueur.id, editingPosteId)"
-              @change="togglePlayerPosteAssociation(joueur.id, editingPosteId!)"
+              :checked="isPlayerAssociatedToAssignment(player.id, editingAssignmentId)"
+              @change="togglePlayerAssignmentAssociation(player.id, editingAssignmentId!)"
             />
-            {{ joueur.nom }}
+            {{ player.name }}
           </label>
         </div>
       </div>
 
-      <!-- Overlay pour fermer le panneau en cliquant à côté -->
+      <!-- Overlay to close panel when clicking outside -->
       <div
-        v-if="editMode && editingPosteId"
+        v-if="editMode && editingAssignmentId"
         class="panel-backdrop"
         @click="closePlayerEditPanel"
       ></div>
@@ -718,20 +720,20 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
   transition: none;
 }
 
-.poste {
+.marker {
   fill: rgba(100, 100, 100, 0.1);
   stroke: rgba(100, 100, 100, 0.3);
   stroke-width: 0.3;
   transition: all 0.3s;
 }
 
-.poste.active {
-  fill: color-mix(in srgb, var(--poste-color) 20%, transparent);
-  stroke: var(--poste-color);
+.assignment.active {
+  fill: color-mix(in srgb, var(--assignment-color) 20%, transparent);
+  stroke: var(--assignment-color);
   stroke-width: 0.5;
 }
 
-.poste.editable {
+.assignment.editable {
   cursor: move;
   transition: none;
 }
@@ -777,9 +779,9 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
   opacity: 1;
 }
 
-.poste.ghost {
-  fill: var(--poste-color);
-  stroke: var(--poste-color);
+.assignment.ghost {
+  fill: var(--assignment-color);
+  stroke: var(--assignment-color);
   stroke-width: 0.3;
   stroke-dasharray: 0.5, 0.3;
   opacity: 0.4;
@@ -793,25 +795,25 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
   opacity: 0.4;
 }
 
-.poste-label {
+.marker-label {
   font-size: 2.5px;
   fill: #888;
   text-anchor: middle;
   transition: all 0.3s;
 }
 
-.poste-label.active {
+.marker-label.active {
   fill: #fff;
   font-weight: bold;
 }
 
-.poste-label.ghost {
-  fill: var(--poste-color, #888);
+.marker-label.ghost {
+  fill: var(--assignment-color, #888);
   opacity: 0.5;
   font-style: italic;
 }
 
-/* Panneau d'édition des joueurs */
+/* Player edit panel */
 .panel-backdrop {
   position: fixed;
   top: 0;

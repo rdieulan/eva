@@ -3,13 +3,13 @@ import { ref, computed, onMounted, watch } from 'vue';
 import MapList from '../components/MapList.vue';
 import MapViewer from '../components/MapViewer.vue';
 import PlannerToolbar from '../components/planner/PlannerToolbar.vue';
-import { loadAllMaps, joueurs } from '../data/config';
+import { loadAllMaps, loadPlayers, getPlayerAssignments } from '../data/config';
 import { useAuth } from '../composables/useAuth';
-import type { MapConfig } from '../types';
+import type { MapConfig, Player } from '../types';
 
 const { permissions, user } = useAuth();
 
-// Debug: vérifier les permissions
+// Debug: check permissions
 const canEdit = computed(() => {
   console.log('User:', user.value);
   console.log('Permissions:', permissions.value);
@@ -17,24 +17,33 @@ const canEdit = computed(() => {
 });
 
 const selectedMapId = ref<string | null>(null);
-const selectedJoueurId = ref<string | null>(null);
-const activePostes = ref<string[]>([]);
+const selectedPlayerId = ref<string | null>(null);
+const activeAssignments = ref<number[]>([]);
 const editMode = ref(false);
 const isLoading = ref(true);
 
 const maps = ref<MapConfig[]>([]);
 const editableMaps = ref<MapConfig[]>([]);
+const players = ref<Player[]>([]);
 
 onMounted(async () => {
   try {
-    maps.value = await loadAllMaps();
-    editableMaps.value = JSON.parse(JSON.stringify(maps.value));
+    // Load players and maps in parallel
+    const [loadedPlayers, loadedMaps] = await Promise.all([
+      loadPlayers(),
+      loadAllMaps()
+    ]);
+
+    players.value = loadedPlayers;
+    maps.value = loadedMaps;
+    editableMaps.value = JSON.parse(JSON.stringify(loadedMaps));
+
     const firstMap = maps.value[0];
     if (firstMap) {
       selectedMapId.value = firstMap.id;
     }
   } catch (error) {
-    console.error('Erreur lors du chargement des maps:', error);
+    console.error('Error loading data:', error);
   } finally {
     isLoading.value = false;
   }
@@ -49,34 +58,34 @@ function selectMap(mapId: string) {
   selectedMapId.value = mapId;
 }
 
-function selectJoueur(joueurId: string | null) {
-  const newJoueurId = selectedJoueurId.value === joueurId ? null : joueurId;
-  selectedJoueurId.value = newJoueurId;
+function selectPlayer(playerId: string | null) {
+  const newPlayerId = selectedPlayerId.value === playerId ? null : playerId;
+  selectedPlayerId.value = newPlayerId;
 
-  const currentPoste = activePostes.value[0];
-  if (currentPoste && newJoueurId && currentMap.value) {
-    const joueurPostes = currentMap.value.joueurs[newJoueurId] || [];
-    if (!joueurPostes.includes(currentPoste)) {
-      activePostes.value = [];
+  const currentAssignment = activeAssignments.value[0];
+  if (currentAssignment && newPlayerId && currentMap.value) {
+    const playerAssignmentIds = getPlayerAssignments(currentMap.value, newPlayerId);
+    if (!playerAssignmentIds.includes(currentAssignment)) {
+      activeAssignments.value = [];
     }
   }
 }
 
-function togglePoste(posteId: string) {
-  if (activePostes.value.includes(posteId)) {
-    activePostes.value = [];
+function toggleAssignment(assignmentId: number) {
+  if (activeAssignments.value.includes(assignmentId)) {
+    activeAssignments.value = [];
   } else {
-    activePostes.value = [posteId];
+    activeAssignments.value = [assignmentId];
   }
 }
 
 function resetSelection() {
-  selectedJoueurId.value = null;
-  activePostes.value = [];
+  selectedPlayerId.value = null;
+  activeAssignments.value = [];
 }
 
 watch(selectedMapId, () => {
-  activePostes.value = [];
+  activeAssignments.value = [];
 });
 
 function toggleEditMode() {
@@ -93,46 +102,84 @@ function handleMapUpdate(updatedMap: MapConfig) {
   }
 }
 
-function handlePlayerPosteChanged(playerId: string, posteId: string, associated: boolean) {
-  if (!associated && activePostes.value.includes(posteId) && selectedJoueurId.value === playerId) {
-    activePostes.value = [];
+function handlePlayerAssignmentChanged(playerId: string, assignmentId: number, associated: boolean) {
+  if (!associated && activeAssignments.value.includes(assignmentId) && selectedPlayerId.value === playerId) {
+    activeAssignments.value = [];
   }
 }
 
 async function saveChanges() {
+  console.log('[PLANNER] Save triggered');
+
   const mapToSave = editableMaps.value.find(m => m.id === selectedMapId.value);
-  if (!mapToSave) return;
+  if (!mapToSave) {
+    console.error('[PLANNER] No map to save');
+    return;
+  }
+  console.log('[PLANNER] Saving map:', mapToSave.id, mapToSave.name);
+
+  const token = localStorage.getItem('token');
+  if (!token) {
+    console.error('[PLANNER] No auth token');
+    alert('❌ Non authentifié');
+    return;
+  }
+  console.log('[PLANNER] Auth token present');
 
   try {
-    const response = await fetch(`http://localhost:3001/api/maps-dev/${mapToSave.id}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(mapToSave),
+    // Get the first game plan ID for this map
+    const gamePlanId = mapToSave.gamePlans?.[0]?.id;
+    console.log('[PLANNER] Game plan ID:', gamePlanId);
+
+    if (!gamePlanId) {
+      console.error('[PLANNER] No game plan found');
+      alert('❌ Aucun plan de jeu trouvé pour cette map');
+      return;
+    }
+
+    const payload = {
+      assignments: mapToSave.assignments,
+      players: mapToSave.players
+    };
+    console.log('[PLANNER] Sending payload:', payload);
+
+    const response = await fetch(`/api/plans/${gamePlanId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(payload),
     });
 
-    const result = await response.json();
+    console.log('[PLANNER] Response status:', response.status);
 
-    if (result.success) {
-      const index = maps.value.findIndex(m => m.id === mapToSave.id);
-      if (index !== -1) {
-        maps.value[index] = JSON.parse(JSON.stringify(mapToSave));
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[PLANNER] Server error response:', errorText);
+      let error;
+      try {
+        error = JSON.parse(errorText);
+      } catch {
+        error = { error: errorText };
       }
-      alert(`✅ Map "${mapToSave.nom}" sauvegardée !`);
-    } else {
-      throw new Error(result.message);
+      throw new Error(error.error || `Erreur serveur (${response.status})`);
     }
-  } catch (error) {
-    console.error('Erreur:', error);
-    const json = JSON.stringify(mapToSave, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${mapToSave.id}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
 
-    alert(`⚠️ Serveur non disponible. Le fichier a été téléchargé.`);
+    const result = await response.json();
+    console.log('[PLANNER] Save success, result:', result);
+
+    // Update local maps with saved data
+    const index = maps.value.findIndex(m => m.id === mapToSave.id);
+    if (index !== -1) {
+      maps.value[index] = JSON.parse(JSON.stringify(mapToSave));
+    }
+
+    console.log('[PLANNER] Map saved successfully:', mapToSave.id);
+    alert(`✅ Map "${mapToSave.name}" sauvegardée !`);
+  } catch (error) {
+    console.error('[PLANNER] Save error:', error);
+    alert(`❌ Erreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
   }
 }
 
@@ -144,19 +191,19 @@ function cancelEdit() {
 
 <template>
   <div class="planner-page">
-    <!-- Toolbar injectée dans la section dynamique de la TopBar -->
+    <!-- Toolbar injected into TopBar dynamic section -->
     <Teleport to="#topbar-dynamic-content">
       <PlannerToolbar
-        :joueurs="joueurs"
-        :selectedJoueurId="selectedJoueurId"
+        :players="players"
+        :selectedPlayerId="selectedPlayerId"
         :map="currentMap"
         :maps="maps"
-        :activePostes="activePostes"
+        :activeAssignments="activeAssignments"
         :editMode="editMode"
         :isLoading="isLoading"
         :canEdit="canEdit"
-        @select-joueur="selectJoueur"
-        @toggle-poste="togglePoste"
+        @select-player="selectPlayer"
+        @toggle-assignment="toggleAssignment"
         @toggle-edit="toggleEditMode"
         @save="saveChanges"
         @cancel="cancelEdit"
@@ -164,7 +211,7 @@ function cancelEdit() {
       />
     </Teleport>
 
-    <!-- État de chargement -->
+    <!-- Loading state -->
     <div v-if="isLoading" class="loading">
       Chargement des maps...
     </div>
@@ -180,12 +227,12 @@ function cancelEdit() {
         <MapViewer
           v-if="currentMap"
           :map="currentMap"
-          :joueurs="joueurs"
-          :selectedJoueurId="selectedJoueurId"
-          :activePostes="activePostes"
+          :players="players"
+          :selectedPlayerId="selectedPlayerId"
+          :activeAssignments="activeAssignments"
           :editMode="editMode"
           @update:map="handleMapUpdate"
-          @player-poste-changed="handlePlayerPosteChanged"
+          @player-assignment-changed="handlePlayerAssignmentChanged"
         />
 
         <div v-else class="no-map">

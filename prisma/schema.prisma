@@ -11,16 +11,21 @@ enum Role {
   PLAYER
 }
 
+// ===========================================
+// User & Authentication
+// ===========================================
+
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
   password  String
-  nom       String
+  name      String
   role      Role     @default(PLAYER)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  sessions Session[]
+  sessions        Session[]
+  gamePlanPlayers GamePlanPlayer[]
 }
 
 model Session {
@@ -35,21 +40,49 @@ model Session {
   @@index([token])
 }
 
-model MapData {
-  id             String   @id
-  nom            String
-  configurations Json
-  joueurs        Json     @default("{}")
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-}
+// ===========================================
+// Maps & Game Plans
+// ===========================================
 
-model GamePlan {
-  id        String   @id @default(cuid())
-  nom       String
-  mapId     String
-  data      Json
+// Map = Template par défaut (structure à copier pour créer un nouveau GamePlan)
+model Map {
+  id        String   @id                    // ex: "artefact", "helios"
+  name      String                          // ex: "Artefact", "Helios"
+  images    Json     @default("[]")         // Array of image paths (for multi-floor maps)
+  template  Json                            // Template par défaut: { assignments: [...] } - sans players
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  gamePlans GamePlan[]
+}
+
+// GamePlan = Implémentation spécifique d'une stratégie sur une map
+model GamePlan {
+  id          String   @id @default(cuid())
+  name        String                          // ex: "Défense standard", "Rush B"
+  mapId       String
+  assignments Json                            // Array of Assignment objects (zones/markers positions)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  map     Map              @relation(fields: [mapId], references: [id], onDelete: Cascade)
+  players GamePlanPlayer[]
+
+  @@index([mapId])
+}
+
+// GamePlanPlayer = Liaison entre un utilisateur et ses assignments dans un game plan
+model GamePlanPlayer {
+  id            String   @id @default(cuid())
+  gamePlanId    String
+  userId        String
+  assignmentIds Int[]    // Array of assignment IDs the player can play (e.g. [1, 3])
+
+  gamePlan GamePlan @relation(fields: [gamePlanId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([gamePlanId, userId])
+  @@index([gamePlanId])
+  @@index([userId])
 }
 

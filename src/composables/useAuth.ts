@@ -4,7 +4,7 @@ import { ref, computed } from 'vue';
 export interface User {
   id: string;
   email: string;
-  nom: string;
+  name: string;
   role: 'ADMIN' | 'PLAYER';
 }
 
@@ -16,26 +16,14 @@ export interface Permissions {
   canViewCalendar: boolean;
 }
 
-// État global de l'utilisateur
+// Global state
 const user = ref<User | null>(null);
 const token = ref<string | null>(null);
+const isLoading = ref(true);
+const isInitialized = ref(false);
+let initPromise: Promise<void> | null = null;
 
-// Initialiser depuis le localStorage
-function initAuth() {
-  const storedToken = localStorage.getItem('token');
-  const storedUser = localStorage.getItem('user');
-
-  if (storedToken && storedUser) {
-    try {
-      token.value = storedToken;
-      user.value = JSON.parse(storedUser);
-    } catch {
-      clearAuth();
-    }
-  }
-}
-
-// Nettoyer l'authentification
+// Clear authentication
 function clearAuth() {
   token.value = null;
   user.value = null;
@@ -43,50 +31,92 @@ function clearAuth() {
   localStorage.removeItem('user');
 }
 
-// Définir l'utilisateur après login
+// Set user after login
 function setAuth(newToken: string, newUser: User) {
   token.value = newToken;
   user.value = newUser;
+  isInitialized.value = true;
+  isLoading.value = false;
   localStorage.setItem('token', newToken);
   localStorage.setItem('user', JSON.stringify(newUser));
 }
 
-// Permissions basées sur le rôle
+// Initialize and validate auth
+function initAuth(): Promise<void> {
+  // Return existing promise if already initializing
+  if (initPromise) return initPromise;
+
+  // Already done
+  if (isInitialized.value) {
+    return Promise.resolve();
+  }
+
+  initPromise = doInitAuth();
+  return initPromise;
+}
+
+async function doInitAuth(): Promise<void> {
+  isLoading.value = true;
+
+  const storedToken = localStorage.getItem('token');
+
+  if (!storedToken) {
+    isLoading.value = false;
+    isInitialized.value = true;
+    return;
+  }
+
+  // Validate token with server
+  try {
+    const response = await fetch('/api/auth/me', {
+      headers: { 'Authorization': `Bearer ${storedToken}` }
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      token.value = storedToken;
+      user.value = data.user;
+      localStorage.setItem('user', JSON.stringify(data.user));
+    } else {
+      // Token invalid
+      clearAuth();
+    }
+  } catch {
+    // Server error
+    clearAuth();
+  }
+
+  isLoading.value = false;
+  isInitialized.value = true;
+}
+
+// Role-based permissions
 const permissions = computed<Permissions>(() => {
   const role = user.value?.role;
 
   return {
-    // Seuls les admins peuvent éditer
     canEdit: role === 'ADMIN',
-    // Seuls les admins peuvent gérer les utilisateurs
     canManageUsers: role === 'ADMIN',
-    // Tout le monde peut exporter
     canExportPlans: role === 'ADMIN' || role === 'PLAYER',
-    // Tout le monde peut voir le planner
     canViewPlanner: role === 'ADMIN' || role === 'PLAYER',
-    // Tout le monde peut voir le calendrier
     canViewCalendar: role === 'ADMIN' || role === 'PLAYER',
   };
 });
 
-// Composable exporté
+// Exported composable
 export function useAuth() {
-  // Initialiser au premier appel
-  if (!user.value && !token.value) {
-    initAuth();
-  }
-
   const isAuthenticated = computed(() => !!(token.value && user.value));
   const isAdmin = computed(() => user.value?.role === 'ADMIN');
   const isPlayer = computed(() => user.value?.role === 'PLAYER');
 
   return {
-    // État
+    // State
     user: computed(() => user.value),
     token: computed(() => token.value),
     isAuthenticated,
     isAdmin,
     isPlayer,
+    isLoading: computed(() => isLoading.value),
     permissions,
 
     // Actions

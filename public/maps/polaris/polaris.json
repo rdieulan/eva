@@ -1,13 +1,13 @@
 {
   "id": "polaris",
-  "nom": "Polaris",
+  "name": "Polaris",
   "images": [
     "/maps/polaris/Polaris.png"
   ],
-  "postes": [
+  "assignments": [
     {
-      "id": "poste1",
-      "nom": "Grille",
+      "id": 1,
+      "name": "Grille",
       "x": 41.2,
       "y": 38.2,
       "zone": {
@@ -38,8 +38,8 @@
       }
     },
     {
-      "id": "poste2",
-      "nom": "Back",
+      "id": 2,
+      "name": "Back",
       "x": 33.2,
       "y": 87.6,
       "zone": {
@@ -66,8 +66,8 @@
       }
     },
     {
-      "id": "poste3",
-      "nom": "Mid",
+      "id": 3,
+      "name": "Mid",
       "x": 25,
       "y": 75,
       "zone": {
@@ -94,8 +94,8 @@
       }
     },
     {
-      "id": "poste4",
-      "nom": "Site",
+      "id": 4,
+      "name": "Site",
       "x": 75,
       "y": 75,
       "zone": {
@@ -106,26 +106,26 @@
       }
     }
   ],
-  "joueurs": {
+  "players": {
     "player1": [
-      "poste1",
-      "poste3"
+      1,
+      3
     ],
     "player2": [
-      "poste2",
-      "poste1"
+      2,
+      1
     ],
     "player3": [
-      "poste1",
-      "poste3"
+      1,
+      3
     ],
     "player4": [
-      "poste4",
-      "poste2"
+      4,
+      2
     ],
     "player5": [
-      "poste2",
-      "poste4"
+      2,
+      4
     ]
   }
 }

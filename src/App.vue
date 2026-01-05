@@ -1,41 +1,48 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import TopBar from './components/layout/TopBar.vue';
 import { useAuth } from './composables/useAuth';
 
-const { isAuthenticated, user, initAuth } = useAuth();
+const { isAuthenticated, user, isLoading, initAuth } = useAuth();
 
 const route = useRoute();
 
-// Vérifier l'authentification à chaque changement de route
-watch(() => route.path, () => {
-  initAuth();
-}, { immediate: true });
+// Initialize auth on mount
+onMounted(async () => {
+  await initAuth();
+});
 
-// Nom de l'utilisateur pour la TopBar
-const userName = computed(() => user.value?.nom);
+// User name for the TopBar
+const userName = computed(() => user.value?.name);
 
-// Détermine si on doit afficher la TopBar (pas sur la page login)
+// Determine if TopBar should be displayed (not on login page)
 const showTopBar = computed(() => route.name !== 'login');
 </script>
 
 <template>
   <div class="app">
-    <!-- TopBar globale avec section dynamique -->
-    <TopBar
-      v-if="showTopBar"
-      :isAuthenticated="isAuthenticated"
-      :userName="userName"
-    >
-      <!-- Le contenu dynamique sera injecté par chaque page via teleport -->
-      <div id="topbar-dynamic-content" class="dynamic-content"></div>
-    </TopBar>
+    <!-- Loading state while checking auth -->
+    <div v-if="isLoading" class="loading-screen">
+      <div class="spinner"></div>
+    </div>
 
-    <!-- Contenu des pages -->
-    <main class="page-content" :class="{ 'no-topbar': !showTopBar }">
-      <RouterView />
-    </main>
+    <template v-else>
+      <!-- Global TopBar with dynamic section -->
+      <TopBar
+        v-if="showTopBar"
+        :isAuthenticated="isAuthenticated"
+        :userName="userName"
+      >
+        <!-- Dynamic content will be injected by each page via teleport -->
+        <div id="topbar-dynamic-content" class="dynamic-content"></div>
+      </TopBar>
+
+      <!-- Page content -->
+      <main class="page-content" :class="{ 'no-topbar': !showTopBar }">
+        <RouterView />
+      </main>
+    </template>
   </div>
 </template>
 
@@ -47,6 +54,28 @@ const showTopBar = computed(() => route.name !== 'login');
   width: 100vw;
   background: #0f0f1a;
   overflow: hidden;
+}
+
+.loading-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  width: 100vw;
+  background: #0f0f1a;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #333;
+  border-top-color: #4ecdc4;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .dynamic-content {

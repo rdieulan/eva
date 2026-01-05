@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { posteColors, checkMapBalance } from '../../data/config';
-import type { MapConfig, Joueur } from '../../types';
+import { assignmentColors, checkMapBalance, getPlayerAssignments, getAssignmentPlayers } from '../../data/config';
+import type { MapConfig, Player } from '../../types';
 import RotationCalculator from '../RotationCalculator.vue';
 
 const props = defineProps<{
-  joueurs: Joueur[];
-  selectedJoueurId: string | null;
+  players: Player[];
+  selectedPlayerId: string | null;
   map: MapConfig | null;
   maps: MapConfig[];
-  activePostes: string[];
+  activeAssignments: number[];
   editMode: boolean;
   isLoading: boolean;
   canEdit: boolean;
@@ -18,28 +18,28 @@ const props = defineProps<{
 const showCalculator = ref(false);
 
 const emit = defineEmits<{
-  'select-joueur': [joueurId: string | null];
-  'toggle-poste': [posteId: string];
+  'select-player': [playerId: string | null];
+  'toggle-assignment': [assignmentId: number];
   'toggle-edit': [];
   'save': [];
   'cancel': [];
   'reset': [];
 }>();
 
-// Liste des postes disponibles (depuis la map actuelle ou fallback)
-const postes = computed(() => {
-  if (props.map && props.map.postes.length > 0) {
-    return props.map.postes.map(p => ({ id: p.id, nom: p.nom }));
+// List of available assignments (from current map or fallback)
+const assignments = computed(() => {
+  if (props.map && props.map.assignments.length > 0) {
+    return props.map.assignments.map(p => ({ id: p.id, name: p.name }));
   }
   return [
-    { id: 'poste1', nom: 'Poste 1' },
-    { id: 'poste2', nom: 'Poste 2' },
-    { id: 'poste3', nom: 'Poste 3' },
-    { id: 'poste4', nom: 'Poste 4' },
+    { id: 1, name: 'Poste 1' },
+    { id: 2, name: 'Poste 2' },
+    { id: 3, name: 'Poste 3' },
+    { id: 4, name: 'Poste 4' },
   ];
 });
 
-// Système de vérification de l'équilibre de l'effectif
+// Balance check system
 interface BalanceCheck {
   isBalanced: boolean;
   messages: string[];
@@ -62,48 +62,48 @@ const balanceCheck = computed<BalanceCheck>(() => {
   };
 });
 
-// Toggle joueur
-function toggleJoueur(joueurId: string) {
-  emit('select-joueur', joueurId);
+// Toggle player
+function togglePlayer(playerId: string) {
+  emit('select-player', playerId);
 }
 
-// Vérifie si un poste est associé au joueur sélectionné
-function isPosteAssociated(posteId: string): boolean {
-  if (!props.selectedJoueurId || !props.map) return true;
-  const joueurPostes = props.map.joueurs[props.selectedJoueurId] || [];
-  return joueurPostes.includes(posteId);
+// Check if an assignment is associated with selected player
+function isAssignmentAssociated(assignmentId: number): boolean {
+  if (!props.selectedPlayerId || !props.map) return true;
+  const playerAssignments = getPlayerAssignments(props.map, props.selectedPlayerId);
+  return playerAssignments.includes(assignmentId);
 }
 
-// Vérifie si un poste est actif
-function isPosteActive(posteId: string): boolean {
-  return props.activePostes.includes(posteId);
+// Check if an assignment is active
+function isAssignmentActive(assignmentId: number): boolean {
+  return props.activeAssignments.includes(assignmentId);
 }
 
-// Toggle poste
-function togglePoste(posteId: string) {
-  if (!isPosteAssociated(posteId)) return;
-  emit('toggle-poste', posteId);
+// Toggle assignment
+function toggleAssignment(assignmentId: number) {
+  if (!isAssignmentAssociated(assignmentId)) return;
+  emit('toggle-assignment', assignmentId);
 }
 
-// Récupère la couleur d'un poste
-function getPosteColor(posteId: string): string {
-  return posteColors[posteId] || '#888';
+// Get assignment color
+function getAssignmentColor(assignmentId: number): string {
+  return assignmentColors[assignmentId] || '#888';
 }
 
-// Vérifie si un joueur est associé au poste sélectionné (pour highlight)
-function isJoueurHighlighted(joueurId: string): boolean {
-  if (props.activePostes.length === 0 || !props.map) return false;
-  const selectedPosteId = props.activePostes[0] as string;
-  const joueurPostes: string[] = props.map.joueurs[joueurId] ?? [];
-  return joueurPostes.includes(selectedPosteId);
+// Check if a player is highlighted (associated to selected assignment)
+function isPlayerHighlighted(playerId: string): boolean {
+  if (props.activeAssignments.length === 0 || !props.map) return false;
+  const selectedAssignmentId = props.activeAssignments[0] as number;
+  const assignedPlayers = getAssignmentPlayers(props.map, selectedAssignmentId);
+  return assignedPlayers.includes(playerId);
 }
 </script>
 
 <template>
   <div class="planner-toolbar">
-    <!-- Section gauche - Messages -->
+    <!-- Left section - Messages -->
     <div class="section-left">
-    <!-- Icône calculateur -->
+    <!-- Calculator icon -->
     <button
       class="btn-calculator"
       @click="showCalculator = true"
@@ -136,44 +136,44 @@ function isJoueurHighlighted(joueurId: string): boolean {
     </div>
   </div>
 
-  <!-- Section centrale - Joueurs + Postes -->
+  <!-- Center section - Players + Assignments -->
   <div class="section-center">
-    <!-- Bloc cartouches -->
+    <!-- Cartouche block -->
     <div class="cartouches-wrapper">
-      <!-- Cartouches joueurs -->
+      <!-- Player cartouches -->
       <nav class="player-bar">
         <button
-          v-for="joueur in joueurs"
-          :key="joueur.id"
+          v-for="player in players"
+          :key="player.id"
           :class="{
-            active: selectedJoueurId === joueur.id,
-            highlighted: isJoueurHighlighted(joueur.id)
+            active: selectedPlayerId === player.id,
+            highlighted: isPlayerHighlighted(player.id)
           }"
-          @click="toggleJoueur(joueur.id)"
+          @click="togglePlayer(player.id)"
         >
-          {{ joueur.nom }}
+          {{ player.name }}
         </button>
       </nav>
 
-      <!-- Cartouches postes -->
-      <nav class="poste-bar">
+      <!-- Assignment cartouches -->
+      <nav class="assignment-bar">
         <button
-          v-for="poste in postes"
-          :key="poste.id"
+          v-for="assignment in assignments"
+          :key="assignment.id"
           :class="{
-            active: isPosteActive(poste.id),
-            disabled: !isPosteAssociated(poste.id)
+            active: isAssignmentActive(assignment.id),
+            disabled: !isAssignmentAssociated(assignment.id)
           }"
-          :style="{ '--poste-color': getPosteColor(poste.id) }"
-          :disabled="!isPosteAssociated(poste.id)"
-          @click="togglePoste(poste.id)"
+          :style="{ '--assignment-color': getAssignmentColor(assignment.id) }"
+          :disabled="!isAssignmentAssociated(assignment.id)"
+          @click="toggleAssignment(assignment.id)"
         >
-          {{ poste.nom }}
+          {{ assignment.name }}
         </button>
       </nav>
     </div>
 
-    <!-- Bloc reset -->
+    <!-- Reset block -->
     <div class="reset-wrapper">
       <button
         class="btn-reset"
@@ -187,7 +187,7 @@ function isJoueurHighlighted(joueurId: string): boolean {
     </div>
   </div>
 
-  <!-- Section droite - Boutons édition (admin seulement) -->
+  <!-- Right section - Edit buttons (admin only) -->
   <div class="section-right">
     <div v-if="canEdit" class="edit-controls">
       <template v-if="editMode">
@@ -206,11 +206,11 @@ function isJoueurHighlighted(joueurId: string): boolean {
   </div>
   </div>
 
-  <!-- Modale calculateur de rotation -->
+  <!-- Rotation calculator modal -->
   <RotationCalculator
     v-if="showCalculator"
     :maps="maps"
-    :joueurs="joueurs"
+    :players="players"
     @close="showCalculator = false"
   />
 </template>
@@ -399,17 +399,17 @@ function isJoueurHighlighted(joueurId: string): boolean {
 }
 
 /* Postes */
-.poste-bar {
+.assignment-bar {
   display: flex;
   gap: 0.5rem;
   justify-content: center;
 }
 
-.poste-bar button {
+.assignment-bar button {
   padding: 0.25rem 0.7rem;
-  border: 2px solid var(--poste-color);
+  border: 2px solid var(--assignment-color);
   background: transparent;
-  color: var(--poste-color);
+  color: var(--assignment-color);
   border-radius: 4px;
   font-weight: 600;
   font-size: 0.75rem;
@@ -417,23 +417,23 @@ function isJoueurHighlighted(joueurId: string): boolean {
   transition: all 0.2s;
 }
 
-.poste-bar button:hover:not(.disabled) {
-  background: color-mix(in srgb, var(--poste-color) 20%, transparent);
+.assignment-bar button:hover:not(.disabled) {
+  background: color-mix(in srgb, var(--assignment-color) 20%, transparent);
 }
 
-.poste-bar button.active {
-  background: color-mix(in srgb, var(--poste-color) 30%, transparent);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--poste-color) 40%, transparent);
+.assignment-bar button.active {
+  background: color-mix(in srgb, var(--assignment-color) 30%, transparent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--assignment-color) 40%, transparent);
 }
 
-.poste-bar button.disabled {
+.assignment-bar button.disabled {
   border-color: #444;
   color: #555;
   cursor: not-allowed;
   opacity: 0.5;
 }
 
-/* Boutons édition */
+/* Edit buttons */
 .edit-controls {
   display: flex;
   gap: 0.5rem;

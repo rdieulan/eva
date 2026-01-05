@@ -1,13 +1,13 @@
 {
   "id": "atlantis",
-  "nom": "Atlantis",
+  "name": "Atlantis",
   "images": [
     "/maps/atlantis/Atlantis.png"
   ],
-  "postes": [
+  "assignments": [
     {
-      "id": "poste1",
-      "nom": "Mid/Cap",
+      "id": 1,
+      "name": "Mid/Cap",
       "x": 28.8,
       "y": 41.5,
       "zone": {
@@ -82,8 +82,8 @@
       }
     },
     {
-      "id": "poste2",
-      "nom": "Balcon",
+      "id": 2,
+      "name": "Balcon",
       "x": 37.1,
       "y": 71,
       "zone": {
@@ -110,8 +110,8 @@
       }
     },
     {
-      "id": "poste3",
-      "nom": "Long",
+      "id": 3,
+      "name": "Long",
       "x": 25,
       "y": 75,
       "zone": {
@@ -138,8 +138,8 @@
       }
     },
     {
-      "id": "poste4",
-      "nom": "Site",
+      "id": 4,
+      "name": "Site",
       "x": 75,
       "y": 75,
       "zone": {
@@ -150,26 +150,26 @@
       }
     }
   ],
-  "joueurs": {
+  "players": {
     "player1": [
-      "poste1",
-      "poste3"
+      1,
+      3
     ],
     "player2": [
-      "poste2",
-      "poste4"
+      2,
+      4
     ],
     "player3": [
-      "poste2",
-      "poste3"
+      2,
+      3
     ],
     "player4": [
-      "poste4",
-      "poste1"
+      4,
+      1
     ],
     "player5": [
-      "poste4",
-      "poste1"
+      4,
+      1
     ]
   }
 }

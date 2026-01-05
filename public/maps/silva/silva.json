@@ -1,13 +1,13 @@
 {
   "id": "silva",
-  "nom": "Silva",
+  "name": "Silva",
   "images": [
     "/maps/silva/Silva.png"
   ],
-  "postes": [
+  "assignments": [
     {
-      "id": "poste1",
-      "nom": "Droite",
+      "id": 1,
+      "name": "Droite",
       "x": 29.1,
       "y": 71.9,
       "zone": {
@@ -54,8 +54,8 @@
       }
     },
     {
-      "id": "poste2",
-      "nom": "Gauche",
+      "id": 2,
+      "name": "Gauche",
       "x": 55.7,
       "y": 7.8,
       "zone": {
@@ -98,8 +98,8 @@
       }
     },
     {
-      "id": "poste3",
-      "nom": "Mid",
+      "id": 3,
+      "name": "Mid",
       "x": 25,
       "y": 75,
       "zone": {
@@ -138,8 +138,8 @@
       }
     },
     {
-      "id": "poste4",
-      "nom": "Site",
+      "id": 4,
+      "name": "Site",
       "x": 51.2,
       "y": 48.6,
       "zone": {
@@ -190,26 +190,26 @@
       }
     }
   ],
-  "joueurs": {
+  "players": {
     "player1": [
-      "poste1",
-      "poste3"
+      1,
+      3
     ],
     "player2": [
-      "poste2",
-      "poste4"
+      2,
+      4
     ],
     "player3": [
-      "poste1",
-      "poste3"
+      1,
+      3
     ],
     "player4": [
-      "poste4",
-      "poste2"
+      4,
+      2
     ],
     "player5": [
-      "poste3",
-      "poste4"
+      3,
+      4
     ]
   }
 }

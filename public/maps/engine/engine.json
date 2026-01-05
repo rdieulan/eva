@@ -1,13 +1,13 @@
 {
   "id": "engine",
-  "nom": "Engine",
+  "name": "Engine",
   "images": [
     "/maps/engine/Engine.png"
   ],
-  "postes": [
+  "assignments": [
     {
-      "id": "poste1",
-      "nom": "Mid/Droite",
+      "id": 1,
+      "name": "Mid/Droite",
       "x": 29.5,
       "y": 78.1,
       "zone": {
@@ -58,8 +58,8 @@
       }
     },
     {
-      "id": "poste2",
-      "nom": "Droite",
+      "id": 2,
+      "name": "Droite",
       "x": 38.1,
       "y": 93.4,
       "zone": {
@@ -102,8 +102,8 @@
       }
     },
     {
-      "id": "poste3",
-      "nom": "Mid/Gauche",
+      "id": 3,
+      "name": "Mid/Gauche",
       "x": 33.8,
       "y": 34.8,
       "zone": {
@@ -138,8 +138,8 @@
       }
     },
     {
-      "id": "poste4",
-      "nom": "Gauche",
+      "id": 4,
+      "name": "Gauche",
       "x": 28.2,
       "y": 10.8,
       "zone": {
@@ -178,26 +178,26 @@
       }
     }
   ],
-  "joueurs": {
+  "players": {
     "player1": [
-      "poste1",
-      "poste2"
+      1,
+      2
     ],
     "player2": [
-      "poste2",
-      "poste3"
+      2,
+      3
     ],
     "player3": [
-      "poste1",
-      "poste3"
+      1,
+      3
     ],
     "player4": [
-      "poste3",
-      "poste4"
+      3,
+      4
     ],
     "player5": [
-      "poste2",
-      "poste4"
+      2,
+      4
     ]
   }
 }

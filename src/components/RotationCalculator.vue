@@ -1,30 +1,30 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref, computed } from 'vue';
-import { posteColors, joueurs as allJoueurs } from '../data/config';
-import type { MapConfig, Joueur } from '../types';
+import { assignmentColors, getPlayerAssignments } from '../data/config';
+import type { MapConfig, Player } from '../types';
 
 const props = defineProps<{
   maps: MapConfig[];
-  joueurs: Joueur[];
+  players: Player[];
 }>();
 
 defineEmits<{
   close: [];
 }>();
 
-const selectedAbsentJoueur = ref<string | null>(null);
+const selectedAbsentPlayer = ref<string | null>(null);
 const selectedMaps = ref<string[]>(props.maps.map(m => m.id));
 const results = ref<MapResult[] | null>(null);
 const hasCalculated = ref(false);
 
-// Configurations sélectionnées par map (mapId -> index de la configuration)
+// Selected configurations per map (mapId -> configuration index)
 const selectedConfigurations = ref<Record<string, number>>({});
 
-// Ref pour le contenu exportable
+// Ref for exportable content
 const exportContentRef = ref<HTMLDivElement | null>(null);
 
 interface ConfigurationResult {
-  assignments: Record<string, string>; // posteId -> joueurId
+  assignments: Record<number, string>; // assignmentId -> playerId
 }
 
 interface MapResult {
@@ -34,7 +34,7 @@ interface MapResult {
   errors: string[];
 }
 
-// Sélectionner/désélectionner toutes les maps
+// Select/deselect all maps
 function selectAllMaps() {
   selectedMaps.value = props.maps.map(m => m.id);
 }
@@ -51,17 +51,17 @@ function toggleMap(mapId: string) {
   }
 }
 
-// Algorithme de calcul des configurations valides
+// Algorithm to calculate valid configurations
 function calculateConfigurations() {
-  if (!selectedAbsentJoueur.value) return;
+  if (!selectedAbsentPlayer.value) return;
 
   hasCalculated.value = true;
   results.value = [];
-  selectedConfigurations.value = {}; // Réinitialiser les sélections
+  selectedConfigurations.value = {}; // Reset selections
 
-  const presentJoueurs = allJoueurs
-    .filter(j => j.id !== selectedAbsentJoueur.value)
-    .map(j => j.id);
+  const presentPlayers = props.players
+    .filter(p => p.id !== selectedAbsentPlayer.value)
+    .map(p => p.id);
 
   for (const mapId of selectedMaps.value) {
     const map = props.maps.find(m => m.id === mapId);
@@ -69,28 +69,28 @@ function calculateConfigurations() {
 
     const mapResult: MapResult = {
       mapId: map.id,
-      mapName: map.nom,
+      mapName: map.name,
       configurations: [],
       errors: []
     };
 
-    // Récupérer les postes de la map
-    const postes = map.postes.map(p => p.id);
+    // Get map assignments
+    const assignmentIds = map.assignments.map(p => p.id);
 
-    // Pour chaque joueur présent, quels postes peut-il occuper ?
-    const joueurToPostes: Record<string, string[]> = {};
-    for (const joueurId of presentJoueurs) {
-      joueurToPostes[joueurId] = (map.joueurs[joueurId] || []).filter(p => postes.includes(p));
+    // For each present player, which assignments can they take?
+    const playerToAssignments: Record<string, number[]> = {};
+    for (const playerId of presentPlayers) {
+      playerToAssignments[playerId] = getPlayerAssignments(map, playerId).filter(p => assignmentIds.includes(p));
     }
 
-    // Vérifier les erreurs de base
-    for (const posteId of postes) {
-      const joueursPourPoste = presentJoueurs.filter(j =>
-        joueurToPostes[j]?.includes(posteId)
+    // Check basic errors
+    for (const assignmentId of assignmentIds) {
+      const playersForAssignment = presentPlayers.filter(j =>
+        playerToAssignments[j]?.includes(assignmentId)
       );
-      if (joueursPourPoste.length === 0) {
-        const poste = map.postes.find(p => p.id === posteId);
-        mapResult.errors.push(`${poste?.nom || posteId} ne peut être occupé par aucun joueur présent`);
+      if (playersForAssignment.length === 0) {
+        const assignment = map.assignments.find(p => p.id === assignmentId);
+        mapResult.errors.push(`${assignment?.name || assignmentId} ne peut être occupé par aucun joueur présent`);
       }
     }
 
@@ -99,14 +99,14 @@ function calculateConfigurations() {
       continue;
     }
 
-    // Trouver toutes les configurations valides (backtracking)
-    const configurations = findAllConfigurations(postes, presentJoueurs, joueurToPostes);
+    // Find all valid configurations (backtracking)
+    const configurations = findAllConfigurations(assignmentIds, presentPlayers, playerToAssignments);
 
     if (configurations.length === 0) {
       mapResult.errors.push("Aucune configuration valide trouvée");
     } else {
       mapResult.configurations = configurations;
-      // Sélectionner automatiquement la première configuration
+      // Automatically select first configuration
       selectedConfigurations.value[mapResult.mapId] = 0;
     }
 
@@ -114,76 +114,76 @@ function calculateConfigurations() {
   }
 }
 
-// Algorithme de backtracking pour trouver toutes les configurations
+// Backtracking algorithm to find all configurations
 function findAllConfigurations(
-  postes: string[],
-  joueurs: string[],
-  joueurToPostes: Record<string, string[]>
+  assignmentIds: number[],
+  playerIds: string[],
+  playerToAssignments: Record<string, number[]>
 ): ConfigurationResult[] {
-  const results: ConfigurationResult[] = [];
-  const assignment: Record<string, string> = {};
-  const usedJoueurs = new Set<string>();
+  const configResults: ConfigurationResult[] = [];
+  const assignment: Record<number, string> = {};
+  const usedPlayers = new Set<string>();
 
-  function backtrack(posteIndex: number) {
-    if (posteIndex === postes.length) {
-      // Configuration complète trouvée
-      results.push({ assignments: { ...assignment } });
+  function backtrack(assignmentIndex: number) {
+    if (assignmentIndex === assignmentIds.length) {
+      // Complete configuration found
+      configResults.push({ assignments: { ...assignment } });
       return;
     }
 
-    const posteId = postes[posteIndex];
-    if (!posteId) return;
+    const assignmentId = assignmentIds[assignmentIndex];
+    if (!assignmentId) return;
 
-    for (const joueurId of joueurs) {
-      if (usedJoueurs.has(joueurId)) continue;
-      const joueurPostes = joueurToPostes[joueurId];
-      if (!joueurPostes || !joueurPostes.includes(posteId)) continue;
+    for (const playerId of playerIds) {
+      if (usedPlayers.has(playerId)) continue;
+      const playerAssignments = playerToAssignments[playerId];
+      if (!playerAssignments || !playerAssignments.includes(assignmentId)) continue;
 
-      // Assigner ce joueur à ce poste
-      assignment[posteId] = joueurId;
-      usedJoueurs.add(joueurId);
+      // Assign this player to this assignment
+      assignment[assignmentId] = playerId;
+      usedPlayers.add(playerId);
 
-      backtrack(posteIndex + 1);
+      backtrack(assignmentIndex + 1);
 
       // Backtrack
-      delete assignment[posteId];
-      usedJoueurs.delete(joueurId);
+      delete assignment[assignmentId];
+      usedPlayers.delete(playerId);
     }
   }
 
   backtrack(0);
-  return results;
+  return configResults;
 }
 
-// Helpers pour l'affichage
-function getJoueurNom(joueurId: string): string {
-  return allJoueurs.find(j => j.id === joueurId)?.nom || joueurId;
+// Display helpers
+function getPlayerName(playerId: string): string {
+  return props.players.find(p => p.id === playerId)?.name || playerId;
 }
 
-function getPosteNom(mapId: string, posteId: string): string {
+function getAssignmentName(mapId: string, assignmentId: number): string {
   const map = props.maps.find(m => m.id === mapId);
-  return map?.postes.find(p => p.id === posteId)?.nom || posteId;
+  return map?.assignments.find(p => p.id === assignmentId)?.name || `Assignment #${assignmentId}`;
 }
 
-function getPosteColor(posteId: string): string {
-  return posteColors[posteId] || '#888';
+function getAssignmentColor(assignmentId: number): string {
+  return assignmentColors[assignmentId] || '#888';
 }
 
 const canCalculate = computed(() => {
-  return selectedAbsentJoueur.value && selectedMaps.value.length > 0;
+  return selectedAbsentPlayer.value && selectedMaps.value.length > 0;
 });
 
-// Sélectionne une configuration pour une map
+// Select a configuration for a map
 function selectConfiguration(mapId: string, configIndex: number) {
   selectedConfigurations.value[mapId] = configIndex;
 }
 
-// Vérifie si une configuration est sélectionnée
+// Check if a configuration is selected
 function isConfigSelected(mapId: string, configIndex: number): boolean {
   return selectedConfigurations.value[mapId] === configIndex;
 }
 
-// Vérifie si toutes les maps valides ont une configuration sélectionnée
+// Check if all valid maps have a selected configuration
 const canExport = computed(() => {
   if (!results.value) return false;
   const validMaps = results.value.filter(r => r.errors.length === 0 && r.configurations.length > 0);
@@ -191,7 +191,7 @@ const canExport = computed(() => {
   return validMaps.every(r => selectedConfigurations.value[r.mapId] !== undefined);
 });
 
-// Maps exportables avec leur configuration sélectionnée
+// Exportable maps with their selected configuration
 const exportableMaps = computed(() => {
   if (!results.value) return [];
   return results.value
@@ -202,87 +202,90 @@ const exportableMaps = computed(() => {
       return {
         mapId: r.mapId,
         mapName: r.mapName,
-        assignments: config ? Object.entries(config.assignments).map(([posteId, joueurId]) => ({
-          posteId,
-          joueurId,
-          posteName: getPosteNom(r.mapId, posteId),
-          joueurName: getJoueurNom(joueurId),
-          posteColor: getPosteColor(posteId)
-        })) : []
+        assignments: config ? Object.entries(config.assignments).map(([assignmentIdStr, playerId]) => {
+          const assignmentId = Number(assignmentIdStr);
+          return {
+            assignmentId,
+            playerId,
+            assignmentName: getAssignmentName(r.mapId, assignmentId),
+            playerName: getPlayerName(playerId),
+            assignmentColor: getAssignmentColor(assignmentId)
+          };
+        }) : []
       };
     })
     .filter(m => m.assignments.length > 0);
 });
 
-// Joueurs présents (tous sauf l'absent)
-const presentJoueurs = computed(() => {
-  if (!selectedAbsentJoueur.value) return [];
-  return allJoueurs.filter(j => j.id !== selectedAbsentJoueur.value);
+// Present players (all except absent)
+const presentPlayers = computed(() => {
+  if (!selectedAbsentPlayer.value) return [];
+  return props.players.filter(p => p.id !== selectedAbsentPlayer.value);
 });
 
-// Données du tableau pour l'export (map -> joueur -> poste)
+// Table data for export (map -> player -> assignment)
 const tableData = computed(() => {
   if (!exportableMaps.value.length) return [];
 
   return exportableMaps.value.map(mapData => {
-    const row: Record<string, { posteName: string; posteColor: string } | null> = {};
+    const row: Record<string, { assignmentName: string; assignmentColor: string } | null> = {};
 
-    // Pour chaque joueur présent, trouver son poste sur cette map
-    for (const joueur of presentJoueurs.value) {
-      const assignment = mapData.assignments.find(a => a.joueurId === joueur.id);
-      if (assignment) {
-        row[joueur.id] = {
-          posteName: assignment.posteName,
-          posteColor: assignment.posteColor
+    // For each present player, find their assignment on this map
+    for (const player of presentPlayers.value) {
+      const assign = mapData.assignments.find(a => a.playerId === player.id);
+      if (assign) {
+        row[player.id] = {
+          assignmentName: assign.assignmentName,
+          assignmentColor: assign.assignmentColor
         };
       } else {
-        row[joueur.id] = null;
+        row[player.id] = null;
       }
     }
 
     return {
       mapId: mapData.mapId,
       mapName: mapData.mapName,
-      joueurs: row
+      players: row
     };
   });
 });
 
-// Génère le texte formaté pour l'export (format tableau)
+// Generate formatted text for export (table format)
 function generateExportText(): string {
-  if (!results.value || !selectedAbsentJoueur.value || !tableData.value.length) return '';
+  if (!results.value || !selectedAbsentPlayer.value || !tableData.value.length) return '';
 
-  const absentName = getJoueurNom(selectedAbsentJoueur.value);
-  const joueurs = presentJoueurs.value;
+  const absentName = getPlayerName(selectedAbsentPlayer.value);
+  const playerList = presentPlayers.value;
 
-  // Calculer les largeurs de colonnes
+  // Calculate column widths
   const mapColWidth = Math.max(10, ...tableData.value.map(r => r.mapName.length)) + 2;
-  const joueurColWidth = Math.max(8, ...joueurs.map(j => j.nom.length)) + 2;
+  const playerColWidth = Math.max(8, ...playerList.map(j => j.name.length)) + 2;
 
   let text = `\n  PLAN DE JEU - ${absentName} absent(e)\n`;
-  text += `${'═'.repeat(mapColWidth + joueurColWidth * joueurs.length + joueurs.length + 1)}\n\n`;
+  text += `${'═'.repeat(mapColWidth + playerColWidth * playerList.length + playerList.length + 1)}\n\n`;
 
-  // En-tête
+  // Header
   text += `  ${'Map'.padEnd(mapColWidth)}`;
-  for (const joueur of joueurs) {
-    text += `│ ${joueur.nom.padEnd(joueurColWidth - 2)} `;
+  for (const player of playerList) {
+    text += `│ ${player.name.padEnd(playerColWidth - 2)} `;
   }
   text += `\n`;
 
-  // Ligne de séparation
+  // Separator line
   text += `  ${'─'.repeat(mapColWidth)}`;
-  for (let i = 0; i < joueurs.length; i++) {
-    text += `┼${'─'.repeat(joueurColWidth)}`;
+  for (let i = 0; i < playerList.length; i++) {
+    text += `┼${'─'.repeat(playerColWidth)}`;
   }
   text += `\n`;
 
-  // Données
+  // Data
   for (const row of tableData.value) {
     text += `  ${row.mapName.padEnd(mapColWidth)}`;
-    for (const joueur of joueurs) {
-      const cell = row.joueurs[joueur.id];
-      const cellText = cell ? cell.posteName : '-';
-      text += `│ ${cellText.padEnd(joueurColWidth - 2)} `;
+    for (const player of playerList) {
+      const cell = row.players[player.id];
+      const cellText = cell ? cell.assignmentName : '-';
+      text += `│ ${cellText.padEnd(playerColWidth - 2)} `;
     }
     text += `\n`;
   }
@@ -292,24 +295,24 @@ function generateExportText(): string {
   return text;
 }
 
-// Export en texte (presse-papier)
+// Export to clipboard
 async function exportToClipboard() {
   const text = generateExportText();
   try {
     await navigator.clipboard.writeText(text);
     alert('Plan de jeu copié dans le presse-papier !');
   } catch (err) {
-    console.error('Erreur de copie:', err);
+    console.error('Copy error:', err);
     alert('Erreur lors de la copie');
   }
 }
 
-// Export en PNG
+// Export to PNG
 async function exportToPng() {
   if (!exportContentRef.value) return;
 
   try {
-    // Import dynamique de html2canvas
+    // Dynamic import of html2canvas
     const html2canvas = (await import('html2canvas')).default;
 
     const canvas = await html2canvas(exportContentRef.value, {
@@ -318,11 +321,11 @@ async function exportToPng() {
     });
 
     const link = document.createElement('a');
-    link.download = `plan-de-jeu-${selectedAbsentJoueur.value}.png`;
+    link.download = `plan-de-jeu-${selectedAbsentPlayer.value}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
   } catch (err) {
-    console.error('Erreur export PNG:', err);
+    console.error('PNG export error:', err);
     alert('Erreur lors de l\'export PNG. Assurez-vous que html2canvas est installé.');
   }
 }
@@ -337,22 +340,22 @@ async function exportToPng() {
       </div>
 
       <div class="modal-body">
-        <!-- Sélection du joueur absent -->
+        <!-- Absent player selection -->
         <div class="form-group">
           <label>Joueur(se) absent(e) :</label>
           <div class="joueur-selector">
             <button
-              v-for="joueur in joueurs"
-              :key="joueur.id"
-              :class="{ active: selectedAbsentJoueur === joueur.id }"
-              @click="selectedAbsentJoueur = joueur.id"
+              v-for="player in players"
+              :key="player.id"
+              :class="{ active: selectedAbsentPlayer === player.id }"
+              @click="selectedAbsentPlayer = player.id"
             >
-              {{ joueur.nom }}
+              {{ player.name }}
             </button>
           </div>
         </div>
 
-        <!-- Sélection des maps -->
+        <!-- Map selection -->
         <div class="form-group">
           <div class="maps-header">
             <label>Maps à analyser :</label>
@@ -373,12 +376,12 @@ async function exportToPng() {
                 :checked="selectedMaps.includes(map.id)"
                 @change="toggleMap(map.id)"
               />
-              {{ map.nom }}
+              {{ map.name }}
             </label>
           </div>
         </div>
 
-        <!-- Bouton calculer -->
+        <!-- Calculate button -->
         <button
           class="btn-calculate"
           :disabled="!canCalculate"
@@ -387,7 +390,7 @@ async function exportToPng() {
           Calculer
         </button>
 
-        <!-- Résultats -->
+        <!-- Results -->
         <div v-if="hasCalculated && results" class="results">
           <div
             v-for="result in results"
@@ -397,7 +400,7 @@ async function exportToPng() {
           >
             <h3>{{ result.mapName }}</h3>
 
-            <!-- Erreurs -->
+            <!-- Errors -->
             <div v-if="result.errors.length > 0" class="result-errors">
               <div v-for="(error, i) in result.errors" :key="i" class="error-row">
                 <span class="error-icon">⚠</span>
@@ -405,7 +408,7 @@ async function exportToPng() {
               </div>
             </div>
 
-            <!-- Configurations valides -->
+            <!-- Valid configurations -->
             <div v-else class="result-configurations">
               <div class="config-count">
                 {{ result.configurations.length }} configuration(s) possible(s)
@@ -422,20 +425,20 @@ async function exportToPng() {
                   {{ isConfigSelected(result.mapId, i) ? '●' : '○' }}
                 </span>
                 <span
-                  v-for="(joueurId, posteId) in config.assignments"
-                  :key="posteId"
+                  v-for="(playerId, assignmentId) in config.assignments"
+                  :key="assignmentId"
                   class="assignment"
                 >
                   <span
-                    class="poste-tag"
+                    class="assignment-tag"
                     :style="{
-                      borderColor: getPosteColor(posteId as string),
-                      color: getPosteColor(posteId as string)
+                      borderColor: getAssignmentColor(Number(assignmentId)),
+                      color: getAssignmentColor(Number(assignmentId))
                     }"
                   >
-                    {{ getPosteNom(result.mapId, posteId as string) }}
+                    {{ getAssignmentName(result.mapId, Number(assignmentId)) }}
                   </span>
-                  <span class="joueur-name">{{ getJoueurNom(joueurId) }}</span>
+                  <span class="joueur-name">{{ getPlayerName(playerId) }}</span>
                 </span>
               </div>
 
@@ -449,28 +452,28 @@ async function exportToPng() {
           </div>
         </div>
 
-<!-- Section Export -->
+<!-- Export Section -->
         <div v-if="hasCalculated && results && canExport" class="export-section">
           <h3>Générer le plan de jeu</h3>
 
-          <!-- Prévisualisation sous forme de tableau -->
+          <!-- Table preview -->
           <div ref="exportContentRef" class="export-preview">
             <div class="export-header">
               <span class="export-title">PLAN DE JEU</span>
-              <span class="export-subtitle">{{ getJoueurNom(selectedAbsentJoueur!) }} absent(e)</span>
+              <span class="export-subtitle">{{ getPlayerName(selectedAbsentPlayer!) }} absent(e)</span>
             </div>
 
-            <!-- Tableau Map / Joueurs -->
+            <!-- Map / Players table -->
             <table class="export-table">
               <thead>
                 <tr>
                   <th class="col-map">Map</th>
                   <th
-                    v-for="joueur in presentJoueurs"
-                    :key="joueur.id"
+                    v-for="player in presentPlayers"
+                    :key="player.id"
                     class="col-joueur"
                   >
-                    {{ joueur.nom }}
+                    {{ player.name }}
                   </th>
                 </tr>
               </thead>
@@ -478,19 +481,19 @@ async function exportToPng() {
                 <tr v-for="row in tableData" :key="row.mapId">
                   <td class="col-map">{{ row.mapName }}</td>
                   <td
-                    v-for="joueur in presentJoueurs"
-                    :key="joueur.id"
+                    v-for="player in presentPlayers"
+                    :key="player.id"
                     class="col-joueur"
                   >
                     <span
-                      v-if="row.joueurs[joueur.id]"
+                      v-if="row.players[player.id]"
                       class="cell-poste"
                       :style="{
-                        color: row.joueurs[joueur.id]?.posteColor,
-                        borderColor: row.joueurs[joueur.id]?.posteColor
+                        color: row.players[player.id]?.assignmentColor,
+                        borderColor: row.players[player.id]?.assignmentColor
                       }"
                     >
-                      {{ row.joueurs[joueur.id]?.posteName }}
+                      {{ row.players[player.id]?.assignmentName }}
                     </span>
                     <span v-else class="cell-empty">-</span>
                   </td>
@@ -499,7 +502,7 @@ async function exportToPng() {
             </table>
           </div>
 
-          <!-- Boutons d'export -->
+          <!-- Export buttons -->
           <div class="export-buttons">
             <button class="btn-export btn-clipboard" @click="exportToClipboard">
               📋 Copier (texte)
@@ -797,7 +800,7 @@ async function exportToPng() {
   gap: 0.3rem;
 }
 
-.poste-tag {
+.assignment-tag {
   padding: 0.15rem 0.4rem;
   border: 1px solid;
   border-radius: 3px;

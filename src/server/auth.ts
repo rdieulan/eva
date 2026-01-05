@@ -17,12 +17,12 @@ export interface AuthRequest extends Request {
   user?: JwtPayload;
 }
 
-// Générer un token JWT
+// Generate a JWT token
 export function generateToken(payload: JwtPayload): string {
   return jwt.sign(payload as object, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN as jwt.SignOptions['expiresIn'] });
 }
 
-// Vérifier un token JWT
+// Verify a JWT token
 export function verifyToken(token: string): JwtPayload | null {
   try {
     return jwt.verify(token, JWT_SECRET) as JwtPayload;
@@ -31,11 +31,12 @@ export function verifyToken(token: string): JwtPayload | null {
   }
 }
 
-// Middleware d'authentification
+// Authentication middleware
 export function authMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.log('[AUTH] Middleware: Missing or invalid Authorization header');
     return res.status(401).json({ error: 'Token manquant' });
   }
 
@@ -43,39 +44,50 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
   const payload = verifyToken(token);
 
   if (!payload) {
+    console.log('[AUTH] Middleware: Invalid token');
     return res.status(401).json({ error: 'Token invalide' });
   }
 
+  console.log('[AUTH] Middleware: Token valid for user', payload.email);
   req.user = payload;
   next();
 }
 
-// Middleware pour vérifier le rôle admin
+// Admin role middleware
 export function adminMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
+  console.log('[AUTH] Admin middleware check - User:', req.user?.email, '- Role:', req.user?.role);
   if (!req.user || req.user.role !== 'ADMIN') {
+    console.log('[AUTH] Admin middleware: Access denied - not an admin');
     return res.status(403).json({ error: 'Accès refusé - Admin requis' });
   }
+  console.log('[AUTH] Admin middleware: Access granted');
   next();
 }
 
-// Handler de login
+// Login handler
 export async function login(req: Request, res: Response) {
+  console.log('[AUTH] POST /api/auth/login');
   const { email, password } = req.body;
 
   if (!email || !password) {
+    console.log('[AUTH] Login failed: missing email or password');
     return res.status(400).json({ error: 'Email et mot de passe requis' });
   }
+
+  console.log('[AUTH] Login attempt for:', email);
 
   try {
     const user = await prisma.user.findUnique({ where: { email } });
 
     if (!user) {
+      console.log('[AUTH] Login failed: user not found');
       return res.status(401).json({ error: 'Identifiants invalides' });
     }
 
     const validPassword = await bcrypt.compare(password, user.password);
 
     if (!validPassword) {
+      console.log('[AUTH] Login failed: invalid password');
       return res.status(401).json({ error: 'Identifiants invalides' });
     }
 
@@ -85,7 +97,7 @@ export async function login(req: Request, res: Response) {
       role: user.role,
     });
 
-    // Sauvegarder la session
+    // Save session
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
@@ -97,12 +109,14 @@ export async function login(req: Request, res: Response) {
       },
     });
 
+    console.log('[AUTH] Login success:', user.email, '- Role:', user.role);
+
     res.json({
       token,
       user: {
         id: user.id,
         email: user.email,
-        nom: user.nom,
+        name: user.name,
         role: user.role,
       },
     });
@@ -112,28 +126,37 @@ export async function login(req: Request, res: Response) {
   }
 }
 
-// Handler de logout
+// Logout handler
 export async function logout(req: AuthRequest, res: Response) {
+  console.log('[AUTH] POST /api/auth/logout');
   const authHeader = req.headers.authorization;
 
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.substring(7);
 
     try {
-      await prisma.session.deleteMany({ where: { token } });
+      const result = await prisma.session.deleteMany({ where: { token } });
+      console.log('[AUTH] Logout success: deleted', result.count, 'session(s)');
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('[AUTH] Logout error:', error);
     }
+  } else {
+    console.log('[AUTH] Logout: no token provided');
   }
 
   res.json({ message: 'Déconnecté' });
 }
 
-// Handler pour obtenir l'utilisateur courant
+// Get current user handler
 export async function getCurrentUser(req: AuthRequest, res: Response) {
+  console.log('[AUTH] GET /api/auth/me called');
+
   if (!req.user) {
+    console.log('[AUTH] No user in request');
     return res.status(401).json({ error: 'Non authentifié' });
   }
+
+  console.log('[AUTH] Looking for user:', req.user.userId);
 
   try {
     const user = await prisma.user.findUnique({
@@ -141,35 +164,43 @@ export async function getCurrentUser(req: AuthRequest, res: Response) {
       select: {
         id: true,
         email: true,
-        nom: true,
+        name: true,
         role: true,
       },
     });
 
     if (!user) {
+      console.log('[AUTH] User not found in DB');
       return res.status(404).json({ error: 'Utilisateur non trouvé' });
     }
 
-    res.json(user);
+    console.log('[AUTH] User found:', user.name);
+    res.json({ user });
   } catch (error) {
-    console.error('Get current user error:', error);
+    console.error('[AUTH] Get current user error:', error);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 }
 
-// Handler pour changer le mot de passe
+// Change password handler
 export async function changePassword(req: AuthRequest, res: Response) {
+  console.log('[AUTH] POST /api/auth/change-password');
   const { currentPassword, newPassword } = req.body;
 
   if (!req.user) {
+    console.log('[AUTH] Change password failed: not authenticated');
     return res.status(401).json({ error: 'Non authentifié' });
   }
 
+  console.log('[AUTH] Change password attempt for:', req.user.email);
+
   if (!currentPassword || !newPassword) {
+    console.log('[AUTH] Change password failed: missing passwords');
     return res.status(400).json({ error: 'Mots de passe requis' });
   }
 
   if (newPassword.length < 6) {
+    console.log('[AUTH] Change password failed: new password too short');
     return res.status(400).json({ error: 'Le nouveau mot de passe doit faire au moins 6 caractères' });
   }
 
@@ -177,12 +208,14 @@ export async function changePassword(req: AuthRequest, res: Response) {
     const user = await prisma.user.findUnique({ where: { id: req.user.userId } });
 
     if (!user) {
+      console.log('[AUTH] Change password failed: user not found');
       return res.status(404).json({ error: 'Utilisateur non trouvé' });
     }
 
     const validPassword = await bcrypt.compare(currentPassword, user.password);
 
     if (!validPassword) {
+      console.log('[AUTH] Change password failed: invalid current password');
       return res.status(401).json({ error: 'Mot de passe actuel incorrect' });
     }
 
@@ -193,10 +226,10 @@ export async function changePassword(req: AuthRequest, res: Response) {
       data: { password: hashedPassword },
     });
 
+    console.log('[AUTH] Change password success for:', req.user.email);
     res.json({ message: 'Mot de passe modifié' });
   } catch (error) {
-    console.error('Change password error:', error);
+    console.error('[AUTH] Change password error:', error);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 }
-

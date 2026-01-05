@@ -1,13 +1,13 @@
 {
   "id": "horizon",
-  "nom": "Horizon",
+  "name": "Horizon",
   "images": [
     "/maps/horizon/Horizon.png"
   ],
-  "postes": [
+  "assignments": [
     {
-      "id": "poste1",
-      "nom": "Exté",
+      "id": 1,
+      "name": "Exté",
       "x": 24.1,
       "y": 42.4,
       "zone": {
@@ -50,8 +50,8 @@
       }
     },
     {
-      "id": "poste2",
-      "nom": "Inté",
+      "id": 2,
+      "name": "Inté",
       "x": 44.5,
       "y": 19.4,
       "zone": {
@@ -78,8 +78,8 @@
       }
     },
     {
-      "id": "poste3",
-      "nom": "Bar",
+      "id": 3,
+      "name": "Bar",
       "x": 25,
       "y": 75,
       "zone": {
@@ -110,8 +110,8 @@
       }
     },
     {
-      "id": "poste4",
-      "nom": "Cap",
+      "id": 4,
+      "name": "Cap",
       "x": 49.9,
       "y": 61.7,
       "zone": {
@@ -166,26 +166,26 @@
       }
     }
   ],
-  "joueurs": {
+  "players": {
     "player1": [
-      "poste1",
-      "poste3"
+      1,
+      3
     ],
     "player2": [
-      "poste2",
-      "poste4"
+      2,
+      4
     ],
     "player3": [
-      "poste3",
-      "poste1"
+      3,
+      1
     ],
     "player4": [
-      "poste4",
-      "poste2"
+      4,
+      2
     ],
     "player5": [
-      "poste2",
-      "poste3"
+      2,
+      3
     ]
   }
 }

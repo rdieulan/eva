@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuth } from '../composables/useAuth';
@@ -6,7 +6,7 @@ import { useAuth } from '../composables/useAuth';
 const router = useRouter();
 const { user, token, clearAuth } = useAuth();
 
-// Changement de mot de passe
+// Password change
 const currentPassword = ref('');
 const newPassword = ref('');
 const confirmPassword = ref('');
@@ -14,7 +14,7 @@ const passwordError = ref('');
 const passwordSuccess = ref('');
 const isChangingPassword = ref(false);
 
-// Changer le mot de passe
+// Change password
 async function handleChangePassword() {
   passwordError.value = '';
   passwordSuccess.value = '';
@@ -66,7 +66,7 @@ async function handleChangePassword() {
   }
 }
 
-// Déconnexion
+// Logout
 async function handleLogout() {
   try {
     await fetch('/api/auth/logout', {
@@ -76,7 +76,7 @@ async function handleLogout() {
       },
     });
   } catch {
-    // Ignorer les erreurs de logout côté serveur
+    // Ignore server-side logout errors
   } finally {
     clearAuth();
     router.push('/login');
@@ -89,13 +89,13 @@ async function handleLogout() {
     <div class="profile-container">
       <h1>Mon Profil</h1>
 
-      <!-- Informations utilisateur -->
+      <!-- User information -->
       <section class="profile-section" v-if="user">
         <h2>Informations</h2>
         <div class="info-grid">
           <div class="info-item">
             <label>Nom</label>
-            <span>{{ user.nom }}</span>
+            <span>{{ user.name }}</span>
           </div>
           <div class="info-item">
             <label>Email</label>
@@ -108,7 +108,7 @@ async function handleLogout() {
         </div>
       </section>
 
-      <!-- Changement de mot de passe -->
+      <!-- Password change -->
       <section class="profile-section">
         <h2>Changer le mot de passe</h2>
         <form @submit.prevent="handleChangePassword" class="password-form">
@@ -159,7 +159,7 @@ async function handleLogout() {
         </form>
       </section>
 
-      <!-- Déconnexion -->
+      <!-- Logout -->
       <section class="profile-section">
         <h2>Session</h2>
         <button class="btn-logout" @click="handleLogout">
@@ -212,7 +212,7 @@ h1 {
   font-weight: 600;
 }
 
-/* Informations utilisateur */
+/* User information */
 .info-grid {
   display: flex;
   flex-direction: column;
@@ -253,7 +253,7 @@ h1 {
   color: #9a9ada;
 }
 
-/* Formulaire mot de passe */
+/* Password form */
 .password-form {
   display: flex;
   flex-direction: column;
@@ -330,7 +330,7 @@ h1 {
   cursor: not-allowed;
 }
 
-/* Bouton déconnexion */
+/* Logout button */
 .btn-logout {
   display: flex;
   align-items: center;

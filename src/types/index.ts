@@ -1,12 +1,12 @@
-// Types pour EVA
+// Types for EVA
 
-// Point d'un polygone
+// Polygon point
 export interface Point {
   x: number;
   y: number;
 }
 
-// Zone peut être un rectangle (legacy), un polygone, ou plusieurs polygones (multi-zone)
+// Zone can be a rectangle (legacy), a polygon, or multiple polygons (multi-zone)
 export interface ZoneRect {
   x1: number;
   y1: number;
@@ -24,17 +24,17 @@ export interface ZoneMulti {
 
 export type Zone = ZoneRect | ZonePolygon | ZoneMulti;
 
-// Helper pour vérifier si une zone est un polygone simple
+// Helper to check if a zone is a simple polygon
 export function isZonePolygon(zone: Zone): zone is ZonePolygon {
   return 'points' in zone;
 }
 
-// Helper pour vérifier si une zone est multi-polygones
+// Helper to check if a zone is multi-polygon
 export function isZoneMulti(zone: Zone): zone is ZoneMulti {
   return 'polygons' in zone;
 }
 
-// Helper pour convertir un rectangle en polygone
+// Helper to convert a rectangle to polygon
 export function rectToPolygon(zone: ZoneRect): ZonePolygon {
   return {
     points: [
@@ -46,7 +46,7 @@ export function rectToPolygon(zone: ZoneRect): ZonePolygon {
   };
 }
 
-// Helper pour obtenir tous les polygones d'une zone
+// Helper to get all polygons from a zone
 export function getZonePolygons(zone: Zone): Point[][] {
   if (isZoneMulti(zone)) {
     return zone.polygons;
@@ -58,37 +58,43 @@ export function getZonePolygons(zone: Zone): Point[][] {
   return [rectToPolygon(zone).points];
 }
 
-// Helper pour obtenir les points d'une zone (premier polygone uniquement - legacy)
+// Helper to get points from a zone (first polygon only - legacy)
 export function getZonePoints(zone: Zone): Point[] {
   const polygons = getZonePolygons(zone);
   return polygons[0] || [];
 }
 
-export interface Poste {
-  id: string;
-  nom: string;
+export interface Assignment {
+  id: number;
+  name: string;
   x: number;
   y: number;
   zone: Zone;
-  etage?: number; // Pour les maps multi-étages (0, 1, etc.)
+  floor?: number; // For multi-floor maps (0, 1, etc.)
+}
+
+// Player assignment in a game plan (links userId to assignment IDs)
+export interface PlayerAssignment {
+  userId: string;
+  assignmentIds: number[];
 }
 
 export interface MapConfig {
   id: string;
-  nom: string;
-  images: string[]; // Support pour plusieurs images (étages)
-  postes: Poste[];
-  joueurs: Record<string, string[]>;
+  name: string;
+  images: string[]; // Support for multiple images (floors)
+  assignments: Assignment[];
+  players: PlayerAssignment[];
+  gamePlans?: { id: string; name: string }[]; // List of available game plans
 }
 
-export interface Joueur {
-  id: string;
-  nom: string;
+export interface Player {
+  id: string;   // cuid from database
+  name: string;
 }
 
 export interface AppState {
   selectedMap: string | null;
-  selectedJoueur: string | null;
-  selectedEtage: number;
+  selectedPlayer: string | null;
+  selectedFloor: number;
 }
-

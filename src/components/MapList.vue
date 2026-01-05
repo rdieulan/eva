@@ -30,7 +30,7 @@ function isMapBalanced(map: MapConfig): boolean {
         }"
         @click="emit('select', map.id)"
       >
-        {{ map.nom }}
+        {{ map.name }}
       </li>
     </ul>
   </aside>

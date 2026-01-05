@@ -1,134 +1,167 @@
-import type { Joueur, MapConfig } from '../types';
+import type { Player, MapConfig } from '../types';
 
-// Liste des IDs de maps disponibles
-export const mapIds = [
-  'artefact',
-  'atlantis',
-  'ceres',
-  'engine',
-  'helios',
-  'horizon',
-  'lunar',
-  'outlaw',
-  'polaris',
-  'silva',
-  'thecliff',
-];
+// =============================================================================
+// CONFIGURATION
+// =============================================================================
 
-// Charge une map depuis son fichier JSON
+// Assignment colors (fixed for all maps, by assignment ID)
+export const assignmentColors: Record<number, string> = {
+  1: '#ff6b6b',
+  2: '#4ecdc4',
+  3: '#ffe66d',
+  4: '#a66cff',
+};
+
+// =============================================================================
+// DATA LOADING (from API)
+// =============================================================================
+
+// Cache for players (loaded once from API)
+let cachedPlayers: Player[] | null = null;
+
+// Load players from API
+export async function loadPlayers(): Promise<Player[]> {
+  if (cachedPlayers) {
+    console.log('[CONFIG] Using cached players:', cachedPlayers.length);
+    return cachedPlayers;
+  }
+
+  console.log('[CONFIG] Loading players from API...');
+  const response = await fetch('/api/players');
+  if (!response.ok) {
+    throw new Error('Failed to load players from API');
+  }
+  cachedPlayers = await response.json();
+  console.log('[CONFIG] Loaded players:', cachedPlayers);
+  return cachedPlayers!;
+}
+
+// Get cached players (must call loadPlayers first)
+export function getPlayers(): Player[] {
+  if (!cachedPlayers) {
+    console.error('[CONFIG] getPlayers called before loadPlayers!');
+    throw new Error('Players not loaded. Call loadPlayers() first.');
+  }
+  return cachedPlayers;
+}
+
+// Load all maps from API
+export async function loadAllMaps(): Promise<MapConfig[]> {
+  console.log('[CONFIG] Loading maps from API...');
+  const response = await fetch('/api/maps');
+  if (!response.ok) {
+    throw new Error('Failed to load maps from API');
+  }
+  const maps = await response.json();
+  console.log('[CONFIG] Loaded maps:', maps.length, '- First map players:', maps[0]?.players);
+  return maps;
+}
+
+// Load a single map from API
 export async function loadMap(mapId: string): Promise<MapConfig> {
-  const response = await fetch(`/maps/${mapId}/${mapId}.json`);
+  const response = await fetch(`/api/maps/${mapId}`);
   if (!response.ok) {
     throw new Error(`Failed to load map: ${mapId}`);
   }
   return response.json();
 }
 
-// Charge toutes les maps
-export async function loadAllMaps(): Promise<MapConfig[]> {
-  const maps = await Promise.all(mapIds.map(loadMap));
-  return maps;
+// =============================================================================
+// HELPERS
+// =============================================================================
+
+// Get assignment IDs for a specific user on a map
+export function getPlayerAssignments(map: MapConfig, userId: string): number[] {
+  const playerAssignment = map.players.find(p => p.userId === userId);
+  return playerAssignment?.assignmentIds || [];
 }
 
-// Couleurs des postes (fixes pour toutes les maps)
-export const posteColors: Record<string, string> = {
-  poste1: '#ff6b6b',
-  poste2: '#4ecdc4',
-  poste3: '#ffe66d',
-  poste4: '#a66cff',
-};
+// Get user IDs assigned to a specific assignment on a map
+export function getAssignmentPlayers(map: MapConfig, assignmentId: number): string[] {
+  return map.players
+    .filter(p => p.assignmentIds.includes(assignmentId))
+    .map(p => p.userId);
+}
 
-// Configuration des joueurs
-export const joueurs: Joueur[] = [
-  { id: 'player1', nom: 'Nyork' },
-  { id: 'player2', nom: 'Kekew' },
-  { id: 'player3', nom: 'Matic' },
-  { id: 'player4', nom: 'Sib' },
-  { id: 'player5', nom: 'Celesta' },
-];
-
-// Vérifier si une map a un effectif équilibré
+// Check if a map has a balanced roster
 export function checkMapBalance(map: MapConfig): { isBalanced: boolean; errors: string[] } {
   const errors: string[] = [];
-  const postes = map.postes.map(p => p.id);
+  const assignmentIds = map.assignments.map(a => a.id);
+  const playerList = getPlayers();
 
-  // Pour chaque poste, trouver les joueurs qui le couvrent
-  const posteToPlayers: Record<string, string[]> = {};
+  // For each assignment, find the players covering it
+  const assignmentToPlayers: Record<number, string[]> = {};
 
-  for (const posteId of postes) {
-    posteToPlayers[posteId] = [];
-    for (const [playerId, playerPostes] of Object.entries(map.joueurs)) {
-      if (playerPostes.includes(posteId)) {
-        posteToPlayers[posteId]?.push(playerId);
-      }
-    }
+  for (const assignmentId of assignmentIds) {
+    assignmentToPlayers[assignmentId] = getAssignmentPlayers(map, assignmentId);
   }
 
-  // Règle 1 : Vérifier si un poste est tenu par moins de 2 joueurs
-  for (const [posteId, players] of Object.entries(posteToPlayers)) {
-    if (players.length < 2) {
-      const poste = map.postes.find(p => p.id === posteId);
-      const posteName = poste?.nom || posteId;
-      if (players.length === 0) {
-        errors.push(`${posteName} n'a aucun joueur`);
+  // Rule 1: Check if an assignment is covered by less than 2 players
+  for (const [assignmentIdStr, userIds] of Object.entries(assignmentToPlayers)) {
+    const assignmentId = Number(assignmentIdStr);
+    if (userIds.length < 2) {
+      const assignment = map.assignments.find(a => a.id === assignmentId);
+      const assignmentName = assignment?.name || String(assignmentId);
+      if (userIds.length === 0) {
+        errors.push(`${assignmentName} n'a aucun joueur`);
       } else {
-        const playerName = joueurs.find(j => j.id === players[0])?.nom || players[0];
-        errors.push(`${posteName} n'a que ${playerName}`);
+        const playerName = playerList.find(p => p.id === userIds[0])?.name || userIds[0];
+        errors.push(`${assignmentName} n'a que ${playerName}`);
       }
     }
   }
 
-  // Règle 2 : Vérifier si un joueur ne couvre qu'un seul poste
-  for (const [playerId, playerPostes] of Object.entries(map.joueurs)) {
-    if (playerPostes.length < 2) {
-      const playerName = joueurs.find(j => j.id === playerId)?.nom || playerId;
-      if (playerPostes.length === 0) {
+  // Rule 2: Check if a player covers only one assignment
+  for (const playerAssignment of map.players) {
+    if (playerAssignment.assignmentIds.length < 2) {
+      const playerName = playerList.find(p => p.id === playerAssignment.userId)?.name || playerAssignment.userId;
+      if (playerAssignment.assignmentIds.length === 0) {
         errors.push(`${playerName} n'a aucun poste`);
       } else {
-        const poste = map.postes.find(p => p.id === playerPostes[0]);
-        const posteName = poste?.nom || playerPostes[0];
-        errors.push(`${playerName} n'a que ${posteName}`);
+        const assignment = map.assignments.find(a => a.id === playerAssignment.assignmentIds[0]);
+        const assignmentName = assignment?.name || String(playerAssignment.assignmentIds[0]);
+        errors.push(`${playerName} n'a que ${assignmentName}`);
       }
     }
   }
 
-  // Règle 4 : Vérifier si un joueur couvre plus de 2 postes
-  for (const [playerId, playerPostes] of Object.entries(map.joueurs)) {
-    if (playerPostes.length > 2) {
-      const playerName = joueurs.find(j => j.id === playerId)?.nom || playerId;
-      errors.push(`${playerName} a ${playerPostes.length} postes (max 2)`);
+  // Rule 3: Check if a player covers more than 2 assignments
+  for (const playerAssignment of map.players) {
+    if (playerAssignment.assignmentIds.length > 2) {
+      const playerName = playerList.find(p => p.id === playerAssignment.userId)?.name || playerAssignment.userId;
+      errors.push(`${playerName} a ${playerAssignment.assignmentIds.length} postes (max 2)`);
     }
   }
 
-  // Règle 3 : Trouver les postes couverts par exactement 2 joueurs
-  const postesWithTwoPlayers: { posteId: string; players: string[] }[] = [];
+  // Rule 4: Find assignments covered by exactly 2 players and check for duplicate pairs
+  const assignmentsWithTwoPlayers: { assignmentId: number; userIds: string[] }[] = [];
 
-  for (const [posteId, players] of Object.entries(posteToPlayers)) {
-    if (players.length === 2) {
-      postesWithTwoPlayers.push({ posteId, players: players.sort() });
+  for (const [assignmentIdStr, userIds] of Object.entries(assignmentToPlayers)) {
+    if (userIds.length === 2) {
+      assignmentsWithTwoPlayers.push({ assignmentId: Number(assignmentIdStr), userIds: userIds.sort() });
     }
   }
 
-  // Vérifier si deux postes partagent la même paire de joueurs
-  const pairToPostes: Record<string, string[]> = {};
+  // Check if two assignments share the same pair of players
+  const pairToAssignments: Record<string, number[]> = {};
 
-  for (const { posteId, players } of postesWithTwoPlayers) {
-    const pairKey = players.join('-');
-    if (!pairToPostes[pairKey]) {
-      pairToPostes[pairKey] = [];
+  for (const { assignmentId, userIds } of assignmentsWithTwoPlayers) {
+    const pairKey = userIds.join('-');
+    if (!pairToAssignments[pairKey]) {
+      pairToAssignments[pairKey] = [];
     }
-    pairToPostes[pairKey]?.push(posteId);
+    pairToAssignments[pairKey]?.push(assignmentId);
   }
 
-  for (const [pairKey, posteIds] of Object.entries(pairToPostes)) {
-    if (posteIds.length > 1) {
+  for (const [pairKey, assignmentIds] of Object.entries(pairToAssignments)) {
+    if (assignmentIds.length > 1) {
       const pair = pairKey.split('-');
-      const playerNames = pair.map(pid => joueurs.find(j => j.id === pid)?.nom || pid);
-      const posteNames = posteIds.map(pid => {
-        const poste = map.postes.find(p => p.id === pid);
-        return poste?.nom || pid;
+      const playerNames = pair.map(uid => playerList.find(p => p.id === uid)?.name || uid);
+      const assignmentNames = assignmentIds.map(aid => {
+        const assignment = map.assignments.find(a => a.id === aid);
+        return assignment?.name || String(aid);
       });
-      errors.push(`${posteNames.join(' et ')} sont couverts uniquement par ${playerNames.join(' et ')}`);
+      errors.push(`${assignmentNames.join(' et ')} sont couverts uniquement par ${playerNames.join(' et ')}`);
     }
   }
 
@@ -137,4 +170,3 @@ export function checkMapBalance(map: MapConfig): { isBalanced: boolean; errors: 
     errors
   };
 }
-

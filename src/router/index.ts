@@ -48,13 +48,25 @@ const router = createRouter({
 });
 
 // Garde de navigation
-router.beforeEach((to, _from, next) => {
-  // Mise à jour du titre de la page
+router.beforeEach(async (to, _from, next) => {
+  // Update page title
   document.title = `EVA - ${to.meta.title || 'App'}`;
 
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading, initAuth } = useAuth();
 
-  // Vérifier si la route nécessite une authentification
+  // Wait for auth to be initialized
+  if (isLoading.value) {
+    await initAuth();
+  }
+
+  // If already authenticated and trying to access login page, redirect
+  if (to.name === 'login' && isAuthenticated.value) {
+    const redirect = to.query.redirect as string;
+    next(redirect || { name: 'home' });
+    return;
+  }
+
+  // Check if route requires authentication
   if (to.meta.requiresAuth && !isAuthenticated.value) {
     next({ name: 'login', query: { redirect: to.fullPath } });
   } else {
