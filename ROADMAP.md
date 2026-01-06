@@ -87,6 +87,17 @@ model GamePlanPlayer {
 
 ## ✅ Chantiers terminés
 
+### Tests automatisés ✅
+- [x] Configuration Vitest
+- [x] Tests unitaires des types (zones, polygones)
+- [x] Tests de la logique de balance d'équipe
+- [x] Tests du calculateur de rotation
+- [x] Tests d'authentification
+- [x] Tests des API (mocks)
+- [x] Tests des composants Vue
+- [x] Tests de la logique serveur
+- **115 tests passants**
+
 ### Authentification & Autorisation
 - [x] Login/Logout avec JWT
 - [x] Rôles ADMIN/PLAYER
