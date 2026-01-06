@@ -658,7 +658,6 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
   color: #ccc;
   border-radius: 4px;
   cursor: pointer;
-  transition: all 0.2s;
 }
 
 .floor-selector button:hover {
@@ -706,7 +705,6 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
   fill: rgba(100, 100, 100, 0.1);
   stroke: rgba(100, 100, 100, 0.3);
   stroke-width: 0.3;
-  transition: all 0.3s;
 }
 
 .zone.active {
@@ -717,25 +715,22 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
 
 .zone.editable {
   cursor: move;
-  transition: none;
 }
 
 .marker {
   fill: rgba(100, 100, 100, 0.1);
   stroke: rgba(100, 100, 100, 0.3);
   stroke-width: 0.3;
-  transition: all 0.3s;
 }
 
-.assignment.active {
-  fill: color-mix(in srgb, var(--assignment-color) 20%, transparent);
+.marker.active {
+  fill: color-mix(in srgb, var(--assignment-color) 60%, transparent);
   stroke: var(--assignment-color);
   stroke-width: 0.5;
 }
 
-.assignment.editable {
+.marker.editable {
   cursor: move;
-  transition: none;
 }
 
 .point-handle {
@@ -779,7 +774,7 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
   opacity: 1;
 }
 
-.assignment.ghost {
+.marker.ghost {
   fill: var(--assignment-color);
   stroke: var(--assignment-color);
   stroke-width: 0.3;
@@ -799,7 +794,6 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
   font-size: 2.5px;
   fill: #888;
   text-anchor: middle;
-  transition: all 0.3s;
 }
 
 .marker-label.active {
@@ -852,7 +846,6 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
   display: flex;
   align-items: center;
   gap: 0.3rem;
-  transition: opacity 0.2s;
 }
 
 .panel-title.editable:hover {
@@ -896,7 +889,6 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
   padding: 0.1rem 0.3rem;
   font-size: 0.8rem;
   border-radius: 3px;
-  transition: all 0.15s;
 }
 
 .name-save {
@@ -945,7 +937,6 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
   cursor: pointer;
   color: #888;
   font-size: 0.85rem;
-  transition: all 0.15s;
 }
 
 .player-checkbox:hover {
