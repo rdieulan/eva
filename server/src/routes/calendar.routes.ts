@@ -14,6 +14,14 @@ import type {
 
 const router = Router();
 
+// Helper function to format date as YYYY-MM-DD without UTC conversion
+function formatDateStr(date: Date): string {
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 // ===========================================
 // Availability Routes
 // ===========================================
@@ -72,7 +80,7 @@ router.get('/availability', authMiddleware, async (req: AuthRequest, res: Respon
     // Initialize all days of the month
     for (let day = 1; day <= endDate.getDate(); day++) {
       const date = new Date(year, monthNum - 1, day);
-      const dateStr = date.toISOString().split('T')[0];
+      const dateStr = formatDateStr(date);
 
       const playerAvailabilities: PlayerAvailability[] = users.map(user => ({
         userId: user.id,
@@ -90,7 +98,7 @@ router.get('/availability', authMiddleware, async (req: AuthRequest, res: Respon
 
     // Fill in availabilities
     for (const availability of availabilities) {
-      const dateStr = availability.date.toISOString().split('T')[0];
+      const dateStr = formatDateStr(availability.date);
       const dayData = days[dateStr];
 
       if (dayData) {
@@ -111,7 +119,7 @@ router.get('/availability', authMiddleware, async (req: AuthRequest, res: Respon
 
     // Fill in events
     for (const event of events) {
-      const dateStr = event.date.toISOString().split('T')[0];
+      const dateStr = formatDateStr(event.date);
       const dayData = days[dateStr];
 
       if (dayData) {
@@ -176,7 +184,7 @@ router.post('/availability', authMiddleware, async (req: AuthRequest, res: Respo
       res.json({
         id: availability.id,
         userId: availability.userId,
-        date: availability.date.toISOString().split('T')[0],
+        date: formatDateStr(availability.date),
         status: availability.status,
       });
     } else {
@@ -220,7 +228,7 @@ router.get('/events', authMiddleware, async (req: AuthRequest, res: Response) =>
     res.json(
       events.map(event => ({
         id: event.id,
-        date: event.date.toISOString().split('T')[0],
+        date: formatDateStr(event.date),
         startTime: event.startTime,
         endTime: event.endTime,
         type: event.type,
@@ -280,7 +288,7 @@ router.post('/events', authMiddleware, adminMiddleware, async (req: AuthRequest,
 
     res.status(201).json({
       id: event.id,
-      date: event.date.toISOString().split('T')[0],
+      date: formatDateStr(event.date),
       startTime: event.startTime,
       endTime: event.endTime,
       type: event.type,
@@ -364,7 +372,7 @@ router.put('/events/:id', authMiddleware, adminMiddleware, async (req: AuthReque
 
     res.json({
       id: event.id,
-      date: event.date.toISOString().split('T')[0],
+      date: formatDateStr(event.date),
       startTime: event.startTime,
       endTime: event.endTime,
       type: event.type,
@@ -406,7 +414,7 @@ router.put('/events/:id/gameplan', authMiddleware, adminMiddleware, async (req: 
 
     res.json({
       id: event.id,
-      date: event.date.toISOString().split('T')[0],
+      date: formatDateStr(event.date),
       startTime: event.startTime,
       endTime: event.endTime,
       type: event.type,

@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import type { AvailabilityStatus, PlayerAvailability, CalendarEvent } from '@shared/types';
 
-const props = defineProps<{
+interface Props {
   date: string; // YYYY-MM-DD
   dayNumber: number;
   isCurrentMonth: boolean;
@@ -11,7 +11,12 @@ const props = defineProps<{
   currentUserStatus: AvailabilityStatus | null;
   playerAvailabilities: PlayerAvailability[];
   events: CalendarEvent[];
-}>();
+  showDayNumber?: boolean; // Show day number in header (default: true)
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  showDayNumber: true,
+});
 
 const emit = defineEmits<{
   'toggle-availability': [];
@@ -80,7 +85,7 @@ function handleDayClick(e: MouseEvent) {
     :title="isPast ? 'Jour passé' : 'Cliquer pour changer votre disponibilité'"
   >
     <!-- Day number -->
-    <div class="day-header">
+    <div v-if="props.showDayNumber" class="day-header">
       <span
         class="day-number"
         @click="handleDayClick"

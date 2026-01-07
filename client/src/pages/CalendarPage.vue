@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import CalendarGrid from '@/components/calendar/CalendarGrid.vue';
+import WeekGrid from '@/components/calendar/WeekGrid.vue';
 import EventFormModal from '@/components/calendar/EventFormModal.vue';
 import { useAuth } from '@/composables/useAuth';
 import { loadAllMaps, loadPlayers } from '@/config/config';
@@ -24,9 +25,16 @@ import type {
 
 const { permissions, user } = useAuth();
 
+// View mode state
+type ViewMode = 'month' | 'week';
+const viewMode = ref<ViewMode>('month');
+
 // Current month state
 const currentYear = ref(new Date().getFullYear());
 const currentMonth = ref(new Date().getMonth() + 1); // 1-12
+
+// Current week state (start of week - Monday)
+const currentWeekStart = ref<Date>(getMonday(new Date()));
 
 // Calendar data
 const days = ref<Record<string, DayData>>({});
@@ -72,6 +80,13 @@ watch([currentYear, currentMonth], () => {
   loadCalendarData();
 });
 
+// Watch view mode changes
+watch(viewMode, (newMode) => {
+  if (newMode === 'week') {
+    syncWeekToMonth();
+  }
+});
+
 // Initial load
 onMounted(async () => {
   // Load maps and players for RotationCalculator (in parallel with calendar)
@@ -105,6 +120,53 @@ function goToNextMonth() {
     currentYear.value++;
   } else {
     currentMonth.value++;
+  }
+}
+
+// Get Monday of the week for a given date
+function getMonday(date: Date): Date {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust for Sunday
+  d.setDate(diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+// Week navigation
+function goToPrevWeek() {
+  const newDate = new Date(currentWeekStart.value);
+  newDate.setDate(newDate.getDate() - 7);
+  currentWeekStart.value = newDate;
+  updateMonthFromWeek();
+}
+
+function goToNextWeek() {
+  const newDate = new Date(currentWeekStart.value);
+  newDate.setDate(newDate.getDate() + 7);
+  currentWeekStart.value = newDate;
+  updateMonthFromWeek();
+}
+
+// Sync month/year when week changes
+function updateMonthFromWeek() {
+  const midWeek = new Date(currentWeekStart.value);
+  midWeek.setDate(midWeek.getDate() + 3); // Wednesday (middle of week)
+  currentYear.value = midWeek.getFullYear();
+  currentMonth.value = midWeek.getMonth() + 1;
+}
+
+// Sync week when switching to week view
+function syncWeekToMonth() {
+  // Use today's date to get the current week
+  const today = new Date();
+  // Only sync to current week if we're viewing the current month
+  if (currentYear.value === today.getFullYear() && currentMonth.value === today.getMonth() + 1) {
+    currentWeekStart.value = getMonday(today);
+  } else {
+    // If viewing a different month, show the first week of that month
+    const firstOfMonth = new Date(currentYear.value, currentMonth.value - 1, 1);
+    currentWeekStart.value = getMonday(firstOfMonth);
   }
 }
 
@@ -232,13 +294,46 @@ async function handleGamePlanUpdate(eventId: string, gamePlan: MatchGamePlan) {
 
     <!-- Calendar -->
     <template v-else>
+      <!-- View mode switch -->
+      <div class="view-switch">
+        <button
+          class="view-btn"
+          :class="{ active: viewMode === 'month' }"
+          @click="viewMode = 'month'"
+        >
+          📅 Mois
+        </button>
+        <button
+          class="view-btn"
+          :class="{ active: viewMode === 'week' }"
+          @click="viewMode = 'week'"
+        >
+          📆 Semaine
+        </button>
+      </div>
 
+      <!-- Month view -->
       <CalendarGrid
+        v-if="viewMode === 'month'"
         :year="currentYear"
         :month="currentMonth"
         :days="days"
         @prev-month="goToPrevMonth"
         @next-month="goToNextMonth"
+        @toggle-availability="handleToggleAvailability"
+        @click-day="handleDayClick"
+        @click-event="handleEventClick"
+      />
+
+      <!-- Week view -->
+      <WeekGrid
+        v-else
+        :year="currentYear"
+        :month="currentMonth"
+        :week-start="currentWeekStart"
+        :days="days"
+        @prev-week="goToPrevWeek"
+        @next-week="goToNextWeek"
         @toggle-availability="handleToggleAvailability"
         @click-day="handleDayClick"
         @click-event="handleEventClick"
@@ -312,5 +407,37 @@ async function handleGamePlanUpdate(eventId: string, gamePlan: MatchGamePlan) {
 .btn-retry:hover {
   background: #3a3a5a;
   border-color: #7a7aba;
+}
+
+/* View mode switch */
+.view-switch {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  padding: 0.25rem;
+  background: rgba(42, 42, 74, 0.5);
+  border-radius: 10px;
+}
+
+.view-btn {
+  padding: 0.6rem 1.25rem;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: #888;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.view-btn:hover {
+  color: #ccc;
+  background: rgba(58, 58, 90, 0.5);
+}
+
+.view-btn.active {
+  background: #7a7aba;
+  color: #fff;
 }
 </style>
