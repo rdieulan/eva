@@ -22,17 +22,22 @@ npm run test:coverage
 ```
 tests/
 ├── setup.ts                    # Global test setup (mocks, etc.)
-├── fixtures/
-│   └── map-fixtures.ts         # Reusable test data
-└── unit/
-    ├── types.test.ts           # Zone type guards and conversions
-    ├── config.test.ts          # Configuration helpers
-    ├── balance.test.ts         # Team balance validation rules
-    ├── rotation-calculator.test.ts  # Rotation calculator algorithm
+├── client/                     # Client-side tests
+│   ├── types.test.ts           # Zone type guards and conversions
+│   ├── config.test.ts          # Configuration helpers
+│   ├── balance.test.ts         # Team balance validation rules
+│   ├── rotation-calculator.test.ts  # Rotation calculator algorithm
+│   ├── map-viewer.test.ts      # MapViewer component logic
+│   ├── vue-components.test.ts  # Vue component patterns
+│   ├── calendar-api.test.ts    # Calendar API calls
+│   ├── calendar-grid.test.ts   # Calendar grid component
+│   ├── calendar-integration.test.ts # Calendar integration tests
+│   ├── event-form-modal.test.ts # Event form modal component
+│   └── game-plan-table.test.ts # Game plan table component
+└── server/                     # Server-side tests
     ├── auth.test.ts            # Authentication flow
     ├── api.test.ts             # API endpoints (mocked)
-    ├── map-viewer.test.ts      # MapViewer component logic
-    ├── vue-components.test.ts  # Vue component patterns
+    ├── calendar-routes.test.ts # Calendar routes API
     └── server-logic.test.ts    # Server-side logic
 ```
 
@@ -100,22 +105,6 @@ tests/
 - Session management
 - **20 tests**
 
-## Fixtures
-
-### Map Fixtures (`fixtures/map-fixtures.ts`)
-
-Pre-configured test data for consistent testing:
-
-- `mockPlayers` - 5 test players
-- `balancedMapConfig` - Valid balanced team configuration
-- `unbalancedAssignmentMap` - Assignment with only one player
-- `unbalancedPlayerMap` - Player with only one assignment
-- `overloadedPlayerMap` - Player with 3+ assignments
-- `duplicatePairMap` - Two assignments with same player pair
-- `multiFloorMap` - Map with multiple floors
-- `polygonZoneMap` - Complex polygon zone
-- `multiPolygonZoneMap` - Split zone with multiple polygons
-- `emptyMap` - Empty map configuration
 
 ## Mocking
 

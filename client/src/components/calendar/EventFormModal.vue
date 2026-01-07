@@ -166,10 +166,6 @@ const gamePlanPlayers = computed(() => {
   const firstAssignments = firstMap?.assignments || [];
   return firstAssignments.map(a => ({ id: a.visibleplayerId, name: a.visibleplayerName }));
 });
-
-function findAssignmentForPlayer(mapPlan: MatchGamePlan['maps'][number], playerId: string) {
-  return mapPlan.assignments.find(a => a.visibleplayerId === playerId) || null;
-}
 </script>
 
 <template>
@@ -598,42 +594,6 @@ function findAssignmentForPlayer(mapPlan: MatchGamePlan['maps'][number], playerI
   font-weight: 500;
 }
 
-.game-plan-table {
-  overflow-x: auto;
-}
-
-.game-plan-table table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.85rem;
-}
-
-.game-plan-table th,
-.game-plan-table td {
-  padding: 0.5rem;
-  text-align: center;
-  border-bottom: 1px solid #3a3a5a;
-}
-
-.game-plan-table th {
-  color: #888;
-  font-weight: 600;
-}
-
-.game-plan-table .map-name {
-  text-align: left;
-  color: #fff;
-  font-weight: 500;
-}
-
-.assignment-badge {
-  display: inline-block;
-  padding: 0.2rem 0.5rem;
-  border: 1px solid;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
 
 /* Game Plan Edit (admin form) */
 .game-plan-edit {
