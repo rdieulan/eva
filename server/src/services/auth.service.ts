@@ -2,8 +2,8 @@
 
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import { prisma } from '../db/prisma';
-import type { JwtPayload } from '../middleware/auth.middleware';
+import { prisma } from '@db/prisma';
+import type { JwtPayload } from '@middleware/auth.middleware';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';

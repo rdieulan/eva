@@ -2,8 +2,8 @@
 
 import { Router } from 'express';
 import type { Request, Response } from 'express';
-import { authMiddleware } from '../middleware/auth.middleware';
-import type { AuthRequest } from '../middleware/auth.middleware';
+import { authMiddleware } from '@middleware/auth.middleware';
+import type { AuthRequest } from '@middleware/auth.middleware';
 import {
   generateToken,
   comparePassword,
@@ -13,7 +13,7 @@ import {
   findUserByEmail,
   findUserById,
   updateUserPassword,
-} from '../services/auth.service';
+} from '@services/auth.service';
 
 const router = Router();
 

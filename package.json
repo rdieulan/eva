@@ -5,24 +5,18 @@
   "type": "module",
   "scripts": {
     "dev": "vite --config client/vite.config.ts",
-    "server": "tsx server/index.ts",
-    "dev:all": "start cmd /c \"npm run server\" && npm run dev",
-    "build": "vue-tsc -b && vite build --config client/vite.config.ts && npm run db:generate",
-    "start": "NODE_ENV=production node --import tsx server/index.ts",
-    "preview": "vite preview --config client/vite.config.ts",
+    "server": "tsx --watch --tsconfig server/tsconfig.json server/index.ts",
+    "build": "vue-tsc -b && vite build --config client/vite.config.ts && tsc -p server/tsconfig.json && tsc-alias -p server/tsconfig.json -f && npm run db:generate",
+    "start": "NODE_ENV=production node dist-server/index.js",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage",
     "db:generate": "prisma generate",
-    "db:migrate": "prisma db push",
-    "db:migrate:dev": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate",
     "docker:up": "docker-compose up -d",
-    "docker:down": "docker-compose down",
-    "docker:logs": "docker-compose logs -f"
+    "docker:down": "docker-compose down"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -58,6 +52,7 @@
     "happy-dom": "^20.0.11",
     "jsdom": "^27.4.0",
     "prisma": "^7.2.0",
+    "tsc-alias": "^1.8.16",
     "tsx": "^4.21.0",
     "typescript": "~5.9.3",
     "vite": "^7.2.4",

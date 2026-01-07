@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import TopBar from './components/layout/TopBar.vue';
-import { useAuth } from './composables/useAuth';
+import TopBar from '@/components/layout/TopBar.vue';
+import { useAuth } from '@/composables/useAuth';
 
 const { isAuthenticated, user, isLoading, initAuth } = useAuth();
 

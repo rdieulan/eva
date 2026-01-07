@@ -2,11 +2,11 @@
 
 import { Router } from 'express';
 import type { Request, Response } from 'express';
-import authRoutes from './auth.routes';
-import mapsRoutes from './maps.routes';
-import plansRoutes from './plans.routes';
-import usersRoutes from './users.routes';
-import { prisma } from '../db/prisma';
+import authRoutes from '@routes/auth.routes';
+import mapsRoutes from '@routes/maps.routes';
+import plansRoutes from '@routes/plans.routes';
+import usersRoutes from '@routes/users.routes';
+import { prisma } from '@db/prisma';
 
 const router = Router();
 

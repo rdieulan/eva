@@ -143,7 +143,7 @@ Database access:
 ## Import Conventions
 
 ### Client (Vue/Vite)
-Uses `@` and `@shared` aliases configured in `client/tsconfig.json` and `client/vite.config.ts`:
+Uses `@/` and `@shared/` aliases configured in `client/tsconfig.json` and `client/vite.config.ts`:
 
 ```typescript
 // Types
@@ -163,16 +163,21 @@ import { getZonePolygons } from '@/utils/zones';
 import { useAuth } from '@/composables/useAuth';
 ```
 
-### Server (Express/tsx)
-Uses relative imports (tsx handles them natively without bundler):
+### Server (Express)
+Uses `@db/`, `@middleware/`, `@services/`, `@routes/` aliases configured in `server/tsconfig.json`. At build time, `tsc-alias` transforms aliases to relative paths with `.js` extensions:
 
 ```typescript
-import { prisma } from '../db/prisma';
-import { authMiddleware } from '../middleware/auth.middleware';
+// Source (TypeScript)
+import { prisma } from '@db/prisma';
+import { authMiddleware } from '@middleware/auth.middleware';
+import { generateToken } from '@services/auth.service';
+
+// Compiled (JavaScript)
+import { prisma } from '../db/prisma.js';
 ```
 
 ### Tests
-Uses same `@` and `@shared` aliases (configured in `vitest.config.mts`):
+Uses same `@/` and `@shared/` aliases (configured in `vitest.config.mts` and `tests/tsconfig.json`):
 
 ```typescript
 import type { MapConfig } from '@/types';
