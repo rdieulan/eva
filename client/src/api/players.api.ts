@@ -1,6 +1,6 @@
 // Players API client
 
-import type { Player } from '../../../shared/types';
+import type { Player } from '@shared/types';
 
 // Cache for players (loaded once)
 let cachedPlayers: Player[] | null = null;

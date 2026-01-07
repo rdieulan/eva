@@ -1,6 +1,6 @@
 // Zone utility functions
 
-import type { Zone, ZonePolygon, ZoneMulti, ZoneRect, Point } from '../../../shared/types';
+import type { Zone, ZonePolygon, ZoneMulti, ZoneRect, Point } from '@shared/types';
 
 // Type guards
 

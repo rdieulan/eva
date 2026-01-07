@@ -1,7 +1,7 @@
-﻿﻿<script setup lang="ts">
+﻿﻿﻿<script setup lang="ts">
 import { ref, computed } from 'vue';
-import { assignmentColors, getPlayerAssignments } from '../config/config';
-import type { MapConfig, Player } from '../types';
+import { assignmentColors, getPlayerAssignments } from '@/config/config';
+import type { MapConfig, Player } from '@/types';
 
 const props = defineProps<{
   maps: MapConfig[];

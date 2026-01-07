@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
-import MapList from '../components/MapList.vue';
-import MapViewer from '../components/MapViewer.vue';
-import PlannerToolbar from '../components/planner/PlannerToolbar.vue';
-import { loadAllMaps, loadPlayers, getPlayerAssignments } from '../config/config';
-import { useAuth } from '../composables/useAuth';
-import type { MapConfig, Player } from '../types';
+import MapList from '@/components/MapList.vue';
+import MapViewer from '@/components/MapViewer.vue';
+import PlannerToolbar from '@/components/planner/PlannerToolbar.vue';
+import { loadAllMaps, loadPlayers, getPlayerAssignments } from '@/config/config';
+import { useAuth } from '@/composables/useAuth';
+import type { MapConfig, Player } from '@/types';
 
 const { permissions, user } = useAuth();
 

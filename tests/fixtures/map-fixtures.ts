@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { MapConfig, Player } from '../../client/src/types';
+import type { MapConfig, Player } from '@/types';
 
 // Test data fixtures for consistent testing across the application
 

@@ -5,8 +5,8 @@ import {
   rectToPolygon,
   getZonePolygons,
   getZonePoints,
-} from '../../client/src/utils/zones';
-import type { ZoneRect, ZonePolygon, ZoneMulti, Point } from '../../client/src/types/index';
+} from '@/utils/zones';
+import type { ZoneRect, ZonePolygon, ZoneMulti, Point } from '@/types';
 
 describe('Zone Type Guards', () => {
   describe('isZonePolygon', () => {

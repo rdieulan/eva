@@ -3,8 +3,8 @@ import {
   assignmentColors,
   getPlayerAssignments,
   getAssignmentPlayers,
-} from '../../client/src/config/config';
-import type { MapConfig } from '../../client/src/types';
+} from '@/config/config';
+import type { MapConfig } from '@/types';
 
 // Mock map configuration for testing
 function createMockMap(overrides: Partial<MapConfig> = {}): MapConfig {

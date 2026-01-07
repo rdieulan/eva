@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { MapConfig, Player } from '../../client/src/types';
+import type { MapConfig, Player } from '@/types';
 
 // We need to test checkMapBalance, but it depends on getPlayers() which requires initialization
 // So we'll mock the module

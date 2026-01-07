@@ -1,8 +1,8 @@
 // Balance validation service
 // Checks if a map configuration has a balanced roster
 
-import type { MapConfig } from '../../../shared/types';
-import { getPlayers } from '../api/players.api';
+import type { MapConfig } from '@shared/types';
+import { getPlayers } from '@/api/players.api';
 
 export interface BalanceCheckResult {
   isBalanced: boolean;

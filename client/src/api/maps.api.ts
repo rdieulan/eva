@@ -1,6 +1,6 @@
 // Maps API client
 
-import type { MapConfig } from '../../../shared/types';
+import type { MapConfig } from '@shared/types';
 
 /**
  * Fetch all maps

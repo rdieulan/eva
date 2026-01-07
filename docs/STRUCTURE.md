@@ -14,8 +14,7 @@ This document describes the organization of the EVA project.
 │       ├── api/               # API client functions
 │       │   ├── auth.api.ts    # Authentication API
 │       │   ├── maps.api.ts    # Maps and game plans API
-│       │   ├── players.api.ts # Players API
-│       │   └── index.ts       # Barrel export
+│       │   └── players.api.ts # Players API
 │       ├── components/        # Vue components
 │       │   ├── layout/        # Layout components (TopBar)
 │       │   ├── planner/       # Planner-specific components
@@ -25,8 +24,7 @@ This document describes the organization of the EVA project.
 │       ├── composables/       # Vue composition hooks
 │       │   └── useAuth.ts
 │       ├── config/            # UI configuration
-│       │   ├── config.ts      # Main config (re-exports API + services)
-│       │   └── constants.ts   # Colors, sizes, etc.
+│       │   └── config.ts      # Main config (re-exports API + services)
 │       ├── pages/             # Vue page components
 │       │   ├── CalendarPage.vue
 │       │   ├── HomePage.vue
@@ -72,9 +70,6 @@ This document describes the organization of the EVA project.
 ├── prisma/
 │   ├── schema.prisma          # Database schema
 │   └── seed.ts                # Database seeding script
-│
-├── scripts/                   # Utility scripts
-│   └── seed.ts
 │
 ├── tests/
 │   ├── setup.ts               # Test setup (mocks, etc.)
@@ -124,8 +119,7 @@ Pure utility functions:
 
 ### client/src/config/
 UI configuration:
-- `config.ts` - Main config file (re-exports API + services for convenience)
-- `constants.ts` - Colors, sizes, etc.
+- `config.ts` - Colors, re-exports API + services for convenience
 
 ### server/src/routes/
 Express route handlers grouped by domain:
@@ -148,8 +142,39 @@ Database access:
 
 ## Import Conventions
 
-1. **Types**: Import from `../types` (which re-exports from `shared/types`)
-2. **API calls**: Import from `../config/config` or directly from `../api/*`
-3. **Business logic**: Import from `../config/config` or directly from `../services/*`
-4. **Utilities**: Import from `../utils/*`
+### Client (Vue/Vite)
+Uses `@` and `@shared` aliases configured in `client/tsconfig.json` and `client/vite.config.ts`:
 
+```typescript
+// Types
+import type { MapConfig, Player } from '@/types';
+import type { Zone } from '@shared/types';
+
+// API calls
+import { loadAllMaps, loadPlayers } from '@/config/config';
+
+// Components
+import MapViewer from '@/components/MapViewer.vue';
+
+// Utilities
+import { getZonePolygons } from '@/utils/zones';
+
+// Composables
+import { useAuth } from '@/composables/useAuth';
+```
+
+### Server (Express/tsx)
+Uses relative imports (tsx handles them natively without bundler):
+
+```typescript
+import { prisma } from '../db/prisma';
+import { authMiddleware } from '../middleware/auth.middleware';
+```
+
+### Tests
+Uses same `@` and `@shared` aliases (configured in `vitest.config.mts`):
+
+```typescript
+import type { MapConfig } from '@/types';
+import { checkMapBalance } from '@/config/config';
+```

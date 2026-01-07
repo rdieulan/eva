@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { MapConfig } from '../../shared/types';
+import type { MapConfig } from '@shared/types';
 
 // API integration tests (mocked)
 describe('Maps API', () => {

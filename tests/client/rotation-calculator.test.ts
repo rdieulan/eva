@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { MapConfig } from '../../client/src/types';
+import type { MapConfig } from '@/types';
 
 // Rotation Calculator Logic Tests
 // These tests verify the rotation calculator can find valid configurations

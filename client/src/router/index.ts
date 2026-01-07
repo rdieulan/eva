@@ -1,13 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import type { RouteRecordRaw } from 'vue-router';
-import { useAuth } from '../composables/useAuth';
+import { useAuth } from '@/composables/useAuth';
 
 // Lazy loading des pages
-const HomePage = () => import('../pages/HomePage.vue');
-const PlannerPage = () => import('../pages/PlannerPage.vue');
-const CalendarPage = () => import('../pages/CalendarPage.vue');
-const ProfilePage = () => import('../pages/ProfilePage.vue');
-const LoginPage = () => import('../pages/LoginPage.vue');
+const HomePage = () => import('@/pages/HomePage.vue');
+const PlannerPage = () => import('@/pages/PlannerPage.vue');
+const CalendarPage = () => import('@/pages/CalendarPage.vue');
+const ProfilePage = () => import('@/pages/ProfilePage.vue');
+const LoginPage = () => import('@/pages/LoginPage.vue');
 
 const routes: RouteRecordRaw[] = [
   {

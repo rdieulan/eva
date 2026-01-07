@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { assignmentColors, checkMapBalance, getPlayerAssignments, getAssignmentPlayers } from '../../config/config';
-import type { MapConfig, Player } from '../../types';
-import RotationCalculator from '../RotationCalculator.vue';
+import { assignmentColors, checkMapBalance, getPlayerAssignments, getAssignmentPlayers } from '@/config/config';
+import type { MapConfig, Player } from '@/types';
+import RotationCalculator from '@/components/RotationCalculator.vue';
 
 const props = defineProps<{
   players: Player[];

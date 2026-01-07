@@ -12,5 +12,5 @@ export type {
   Assignment,
   MapConfig,
   AppState,
-} from '../../../shared/types';
+} from '@shared/types';
 
