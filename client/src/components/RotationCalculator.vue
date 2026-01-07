@@ -1,7 +1,8 @@
 ﻿<script setup lang="ts">
 import { ref, computed } from 'vue';
 import { assignmentColors, getPlayerAssignments } from '@/config/config';
-import type { MapConfig, Player, MatchGamePlan } from '@/types';
+import GamePlanTable from '@/components/common/GamePlanTable.vue';
+import type { MapConfig, Player, MatchGamePlan } from '@shared/types';
 
 const props = withDefaults(
   defineProps<{
@@ -368,6 +369,30 @@ function handleAssociate() {
     emit('associate', gamePlan);
   }
 }
+
+const exportHeaders = computed(() => {
+  return presentPlayers.value.map(p => ({ id: p.id, name: p.name }));
+});
+
+const previewGamePlan = computed(() => {
+  // Build a MatchGamePlan-like object from exportableMaps for preview only
+  if (!selectedAbsentPlayer.value) return null;
+  return {
+    absentPlayerId: selectedAbsentPlayer.value,
+    absentPlayerName: getPlayerName(selectedAbsentPlayer.value),
+    maps: exportableMaps.value.map(mapData => ({
+      mapId: mapData.mapId,
+      mapName: mapData.mapName,
+      assignments: mapData.assignments.map(a => ({
+        visibleplayerId: a.playerId,
+        visibleplayerName: a.playerName,
+        assignmentId: a.assignmentId,
+        assignmentName: a.assignmentName,
+        assignmentColor: a.assignmentColor,
+      }))
+    }))
+  } as const;
+});
 </script>
 
 <template>
@@ -503,42 +528,8 @@ function handleAssociate() {
             </div>
 
             <!-- Map / Players table -->
-            <table class="export-table">
-              <thead>
-                <tr>
-                  <th class="col-map">Map</th>
-                  <th
-                    v-for="player in presentPlayers"
-                    :key="player.id"
-                    class="col-joueur"
-                  >
-                    {{ player.name }}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="row in tableData" :key="row.mapId">
-                  <td class="col-map">{{ row.mapName }}</td>
-                  <td
-                    v-for="player in presentPlayers"
-                    :key="player.id"
-                    class="col-joueur"
-                  >
-                    <span
-                      v-if="row.players[player.id]"
-                      class="cell-poste"
-                      :style="{
-                        color: row.players[player.id]?.assignmentColor,
-                        borderColor: row.players[player.id]?.assignmentColor
-                      }"
-                    >
-                      {{ row.players[player.id]?.assignmentName }}
-                    </span>
-                    <span v-else class="cell-empty">-</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            <GamePlanTable v-if="previewGamePlan" :headers="exportHeaders" :gamePlan="previewGamePlan" />
+
           </div>
 
           <!-- Export buttons -->
@@ -909,58 +900,7 @@ function handleAssociate() {
   margin-top: 0.25rem;
 }
 
-/* Tableau d'export */
-.export-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.85rem;
-}
-
-.export-table th,
-.export-table td {
-  padding: 0.5rem 0.75rem;
-  text-align: center;
-  border: 1px solid #333;
-}
-
-.export-table th {
-  background: #252540;
-  color: #fff;
-  font-weight: 600;
-}
-
-.export-table th.col-map {
-  text-align: left;
-  width: 120px;
-}
-
-.export-table td.col-map {
-  text-align: left;
-  font-weight: 600;
-  color: #fff;
-  background: #1f1f35;
-}
-
-.export-table tbody tr:nth-child(odd) {
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.export-table tbody tr:hover {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.cell-poste {
-  display: inline-block;
-  padding: 0.2rem 0.5rem;
-  border: 1px solid;
-  border-radius: 4px;
-  font-weight: 600;
-  font-size: 0.8rem;
-}
-
-.cell-empty {
-  color: #555;
-}
+/* Removed legacy export table styles (now using GamePlanTable) */
 
 .export-buttons {
   display: flex;
@@ -1008,4 +948,3 @@ function handleAssociate() {
   background: #fdba74;
 }
 </style>
-

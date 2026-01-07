@@ -2,6 +2,7 @@
 import { ref, watch, computed } from 'vue';
 import Modal from '@/components/common/Modal.vue';
 import RotationCalculator from '@/components/RotationCalculator.vue';
+import GamePlanTable from '@/components/common/GamePlanTable.vue';
 import type {
   EventType,
   CreateEventRequest,
@@ -156,6 +157,19 @@ const hasGamePlan = computed(() => {
 const modalSize = computed(() => {
   return hasGamePlan.value ? 'lg' : 'sm';
 });
+
+// Normalize game plan display: consistent player headers across maps
+const gamePlanPlayers = computed(() => {
+  const gp = gamePlan.value;
+  if (!gp || !gp.maps || gp.maps.length === 0) return [] as { id: string; name: string }[];
+  const firstMap = gp.maps[0];
+  const firstAssignments = firstMap?.assignments || [];
+  return firstAssignments.map(a => ({ id: a.visibleplayerId, name: a.visibleplayerName }));
+});
+
+function findAssignmentForPlayer(mapPlan: MatchGamePlan['maps'][number], playerId: string) {
+  return mapPlan.assignments.find(a => a.visibleplayerId === playerId) || null;
+}
 </script>
 
 <template>
@@ -200,38 +214,7 @@ const modalSize = computed(() => {
           <span class="event-view-label">🎯 Plan de jeu</span>
           <span class="absent-badge">{{ gamePlan.absentPlayerName }} absent(e)</span>
         </div>
-        <div class="game-plan-table">
-          <table>
-            <thead>
-              <tr>
-                <th>Map</th>
-                <th v-for="map in gamePlan.maps[0]?.assignments" :key="map.visibleplayerId">
-                  {{ map.visibleplayerName }}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="mapPlan in gamePlan.maps" :key="mapPlan.mapId">
-                <td class="map-name">{{ mapPlan.mapName }}</td>
-                <td
-                  v-for="assignment in mapPlan.assignments"
-                  :key="assignment.assignmentId"
-                  class="assignment-cell"
-                >
-                  <span
-                    class="assignment-badge"
-                    :style="{
-                      color: assignment.assignmentColor,
-                      borderColor: assignment.assignmentColor
-                    }"
-                  >
-                    {{ assignment.assignmentName }}
-                  </span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <GamePlanTable :headers="gamePlanPlayers" :gamePlan="gamePlan" />
       </div>
     </div>
 
@@ -339,36 +322,7 @@ const modalSize = computed(() => {
             </button>
           </div>
           <div class="game-plan-table">
-            <table>
-              <thead>
-                <tr>
-                  <th>Map</th>
-                  <th v-for="assignment in gamePlan.maps[0]?.assignments" :key="assignment.visibleplayerId">
-                    {{ assignment.visibleplayerName }}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="mapPlan in gamePlan.maps" :key="mapPlan.mapId">
-                  <td class="map-name">{{ mapPlan.mapName }}</td>
-                  <td
-                    v-for="assignment in mapPlan.assignments"
-                    :key="assignment.assignmentId"
-                    class="assignment-cell"
-                  >
-                    <span
-                      class="assignment-badge"
-                      :style="{
-                        color: assignment.assignmentColor,
-                        borderColor: assignment.assignmentColor
-                      }"
-                    >
-                      {{ assignment.assignmentName }}
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            <GamePlanTable :headers="gamePlanPlayers" :gamePlan="gamePlan" />
           </div>
         </div>
 
@@ -726,4 +680,3 @@ const modalSize = computed(() => {
   border-style: solid;
 }
 </style>
-
