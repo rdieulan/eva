@@ -14,5 +14,8 @@ export type {
   MonthData,
   SetAvailabilityRequest,
   CreateEventRequest,
+  MapAssignment,
+  MapGamePlan,
+  MatchGamePlan,
 } from './calendar.types';
 

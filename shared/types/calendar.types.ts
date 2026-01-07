@@ -4,6 +4,29 @@ export type AvailabilityStatus = 'AVAILABLE' | 'UNAVAILABLE';
 
 export type EventType = 'MATCH' | 'EVENT';
 
+// Assignment in a game plan (player -> assignment on a map)
+export interface MapAssignment {
+  visibleplayerId: string;
+  visibleplayerName: string;
+  assignmentId: number;
+  assignmentName: string;
+  assignmentColor: string;
+}
+
+// Game plan for a map
+export interface MapGamePlan {
+  mapId: string;
+  mapName: string;
+  assignments: MapAssignment[];
+}
+
+// Complete game plan for a match
+export interface MatchGamePlan {
+  absentPlayerId: string;
+  absentPlayerName: string;
+  maps: MapGamePlan[];
+}
+
 // Availability record for a user on a specific date
 export interface Availability {
   id: string;
@@ -21,6 +44,7 @@ export interface CalendarEvent {
   type: EventType;
   title: string;
   description?: string;
+  gamePlan?: MatchGamePlan; // Plan de jeu pour les MATCH
   createdById: string;
   createdAt: string;
 }

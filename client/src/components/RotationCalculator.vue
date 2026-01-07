@@ -1,15 +1,22 @@
 ﻿<script setup lang="ts">
 import { ref, computed } from 'vue';
 import { assignmentColors, getPlayerAssignments } from '@/config/config';
-import type { MapConfig, Player } from '@/types';
+import type { MapConfig, Player, MatchGamePlan } from '@/types';
 
-const props = defineProps<{
-  maps: MapConfig[];
-  players: Player[];
-}>();
+const props = withDefaults(
+  defineProps<{
+    maps: MapConfig[];
+    players: Player[];
+    mode?: 'standalone' | 'associate'; // 'associate' mode shows "Associer" button
+  }>(),
+  {
+    mode: 'standalone',
+  }
+);
 
-defineEmits<{
+const emit = defineEmits<{
   close: [];
+  associate: [gamePlan: MatchGamePlan];
 }>();
 
 const selectedAbsentPlayer = ref<string | null>(null);
@@ -329,6 +336,38 @@ async function exportToPng() {
     alert('Erreur lors de l\'export PNG. Assurez-vous que html2canvas est installé.');
   }
 }
+
+// Build MatchGamePlan object for association with a match
+function buildMatchGamePlan(): MatchGamePlan | null {
+  if (!selectedAbsentPlayer.value || !exportableMaps.value.length) return null;
+
+  const absentPlayer = props.players.find(p => p.id === selectedAbsentPlayer.value);
+  if (!absentPlayer) return null;
+
+  return {
+    absentPlayerId: absentPlayer.id,
+    absentPlayerName: absentPlayer.name,
+    maps: exportableMaps.value.map(mapData => ({
+      mapId: mapData.mapId,
+      mapName: mapData.mapName,
+      assignments: mapData.assignments.map(a => ({
+        visibleplayerId: a.playerId,
+        visibleplayerName: a.playerName,
+        assignmentId: a.assignmentId,
+        assignmentName: a.assignmentName,
+        assignmentColor: a.assignmentColor,
+      })),
+    })),
+  };
+}
+
+// Handle "Associer" button click
+function handleAssociate() {
+  const gamePlan = buildMatchGamePlan();
+  if (gamePlan) {
+    emit('associate', gamePlan);
+  }
+}
 </script>
 
 <template>
@@ -509,6 +548,13 @@ async function exportToPng() {
             </button>
             <button class="btn-export btn-png" @click="exportToPng">
               🖼️ Télécharger (PNG)
+            </button>
+            <button
+              v-if="mode === 'associate'"
+              class="btn-export btn-associate"
+              @click="handleAssociate"
+            >
+              ✓ Associer au match
             </button>
           </div>
         </div>
@@ -951,6 +997,15 @@ async function exportToPng() {
 
 .btn-png:hover {
   background: #6ee7a0;
+}
+
+.btn-associate {
+  background: #fb923c;
+  color: #1a1a2e;
+}
+
+.btn-associate:hover {
+  background: #fdba74;
 }
 </style>
 

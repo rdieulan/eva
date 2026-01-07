@@ -123,6 +123,7 @@ router.get('/availability', authMiddleware, async (req: AuthRequest, res: Respon
           type: event.type,
           title: event.title,
           description: event.description || undefined,
+          gamePlan: event.gamePlan as any || undefined,
           createdById: event.createdById,
           createdAt: event.createdAt.toISOString(),
         });
@@ -225,6 +226,7 @@ router.get('/events', authMiddleware, async (req: AuthRequest, res: Response) =>
         type: event.type,
         title: event.title,
         description: event.description || undefined,
+        gamePlan: event.gamePlan || undefined,
         createdById: event.createdById,
         createdAt: event.createdAt.toISOString(),
       }))
@@ -284,6 +286,7 @@ router.post('/events', authMiddleware, adminMiddleware, async (req: AuthRequest,
       type: event.type,
       title: event.title,
       description: event.description || undefined,
+      gamePlan: event.gamePlan || undefined,
       createdById: event.createdById,
       createdAt: event.createdAt.toISOString(),
     });
@@ -367,11 +370,54 @@ router.put('/events/:id', authMiddleware, adminMiddleware, async (req: AuthReque
       type: event.type,
       title: event.title,
       description: event.description || undefined,
+      gamePlan: event.gamePlan || undefined,
       createdById: event.createdById,
       createdAt: event.createdAt.toISOString(),
     });
   } catch (error) {
     console.error('[CALENDAR] Error updating event:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// PUT /api/calendar/events/:id/gameplan
+// Update the game plan for an event (Admin only)
+router.put('/events/:id/gameplan', authMiddleware, adminMiddleware, async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  const { gamePlan } = req.body;
+
+  try {
+    const existingEvent = await prisma.calendarEvent.findUnique({ where: { id } });
+
+    if (!existingEvent) {
+      res.status(404).json({ error: 'Événement non trouvé' });
+      return;
+    }
+
+    if (existingEvent.type !== 'MATCH') {
+      res.status(400).json({ error: 'Seuls les MATCH peuvent avoir un plan de jeu' });
+      return;
+    }
+
+    const event = await prisma.calendarEvent.update({
+      where: { id },
+      data: { gamePlan: gamePlan || null },
+    });
+
+    res.json({
+      id: event.id,
+      date: event.date.toISOString().split('T')[0],
+      startTime: event.startTime,
+      endTime: event.endTime,
+      type: event.type,
+      title: event.title,
+      description: event.description || undefined,
+      gamePlan: event.gamePlan || undefined,
+      createdById: event.createdById,
+      createdAt: event.createdAt.toISOString(),
+    });
+  } catch (error) {
+    console.error('[CALENDAR] Error updating game plan:', error);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });

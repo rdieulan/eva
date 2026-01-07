@@ -57,6 +57,13 @@ Mise en place d'un calendrier partagé permettant aux joueurs de renseigner leur
   - Gestion du state (mois courant, données)
   - Modale de création d'événement pour les admins
 
+- [x] **Étape 9** : Plan de jeu pour les MATCH ✅
+  - Bouton "Définir plan de jeu" dans le formulaire de MATCH (admin)
+  - Intégration du RotationCalculator en mode "associate"
+  - Stockage du plan de jeu en JSON dans la base de données
+  - Affichage du plan de jeu dans la vue utilisateur (readonly)
+  - Route API `PUT /api/calendar/events/:id/gameplan`
+
 ---
 
 ## 📋 Prochaines étapes (après Calendrier)

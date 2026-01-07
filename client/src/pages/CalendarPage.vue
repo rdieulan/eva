@@ -3,18 +3,23 @@ import { ref, computed, onMounted, watch } from 'vue';
 import CalendarGrid from '@/components/calendar/CalendarGrid.vue';
 import EventFormModal from '@/components/calendar/EventFormModal.vue';
 import { useAuth } from '@/composables/useAuth';
+import { loadAllMaps, loadPlayers } from '@/config/config';
 import {
   fetchMonthData,
   setAvailability,
   createEvent,
   updateEvent,
   deleteEvent,
+  updateEventGamePlan,
 } from '@/api/calendar.api';
 import type {
   DayData,
   AvailabilityStatus,
   CalendarEvent,
   CreateEventRequest,
+  MapConfig,
+  Player,
+  MatchGamePlan,
 } from '@shared/types';
 
 const { permissions, user } = useAuth();
@@ -27,6 +32,10 @@ const currentMonth = ref(new Date().getMonth() + 1); // 1-12
 const days = ref<Record<string, DayData>>({});
 const isLoading = ref(true);
 const error = ref('');
+
+// Maps and players for RotationCalculator
+const maps = ref<MapConfig[]>([]);
+const players = ref<Player[]>([]);
 
 // Event modal state
 const showEventModal = ref(false);
@@ -64,7 +73,19 @@ watch([currentYear, currentMonth], () => {
 });
 
 // Initial load
-onMounted(() => {
+onMounted(async () => {
+  // Load maps and players for RotationCalculator (in parallel with calendar)
+  try {
+    const [loadedMaps, loadedPlayers] = await Promise.all([
+      loadAllMaps(),
+      loadPlayers(),
+    ]);
+    maps.value = loadedMaps;
+    players.value = loadedPlayers;
+  } catch (err) {
+    console.error('Error loading maps/players:', err);
+  }
+
   loadCalendarData();
 });
 
@@ -181,6 +202,18 @@ async function handleEventDelete(eventId: string) {
     alert(err instanceof Error ? err.message : 'Erreur');
   }
 }
+
+// Update game plan for an event
+async function handleGamePlanUpdate(eventId: string, gamePlan: MatchGamePlan) {
+  try {
+    await updateEventGamePlan(eventId, gamePlan);
+    showEventModal.value = false;
+    await loadCalendarData();
+  } catch (err) {
+    console.error('Error updating game plan:', err);
+    alert(err instanceof Error ? err.message : 'Erreur');
+  }
+}
 </script>
 
 <template>
@@ -218,9 +251,12 @@ async function handleEventDelete(eventId: string) {
       :selected-date="selectedDate"
       :edit-event="editingEvent"
       :read-only="!canCreateEvents"
+      :maps="maps"
+      :players="players"
       @close="showEventModal = false"
       @submit="handleEventSubmit"
       @delete="handleEventDelete"
+      @update-gameplan="handleGamePlanUpdate"
     />
   </div>
 </template>

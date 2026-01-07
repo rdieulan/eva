@@ -133,3 +133,24 @@ export async function deleteEvent(id: string): Promise<void> {
   }
 }
 
+/**
+ * Update the game plan for a match event (Admin only)
+ */
+export async function updateEventGamePlan(
+  eventId: string,
+  gamePlan: import('@shared/types').MatchGamePlan | null
+): Promise<CalendarEvent> {
+  const response = await fetch(`/api/calendar/events/${eventId}/gameplan`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ gamePlan }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors de la mise à jour du plan de jeu');
+  }
+
+  return response.json();
+}
+

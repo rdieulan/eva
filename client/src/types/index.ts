@@ -21,5 +21,8 @@ export type {
   MonthData,
   SetAvailabilityRequest,
   CreateEventRequest,
+  MapAssignment,
+  MapGamePlan,
+  MatchGamePlan,
 } from '@shared/types';
 
