@@ -1,54 +1,69 @@
 # EVA - Roadmap
 
-## 🎯 Objectif actuel : Migration vers la nouvelle structure DB
+## 🎯 Objectif actuel : Stabilisation et améliorations
 
 ---
 
-## 📋 Plan de migration (étapes claires)
+## ✅ Chantiers terminés
 
-### Étape 1 : Structure DB ✅
-- [x] Schéma Prisma mis à jour
-  - `Map` : contient le template (assignments sans players)
-  - `GamePlan` : contient les assignments modifiés
-  - `GamePlanPlayer` : table de liaison userId ↔ assignmentIds
-- [x] Prisma client régénéré
+### Réorganisation du projet ✅ (Janvier 2026)
+- [x] Séparation frontend/backend claire
+  - `client/src/` - Modules frontend (api, config, services, utils)
+  - `server/src/` - Modules backend (routes, middleware, services, db)
+  - `shared/types/` - Types partagés (purs, sans fonctions)
+- [x] Découpage des routes Express par domaine
+- [x] Re-export pour compatibilité ascendante
+- [x] Documentation de la structure (`docs/STRUCTURE.md`)
 
-### Étape 2 : Logique adaptée au nouveau format ✅
-- [x] Types TypeScript mis à jour (`PlayerAssignment { userId, assignmentIds[] }`)
-- [x] `config.ts` nettoyé (plus de fallback avec données en dur)
-- [x] Chargement des joueurs via API (`/api/players`)
-- [x] Chargement des maps via API (`/api/maps`)
-- [x] Helpers créés (`getPlayerAssignments`, `getAssignmentPlayers`)
-- [x] Composants Vue adaptés
-- [x] Server endpoints mis à jour
+### Tests automatisés ✅
+- [x] Configuration Vitest
+- [x] 115 tests passants
+- [x] Tests unitaires des types, config, balance, auth, API, composants Vue
 
-### Étape 3 : Script de migration des données 🚧
-- [x] Script créé (`scripts/migrate-json-to-db.ts`)
-- [ ] Définir le mapping `player1` → `userId` réel
-- [ ] Tester le script en local
-- [ ] Migrer les données JSON vers la DB
+### Migration DB ✅
+- [x] Schéma Prisma mis à jour (Map, GamePlan, GamePlanPlayer)
+- [x] Script de migration JSON → DB
+- [x] Déploiement Railway fonctionnel
 
-### Étape 4 : Exécution de la migration ⏳
-- [ ] Appliquer le schéma sur la DB locale (`npx prisma db push`)
-- [ ] Exécuter le seed (`npm run db:seed`)
-- [ ] Exécuter le script de migration
-- [ ] Tester l'application en local
+### Authentification & Autorisation ✅
+- [x] Login/Logout avec JWT
+- [x] Rôles ADMIN/PLAYER
+- [x] Mode édition réservé aux admins
 
-### Étape 5 : Déploiement ⏳
-- [ ] Appliquer le schéma sur Railway
-- [ ] Migrer les données en prod
-- [ ] Vérifier que tout fonctionne
+### Planificateur de maps ✅
+- [x] Visualisation des maps avec zones
+- [x] Mode édition (déplacement zones/pastilles)
+- [x] Calculateur de rotation
+- [x] Export PNG/texte des plans de jeu
+
+### Refactoring FR → EN ✅
+- [x] Nomenclature anglaise (Assignment, Player, etc.)
+- [x] Messages UI restent en français
 
 ---
 
-## 📦 Fichiers clés
+## 📋 Prochaines étapes
 
-| Fichier | Rôle |
+### Améliorations à venir
+- [ ] Finaliser la migration du serveur (`server.ts` → `server/index.ts`)
+- [ ] Supprimer les fichiers legacy (`src/server/`)
+- [ ] Page Calendrier
+- [ ] Multi-language support
+
+---
+
+## 📦 Structure du projet
+
+Voir `docs/STRUCTURE.md` pour la documentation complète.
+
+| Dossier | Rôle |
 |---------|------|
-| `prisma/schema.prisma` | Schéma de la DB |
-| `prisma/seed.ts` | Initialisation des users et maps (templates) |
-| `scripts/migrate-json-to-db.ts` | Migration des JSON vers GamePlan + GamePlanPlayer |
-| `src/data/config.ts` | Chargement des données depuis l'API + helpers |
+| `client/src/api/` | Appels API (auth, maps, players) |
+| `client/src/services/` | Logique métier (balance) |
+| `client/src/config/` | Configuration UI (couleurs) |
+| `server/src/routes/` | Routes Express par domaine |
+| `server/src/middleware/` | Middlewares (auth) |
+| `shared/types/` | Types TypeScript partagés |
 | `src/types/index.ts` | Types TypeScript |
 | `server.ts` | API endpoints |
 

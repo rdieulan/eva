@@ -30,12 +30,12 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/server.ts ./
-COPY --from=builder /app/src ./src
+COPY --from=builder /app/server ./server
+COPY --from=builder /app/shared ./shared
 
 USER appuser
 
 EXPOSE 3001
 
-CMD ["sh", "-c", "npx prisma db push && node --import tsx server.ts"]
+CMD ["sh", "-c", "npx prisma db push && node --import tsx server/index.ts"]
 
