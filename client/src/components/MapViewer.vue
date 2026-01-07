@@ -2,7 +2,7 @@
 import { ref, computed, watch } from 'vue';
 import type { MapConfig, Player, Point, Assignment } from '../types';
 import { assignmentColors, getPlayerAssignments } from '../config/config';
-import { getZonePolygons } from '../types';
+import { getZonePolygons } from '../utils/zones';
 
 const props = defineProps<{
   map: MapConfig;

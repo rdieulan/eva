@@ -1,4 +1,6 @@
 // Client types - re-exports from shared
+// NOTE: Types only, no functions here
+
 export type {
   Point,
   Zone,
@@ -11,16 +13,4 @@ export type {
   MapConfig,
   AppState,
 } from '../../../shared/types';
-
-// Zone utility functions
-export {
-  isZonePolygon,
-  isZoneMulti,
-  isZoneRect,
-  rectToPolygon,
-  getZonePolygons,
-  getZonePoints,
-  getPolygonPath,
-  getPolygonCentroid,
-} from '../utils/zones';
 
