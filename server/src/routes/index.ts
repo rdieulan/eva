@@ -6,6 +6,7 @@ import authRoutes from '@routes/auth.routes';
 import mapsRoutes from '@routes/maps.routes';
 import plansRoutes from '@routes/plans.routes';
 import usersRoutes from '@routes/users.routes';
+import calendarRoutes from '@routes/calendar.routes';
 import { prisma } from '@db/prisma';
 
 const router = Router();
@@ -15,6 +16,7 @@ router.use('/auth', authRoutes);
 router.use('/maps', mapsRoutes);
 router.use('/plans', plansRoutes);
 router.use('/users', usersRoutes);
+router.use('/calendar', calendarRoutes);
 
 // GET /api/players - Public endpoint for player list
 router.get('/players', async (_req: Request, res: Response) => {

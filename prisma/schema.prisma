@@ -26,6 +26,8 @@ model User {
 
   sessions        Session[]
   gamePlanPlayers GamePlanPlayer[]
+  availabilities  Availability[]
+  createdEvents   CalendarEvent[]
 }
 
 model Session {
@@ -84,5 +86,50 @@ model GamePlanPlayer {
   @@unique([gamePlanId, userId])
   @@index([gamePlanId])
   @@index([userId])
+}
+
+// ===========================================
+// Calendar & Availability
+// ===========================================
+
+enum AvailabilityStatus {
+  AVAILABLE
+  UNAVAILABLE
+}
+
+enum EventType {
+  MATCH
+  EVENT
+}
+
+// Availability = Disponibilité d'un joueur pour une date donnée
+model Availability {
+  id     String             @id @default(cuid())
+  userId String
+  date   DateTime           @db.Date // Date sans heure
+  status AvailabilityStatus
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([date])
+}
+
+// CalendarEvent = Événement créé par un admin (match ou event)
+model CalendarEvent {
+  id          String    @id @default(cuid())
+  date        DateTime  @db.Date
+  startTime   String    // Format "HH:mm"
+  endTime     String    // Format "HH:mm"
+  type        EventType
+  title       String
+  description String?
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  createdBy User @relation(fields: [createdById], references: [id])
+
+  @@index([date])
 }
 

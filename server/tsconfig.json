@@ -8,16 +8,15 @@
     "strict": true,
     "skipLibCheck": true,
     "outDir": "../dist-server",
-    "rootDir": ".",
     "baseUrl": ".",
     "paths": {
       "@db/*": ["src/db/*"],
       "@middleware/*": ["src/middleware/*"],
       "@services/*": ["src/services/*"],
-      "@routes/*": ["src/routes/*"]
+      "@routes/*": ["src/routes/*"],
+      "@shared/*": ["../shared/*"]
     }
   },
-  "include": ["index.ts", "src/**/*.ts"],
+  "include": ["index.ts", "src/**/*.ts", "../shared/**/*.ts"],
   "exclude": ["node_modules"]
 }
-

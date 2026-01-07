@@ -13,9 +13,16 @@ This document describes the organization of the EVA project.
 │   └── src/
 │       ├── api/               # API client functions
 │       │   ├── auth.api.ts    # Authentication API
+│       │   ├── calendar.api.ts # Calendar API (availability, events)
 │       │   ├── maps.api.ts    # Maps and game plans API
 │       │   └── players.api.ts # Players API
 │       ├── components/        # Vue components
+│       │   ├── calendar/      # Calendar components
+│       │   │   ├── CalendarGrid.vue   # Monthly grid with navigation
+│       │   │   ├── DayCell.vue        # Single day cell
+│       │   │   └── EventFormModal.vue # Event creation/edit modal
+│       │   ├── common/        # Reusable components
+│       │   │   └── Modal.vue  # Generic modal component
 │       │   ├── layout/        # Layout components (TopBar)
 │       │   ├── planner/       # Planner-specific components
 │       │   ├── MapList.vue
@@ -49,6 +56,7 @@ This document describes the organization of the EVA project.
 │   └── src/
 │       ├── routes/            # API route handlers
 │       │   ├── auth.routes.ts
+│       │   ├── calendar.routes.ts # Availability & events API
 │       │   ├── maps.routes.ts
 │       │   ├── plans.routes.ts
 │       │   ├── users.routes.ts
@@ -63,6 +71,7 @@ This document describes the organization of the EVA project.
 ├── shared/                    # Shared types (frontend + backend)
 │   └── types/
 │       ├── index.ts           # Barrel export
+│       ├── calendar.types.ts  # Availability, CalendarEvent, etc.
 │       ├── zone.types.ts      # Zone, Point, etc.
 │       ├── player.types.ts    # Player, PlayerAssignment
 │       └── map.types.ts       # MapConfig, Assignment, AppState

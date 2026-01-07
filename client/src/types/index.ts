@@ -12,5 +12,14 @@ export type {
   Assignment,
   MapConfig,
   AppState,
+  AvailabilityStatus,
+  EventType,
+  Availability,
+  CalendarEvent,
+  PlayerAvailability,
+  DayData,
+  MonthData,
+  SetAvailabilityRequest,
+  CreateEventRequest,
 } from '@shared/types';
 
