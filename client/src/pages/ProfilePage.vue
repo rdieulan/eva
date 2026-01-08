@@ -173,16 +173,30 @@ async function handleLogout() {
   </div>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
+@use '@/styles/variables' as *;
+
 .profile-page {
   min-height: 100%;
   width: 100%;
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 2rem;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  padding: $spacing-xl;
+  background: linear-gradient(135deg, $color-bg-secondary 0%, #16213e 100%);
   overflow-y: auto;
+
+  @include tablet {
+    padding: $spacing-lg;
+  }
+
+  @include mobile-lg {
+    padding: $spacing-md;
+  }
+
+  @include mobile {
+    padding: 0.75rem;
+  }
 }
 
 .profile-container {
@@ -192,164 +206,228 @@ async function handleLogout() {
 
 h1 {
   color: #fff;
-  margin: 0 0 2rem;
+  margin: 0 0 $spacing-xl;
   font-size: 2rem;
   text-align: center;
+
+  @include tablet {
+    font-size: 1.75rem;
+  }
+
+  @include mobile-lg {
+    font-size: 1.5rem;
+    margin-bottom: $spacing-lg;
+  }
+
+  @include mobile {
+    font-size: 1.35rem;
+    margin-bottom: 1.25rem;
+  }
 }
 
 .profile-section {
-  background: #2a2a4a;
-  border: 1px solid #3a3a5a;
-  border-radius: 12px;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
+  background: $color-bg-tertiary;
+  border: 1px solid $color-border-light;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-lg;
+
+  @include mobile-lg {
+    padding: 1.25rem;
+    margin-bottom: $spacing-md;
+    border-radius: 10px;
+  }
+
+  @include mobile {
+    padding: $spacing-md;
+    margin-bottom: 0.75rem;
+  }
+
+  h2 {
+    color: $color-accent-light;
+    margin: 0 0 $spacing-md;
+    font-size: 1.1rem;
+    font-weight: 600;
+
+    @include mobile-lg {
+      font-size: 1rem;
+    }
+
+    @include mobile {
+      font-size: 0.95rem;
+      margin-bottom: 0.75rem;
+    }
+  }
 }
 
-.profile-section h2 {
-  color: #9a9ada;
-  margin: 0 0 1rem;
-  font-size: 1.1rem;
-  font-weight: 600;
-}
-
-/* User information */
 .info-grid {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: $spacing-md;
 }
 
 .info-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-}
 
-.info-item label {
-  color: #888;
-  font-size: 0.9rem;
-}
+  @include mobile-lg {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: $spacing-xs;
+  }
 
-.info-item span {
-  color: #fff;
-  font-weight: 500;
+  label {
+    color: $color-text-secondary;
+    font-size: 0.9rem;
+
+    @include mobile {
+      font-size: 0.85rem;
+    }
+  }
+
+  span {
+    color: #fff;
+    font-weight: 500;
+  }
 }
 
 .role-badge {
-  padding: 0.25rem 0.75rem;
-  border-radius: 4px;
+  padding: $spacing-xs 0.75rem;
+  border-radius: $radius-sm;
   font-size: 0.8rem;
   font-weight: 600;
   text-transform: uppercase;
+
+  &.admin {
+    background: rgba($color-success, 0.2);
+    color: $color-success;
+  }
+
+  &.player {
+    background: rgba($color-accent, 0.2);
+    color: $color-accent-light;
+  }
 }
 
-.role-badge.admin {
-  background: rgba(74, 222, 128, 0.2);
-  color: #4ade80;
-}
-
-.role-badge.player {
-  background: rgba(122, 122, 186, 0.2);
-  color: #9a9ada;
-}
-
-/* Password form */
 .password-form {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: $spacing-md;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-}
+  gap: $spacing-sm;
 
-.form-group label {
-  color: #888;
-  font-size: 0.9rem;
-}
+  label {
+    color: $color-text-secondary;
+    font-size: 0.9rem;
 
-.form-group input {
-  padding: 0.75rem 1rem;
-  background: #1a1a2e;
-  border: 2px solid #3a3a5a;
-  border-radius: 8px;
-  color: #fff;
-  font-size: 1rem;
-  transition: border-color 0.2s;
-}
+    @include mobile {
+      font-size: 0.85rem;
+    }
+  }
 
-.form-group input:focus {
-  outline: none;
-  border-color: #7a7aba;
-}
+  input {
+    padding: 0.75rem $spacing-md;
+    background: $color-bg-secondary;
+    border: 2px solid $color-border-light;
+    border-radius: $radius-md;
+    color: #fff;
+    font-size: 1rem;
+    transition: border-color 0.2s;
 
-.form-group input::placeholder {
-  color: #555;
+    &:focus {
+      outline: none;
+      border-color: $color-accent;
+    }
+
+    &::placeholder {
+      color: #555;
+    }
+
+    @include mobile-lg {
+      font-size: 16px; // Prevents zoom on iOS
+    }
+  }
 }
 
 .message {
   padding: 0.75rem;
-  border-radius: 8px;
+  border-radius: $radius-md;
   font-size: 0.9rem;
   text-align: center;
-}
 
-.message.error {
-  background: rgba(255, 107, 107, 0.1);
-  border: 1px solid rgba(255, 107, 107, 0.3);
-  color: #ff6b6b;
-}
+  &.error {
+    background: rgba($color-danger, 0.1);
+    border: 1px solid rgba($color-danger, 0.3);
+    color: $color-danger;
+  }
 
-.message.success {
-  background: rgba(74, 222, 128, 0.1);
-  border: 1px solid rgba(74, 222, 128, 0.3);
-  color: #4ade80;
+  &.success {
+    background: rgba($color-success, 0.1);
+    border: 1px solid rgba($color-success, 0.3);
+    color: $color-success;
+  }
+
+  @include mobile {
+    font-size: 0.85rem;
+    padding: 0.625rem;
+  }
 }
 
 .btn-primary {
   padding: 0.875rem;
-  background: #7a7aba;
+  background: $color-accent;
   border: none;
-  border-radius: 8px;
+  border-radius: $radius-md;
   color: #fff;
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: $color-accent-light;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  @include mobile {
+    padding: 0.75rem;
+    font-size: 0.95rem;
+  }
 }
 
-.btn-primary:hover:not(:disabled) {
-  background: #9a9ada;
-}
-
-.btn-primary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* Logout button */
 .btn-logout {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: $spacing-sm;
   width: 100%;
   padding: 0.875rem;
   background: transparent;
-  border: 2px solid #ff6b6b;
-  border-radius: 8px;
-  color: #ff6b6b;
+  border: 2px solid $color-danger;
+  border-radius: $radius-md;
+  color: $color-danger;
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-}
 
-.btn-logout:hover {
-  background: rgba(255, 107, 107, 0.1);
+  &:hover {
+    background: rgba($color-danger, 0.1);
+  }
+
+  @include mobile {
+    padding: 0.75rem;
+    font-size: 0.95rem;
+  }
 }
 
 .logout-icon {

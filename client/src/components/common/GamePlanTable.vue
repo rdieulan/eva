@@ -58,41 +58,87 @@ const hasData = computed(() => props.headers.length > 0 && rows.value.length > 0
   </div>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
+@use '@/styles/variables' as *;
+
 .game-plan-table {
   overflow-x: auto;
-}
 
-.game-plan-table table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.85rem;
-}
+  @include mobile-lg {
+    margin: 0 (0 - $spacing-sm);
+  }
 
-.game-plan-table th,
-.game-plan-table td {
-  padding: 0.5rem;
-  text-align: center;
-  border-bottom: 1px solid #3a3a5a;
-}
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
 
-.game-plan-table th {
-  color: #888;
-  font-weight: 600;
-}
+    @include tablet {
+      font-size: 0.8rem;
+    }
 
-.game-plan-table .map-name {
-  text-align: left;
-  color: #fff;
-  font-weight: 500;
+    @include mobile-lg {
+      font-size: 0.75rem;
+      min-width: 400px;
+    }
+
+    @include mobile {
+      font-size: 0.7rem;
+    }
+  }
+
+  th,
+  td {
+    padding: $spacing-sm;
+    text-align: center;
+    border-bottom: 1px solid $color-border-light;
+
+    @include tablet {
+      padding: 0.4rem;
+    }
+
+    @include mobile-lg {
+      padding: 0.35rem $spacing-xs;
+    }
+
+    @include mobile {
+      padding: $spacing-xs 0.2rem;
+    }
+  }
+
+  th {
+    color: $color-text-secondary;
+    font-weight: 600;
+  }
+
+  .map-name {
+    text-align: left;
+    color: #fff;
+    font-weight: 500;
+  }
 }
 
 .assignment-badge {
   display: inline-block;
-  padding: 0.2rem 0.5rem;
+  padding: 0.2rem $spacing-sm;
   border: 1px solid;
-  border-radius: 4px;
+  border-radius: $radius-sm;
   font-size: 0.75rem;
   font-weight: 600;
+
+  @include tablet {
+    padding: 0.15rem 0.4rem;
+    font-size: 0.7rem;
+  }
+
+  @include mobile-lg {
+    padding: 0.1rem 0.3rem;
+    font-size: 0.65rem;
+  }
+
+  @include mobile {
+    padding: 0.1rem $spacing-xs;
+    font-size: 0.6rem;
+  }
 }
 </style>

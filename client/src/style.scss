@@ -1,0 +1,185 @@
+@use 'styles/variables' as *;
+
+// ===========================================
+// Global Styles
+// ===========================================
+
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: dark;
+  color: $color-text-primary;
+  background-color: $color-bg-primary;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  // CSS Custom Properties (for runtime access)
+  --spacing-xs: #{$spacing-xs};
+  --spacing-sm: #{$spacing-sm};
+  --spacing-md: #{$spacing-md};
+  --spacing-lg: #{$spacing-lg};
+  --spacing-xl: #{$spacing-xl};
+  --spacing-2xl: #{$spacing-2xl};
+
+  --font-size-xs: #{$font-size-xs};
+  --font-size-sm: #{$font-size-sm};
+  --font-size-base: #{$font-size-base};
+  --font-size-lg: #{$font-size-lg};
+  --font-size-xl: #{$font-size-xl};
+  --font-size-2xl: #{$font-size-2xl};
+  --font-size-3xl: #{$font-size-3xl};
+  --font-size-4xl: #{$font-size-4xl};
+
+  --touch-target-min: #{$touch-target-min};
+
+  --radius-sm: #{$radius-sm};
+  --radius-md: #{$radius-md};
+  --radius-lg: #{$radius-lg};
+  --radius-xl: #{$radius-xl};
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+#app {
+  width: 100%;
+  height: 100vh;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+button {
+  border-radius: $radius-md;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+
+  &:hover {
+    border-color: #646cff;
+  }
+
+  &:focus,
+  &:focus-visible {
+    outline: 4px auto -webkit-focus-ring-color;
+  }
+}
+
+// ===========================================
+// Responsive Font Sizes
+// ===========================================
+
+@include mobile-lg {
+  :root {
+    --font-size-3xl: 1.75rem;
+    --font-size-4xl: 2.5rem;
+  }
+}
+
+@include mobile {
+  :root {
+    --font-size-2xl: 1.25rem;
+    --font-size-3xl: 1.5rem;
+    --font-size-4xl: 2rem;
+  }
+}
+
+// ===========================================
+// Utility Classes
+// ===========================================
+
+// Hide on specific breakpoints
+@include mobile {
+  .hide-mobile {
+    display: none !important;
+  }
+}
+
+@media (min-width: #{$breakpoint-mobile + 1}) and (max-width: #{$breakpoint-mobile-lg}) {
+  .hide-mobile-lg {
+    display: none !important;
+  }
+}
+
+@media (min-width: #{$breakpoint-mobile-lg + 1}) and (max-width: #{$breakpoint-tablet}) {
+  .hide-tablet {
+    display: none !important;
+  }
+}
+
+@include desktop {
+  .hide-desktop {
+    display: none !important;
+  }
+}
+
+// Show only on specific breakpoints
+@media (min-width: #{$breakpoint-mobile + 1}) {
+  .mobile-only {
+    display: none !important;
+  }
+}
+
+@include mobile-lg {
+  .tablet-up {
+    display: none !important;
+  }
+}
+
+@include tablet {
+  .desktop-only {
+    display: none !important;
+  }
+}
+
+// Touch-friendly sizing
+.touch-target {
+  min-width: $touch-target-min;
+  min-height: $touch-target-min;
+}
+
+// Responsive text utilities
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.text-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+// Responsive container
+.container-responsive {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 $spacing-md;
+
+  @include mobile {
+    padding: 0 $spacing-sm;
+  }
+}
+

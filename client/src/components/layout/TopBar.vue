@@ -60,99 +60,166 @@ function goToProfile() {
   </header>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
+@use '@/styles/variables' as *;
+
 .top-bar {
   display: flex;
   align-items: stretch;
-  background: #1a1a2e;
-  border-bottom: 1px solid #333;
+  background: $color-bg-secondary;
+  border-bottom: 1px solid $color-border;
   min-height: 70px;
+
+  @include tablet {
+    min-height: 60px;
+  }
+
+  @include mobile-lg {
+    min-height: 56px;
+  }
+
+  @include mobile {
+    min-height: 52px;
+  }
 }
 
-/* Section Logo - immuable */
 .section-logo {
   display: flex;
   align-items: center;
-  padding: 0.5rem 1rem;
-  border-right: 1px solid #333;
+  padding: $spacing-sm $spacing-md;
+  border-right: 1px solid $color-border;
+
+  @include tablet {
+    padding: $spacing-sm 0.75rem;
+  }
+
+  @include mobile-lg {
+    padding: $spacing-sm;
+  }
+
+  @include mobile {
+    border: none;
+  }
 }
 
 .btn-home {
   width: 48px;
   height: 48px;
   border: none;
-  background: #2a2a4a;
-  border-radius: 8px;
+  background: $color-bg-tertiary;
+  border-radius: $radius-md;
   cursor: pointer;
   padding: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
-}
 
-.btn-home:hover {
-  background: #3a3a5a;
-  transform: scale(1.05);
+  &:hover {
+    background: $color-border-light;
+    transform: scale(1.05);
+  }
+
+  @include tablet {
+    width: $touch-target-min;
+    height: $touch-target-min;
+  }
+
+  @include mobile-lg {
+    width: 40px;
+    height: 40px;
+    padding: 6px;
+  }
+
+  @include mobile {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+  }
 }
 
 .home-icon {
   width: 100%;
   height: 100%;
-  fill: #7a7aba;
+  fill: $color-accent;
+
+  .btn-home:hover & {
+    fill: $color-accent-light;
+  }
 }
 
-.btn-home:hover .home-icon {
-  fill: #9a9ada;
-}
-
-/* Section Dynamique - via slot */
 .section-dynamic {
   flex: 1;
   display: flex;
   align-items: stretch;
 }
 
-/* Section Auth - immuable */
 .section-auth {
   display: flex;
   align-items: center;
-  padding: 0.5rem 1rem;
-  border-left: 1px solid #333;
+  padding: $spacing-sm $spacing-md;
+  border-left: 1px solid $color-border;
+
+  @include tablet {
+    padding: $spacing-sm 0.75rem;
+  }
+
+  @include mobile-lg {
+    padding: $spacing-sm;
+  }
+
+  @include mobile {
+    border: none;
+  }
 }
 
 .btn-login,
 .btn-profile {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
   border: 2px solid #4a4a8a;
   background: transparent;
-  color: #9a9ada;
+  color: $color-accent-light;
   border-radius: 6px;
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: $font-size-sm;
   cursor: pointer;
   transition: all 0.2s;
-}
 
-.btn-login:hover,
-.btn-profile:hover {
-  background: #2a2a4a;
-  border-color: #7a7aba;
-  color: #fff;
+  &:hover {
+    background: $color-bg-tertiary;
+    border-color: $color-accent;
+    color: #fff;
+  }
+
+  @include mobile-lg {
+    padding: $spacing-sm;
+    gap: 0;
+
+    span {
+      display: none;
+    }
+  }
+
+  @include mobile {
+    width: 36px;
+    height: 36px;
+    padding: 6px;
+    border-radius: 6px;
+  }
 }
 
 .btn-profile {
-  border-color: #4ade80;
-  color: #4ade80;
-}
+  border-color: $color-success;
+  color: $color-success;
 
-.btn-profile:hover {
-  border-color: #6ee7a0;
-  color: #fff;
-  background: rgba(74, 222, 128, 0.1);
+  &:hover {
+    border-color: #6ee7a0;
+    color: #fff;
+    background: rgba(74, 222, 128, 0.1);
+  }
 }
 
 .login-icon,
@@ -160,6 +227,11 @@ function goToProfile() {
   width: 20px;
   height: 20px;
   fill: currentColor;
+
+  @include mobile-lg {
+    width: 24px;
+    height: 24px;
+  }
 }
 </style>
 

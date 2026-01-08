@@ -215,12 +215,20 @@ function isPlayerHighlighted(playerId: string): boolean {
   />
 </template>
 
-<style scoped>
+<style scoped lang="scss">
+@use '@/styles/variables' as *;
+
 .planner-toolbar {
   display: flex;
   flex: 1;
   align-items: stretch;
   width: 100%;
+
+  @include mobile-lg {
+    flex-direction: column;
+    gap: $spacing-xs;
+    padding: $spacing-xs;
+  }
 }
 
 .section-left {
@@ -228,8 +236,16 @@ function isPlayerHighlighted(playerId: string): boolean {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.5rem 1rem;
+  padding: $spacing-sm $spacing-md;
   min-width: 0;
+
+  @include tablet {
+    padding: $spacing-sm 0.75rem;
+  }
+
+  @include mobile-lg {
+    display: none; // Hide balance messages on mobile
+  }
 }
 
 .section-center {
@@ -237,8 +253,23 @@ function isPlayerHighlighted(playerId: string): boolean {
   flex-direction: row;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.4rem 1rem;
+  padding: 0.4rem $spacing-md;
   flex-shrink: 0;
+
+  @include tablet {
+    padding: 0.4rem $spacing-sm;
+  }
+
+  @include mobile-lg {
+    order: 1;
+    padding: $spacing-xs;
+    width: 100%;
+  }
+
+  @include mobile {
+    flex-direction: column;
+    gap: 0.35rem;
+  }
 }
 
 .section-right {
@@ -246,16 +277,26 @@ function isPlayerHighlighted(playerId: string): boolean {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding: 0.5rem 1rem;
+  padding: $spacing-sm $spacing-md;
   min-width: 0;
+
+  @include tablet {
+    padding: $spacing-sm 0.75rem;
+  }
+
+  @include mobile-lg {
+    order: 2;
+    justify-content: center;
+    padding: $spacing-xs;
+  }
 }
 
 .btn-calculator {
-  width: 44px;
-  height: 44px;
+  width: $touch-target-min;
+  height: $touch-target-min;
   border: none;
-  background: #2a2a4a;
-  border-radius: 8px;
+  background: $color-bg-tertiary;
+  border-radius: $radius-md;
   cursor: pointer;
   padding: 6px;
   display: flex;
@@ -263,40 +304,63 @@ function isPlayerHighlighted(playerId: string): boolean {
   justify-content: center;
   transition: all 0.2s;
   flex-shrink: 0;
-}
 
-.btn-calculator:hover {
-  background: #3a3a5a;
-  transform: scale(1.05);
+  &:hover {
+    background: $color-border-light;
+    transform: scale(1.05);
+  }
+
+  @include mobile-lg {
+    width: 36px;
+    height: 36px;
+  }
 }
 
 .calculator-icon {
   width: 100%;
   height: 100%;
-  fill: #4ade80;
-  color: #4ade80;
-}
+  fill: $color-success;
+  color: $color-success;
 
-.btn-calculator:hover .calculator-icon {
-  fill: #6ee7a0;
-  color: #6ee7a0;
+  .btn-calculator:hover & {
+    fill: #6ee7a0;
+    color: #6ee7a0;
+  }
 }
 
 .balance-messages {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: $spacing-xs;
   font-size: 0.8rem;
   font-weight: 600;
-  padding: 0.5rem 0.75rem;
-  border-radius: 4px;
+  padding: $spacing-sm 0.75rem;
+  border-radius: $radius-sm;
   max-width: 400px;
+
+  &.is-balanced {
+    color: $color-success;
+    background: rgba($color-success, 0.1);
+    border: 1px solid rgba($color-success, 0.3);
+  }
+
+  &.is-unbalanced {
+    color: $color-danger;
+    background: rgba($color-danger, 0.1);
+    border: 1px solid rgba($color-danger, 0.3);
+  }
+
+  @include tablet {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.6rem;
+    max-width: 300px;
+  }
 }
 
 .balance-message-row {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: $spacing-sm;
 }
 
 .message-icon {
@@ -307,28 +371,25 @@ function isPlayerHighlighted(playerId: string): boolean {
   line-height: 1.3;
 }
 
-.balance-messages.is-balanced {
-  color: #4ade80;
-  background: rgba(74, 222, 128, 0.1);
-  border: 1px solid rgba(74, 222, 128, 0.3);
-}
-
-.balance-messages.is-unbalanced {
-  color: #ff6b6b;
-  background: rgba(255, 107, 107, 0.1);
-  border: 1px solid rgba(255, 107, 107, 0.3);
-}
-
-
 .cartouches-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: $spacing-xs;
+
+  @include mobile-lg {
+    width: 100%;
+  }
 }
 
 .reset-wrapper {
   display: flex;
   align-items: center;
+
+  @include mobile {
+    position: absolute;
+    top: $spacing-xs;
+    right: $spacing-xs;
+  }
 }
 
 .btn-reset {
@@ -341,146 +402,211 @@ function isPlayerHighlighted(playerId: string): boolean {
   display: flex;
   align-items: center;
   justify-content: center;
+
+  @include mobile-lg {
+    width: 32px;
+    height: 32px;
+  }
 }
 
 .reset-icon {
   width: 32px;
   height: 32px;
-  fill: #888;
+  fill: $color-text-secondary;
   transition: transform 0.3s, fill 0.2s;
+
+  .btn-reset:hover & {
+    fill: #fff;
+    transform: rotate(90deg);
+  }
+
+  @include mobile-lg {
+    width: 28px;
+    height: 28px;
+  }
 }
 
-.btn-reset:hover .reset-icon {
-  fill: #fff;
-  transform: rotate(90deg);
-}
-
-
-/* Joueurs */
 .player-bar {
   display: flex;
-  gap: 0.5rem;
+  gap: $spacing-sm;
   justify-content: center;
+
+  @include mobile-lg {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.35rem;
+  }
+
+  button {
+    padding: 0.3rem 0.75rem;
+    border: 2px solid #666;
+    background: transparent;
+    color: #ccc;
+    border-radius: $radius-sm;
+    font-weight: 600;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      background: $color-border-light;
+      border-color: $color-text-secondary;
+      color: #fff;
+    }
+
+    &.active {
+      background: #4a4a8a;
+      border-color: $color-accent;
+      color: #fff;
+      box-shadow: 0 0 8px rgba(100, 100, 200, 0.3);
+    }
+
+    &.highlighted {
+      border-color: white;
+
+      &.active {
+        background: linear-gradient(135deg, #4a4a8a 0%, rgba($color-success, 0.3) 100%);
+        border-color: white;
+        color: #fff;
+      }
+    }
+
+    @include tablet {
+      padding: $spacing-xs $spacing-sm;
+      font-size: 0.75rem;
+    }
+
+    @include mobile-lg {
+      padding: 0.3rem $spacing-sm;
+      font-size: 0.7rem;
+    }
+
+    @include mobile {
+      padding: $spacing-xs 0.4rem;
+      font-size: 0.65rem;
+    }
+  }
 }
 
-.player-bar button {
-  padding: 0.3rem 0.75rem;
-  border: 2px solid #666;
-  background: transparent;
-  color: #ccc;
-  border-radius: 4px;
-  font-weight: 600;
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.player-bar button:hover {
-  background: #3a3a5a;
-  border-color: #888;
-  color: #fff;
-}
-
-.player-bar button.active {
-  background: #4a4a8a;
-  border-color: #7a7aba;
-  color: #fff;
-  box-shadow: 0 0 8px rgba(100, 100, 200, 0.3);
-}
-
-.player-bar button.highlighted {
-  border-color: white;
-}
-
-.player-bar button.highlighted.active {
-  background: linear-gradient(135deg, #4a4a8a 0%, rgba(74, 222, 128, 0.3) 100%);
-  border-color: white;
-  color: #fff;
-}
-
-/* Postes */
 .assignment-bar {
   display: flex;
-  gap: 0.5rem;
+  gap: $spacing-sm;
   justify-content: center;
+
+  @include mobile-lg {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.35rem;
+  }
+
+  button {
+    padding: $spacing-xs 0.7rem;
+    border: 2px solid var(--assignment-color);
+    background: transparent;
+    color: var(--assignment-color);
+    border-radius: $radius-sm;
+    font-weight: 600;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover:not(.disabled) {
+      background: color-mix(in srgb, var(--assignment-color) 20%, transparent);
+    }
+
+    &.active {
+      background: color-mix(in srgb, var(--assignment-color) 30%, transparent);
+      box-shadow: 0 0 8px color-mix(in srgb, var(--assignment-color) 40%, transparent);
+    }
+
+    &.disabled {
+      border-color: #444;
+      color: #555;
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    @include tablet {
+      padding: 0.2rem $spacing-sm;
+      font-size: 0.7rem;
+    }
+
+    @include mobile-lg {
+      padding: $spacing-xs 0.45rem;
+      font-size: 0.65rem;
+    }
+
+    @include mobile {
+      padding: $spacing-xs 0.4rem;
+      font-size: 0.65rem;
+    }
+  }
 }
 
-.assignment-bar button {
-  padding: 0.25rem 0.7rem;
-  border: 2px solid var(--assignment-color);
-  background: transparent;
-  color: var(--assignment-color);
-  border-radius: 4px;
-  font-weight: 600;
-  font-size: 0.75rem;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.assignment-bar button:hover:not(.disabled) {
-  background: color-mix(in srgb, var(--assignment-color) 20%, transparent);
-}
-
-.assignment-bar button.active {
-  background: color-mix(in srgb, var(--assignment-color) 30%, transparent);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--assignment-color) 40%, transparent);
-}
-
-.assignment-bar button.disabled {
-  border-color: #444;
-  color: #555;
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-/* Edit buttons */
 .edit-controls {
   display: flex;
-  gap: 0.5rem;
+  gap: $spacing-sm;
+
+  @include mobile-lg {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
 }
 
-.btn-edit, .btn-save, .btn-cancel {
+.btn-edit,
+.btn-save,
+.btn-cancel {
   padding: 0.4rem 0.75rem;
   border: none;
-  border-radius: 4px;
+  border-radius: $radius-sm;
   font-weight: 600;
   font-size: 0.8rem;
   cursor: pointer;
   transition: all 0.2s;
+
+  @include tablet {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.75rem;
+  }
+
+  @include mobile-lg {
+    padding: 0.3rem $spacing-sm;
+    font-size: 0.7rem;
+  }
 }
 
 .btn-edit {
-  background: #2a2a4a;
+  background: $color-bg-tertiary;
   color: #ccc;
   border: 1px solid #444;
-}
 
-.btn-edit:hover {
-  background: #3a3a5a;
-}
+  &:hover {
+    background: $color-border-light;
+  }
 
-.btn-edit.active {
-  background: #ff6b6b;
-  color: #fff;
-  border-color: #ff6b6b;
+  &.active {
+    background: $color-danger;
+    color: #fff;
+    border-color: $color-danger;
+  }
 }
 
 .btn-save {
   background: #4ecdc4;
-  color: #1a1a2e;
-}
+  color: $color-bg-secondary;
 
-.btn-save:hover {
-  background: #5fd9d0;
+  &:hover {
+    background: #5fd9d0;
+  }
 }
 
 .btn-cancel {
   background: #666;
   color: #fff;
-}
 
-.btn-cancel:hover {
-  background: #888;
+  &:hover {
+    background: $color-text-secondary;
+  }
 }
 </style>
 

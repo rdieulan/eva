@@ -630,44 +630,79 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
   </div>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
+@use '@/styles/variables' as *;
+
 .map-viewer {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 0.5rem;
-  background: #0f0f1a;
+  padding: $spacing-sm;
+  background: $color-bg-primary;
   overflow: hidden;
   min-width: 0;
   min-height: 0;
+
+  @include mobile-lg {
+    padding: $spacing-sm;
+  }
+
+  @include mobile {
+    padding: 0.35rem;
+  }
 }
 
 .floor-selector {
   display: flex;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-sm;
   flex-shrink: 0;
-}
 
-.floor-selector button {
-  padding: 0.5rem 1rem;
-  border: 1px solid #444;
-  background: #1a1a2e;
-  color: #ccc;
-  border-radius: 4px;
-  cursor: pointer;
-}
+  @include tablet {
+    gap: 0.35rem;
+  }
 
-.floor-selector button:hover {
-  background: #2a2a4a;
-}
+  @include mobile-lg {
+    gap: $spacing-xs;
+    margin-bottom: $spacing-sm;
+  }
 
-.floor-selector button.active {
-  background: #4a4a8a;
-  border-color: #6a6aaa;
-  color: #fff;
+  button {
+    padding: $spacing-sm $spacing-md;
+    border: 1px solid #444;
+    background: $color-bg-secondary;
+    color: #ccc;
+    border-radius: $radius-sm;
+    cursor: pointer;
+
+    &:hover {
+      background: $color-bg-tertiary;
+    }
+
+    &.active {
+      background: #4a4a8a;
+      border-color: #6a6aaa;
+      color: #fff;
+    }
+
+    @include tablet {
+      padding: 0.35rem 0.6rem;
+      font-size: 0.75rem;
+    }
+
+    @include mobile-lg {
+      padding: 0.3rem $spacing-sm;
+      font-size: 0.7rem;
+      border-radius: $radius-sm;
+    }
+
+    @include mobile {
+      padding: $spacing-xs 0.4rem;
+      font-size: 0.65rem;
+    }
+  }
 }
 
 .map-container {
@@ -683,7 +718,7 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
   max-height: calc(100vh - 120px);
   width: auto;
   height: auto;
-  border-radius: 8px;
+  border-radius: $radius-md;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
 }
 
@@ -694,56 +729,72 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
   width: 100%;
   height: 100%;
   pointer-events: none;
-  border-radius: 8px;
-}
+  border-radius: $radius-md;
 
-.overlay.edit-mode {
-  pointer-events: all;
+  &.edit-mode {
+    pointer-events: all;
+  }
 }
 
 .zone {
   fill: rgba(100, 100, 100, 0.1);
   stroke: rgba(100, 100, 100, 0.3);
   stroke-width: 0.3;
-}
 
-.zone.active {
-  fill: color-mix(in srgb, var(--zone-color) 20%, transparent);
-  stroke: var(--zone-color);
-  stroke-width: 0.5;
-}
+  &.active {
+    fill: color-mix(in srgb, var(--zone-color) 20%, transparent);
+    stroke: var(--zone-color);
+    stroke-width: 0.5;
+  }
 
-.zone.editable {
-  cursor: move;
+  &.editable {
+    cursor: move;
+  }
+
+  &.ghost {
+    fill: color-mix(in srgb, var(--zone-color) 10%, transparent);
+    stroke: var(--zone-color);
+    stroke-width: 0.3;
+    stroke-dasharray: 1, 0.5;
+    opacity: 0.4;
+  }
 }
 
 .marker {
   fill: rgba(100, 100, 100, 0.1);
   stroke: rgba(100, 100, 100, 0.3);
   stroke-width: 0.3;
-}
 
-.marker.active {
-  fill: color-mix(in srgb, var(--assignment-color) 60%, transparent);
-  stroke: var(--assignment-color);
-  stroke-width: 0.5;
-}
+  &.active {
+    fill: color-mix(in srgb, var(--assignment-color) 60%, transparent);
+    stroke: var(--assignment-color);
+    stroke-width: 0.5;
+  }
 
-.marker.editable {
-  cursor: move;
+  &.editable {
+    cursor: move;
+  }
+
+  &.ghost {
+    fill: var(--assignment-color);
+    stroke: var(--assignment-color);
+    stroke-width: 0.3;
+    stroke-dasharray: 0.5, 0.3;
+    opacity: 0.4;
+  }
 }
 
 .point-handle {
   fill: #fff;
-  stroke: #333;
+  stroke: $color-border;
   stroke-width: 0.3;
   cursor: move;
   opacity: 0.9;
-}
 
-.point-handle:hover {
-  fill: #4ecdc4;
-  opacity: 1;
+  &:hover {
+    fill: #4ecdc4;
+    opacity: 1;
+  }
 }
 
 .add-point-handle {
@@ -752,62 +803,57 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
   stroke-width: 0.2;
   cursor: pointer;
   opacity: 0.5;
-}
 
-.add-point-handle:hover {
-  opacity: 1;
-  r: 1;
+  &:hover {
+    opacity: 1;
+    r: 1;
+  }
 }
 
 .remove-polygon-btn {
   font-size: 3px;
-  fill: #ff6b6b;
+  fill: $color-danger;
   text-anchor: middle;
   dominant-baseline: middle;
   cursor: pointer;
   opacity: 0.7;
   pointer-events: all;
-}
 
-.remove-polygon-btn:hover {
-  fill: #ff4444;
-  opacity: 1;
-}
-
-.marker.ghost {
-  fill: var(--assignment-color);
-  stroke: var(--assignment-color);
-  stroke-width: 0.3;
-  stroke-dasharray: 0.5, 0.3;
-  opacity: 0.4;
-}
-
-.zone.ghost {
-  fill: color-mix(in srgb, var(--zone-color) 10%, transparent);
-  stroke: var(--zone-color);
-  stroke-width: 0.3;
-  stroke-dasharray: 1, 0.5;
-  opacity: 0.4;
+  &:hover {
+    fill: #ff4444;
+    opacity: 1;
+  }
 }
 
 .marker-label {
   font-size: 2.5px;
-  fill: #888;
+  fill: $color-text-secondary;
   text-anchor: middle;
+
+  &.active {
+    fill: #fff;
+    font-weight: bold;
+  }
+
+  &.ghost {
+    fill: var(--assignment-color, $color-text-secondary);
+    opacity: 0.5;
+    font-style: italic;
+  }
+
+  @include tablet {
+    font-size: 2px;
+  }
+
+  @include mobile-lg {
+    font-size: 1.8px;
+  }
+
+  @include mobile {
+    font-size: 1.5px;
+  }
 }
 
-.marker-label.active {
-  fill: #fff;
-  font-weight: bold;
-}
-
-.marker-label.ghost {
-  fill: var(--assignment-color, #888);
-  opacity: 0.5;
-  font-style: italic;
-}
-
-/* Player edit panel */
 .panel-backdrop {
   position: fixed;
   top: 0;
@@ -820,51 +866,76 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
 .player-edit-panel {
   position: fixed;
   z-index: 100;
-  background: #1a1a2e;
+  background: $color-bg-secondary;
   border: 1px solid #444;
-  border-radius: 8px;
+  border-radius: $radius-md;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
   min-width: 150px;
   transform: translate(-50%, 10px);
+
+  @include mobile-lg {
+    min-width: 130px;
+    transform: translate(-50%, 5px);
+  }
+
+  @include mobile {
+    min-width: 120px;
+  }
 }
 
 .panel-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid #333;
+  padding: $spacing-sm 0.75rem;
+  border-bottom: 1px solid $color-border;
+
+  @include mobile-lg {
+    padding: 0.4rem 0.6rem;
+  }
+
+  @include mobile {
+    padding: 0.3rem $spacing-sm;
+  }
 }
 
 .panel-title {
   font-weight: 600;
   font-size: 0.9rem;
-}
 
-.panel-title.editable {
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-}
+  &.editable {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
 
-.panel-title.editable:hover {
-  opacity: 0.8;
-}
+    &:hover {
+      opacity: 0.8;
+    }
+  }
 
-.panel-title .edit-hint {
-  font-size: 0.7rem;
-  opacity: 0.5;
-}
+  .edit-hint {
+    font-size: 0.7rem;
+    opacity: 0.5;
+  }
 
-.panel-title.editable:hover .edit-hint {
-  opacity: 1;
+  &.editable:hover .edit-hint {
+    opacity: 1;
+  }
+
+  @include mobile-lg {
+    font-size: 0.8rem;
+  }
+
+  @include mobile {
+    font-size: 0.75rem;
+  }
 }
 
 .name-edit-wrapper {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: $spacing-xs;
 }
 
 .name-input {
@@ -876,13 +947,14 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
   font-weight: 600;
   width: 100px;
   outline: none;
+
+  &:focus {
+    border-color: #666;
+  }
 }
 
-.name-input:focus {
-  border-color: #666;
-}
-
-.name-save, .name-cancel {
+.name-save,
+.name-cancel {
   background: none;
   border: none;
   cursor: pointer;
@@ -892,66 +964,81 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
 }
 
 .name-save {
-  color: #4ade80;
-}
+  color: $color-success;
 
-.name-save:hover {
-  background: rgba(74, 222, 128, 0.2);
+  &:hover {
+    background: rgba($color-success, 0.2);
+  }
 }
 
 .name-cancel {
-  color: #ff6b6b;
-}
+  color: $color-danger;
 
-.name-cancel:hover {
-  background: rgba(255, 107, 107, 0.2);
+  &:hover {
+    background: rgba($color-danger, 0.2);
+  }
 }
 
 .panel-close {
   background: none;
   border: none;
-  color: #888;
+  color: $color-text-secondary;
   cursor: pointer;
   font-size: 1rem;
   padding: 0;
   line-height: 1;
-}
 
-.panel-close:hover {
-  color: #fff;
+  &:hover {
+    color: #fff;
+  }
 }
 
 .panel-content {
-  padding: 0.5rem;
+  padding: $spacing-sm;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: $spacing-xs;
+
+  @include mobile-lg {
+    padding: 0.4rem;
+  }
 }
 
 .player-checkbox {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.4rem 0.5rem;
-  border-radius: 4px;
+  gap: $spacing-sm;
+  padding: 0.4rem $spacing-sm;
+  border-radius: $radius-sm;
   cursor: pointer;
-  color: #888;
+  color: $color-text-secondary;
   font-size: 0.85rem;
-}
 
-.player-checkbox:hover {
-  background: #2a2a4a;
-  color: #ccc;
-}
+  &:hover {
+    background: $color-bg-tertiary;
+    color: #ccc;
+  }
 
-.player-checkbox.checked {
-  color: #fff;
-  background: #2a2a4a;
-}
+  &.checked {
+    color: #fff;
+    background: $color-bg-tertiary;
+  }
 
-.player-checkbox input {
-  accent-color: #4ecdc4;
-  cursor: pointer;
+  input {
+    accent-color: #4ecdc4;
+    cursor: pointer;
+  }
+
+  @include mobile-lg {
+    padding: 0.35rem 0.4rem;
+    font-size: 0.8rem;
+  }
+
+  @include mobile {
+    padding: 0.3rem;
+    font-size: 0.75rem;
+    gap: 0.35rem;
+  }
 }
 </style>
 

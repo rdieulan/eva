@@ -554,7 +554,9 @@ const previewGamePlan = computed(() => {
   </div>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
+@use '@/styles/variables' as *;
+
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -570,9 +572,9 @@ const previewGamePlan = computed(() => {
 }
 
 .modal-content {
-  background: #1a1a2e;
-  border: 1px solid #333;
-  border-radius: 8px;
+  background: $color-bg-secondary;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
   width: 90%;
   max-width: 600px;
   max-height: calc(100vh - 120px);
@@ -584,76 +586,127 @@ const previewGamePlan = computed(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid #333;
-}
+  padding: $spacing-md $spacing-lg;
+  border-bottom: 1px solid $color-border;
 
-.modal-header h2 {
-  margin: 0;
-  font-size: 1.2rem;
-  color: #fff;
+  h2 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: #fff;
+  }
 }
 
 .btn-close {
   background: transparent;
   border: none;
-  color: #888;
+  color: $color-text-secondary;
   font-size: 1.2rem;
   cursor: pointer;
-  padding: 0.25rem 0.5rem;
+  padding: $spacing-xs $spacing-sm;
   transition: color 0.2s;
-}
 
-.btn-close:hover {
-  color: #fff;
+  &:hover {
+    color: #fff;
+  }
 }
 
 .modal-body {
-  padding: 1.5rem;
+  padding: $spacing-lg;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: $spacing-lg;
+
+  @include tablet {
+    padding: 1.25rem;
+    gap: $spacing-md;
+  }
+
+  @include mobile-lg {
+    padding: $spacing-md;
+    gap: 0.875rem;
+  }
+
+  @include mobile {
+    padding: 0.75rem;
+    gap: 0.75rem;
+  }
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-}
+  gap: $spacing-sm;
 
-.form-group label {
-  color: #aaa;
-  font-size: 0.9rem;
-  font-weight: 600;
+  label {
+    color: #aaa;
+    font-size: 0.9rem;
+    font-weight: 600;
+
+    @include tablet {
+      font-size: 0.9rem;
+    }
+
+    @include mobile-lg {
+      font-size: 0.85rem;
+    }
+
+    @include mobile {
+      font-size: 0.8rem;
+      margin-bottom: 0.4rem;
+    }
+  }
 }
 
 .joueur-selector {
   display: flex;
-  gap: 0.5rem;
+  gap: $spacing-sm;
   flex-wrap: wrap;
-}
 
-.joueur-selector button {
-  padding: 0.4rem 0.8rem;
-  border: 2px solid #666;
-  background: transparent;
-  color: #ccc;
-  border-radius: 4px;
-  font-weight: 600;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: all 0.2s;
-}
+  @include tablet {
+    gap: 0.35rem;
+  }
 
-.joueur-selector button:hover {
-  background: #3a3a5a;
-  border-color: #888;
-}
+  @include mobile-lg {
+    gap: 0.3rem;
+  }
 
-.joueur-selector button.active {
-  background: #ff6b6b;
-  border-color: #ff6b6b;
-  color: #fff;
+  button {
+    padding: 0.4rem 0.8rem;
+    border: 2px solid #666;
+    background: transparent;
+    color: #ccc;
+    border-radius: $radius-sm;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      background: $color-border-light;
+      border-color: $color-text-secondary;
+    }
+
+    &.active {
+      background: $color-danger;
+      border-color: $color-danger;
+      color: #fff;
+    }
+
+    @include tablet {
+      padding: 0.35rem 0.6rem;
+      font-size: 0.8rem;
+    }
+
+    @include mobile-lg {
+      padding: 0.3rem $spacing-sm;
+      font-size: 0.75rem;
+    }
+
+    @include mobile {
+      padding: $spacing-xs 0.4rem;
+      font-size: 0.7rem;
+    }
+  }
 }
 
 .maps-header {
@@ -664,29 +717,37 @@ const previewGamePlan = computed(() => {
 
 .maps-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: $spacing-sm;
 }
 
 .btn-small {
-  padding: 0.2rem 0.5rem;
-  background: #2a2a4a;
+  padding: 0.2rem $spacing-sm;
+  background: $color-bg-tertiary;
   border: 1px solid #444;
   color: #aaa;
   border-radius: 3px;
   font-size: 0.75rem;
   cursor: pointer;
   transition: all 0.2s;
-}
 
-.btn-small:hover {
-  background: #3a3a5a;
-  color: #fff;
+  &:hover {
+    background: $color-border-light;
+    color: #fff;
+  }
 }
 
 .maps-selector {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: $spacing-sm;
+
+  @include tablet {
+    gap: 0.35rem;
+  }
+
+  @include mobile-lg {
+    gap: 0.3rem;
+  }
 }
 
 .map-checkbox {
@@ -694,91 +755,145 @@ const previewGamePlan = computed(() => {
   align-items: center;
   gap: 0.4rem;
   padding: 0.3rem 0.6rem;
-  background: #2a2a4a;
+  background: $color-bg-tertiary;
   border: 1px solid #444;
-  border-radius: 4px;
+  border-radius: $radius-sm;
   color: #aaa;
   font-size: 0.8rem;
   cursor: pointer;
   transition: all 0.2s;
-}
 
-.map-checkbox:hover {
-  background: #3a3a5a;
-  border-color: #666;
-}
+  &:hover {
+    background: $color-border-light;
+    border-color: #666;
+  }
 
-.map-checkbox.checked {
-  background: rgba(74, 222, 128, 0.2);
-  border-color: #4ade80;
-  color: #4ade80;
-}
+  &.checked {
+    background: rgba($color-success, 0.2);
+    border-color: $color-success;
+    color: $color-success;
+  }
 
-.map-checkbox input {
-  display: none;
+  input {
+    display: none;
+  }
+
+  @include tablet {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.75rem;
+  }
+
+  @include mobile-lg {
+    padding: 0.3rem $spacing-sm;
+    font-size: 0.7rem;
+  }
+
+  @include mobile {
+    padding: $spacing-xs 0.4rem;
+    font-size: 0.65rem;
+  }
 }
 
 .btn-calculate {
-  padding: 0.75rem 1.5rem;
-  background: #4ade80;
+  padding: 0.75rem $spacing-lg;
+  background: $color-success;
   border: none;
   border-radius: 6px;
-  color: #1a1a2e;
+  color: $color-bg-secondary;
   font-weight: 700;
   font-size: 1rem;
   cursor: pointer;
   transition: all 0.2s;
   align-self: center;
-}
 
-.btn-calculate:hover:not(:disabled) {
-  background: #6ee7a0;
-  transform: translateY(-1px);
-}
+  &:hover:not(:disabled) {
+    background: #6ee7a0;
+    transform: translateY(-1px);
+  }
 
-.btn-calculate:disabled {
-  background: #444;
-  color: #888;
-  cursor: not-allowed;
+  &:disabled {
+    background: #444;
+    color: $color-text-secondary;
+    cursor: not-allowed;
+  }
+
+  @include tablet {
+    padding: 0.625rem 1.25rem;
+    font-size: 0.9rem;
+  }
+
+  @include mobile-lg {
+    padding: $spacing-sm $spacing-md;
+    font-size: 0.85rem;
+  }
+
+  @include mobile {
+    padding: 0.45rem 0.875rem;
+    font-size: 0.8rem;
+  }
 }
 
 .results {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  border-top: 1px solid #333;
-  padding-top: 1.5rem;
+  gap: $spacing-md;
+  border-top: 1px solid $color-border;
+  padding-top: $spacing-lg;
 }
 
 .result-card {
   background: #252540;
-  border: 1px solid #333;
+  border: 1px solid $color-border;
   border-radius: 6px;
-  padding: 1rem;
-}
+  padding: $spacing-md;
 
-.result-card.has-errors {
-  border-color: rgba(255, 107, 107, 0.5);
-}
+  &.has-errors {
+    border-color: rgba($color-danger, 0.5);
+  }
 
-.result-card h3 {
-  margin: 0 0 0.75rem 0;
-  font-size: 1rem;
-  color: #fff;
+  h3 {
+    margin: 0 0 0.75rem 0;
+    font-size: 1rem;
+    color: #fff;
+
+    @include mobile-lg {
+      font-size: 0.9rem;
+    }
+
+    @include mobile {
+      font-size: 0.85rem;
+    }
+  }
+
+  @include tablet {
+    padding: 0.875rem;
+  }
+
+  @include mobile-lg {
+    padding: 0.75rem;
+  }
+
+  @include mobile {
+    padding: 0.625rem;
+  }
 }
 
 .result-errors {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: $spacing-xs;
 }
 
 .error-row {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  color: #ff6b6b;
+  gap: $spacing-sm;
+  color: $color-danger;
   font-size: 0.85rem;
+
+  @include mobile {
+    font-size: 0.75rem;
+  }
 }
 
 .error-icon {
@@ -788,47 +903,56 @@ const previewGamePlan = computed(() => {
 .result-configurations {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: $spacing-sm;
 }
 
 .config-count {
-  color: #4ade80;
+  color: $color-success;
   font-size: 0.85rem;
   font-weight: 600;
-  margin-bottom: 0.25rem;
+  margin-bottom: $spacing-xs;
+
+  @include mobile {
+    font-size: 0.75rem;
+  }
 }
 
 .configuration {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
-  padding: 0.5rem;
-  background: #1a1a2e;
-  border-radius: 4px;
+  padding: $spacing-sm;
+  background: $color-bg-secondary;
+  border-radius: $radius-sm;
   cursor: pointer;
   border: 2px solid transparent;
   transition: all 0.15s;
   align-items: center;
-}
 
-.configuration:hover {
-  background: #252545;
-  border-color: #444;
-}
+  &:hover {
+    background: #252545;
+    border-color: #444;
+  }
 
-.configuration.selected {
-  background: rgba(74, 222, 128, 0.1);
-  border-color: #4ade80;
+  &.selected {
+    background: rgba($color-success, 0.1);
+    border-color: $color-success;
+
+    .config-selector {
+      color: $color-success;
+    }
+  }
+
+  @include mobile-lg {
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
 }
 
 .config-selector {
   color: #666;
   font-size: 0.9rem;
-  margin-right: 0.25rem;
-}
-
-.configuration.selected .config-selector {
-  color: #4ade80;
+  margin-right: $spacing-xs;
 }
 
 .assignment {
@@ -843,46 +967,58 @@ const previewGamePlan = computed(() => {
   border-radius: 3px;
   font-size: 0.75rem;
   font-weight: 600;
+
+  @include mobile-lg {
+    font-size: 0.65rem;
+    padding: 0.1rem 0.3rem;
+  }
 }
 
 .joueur-name {
   color: #fff;
   font-size: 0.85rem;
+
+  @include mobile-lg {
+    font-size: 0.7rem;
+  }
 }
 
 .more-configs {
-  color: #888;
+  color: $color-text-secondary;
   font-size: 0.8rem;
   font-style: italic;
-  padding-top: 0.25rem;
+  padding-top: $spacing-xs;
 }
 
-/* Section Export */
 .export-section {
-  border-top: 1px solid #333;
-  padding-top: 1.5rem;
-  margin-top: 1rem;
-}
+  border-top: 1px solid $color-border;
+  padding-top: $spacing-lg;
+  margin-top: $spacing-md;
 
-.export-section h3 {
-  margin: 0 0 1rem 0;
-  font-size: 1rem;
-  color: #fff;
+  h3 {
+    margin: 0 0 $spacing-md 0;
+    font-size: 1rem;
+    color: #fff;
+  }
 }
 
 .export-preview {
-  background: #1a1a2e;
-  border: 1px solid #333;
-  border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 1rem;
+  background: $color-bg-secondary;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  margin-bottom: $spacing-md;
+
+  @include mobile {
+    padding: 0.75rem;
+  }
 }
 
 .export-header {
   text-align: center;
-  margin-bottom: 1rem;
+  margin-bottom: $spacing-md;
   padding-bottom: 0.75rem;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid $color-border;
 }
 
 .export-title {
@@ -891,21 +1027,32 @@ const previewGamePlan = computed(() => {
   font-weight: 700;
   color: #fff;
   letter-spacing: 0.1em;
+
+  @include mobile {
+    font-size: 1rem;
+  }
 }
 
 .export-subtitle {
   display: block;
   font-size: 0.85rem;
-  color: #ff6b6b;
-  margin-top: 0.25rem;
-}
+  color: $color-danger;
+  margin-top: $spacing-xs;
 
-/* Removed legacy export table styles (now using GamePlanTable) */
+  @include mobile {
+    font-size: 0.8rem;
+  }
+}
 
 .export-buttons {
   display: flex;
   gap: 0.75rem;
   justify-content: center;
+
+  @include mobile-lg {
+    flex-wrap: wrap;
+    gap: $spacing-sm;
+  }
 }
 
 .btn-export {
@@ -919,32 +1066,50 @@ const previewGamePlan = computed(() => {
   display: flex;
   align-items: center;
   gap: 0.4rem;
+
+  @include tablet {
+    padding: $spacing-sm $spacing-md;
+    font-size: 0.85rem;
+  }
+
+  @include mobile-lg {
+    padding: 0.45rem 0.875rem;
+    font-size: 0.8rem;
+    flex: 1;
+    min-width: 120px;
+    justify-content: center;
+  }
+
+  @include mobile {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.75rem;
+  }
 }
 
 .btn-clipboard {
   background: #4a4a8a;
   color: #fff;
-}
 
-.btn-clipboard:hover {
-  background: #5a5a9a;
+  &:hover {
+    background: #5a5a9a;
+  }
 }
 
 .btn-png {
-  background: #4ade80;
-  color: #1a1a2e;
-}
+  background: $color-success;
+  color: $color-bg-secondary;
 
-.btn-png:hover {
-  background: #6ee7a0;
+  &:hover {
+    background: #6ee7a0;
+  }
 }
 
 .btn-associate {
-  background: #fb923c;
-  color: #1a1a2e;
-}
+  background: $color-warning;
+  color: $color-bg-secondary;
 
-.btn-associate:hover {
-  background: #fdba74;
+  &:hover {
+    background: #fdba74;
+  }
 }
 </style>

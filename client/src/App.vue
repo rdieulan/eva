@@ -46,13 +46,15 @@ const showTopBar = computed(() => route.name !== 'login');
   </div>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
+@use '@/styles/variables' as *;
+
 .app {
   display: flex;
   flex-direction: column;
   height: 100vh;
   width: 100vw;
-  background: #0f0f1a;
+  background: $color-bg-primary;
   overflow: hidden;
 }
 
@@ -62,13 +64,13 @@ const showTopBar = computed(() => route.name !== 'login');
   justify-content: center;
   height: 100vh;
   width: 100vw;
-  background: #0f0f1a;
+  background: $color-bg-primary;
 }
 
 .spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid #333;
+  border: 3px solid $color-border;
   border-top-color: #4ecdc4;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -90,9 +92,9 @@ const showTopBar = computed(() => route.name !== 'login');
   flex: 1;
   overflow: hidden;
   min-height: 0;
-}
 
-.page-content.no-topbar {
-  height: 100vh;
+  &.no-topbar {
+    height: 100vh;
+  }
 }
 </style>

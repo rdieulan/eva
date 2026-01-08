@@ -364,11 +364,21 @@ const gamePlanPlayers = computed(() => {
   </Modal>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
+@use '@/styles/variables' as *;
+
 .event-form {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: $spacing-md;
+
+  @include tablet {
+    gap: 0.875rem;
+  }
+
+  @include mobile-lg {
+    gap: 0.75rem;
+  }
 }
 
 .error-message {
@@ -383,79 +393,118 @@ const gamePlanPlayers = computed(() => {
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: $spacing-sm;
 }
 
 .form-row {
   display: flex;
-  gap: 1rem;
-}
+  gap: $spacing-md;
 
-.form-row .form-group {
-  flex: 1;
+  .form-group {
+    flex: 1;
+  }
+
+  @include tablet {
+    gap: 0.75rem;
+  }
+
+  @include mobile-lg {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
 }
 
 .form-label {
   font-size: 0.85rem;
   font-weight: 600;
   color: #aaa;
+
+  @include mobile {
+    font-size: 0.8rem;
+  }
 }
 
 .form-input {
   padding: 0.75rem;
-  background: #2a2a4a;
-  border: 1px solid #3a3a5a;
+  background: $color-bg-tertiary;
+  border: 1px solid $color-border-light;
   border-radius: 6px;
   color: #fff;
   font-size: 0.95rem;
   transition: border-color 0.2s;
-}
 
-.form-input:focus {
-  outline: none;
-  border-color: #7a7aba;
+  &:focus {
+    outline: none;
+    border-color: $color-accent;
+  }
+
+  @include mobile-lg {
+    font-size: 16px; // Prevents zoom on iOS
+  }
 }
 
 .form-textarea {
   resize: vertical;
   min-height: 80px;
+
+  @include mobile-lg {
+    font-size: 16px;
+  }
 }
 
-/* Type selector */
+.form-select {
+  @include mobile-lg {
+    font-size: 16px;
+  }
+}
+
 .type-selector {
   display: flex;
-  gap: 0.5rem;
+  gap: $spacing-sm;
+
+  @include mobile-lg {
+    gap: $spacing-sm;
+  }
 }
 
 .type-btn {
   flex: 1;
   padding: 0.75rem;
-  background: #2a2a4a;
-  border: 2px solid #3a3a5a;
-  border-radius: 8px;
-  color: #888;
+  background: $color-bg-tertiary;
+  border: 2px solid $color-border-light;
+  border-radius: $radius-md;
+  color: $color-text-secondary;
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s;
+
+  &:hover {
+    background: $color-border-light;
+  }
+
+  &.active.type-match {
+    background: rgba($color-warning, 0.2);
+    border-color: $color-warning;
+    color: #fdba74;
+  }
+
+  &.active.type-event {
+    background: rgba($color-info, 0.2);
+    border-color: $color-info;
+    color: #93c5fd;
+  }
+
+  @include mobile-lg {
+    padding: $spacing-sm;
+    font-size: 0.85rem;
+  }
+
+  @include mobile {
+    padding: 0.4rem;
+    font-size: 0.8rem;
+  }
 }
 
-.type-btn:hover {
-  background: #3a3a5a;
-}
-
-.type-btn.active.type-match {
-  background: rgba(251, 146, 60, 0.2);
-  border-color: #fb923c;
-  color: #fdba74;
-}
-
-.type-btn.active.type-event {
-  background: rgba(96, 165, 250, 0.2);
-  border-color: #60a5fa;
-  color: #93c5fd;
-}
-
-/* Buttons */
 .btn {
   padding: 0.75rem 1.25rem;
   border-radius: 6px;
@@ -464,62 +513,71 @@ const gamePlanPlayers = computed(() => {
   cursor: pointer;
   transition: all 0.2s;
   border: none;
+
+  @include tablet {
+    padding: 0.625rem $spacing-md;
+    font-size: 0.85rem;
+  }
+
+  @include mobile-lg {
+    padding: 0.625rem 0.875rem;
+    font-size: 0.85rem;
+  }
 }
 
 .btn-primary {
-  background: #7a7aba;
+  background: $color-accent;
   color: #fff;
-}
 
-.btn-primary:hover {
-  background: #9a9ada;
+  &:hover {
+    background: $color-accent-light;
+  }
 }
 
 .btn-secondary {
-  background: #3a3a5a;
+  background: $color-border-light;
   color: #ccc;
-}
 
-.btn-secondary:hover {
-  background: #4a4a6a;
+  &:hover {
+    background: #4a4a6a;
+  }
 }
 
 .btn-danger {
   background: rgba(248, 113, 113, 0.2);
   color: #f87171;
   border: 1px solid #f87171;
-}
 
-.btn-danger:hover {
-  background: rgba(248, 113, 113, 0.3);
+  &:hover {
+    background: rgba(248, 113, 113, 0.3);
+  }
 }
 
 .spacer {
   flex: 1;
 }
 
-/* Read-only event view */
 .event-view {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: $spacing-md;
 }
 
 .event-view-header {
-  padding: 0.5rem 1rem;
+  padding: $spacing-sm $spacing-md;
   border-radius: 6px;
   font-weight: 600;
   text-align: center;
-}
 
-.event-view-header.type-match {
-  background: rgba(251, 146, 60, 0.2);
-  color: #fdba74;
-}
+  &.type-match {
+    background: rgba($color-warning, 0.2);
+    color: #fdba74;
+  }
 
-.event-view-header.type-event {
-  background: rgba(96, 165, 250, 0.2);
-  color: #93c5fd;
+  &.type-event {
+    background: rgba($color-info, 0.2);
+    color: #93c5fd;
+  }
 }
 
 .event-view-title {
@@ -527,25 +585,39 @@ const gamePlanPlayers = computed(() => {
   font-size: 1.25rem;
   color: #fff;
   text-align: center;
+
+  @include mobile-lg {
+    font-size: 1.1rem;
+  }
 }
 
 .event-view-details {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  padding: 1rem;
-  background: rgba(42, 42, 74, 0.5);
-  border-radius: 8px;
+  padding: $spacing-md;
+  background: rgba($color-bg-tertiary, 0.5);
+  border-radius: $radius-md;
+
+  @include mobile {
+    padding: 0.75rem;
+  }
 }
 
 .event-view-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
+
+  @include mobile {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: $spacing-xs;
+  }
 }
 
 .event-view-label {
-  color: #888;
+  color: $color-text-secondary;
   font-size: 0.9rem;
 }
 
@@ -555,88 +627,110 @@ const gamePlanPlayers = computed(() => {
 }
 
 .event-view-description {
-  padding: 1rem;
-  background: rgba(42, 42, 74, 0.5);
-  border-radius: 8px;
+  padding: $spacing-md;
+  background: rgba($color-bg-tertiary, 0.5);
+  border-radius: $radius-md;
+
+  .event-view-label {
+    display: block;
+    margin-bottom: $spacing-sm;
+  }
+
+  p {
+    margin: 0;
+    color: #ccc;
+    white-space: pre-wrap;
+  }
 }
 
-.event-view-description .event-view-label {
-  display: block;
-  margin-bottom: 0.5rem;
-}
-
-.event-view-description p {
-  margin: 0;
-  color: #ccc;
-  white-space: pre-wrap;
-}
-
-/* Game Plan View (readonly) */
 .game-plan-view {
-  padding: 1rem;
-  background: rgba(42, 42, 74, 0.5);
-  border-radius: 8px;
+  padding: $spacing-md;
+  background: rgba($color-bg-tertiary, 0.5);
+  border-radius: $radius-md;
+
+  @include mobile-lg {
+    padding: 0.75rem;
+  }
 }
 
 .game-plan-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: $spacing-md;
+
+  @include mobile-lg {
+    flex-direction: column;
+    gap: $spacing-sm;
+    align-items: flex-start;
+  }
 }
 
 .absent-badge {
   background: rgba(248, 113, 113, 0.2);
   color: #f87171;
-  padding: 0.25rem 0.75rem;
+  padding: $spacing-xs 0.75rem;
   border-radius: 20px;
   font-size: 0.8rem;
   font-weight: 500;
+
+  @include mobile {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.6rem;
+  }
 }
 
-
-/* Game Plan Edit (admin form) */
 .game-plan-edit {
-  border: 1px solid #3a3a5a;
-}
+  border: 1px solid $color-border-light;
 
-.game-plan-edit .game-plan-header {
-  border-bottom: 1px solid #3a3a5a;
-  padding-bottom: 0.75rem;
-  margin-bottom: 0.75rem;
+  .game-plan-header {
+    border-bottom: 1px solid $color-border-light;
+    padding-bottom: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
 }
 
 .btn-change-plan {
   padding: 0.4rem 0.75rem;
-  background: #3a3a5a;
+  background: $color-border-light;
   border: 1px solid #4a4a6a;
-  border-radius: 4px;
+  border-radius: $radius-sm;
   color: #ccc;
   font-size: 0.8rem;
   cursor: pointer;
   transition: all 0.2s;
-}
 
-.btn-change-plan:hover {
-  background: #4a4a6a;
-  color: #fff;
+  &:hover {
+    background: #4a4a6a;
+    color: #fff;
+  }
+
+  @include mobile {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.6rem;
+  }
 }
 
 .btn-set-gameplan {
   width: 100%;
   padding: 0.75rem;
-  background: rgba(251, 146, 60, 0.2);
-  border: 2px dashed #fb923c;
-  border-radius: 8px;
+  background: rgba($color-warning, 0.2);
+  border: 2px dashed $color-warning;
+  border-radius: $radius-md;
   color: #fdba74;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-}
 
-.btn-set-gameplan:hover {
-  background: rgba(251, 146, 60, 0.3);
-  border-style: solid;
+  &:hover {
+    background: rgba($color-warning, 0.3);
+    border-style: solid;
+  }
+
+  @include mobile-lg {
+    padding: 0.625rem;
+    font-size: 0.85rem;
+  }
 }
 </style>

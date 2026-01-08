@@ -36,68 +36,124 @@ function isMapBalanced(map: MapConfig): boolean {
   </aside>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
+@use '@/styles/variables' as *;
+
 .map-list {
-  background: #1a1a2e;
-  padding: 1rem;
+  background: $color-bg-secondary;
+  padding: $spacing-md;
   min-width: 180px;
-  border-right: 1px solid #333;
-}
+  border-right: 1px solid $color-border;
 
-.map-list h2 {
-  margin: 0 0 1rem 0;
-  font-size: 1.2rem;
-  color: #888;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
+  @include tablet {
+    min-width: 150px;
+    padding: 0.75rem;
+  }
 
-.map-list ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
+  @include mobile-lg {
+    min-width: 100%;
+    max-width: 100%;
+    padding: $spacing-sm;
+    border-right: none;
+    border-bottom: 1px solid $color-border;
+    overflow-x: auto;
+  }
 
-.map-list li {
-  padding: 0.75rem 1rem;
-  cursor: pointer;
-  border-radius: 6px;
-  margin-bottom: 0.5rem;
-  transition: all 0.2s;
-  color: #888;
-}
+  @include mobile {
+    padding: 0.35rem;
+  }
 
-.map-list li.balanced {
-  color: #4ade80;
-}
+  h2 {
+    margin: 0 0 $spacing-md 0;
+    font-size: 1.2rem;
+    color: $color-text-secondary;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
 
-.map-list li.unbalanced {
-  color: #ff6b6b;
-}
+    @include tablet {
+      font-size: 1rem;
+      margin-bottom: 0.75rem;
+    }
 
-.map-list li:hover {
-  background: #2a2a4a;
-}
+    @include mobile-lg {
+      display: none;
+    }
+  }
 
-.map-list li.balanced:hover {
-  color: #6ee7a0;
-}
+  ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
 
-.map-list li.unbalanced:hover {
-  color: #ff8a8a;
-}
+    @include mobile-lg {
+      display: flex;
+      flex-direction: row;
+      gap: 0.35rem;
+      overflow-x: auto;
+      padding-bottom: $spacing-xs;
+    }
+  }
 
-.map-list li.active {
-  background: #4a4a8a;
-  font-weight: 600;
-}
+  li {
+    padding: 0.75rem $spacing-md;
+    cursor: pointer;
+    border-radius: 6px;
+    margin-bottom: $spacing-sm;
+    transition: all 0.2s;
+    color: $color-text-secondary;
 
-.map-list li.active.balanced {
-  color: #4ade80;
-}
+    &.balanced {
+      color: $color-success;
 
-.map-list li.active.unbalanced {
-  color: #ff6b6b;
+      &:hover {
+        color: #6ee7a0;
+      }
+    }
+
+    &.unbalanced {
+      color: $color-danger;
+
+      &:hover {
+        color: #ff8a8a;
+      }
+    }
+
+    &:hover {
+      background: $color-bg-tertiary;
+    }
+
+    &.active {
+      background: #4a4a8a;
+      font-weight: 600;
+
+      &.balanced {
+        color: $color-success;
+      }
+
+      &.unbalanced {
+        color: $color-danger;
+      }
+    }
+
+    @include tablet {
+      padding: 0.6rem 0.75rem;
+      font-size: 0.9rem;
+    }
+
+    @include mobile-lg {
+      padding: $spacing-sm 0.75rem;
+      margin-bottom: 0;
+      white-space: nowrap;
+      flex-shrink: 0;
+      font-size: 0.8rem;
+    }
+
+    @include mobile {
+      padding: 0.4rem 0.6rem;
+      font-size: 0.75rem;
+      border-radius: $radius-sm;
+    }
+  }
 }
 </style>
 

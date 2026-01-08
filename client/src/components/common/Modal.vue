@@ -86,7 +86,9 @@ onUnmounted(() => {
   </Teleport>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
+@use '@/styles/variables' as *;
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -95,17 +97,29 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 1rem;
+  padding: $spacing-md;
+
+  @include mobile-lg {
+    padding: 0;
+    align-items: flex-end;
+  }
 }
 
 .modal-container {
-  background: #1a1a2e;
-  border: 1px solid #333;
-  border-radius: 12px;
+  background: $color-bg-secondary;
+  border: 1px solid $color-border;
+  border-radius: $radius-lg;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+
+  @include mobile-lg {
+    max-height: 95vh;
+    border-radius: $radius-xl $radius-xl 0 0;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
 }
 
 .modal-sm {
@@ -121,14 +135,30 @@ onUnmounted(() => {
 .modal-lg {
   width: 100%;
   max-width: 800px;
+
+  @include tablet {
+    max-width: 95%;
+  }
 }
 
 .modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid #333;
+  padding: $spacing-md $spacing-lg;
+  border-bottom: 1px solid $color-border;
+
+  @include tablet {
+    padding: 0.875rem 1.25rem;
+  }
+
+  @include mobile-lg {
+    padding: 0.75rem $spacing-md;
+  }
+
+  @include mobile {
+    padding: 0.625rem 0.875rem;
+  }
 }
 
 .modal-title {
@@ -136,6 +166,18 @@ onUnmounted(() => {
   font-size: 1.25rem;
   font-weight: 600;
   color: #fff;
+
+  @include tablet {
+    font-size: 1.1rem;
+  }
+
+  @include mobile-lg {
+    font-size: 1rem;
+  }
+
+  @include mobile {
+    font-size: 0.95rem;
+  }
 }
 
 .btn-close {
@@ -150,25 +192,42 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   transition: background 0.2s;
-}
 
-.btn-close:hover {
-  background: #2a2a4a;
+  &:hover {
+    background: $color-bg-tertiary;
+  }
+
+  @include mobile-lg {
+    width: 36px;
+    height: 36px;
+  }
 }
 
 .close-icon {
   width: 20px;
   height: 20px;
-  fill: #888;
-}
+  fill: $color-text-secondary;
 
-.btn-close:hover .close-icon {
-  fill: #fff;
+  .btn-close:hover & {
+    fill: #fff;
+  }
 }
 
 .modal-body {
-  padding: 1.5rem;
+  padding: $spacing-lg;
   overflow-y: auto;
+
+  @include tablet {
+    padding: 1.25rem;
+  }
+
+  @include mobile-lg {
+    padding: $spacing-md;
+  }
+
+  @include mobile {
+    padding: 0.875rem;
+  }
 }
 
 .modal-footer {
@@ -176,19 +235,32 @@ onUnmounted(() => {
   align-items: center;
   justify-content: flex-end;
   gap: 0.75rem;
-  padding: 1rem 1.5rem;
-  border-top: 1px solid #333;
+  padding: $spacing-md $spacing-lg;
+  border-top: 1px solid $color-border;
+
+  @include tablet {
+    padding: 0.875rem 1.25rem;
+  }
+
+  @include mobile-lg {
+    padding: 0.75rem $spacing-md;
+    gap: $spacing-sm;
+  }
+
+  @include mobile {
+    padding: 0.625rem 0.875rem;
+    flex-wrap: wrap;
+  }
 }
 
-/* Transitions */
+// Transitions
 .modal-enter-active,
 .modal-leave-active {
   transition: opacity 0.2s ease;
-}
 
-.modal-enter-active .modal-container,
-.modal-leave-active .modal-container {
-  transition: transform 0.2s ease;
+  .modal-container {
+    transition: transform 0.2s ease;
+  }
 }
 
 .modal-enter-from,
@@ -198,10 +270,18 @@ onUnmounted(() => {
 
 .modal-enter-from .modal-container {
   transform: scale(0.95) translateY(-20px);
+
+  @include mobile-lg {
+    transform: translateY(100%);
+  }
 }
 
 .modal-leave-to .modal-container {
   transform: scale(0.95);
+
+  @include mobile-lg {
+    transform: translateY(100%);
+  }
 }
 </style>
 

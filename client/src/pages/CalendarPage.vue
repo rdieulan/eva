@@ -356,16 +356,30 @@ async function handleGamePlanUpdate(eventId: string, gamePlan: MatchGamePlan) {
   </div>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
+@use '@/styles/variables' as *;
+
 .calendar-page {
   min-height: 100%;
   width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 2rem;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  padding: $spacing-xl;
+  background: linear-gradient(135deg, $color-bg-secondary 0%, #16213e 100%);
   overflow-y: auto;
+
+  @include tablet {
+    padding: $spacing-lg;
+  }
+
+  @include mobile-lg {
+    padding: $spacing-md;
+  }
+
+  @include mobile {
+    padding: $spacing-sm;
+  }
 }
 
 .loading-state,
@@ -374,16 +388,16 @@ async function handleGamePlanUpdate(eventId: string, gamePlan: MatchGamePlan) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1rem;
-  color: #888;
+  gap: $spacing-md;
+  color: $color-text-secondary;
   min-height: 300px;
 }
 
 .spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid #333;
-  border-top-color: #7a7aba;
+  border: 3px solid $color-border;
+  border-top-color: $color-accent;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -395,49 +409,72 @@ async function handleGamePlanUpdate(eventId: string, gamePlan: MatchGamePlan) {
 }
 
 .btn-retry {
-  padding: 0.75rem 1.5rem;
-  background: #2a2a4a;
-  border: 1px solid #3a3a5a;
-  border-radius: 8px;
+  padding: 0.75rem $spacing-lg;
+  background: $color-bg-tertiary;
+  border: 1px solid $color-border-light;
+  border-radius: $radius-md;
   color: #ccc;
   cursor: pointer;
   transition: all 0.2s;
+
+  &:hover {
+    background: $color-border-light;
+    border-color: $color-accent;
+  }
 }
 
-.btn-retry:hover {
-  background: #3a3a5a;
-  border-color: #7a7aba;
-}
-
-/* View mode switch */
 .view-switch {
   display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1.5rem;
-  padding: 0.25rem;
-  background: rgba(42, 42, 74, 0.5);
+  gap: $spacing-sm;
+  margin-bottom: $spacing-lg;
+  padding: $spacing-xs;
+  background: rgba($color-bg-tertiary, 0.5);
   border-radius: 10px;
+
+  @include tablet {
+    margin-bottom: $spacing-md;
+  }
+
+  @include mobile-lg {
+    margin-bottom: 0.75rem;
+  }
+
+  @include mobile {
+    padding: 0.2rem;
+    border-radius: $radius-md;
+  }
 }
 
 .view-btn {
   padding: 0.6rem 1.25rem;
   background: transparent;
   border: none;
-  border-radius: 8px;
-  color: #888;
+  border-radius: $radius-md;
+  color: $color-text-secondary;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-}
 
-.view-btn:hover {
-  color: #ccc;
-  background: rgba(58, 58, 90, 0.5);
-}
+  &:hover {
+    color: #ccc;
+    background: rgba($color-border-light, 0.5);
+  }
 
-.view-btn.active {
-  background: #7a7aba;
-  color: #fff;
+  &.active {
+    background: $color-accent;
+    color: #fff;
+  }
+
+  @include mobile-lg {
+    padding: $spacing-sm $spacing-md;
+    font-size: 0.85rem;
+  }
+
+  @include mobile {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+    border-radius: 6px;
+  }
 }
 </style>

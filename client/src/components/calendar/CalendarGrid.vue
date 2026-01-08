@@ -166,20 +166,42 @@ function handleToggleAvailability(date: string, currentStatus: AvailabilityStatu
   </div>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
+@use '@/styles/variables' as *;
+
 .calendar-grid {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: $spacing-md;
   width: 100%;
   max-width: 1200px;
+
+  @include tablet {
+    gap: 0.75rem;
+  }
+
+  @include mobile-lg {
+    gap: $spacing-sm;
+  }
 }
 
 .calendar-header {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 1.5rem;
+  gap: $spacing-lg;
+
+  @include tablet {
+    gap: $spacing-md;
+  }
+
+  @include mobile-lg {
+    gap: 0.75rem;
+  }
+
+  @include mobile {
+    gap: $spacing-sm;
+  }
 }
 
 .month-title {
@@ -189,55 +211,110 @@ function handleToggleAvailability(date: string, currentStatus: AvailabilityStatu
   color: #fff;
   min-width: 200px;
   text-align: center;
+
+  @include tablet {
+    font-size: 1.25rem;
+    min-width: 180px;
+  }
+
+  @include mobile-lg {
+    font-size: 1.1rem;
+    min-width: 150px;
+  }
+
+  @include mobile {
+    font-size: 1rem;
+    min-width: 120px;
+  }
 }
 
 .nav-btn {
   width: 40px;
   height: 40px;
-  border: 1px solid #3a3a5a;
-  background: #2a2a4a;
-  border-radius: 8px;
+  border: 1px solid $color-border-light;
+  background: $color-bg-tertiary;
+  border-radius: $radius-md;
   cursor: pointer;
   padding: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
-}
 
-.nav-btn:hover {
-  background: #3a3a5a;
-  border-color: #7a7aba;
+  &:hover {
+    background: $color-border-light;
+    border-color: $color-accent;
+  }
+
+  @include mobile-lg {
+    width: 36px;
+    height: 36px;
+    padding: 6px;
+  }
+
+  @include mobile {
+    width: 32px;
+    height: 32px;
+    padding: 4px;
+    border-radius: 6px;
+  }
 }
 
 .nav-icon {
   width: 24px;
   height: 24px;
-  fill: #888;
+  fill: $color-text-secondary;
+
+  .nav-btn:hover & {
+    fill: #fff;
+  }
+
+  @include mobile-lg {
+    width: 20px;
+    height: 20px;
+  }
+
+  @include mobile {
+    width: 18px;
+    height: 18px;
+  }
 }
 
-.nav-btn:hover .nav-icon {
-  fill: #fff;
-}
-
-.weekdays-header {
+.weekdays-header,
+.days-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 0.5rem;
+  gap: $spacing-sm;
+
+  @include tablet {
+    gap: 0.35rem;
+  }
+
+  @include mobile-lg {
+    gap: $spacing-xs;
+  }
+
+  @include mobile {
+    gap: 0.15rem;
+  }
 }
 
 .weekday-name {
   text-align: center;
   font-weight: 600;
   font-size: 0.85rem;
-  color: #7a7aba;
-  padding: 0.5rem;
-}
+  color: $color-accent;
+  padding: $spacing-sm;
 
-.days-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 0.5rem;
+  @include mobile-lg {
+    font-size: 0.7rem;
+    padding: $spacing-xs;
+  }
+
+  @include mobile {
+    font-size: 0.65rem;
+    padding: 0.2rem;
+  }
 }
 </style>
 

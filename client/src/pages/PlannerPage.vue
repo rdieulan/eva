@@ -243,13 +243,15 @@ function cancelEdit() {
   </div>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
+@use '@/styles/variables' as *;
+
 .planner-page {
   display: flex;
   flex-direction: column;
   flex: 1;
   width: 100%;
-  background: #0f0f1a;
+  background: $color-bg-primary;
   overflow: hidden;
 }
 
@@ -258,23 +260,27 @@ function cancelEdit() {
   flex: 1;
   overflow: hidden;
   min-height: 0;
+
+  @include mobile-lg {
+    flex-direction: column;
+  }
 }
 
-.no-map {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #666;
-  font-size: 1.5rem;
-}
-
+.no-map,
 .loading {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #888;
+  color: $color-text-secondary;
   font-size: 1.5rem;
+
+  @include mobile-lg {
+    font-size: 1.2rem;
+  }
+
+  @include mobile {
+    font-size: 1rem;
+  }
 }
 </style>

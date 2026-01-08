@@ -152,20 +152,42 @@ function handleToggleAvailability(date: string, currentStatus: AvailabilityStatu
   </div>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
+@use '@/styles/variables' as *;
+
 .week-grid {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: $spacing-md;
   width: 100%;
   max-width: 1200px;
+
+  @include tablet {
+    gap: 0.75rem;
+  }
+
+  @include mobile-lg {
+    gap: $spacing-sm;
+  }
 }
 
 .week-header {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 1.5rem;
+  gap: $spacing-lg;
+
+  @include tablet {
+    gap: $spacing-md;
+  }
+
+  @include mobile-lg {
+    gap: 0.75rem;
+  }
+
+  @include mobile {
+    gap: $spacing-sm;
+  }
 }
 
 .week-title {
@@ -175,87 +197,207 @@ function handleToggleAvailability(date: string, currentStatus: AvailabilityStatu
   color: #fff;
   min-width: 300px;
   text-align: center;
+
+  @include tablet {
+    font-size: 1.1rem;
+    min-width: 260px;
+  }
+
+  @include mobile-lg {
+    font-size: 0.95rem;
+    min-width: 200px;
+  }
+
+  @include mobile {
+    font-size: 0.85rem;
+    min-width: 160px;
+  }
 }
 
 .nav-btn {
   width: 40px;
   height: 40px;
-  border: 1px solid #3a3a5a;
-  background: #2a2a4a;
-  border-radius: 8px;
+  border: 1px solid $color-border-light;
+  background: $color-bg-tertiary;
+  border-radius: $radius-md;
   cursor: pointer;
   padding: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
-}
 
-.nav-btn:hover {
-  background: #3a3a5a;
-  border-color: #7a7aba;
+  &:hover {
+    background: $color-border-light;
+    border-color: $color-accent;
+  }
+
+  @include mobile-lg {
+    width: 36px;
+    height: 36px;
+    padding: 6px;
+  }
+
+  @include mobile {
+    width: 32px;
+    height: 32px;
+    padding: 4px;
+    border-radius: 6px;
+  }
 }
 
 .nav-icon {
   width: 24px;
   height: 24px;
-  fill: #888;
-}
+  fill: $color-text-secondary;
 
-.nav-btn:hover .nav-icon {
-  fill: #fff;
+  .nav-btn:hover & {
+    fill: #fff;
+  }
+
+  @include mobile-lg {
+    width: 20px;
+    height: 20px;
+  }
+
+  @include mobile {
+    width: 18px;
+    height: 18px;
+  }
 }
 
 .week-days {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 0.5rem;
+  gap: $spacing-sm;
+
+  @include tablet {
+    gap: 0.35rem;
+  }
+
+  @include mobile-lg {
+    grid-template-columns: 1fr;
+    gap: $spacing-sm;
+  }
+
+  @include mobile {
+    gap: 0.35rem;
+  }
 }
 
 .week-day-column {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-}
+  gap: $spacing-sm;
 
-.week-day-column.is-today .week-day-header {
-  background: rgba(122, 122, 186, 0.2);
-  border-color: #7a7aba;
+  &.is-today .week-day-header {
+    background: rgba($color-accent, 0.2);
+    border-color: $color-accent;
+  }
+
+  @include mobile-lg {
+    flex-direction: row;
+    gap: $spacing-sm;
+  }
+
+  @include mobile {
+    gap: 0.35rem;
+  }
 }
 
 .week-day-header {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 0.5rem;
-  background: rgba(42, 42, 74, 0.5);
-  border: 1px solid #3a3a5a;
-  border-radius: 8px;
+  padding: $spacing-sm;
+  background: rgba($color-bg-tertiary, 0.5);
+  border: 1px solid $color-border-light;
+  border-radius: $radius-md;
+
+  @include tablet {
+    padding: 0.4rem;
+  }
+
+  @include mobile-lg {
+    min-width: 80px;
+    justify-content: center;
+    border-radius: 6px;
+    padding: $spacing-sm;
+  }
+
+  @include mobile {
+    min-width: 65px;
+    padding: 0.35rem;
+  }
 }
 
 .day-name {
   font-size: 0.8rem;
   font-weight: 600;
-  color: #7a7aba;
+  color: $color-accent;
+
+  @include tablet {
+    font-size: 0.75rem;
+  }
+
+  @include mobile-lg {
+    font-size: 0.7rem;
+  }
+
+  @include mobile {
+    font-size: 0.6rem;
+  }
 }
 
 .day-number {
   font-size: 1.25rem;
   font-weight: 700;
   color: #fff;
-}
 
-.day-number.other-month {
-  color: #555;
+  &.other-month {
+    color: #555;
+  }
+
+  @include tablet {
+    font-size: 1.1rem;
+  }
+
+  @include mobile-lg {
+    font-size: 1rem;
+  }
+
+  @include mobile {
+    font-size: 0.9rem;
+  }
 }
 
 .week-day-cell {
   min-height: 200px;
+
+  @include mobile-lg {
+    flex: 1;
+    min-height: 80px;
+  }
+
+  @include mobile {
+    min-height: 70px;
+  }
 }
 
-/* Override DayCell styles for week view */
 :deep(.day-cell) {
   min-height: 200px;
+
+  @include tablet {
+    min-height: 160px;
+  }
+
+  @include mobile-lg {
+    min-height: 80px;
+  }
+
+  @include mobile {
+    min-height: 70px;
+  }
 }
 </style>
 

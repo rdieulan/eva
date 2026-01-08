@@ -141,78 +141,104 @@ function handleDayClick(e: MouseEvent) {
   </div>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
+@use '@/styles/variables' as *;
+
 .day-cell {
   min-height: 100px;
-  padding: 0.5rem;
-  border-radius: 8px;
+  padding: $spacing-sm;
+  border-radius: $radius-md;
   cursor: pointer;
   transition: all 0.15s ease-out;
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
   border: 2px solid transparent;
-}
 
-/* Status-based backgrounds */
-.day-cell.status-unknown {
-  background: #1e1e32;
-  border-color: #2a2a4a;
-}
+  &.status-unknown {
+    background: #1e1e32;
+    border-color: $color-bg-tertiary;
 
-.day-cell.status-unknown:hover {
-  background: #252540;
-  border-color: #3a3a5a;
-}
+    &:hover {
+      background: #252540;
+      border-color: $color-border-light;
+    }
+  }
 
-.day-cell.status-available {
-  background: rgba(74, 222, 128, 0.15);
-  border-color: rgba(74, 222, 128, 0.4);
-}
+  &.status-available {
+    background: rgba($color-success, 0.15);
+    border-color: rgba($color-success, 0.4);
 
-.day-cell.status-available:hover {
-  background: rgba(74, 222, 128, 0.25);
-  border-color: rgba(74, 222, 128, 0.6);
-}
+    &:hover {
+      background: rgba($color-success, 0.25);
+      border-color: rgba($color-success, 0.6);
+    }
+  }
 
-.day-cell.status-unavailable {
-  background: rgba(248, 113, 113, 0.15);
-  border-color: rgba(248, 113, 113, 0.4);
-}
+  &.status-unavailable {
+    background: rgba(248, 113, 113, 0.15);
+    border-color: rgba(248, 113, 113, 0.4);
 
-.day-cell.status-unavailable:hover {
-  background: rgba(248, 113, 113, 0.25);
-  border-color: rgba(248, 113, 113, 0.6);
-}
+    &:hover {
+      background: rgba(248, 113, 113, 0.25);
+      border-color: rgba(248, 113, 113, 0.6);
+    }
+  }
 
-.day-cell.status-past {
-  background: #18181f;
-  border-color: #222;
-  cursor: not-allowed;
-  opacity: 0.5;
-}
+  &.status-past {
+    background: #18181f;
+    border-color: #222;
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
 
-.day-cell.other-month {
-  opacity: 0.4;
-}
+  &.other-month {
+    opacity: 0.4;
+  }
 
-.day-cell.is-today {
-  box-shadow: 0 0 0 2px #7a7aba;
-}
+  &.is-today {
+    box-shadow: 0 0 0 2px $color-accent;
+  }
 
-.day-cell.is-past {
-  pointer-events: none;
-}
+  &.is-past {
+    pointer-events: none;
 
-.day-cell.is-past .events-list,
-.day-cell.is-past .event-badge {
-  pointer-events: auto;
+    .events-list,
+    .event-badge {
+      pointer-events: auto;
+    }
+  }
+
+  @include tablet {
+    min-height: 85px;
+    padding: 0.4rem;
+    gap: $spacing-xs;
+  }
+
+  @include mobile-lg {
+    min-height: 70px;
+    padding: 0.3rem;
+    gap: 0.2rem;
+    border-radius: 6px;
+  }
+
+  @include mobile {
+    min-height: 55px;
+    padding: 0.2rem;
+    gap: 0.15rem;
+    border-radius: $radius-sm;
+    border-width: 1px;
+  }
 }
 
 .day-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+
+  @include mobile-lg {
+    margin-bottom: 0.1rem;
+  }
 }
 
 .day-number {
@@ -226,93 +252,157 @@ function handleDayClick(e: MouseEvent) {
   justify-content: center;
   border-radius: 50%;
   transition: background 0.15s;
+
+  &.clickable:hover {
+    background: rgba($color-accent, 0.3);
+  }
+
+  .is-today & {
+    background: $color-accent;
+    color: #fff;
+  }
+
+  @include tablet {
+    font-size: 0.85rem;
+    width: 22px;
+    height: 22px;
+  }
+
+  @include mobile-lg {
+    font-size: 0.75rem;
+    width: 20px;
+    height: 20px;
+  }
+
+  @include mobile {
+    font-size: 0.7rem;
+    width: 18px;
+    height: 18px;
+  }
 }
 
-.day-number.clickable:hover {
-  background: rgba(122, 122, 186, 0.3);
-}
-
-.is-today .day-number {
-  background: #7a7aba;
-  color: #fff;
-}
-
-/* Status icon */
 .status-icon {
   font-size: 0.85rem;
   font-weight: 700;
+
+  .status-available & {
+    color: $color-success;
+  }
+
+  .status-unavailable & {
+    color: #f87171;
+  }
+
+  .status-unknown & {
+    color: #555;
+  }
+
+  @include mobile-lg {
+    font-size: 0.7rem;
+  }
+
+  @include mobile {
+    font-size: 0.6rem;
+  }
 }
 
-.status-available .status-icon {
-  color: #4ade80;
-}
-
-.status-unavailable .status-icon {
-  color: #f87171;
-}
-
-.status-unknown .status-icon {
-  color: #555;
-}
-
-/* Events list */
 .events-list {
   display: flex;
   flex-direction: column;
   gap: 2px;
+
+  @include mobile {
+    gap: 1px;
+  }
 }
 
 .event-badge {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: $spacing-xs;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: $radius-sm;
   font-size: 0.7rem;
   cursor: pointer;
   transition: filter 0.15s;
   overflow: hidden;
-}
 
-.event-badge:hover {
-  filter: brightness(1.2);
+  &:hover {
+    filter: brightness(1.2);
+  }
+
+  @include tablet {
+    padding: 2px 4px;
+    font-size: 0.65rem;
+  }
+
+  @include mobile-lg {
+    padding: 1px 3px;
+    font-size: 0.6rem;
+    border-radius: 3px;
+  }
+
+  @include mobile {
+    padding: 1px 2px;
+    font-size: 0.55rem;
+    border-left-width: 1px;
+  }
 }
 
 .event-match {
-  background: rgba(251, 146, 60, 0.3);
-  border-left: 2px solid #fb923c;
+  background: rgba($color-warning, 0.3);
+  border-left: 2px solid $color-warning;
   color: #fdba74;
 }
 
 .event-event {
-  background: rgba(96, 165, 250, 0.3);
-  border-left: 2px solid #60a5fa;
+  background: rgba($color-info, 0.3);
+  border-left: 2px solid $color-info;
   color: #93c5fd;
 }
 
 .event-time {
   font-weight: 600;
   flex-shrink: 0;
+
+  @include mobile-lg {
+    display: none;
+  }
 }
 
 .event-title {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+
+  @include mobile {
+    max-width: 100%;
+  }
 }
 
 .events-more {
   font-size: 0.65rem;
-  color: #888;
+  color: $color-text-secondary;
   padding-left: 4px;
+
+  @include mobile-lg {
+    font-size: 0.55rem;
+  }
 }
 
-/* Players summary */
 .players-summary {
   display: flex;
   flex-wrap: wrap;
   gap: 3px;
   margin-top: auto;
+
+  @include mobile-lg {
+    gap: 2px;
+  }
+
+  @include mobile {
+    display: none;
+  }
 }
 
 .player-avatar {
@@ -326,20 +416,32 @@ function handleDayClick(e: MouseEvent) {
   font-weight: 700;
   color: #fff;
   transition: transform 0.15s;
-}
 
-.player-avatar:hover {
-  transform: scale(1.15);
+  &:hover {
+    transform: scale(1.15);
+  }
+
+  @include tablet {
+    width: 20px;
+    height: 20px;
+    font-size: 0.5rem;
+  }
+
+  @include mobile-lg {
+    width: 16px;
+    height: 16px;
+    font-size: 0.45rem;
+  }
 }
 
 .player-unknown {
   background: #444;
-  color: #888;
+  color: $color-text-secondary;
 }
 
 .player-available {
   background: #166534;
-  border: 1px solid #4ade80;
+  border: 1px solid $color-success;
 }
 
 .player-unavailable {
