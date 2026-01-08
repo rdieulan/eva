@@ -83,7 +83,8 @@ const showTopBar = computed(() => route.name !== 'login');
 .dynamic-content {
   display: flex;
   flex: 1;
-  align-items: stretch;
+  align-items: center;
+  justify-content: center;
   width: 100%;
 }
 

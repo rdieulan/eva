@@ -8,13 +8,15 @@ const props = defineProps<{
   month: number; // 1-12
   weekStart: Date; // Start of the week to display
   days: Record<string, DayData>;
+  editMode?: boolean;
 }>();
 
 const emit = defineEmits<{
   'prev-week': [];
   'next-week': [];
-  'toggle-availability': [date: string, currentStatus: AvailabilityStatus | null];
+  'set-availability': [date: string, status: AvailabilityStatus | null];
   'open-event-viewer': [events: CalendarEvent[], initialIndex: number];
+  'open-create-event': [date: string];
 }>();
 
 // Month names in French
@@ -95,8 +97,8 @@ const weekGrid = computed(() => {
   return grid;
 });
 
-function handleToggleAvailability(date: string, currentStatus: AvailabilityStatus | null) {
-  emit('toggle-availability', date, currentStatus);
+function handleSetAvailability(date: string, status: AvailabilityStatus | null) {
+  emit('set-availability', date, status);
 }
 </script>
 
@@ -142,8 +144,10 @@ function handleToggleAvailability(date: string, currentStatus: AvailabilityStatu
           :events="cell.data?.events ?? []"
           class="week-day-cell"
           :show-day-number="false"
-          @toggle-availability="handleToggleAvailability(cell.date, cell.data?.currentUserStatus ?? null)"
+          :edit-mode="props.editMode"
+          @set-availability="(status) => handleSetAvailability(cell.date, status)"
           @open-event-viewer="(events, index) => emit('open-event-viewer', events, index)"
+          @open-create-event="(date) => emit('open-create-event', date)"
         />
       </div>
     </div>

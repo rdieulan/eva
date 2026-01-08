@@ -8,10 +8,14 @@ import type { Header } from '@/components/common/GamePlanTable.vue';
 const props = defineProps<{
   events: CalendarEvent[];
   initialIndex?: number;
+  isAdmin?: boolean;
+  selectedDate?: string;
 }>();
 
 const emit = defineEmits<{
   close: [];
+  'edit-event': [event: CalendarEvent];
+  'create-event': [date: string];
 }>();
 
 // Current event index
@@ -79,10 +83,24 @@ const gamePlanHeaders = computed<Header[]>(() => {
 
 // Show modal when events are provided
 const showModal = computed(() => props.events.length > 0);
+
+// Admin actions
+function handleEditEvent() {
+  if (currentEvent.value) {
+    emit('edit-event', currentEvent.value);
+  }
+}
+
+function handleCreateEvent() {
+  const date = currentEvent.value?.date || props.selectedDate || '';
+  if (date) {
+    emit('create-event', date);
+  }
+}
 </script>
 
 <template>
-  <Modal :open="showModal" size="md" @close="emit('close')">
+  <Modal :open="showModal" size="md" :show-close-button="false" @close="emit('close')">
     <template #header>
       <!-- Navigation header with arrows -->
       <div class="viewer-header">
@@ -94,9 +112,7 @@ const showModal = computed(() => props.events.length > 0);
           @click="goToPrev"
           title="Événement précédent"
         >
-          <svg viewBox="0 0 24 24" class="arrow-icon">
-            <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
-          </svg>
+          ◀
         </button>
 
         <div class="header-content">
@@ -116,9 +132,7 @@ const showModal = computed(() => props.events.length > 0);
           @click="goToNext"
           title="Événement suivant"
         >
-          <svg viewBox="0 0 24 24" class="arrow-icon">
-            <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
-          </svg>
+          ▶
         </button>
       </div>
     </template>
@@ -163,9 +177,20 @@ const showModal = computed(() => props.events.length > 0);
     </template>
 
     <template #footer>
-      <button class="btn btn-secondary" @click="emit('close')">
-        Fermer
-      </button>
+      <div class="footer-actions">
+        <!-- Admin buttons -->
+        <div v-if="isAdmin" class="admin-actions">
+          <button class="btn btn-primary" @click="handleEditEvent" title="Modifier cet événement">
+            ✏️ Modifier
+          </button>
+          <button class="btn btn-accent" @click="handleCreateEvent" title="Ajouter un événement">
+            ➕ Ajouter
+          </button>
+        </div>
+        <button class="btn btn-secondary" @click="emit('close')">
+          Fermer
+        </button>
+      </div>
     </template>
   </Modal>
 </template>
@@ -218,10 +243,13 @@ const showModal = computed(() => props.events.length > 0);
   justify-content: center;
   transition: all 0.2s;
   flex-shrink: 0;
+  font-size: 1rem;
+  color: $color-text-secondary;
 
   &:hover:not(.disabled) {
     background: $color-border-light;
     border-color: $color-accent;
+    color: #fff;
   }
 
   &.disabled {
@@ -230,15 +258,6 @@ const showModal = computed(() => props.events.length > 0);
   }
 }
 
-.arrow-icon {
-  width: 20px;
-  height: 20px;
-  fill: $color-text-secondary;
-
-  .nav-arrow:hover:not(.disabled) & {
-    fill: #fff;
-  }
-}
 
 .event-viewer {
   display: flex;
@@ -349,6 +368,50 @@ const showModal = computed(() => props.events.length > 0);
 
   &:hover {
     background: #4a4a6a;
+  }
+}
+
+.btn-primary {
+  background: $color-accent;
+  color: #fff;
+
+  &:hover {
+    background: $color-accent-light;
+  }
+}
+
+.btn-accent {
+  background: $color-success;
+  color: #fff;
+
+  &:hover {
+    filter: brightness(1.1);
+  }
+}
+
+.footer-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  gap: $spacing-md;
+
+  @include mobile {
+    flex-direction: column-reverse;
+    gap: $spacing-sm;
+  }
+}
+
+.admin-actions {
+  display: flex;
+  gap: $spacing-sm;
+
+  @include mobile {
+    width: 100%;
+
+    .btn {
+      flex: 1;
+    }
   }
 }
 </style>

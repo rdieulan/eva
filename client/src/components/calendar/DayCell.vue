@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import type { AvailabilityStatus, PlayerAvailability, CalendarEvent } from '@shared/types';
 
 interface Props {
@@ -12,21 +12,29 @@ interface Props {
   playerAvailabilities: PlayerAvailability[];
   events: CalendarEvent[];
   showDayNumber?: boolean;
+  editMode?: boolean; // Availability edit mode
 }
 
 const props = withDefaults(defineProps<Props>(), {
   showDayNumber: true,
+  editMode: false,
 });
 
 const emit = defineEmits<{
-  'toggle-availability': [];
+  'set-availability': [status: AvailabilityStatus | null];
   'open-event-viewer': [events: CalendarEvent[], initialIndex: number];
+  'open-create-event': [date: string];
 }>();
 
-// Long press handling
-const longPressTimer = ref<ReturnType<typeof setTimeout> | null>(null);
-const isLongPress = ref(false);
-const LONG_PRESS_DURATION = 500; // ms
+// Sort events by start time
+const sortedEvents = computed(() => {
+  return [...props.events].sort((a, b) => {
+    return a.startTime.localeCompare(b.startTime);
+  });
+});
+
+// Check if there are events
+const hasEvents = computed(() => props.events.length > 0);
 
 // Cell background class based on current user's availability
 const cellStatusClass = computed(() => {
@@ -58,37 +66,49 @@ function getEventTypeClass(type: string): string {
   return type === 'MATCH' ? 'event-match' : 'event-event';
 }
 
-// Handle pointer down - start long press timer
-function handlePointerDown() {
+// Click on cell
+function handleCellClick() {
   if (props.isPast) return;
 
-  isLongPress.value = false;
-  longPressTimer.value = setTimeout(() => {
-    isLongPress.value = true;
-    // Open event viewer on long press (if events exist)
-    if (props.events.length > 0) {
-      emit('open-event-viewer', props.events, 0);
-    }
-  }, LONG_PRESS_DURATION);
-}
-
-// Handle pointer up - clear timer
-function handlePointerUp() {
-  if (longPressTimer.value) {
-    clearTimeout(longPressTimer.value);
-    longPressTimer.value = null;
+  if (props.editMode) {
+    // Edit mode: cycle through availability states
+    cycleAvailability();
+  } else if (hasEvents.value) {
+    // Normal mode with events: open event viewer
+    emit('open-event-viewer', sortedEvents.value, 0);
+  } else {
+    // Normal mode without events: emit to open create modal (for admins)
+    emit('open-create-event', props.date);
   }
 }
 
-// Handle pointer leave - clear timer
-function handlePointerLeave() {
-  handlePointerUp();
+// Click on specific event = open viewer at that event index (or cycle in edit mode)
+function handleEventClick(e: MouseEvent, index: number) {
+  e.stopPropagation();
+  if (props.isPast) return;
+
+  if (props.editMode) {
+    // In edit mode, cycle availability
+    cycleAvailability();
+  } else {
+    emit('open-event-viewer', sortedEvents.value, index);
+  }
 }
 
-// Handle cell click - toggle availability (short click only)
-function handleCellClick() {
-  if (props.isPast || isLongPress.value) return;
-  emit('toggle-availability');
+// Cycle availability: null -> AVAILABLE -> UNAVAILABLE -> null
+function cycleAvailability() {
+  if (props.isPast) return;
+
+  let newStatus: AvailabilityStatus | null;
+  if (props.currentUserStatus === null) {
+    newStatus = 'AVAILABLE';
+  } else if (props.currentUserStatus === 'AVAILABLE') {
+    newStatus = 'UNAVAILABLE';
+  } else {
+    newStatus = null;
+  }
+
+  emit('set-availability', newStatus);
 }
 </script>
 
@@ -101,62 +121,50 @@ function handleCellClick() {
         'other-month': !isCurrentMonth,
         'is-today': isToday,
         'is-past': isPast,
-        'has-events': events.length > 0,
+        'has-events': hasEvents,
+        'edit-mode': editMode,
       }
     ]"
     @click="handleCellClick"
-    @pointerdown="handlePointerDown"
-    @pointerup="handlePointerUp"
-    @pointerleave="handlePointerLeave"
-    @contextmenu.prevent
-    :title="isPast ? 'Jour passé' : 'Clic = disponibilité | Appui long = événements'"
   >
     <!-- Day number -->
     <div v-if="props.showDayNumber" class="day-header">
       <span class="day-number">
         {{ dayNumber }}
       </span>
-      <!-- Status indicator icon -->
-      <span v-if="!isPast" class="status-icon">
-        <template v-if="currentUserStatus === 'AVAILABLE'">✓</template>
-        <template v-else-if="currentUserStatus === 'UNAVAILABLE'">✗</template>
-        <template v-else>?</template>
-      </span>
     </div>
 
-    <!-- Events -->
-    <div v-if="events.length > 0" class="events-list">
+    <!-- Events list -->
+    <div v-if="hasEvents" class="events-list">
       <div
-        v-for="event in events.slice(0, 2)"
+        v-for="(event, index) in sortedEvents"
         :key="event.id"
         class="event-badge"
         :class="getEventTypeClass(event.type)"
+        @click="handleEventClick($event, index)"
       >
         <span class="event-time">{{ event.startTime }}</span>
         <span class="event-title">{{ event.title }}</span>
       </div>
-      <div v-if="events.length > 2" class="events-more">
-        +{{ events.length - 2 }}
-      </div>
     </div>
 
-    <!-- Player availability summary (mini avatars) -->
+    <!-- Player availability summary (always visible) -->
     <div class="players-summary">
       <div
         v-for="player in playerAvailabilities"
         :key="player.userId"
         class="player-avatar"
         :class="getPlayerStatusClass(player.status)"
-        :title="`${player.userName}: ${
-          player.status === 'AVAILABLE'
-            ? 'Disponible'
-            : player.status === 'UNAVAILABLE'
-            ? 'Indisponible'
-            : 'Non renseigné'
-        }`"
       >
         {{ getInitials(player.userName) }}
       </div>
+    </div>
+
+    <!-- Background status icon (only in edit mode) -->
+    <div v-if="!isPast && editMode" class="status-bg-icon">
+      <template v-if="currentUserStatus === 'AVAILABLE'">✓</template>
+      <template v-else-if="currentUserStatus === 'UNAVAILABLE'">✗</template>
+      <template v-else>?</template>
     </div>
   </div>
 </template>
@@ -165,7 +173,9 @@ function handleCellClick() {
 @use '@/styles/variables' as *;
 
 .day-cell {
+  position: relative;
   min-height: 100px;
+  min-width: 0; // Prevent overflow in grid
   padding: $spacing-sm;
   border-radius: $radius-md;
   cursor: pointer;
@@ -174,6 +184,9 @@ function handleCellClick() {
   flex-direction: column;
   gap: 0.35rem;
   border: 2px solid transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  overflow: hidden;
 
   &.status-unknown {
     background: #1e1e32;
@@ -249,7 +262,8 @@ function handleCellClick() {
 .day-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  position: relative;
+  z-index: 1;
 
   @include mobile-lg {
     margin-bottom: 0.1rem;
@@ -291,9 +305,17 @@ function handleCellClick() {
   }
 }
 
-.status-icon {
-  font-size: 0.85rem;
-  font-weight: 700;
+.status-bg-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 5rem;
+  font-weight: 900;
+  opacity: 0.25;
+  pointer-events: none;
+  z-index: 0;
+  text-shadow: 0 0 10px currentColor;
 
   .status-available & {
     color: $color-success;
@@ -304,15 +326,19 @@ function handleCellClick() {
   }
 
   .status-unknown & {
-    color: #555;
+    color: #888;
+  }
+
+  @include tablet {
+    font-size: 4rem;
   }
 
   @include mobile-lg {
-    font-size: 0.7rem;
+    font-size: 3rem;
   }
 
   @include mobile {
-    font-size: 0.6rem;
+    font-size: 2.5rem;
   }
 }
 
@@ -320,6 +346,9 @@ function handleCellClick() {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
 
   @include mobile {
     gap: 1px;
@@ -330,9 +359,9 @@ function handleCellClick() {
   display: flex;
   align-items: center;
   gap: $spacing-xs;
-  padding: 2px 6px;
+  padding: 4px 6px;
   border-radius: $radius-sm;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   cursor: pointer;
   transition: filter 0.15s;
   overflow: hidden;
@@ -342,18 +371,18 @@ function handleCellClick() {
   }
 
   @include tablet {
-    padding: 2px 4px;
-    font-size: 0.65rem;
+    padding: 3px 5px;
+    font-size: 0.7rem;
   }
 
   @include mobile-lg {
-    padding: 1px 3px;
+    padding: 2px 4px;
     font-size: 0.6rem;
     border-radius: 3px;
   }
 
   @include mobile {
-    padding: 1px 2px;
+    padding: 2px 3px;
     font-size: 0.55rem;
     border-left-width: 1px;
   }
@@ -390,29 +419,29 @@ function handleCellClick() {
   }
 }
 
-.events-more {
-  font-size: 0.65rem;
-  color: $color-text-secondary;
-  padding-left: 4px;
-
-  @include mobile-lg {
-    font-size: 0.55rem;
-  }
-}
 
 .players-summary {
   display: flex;
   flex-wrap: wrap;
   gap: 3px;
   margin-top: auto;
+  padding: 4px;
+  border-radius: $radius-sm;
+  min-height: 30px;
+  position: relative;
+  z-index: 1;
+
 
   @include mobile-lg {
     gap: 2px;
+    padding: 3px;
+    min-height: 24px;
   }
 
   @include mobile {
     gap: 1px;
-    // Keep visible on mobile with compact dots
+    padding: 2px;
+    min-height: 16px;
   }
 }
 
@@ -426,11 +455,6 @@ function handleCellClick() {
   font-size: 0.55rem;
   font-weight: 700;
   color: #fff;
-  transition: transform 0.15s;
-
-  &:hover {
-    transform: scale(1.15);
-  }
 
   @include tablet {
     width: 20px;

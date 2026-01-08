@@ -7,13 +7,15 @@ const props = defineProps<{
   year: number;
   month: number; // 1-12
   days: Record<string, DayData>;
+  editMode?: boolean;
 }>();
 
 const emit = defineEmits<{
   'prev-month': [];
   'next-month': [];
-  'toggle-availability': [date: string, currentStatus: AvailabilityStatus | null];
+  'set-availability': [date: string, status: AvailabilityStatus | null];
   'open-event-viewer': [events: CalendarEvent[], initialIndex: number];
+  'open-create-event': [date: string];
 }>();
 
 // Month names in French
@@ -115,8 +117,8 @@ const calendarGrid = computed(() => {
   return grid;
 });
 
-function handleToggleAvailability(date: string, currentStatus: AvailabilityStatus | null) {
-  emit('toggle-availability', date, currentStatus);
+function handleSetAvailability(date: string, status: AvailabilityStatus | null) {
+  emit('set-availability', date, status);
 }
 </script>
 
@@ -157,8 +159,10 @@ function handleToggleAvailability(date: string, currentStatus: AvailabilityStatu
         :current-user-status="cell.data?.currentUserStatus ?? null"
         :player-availabilities="cell.data?.playerAvailabilities ?? []"
         :events="cell.data?.events ?? []"
-        @toggle-availability="handleToggleAvailability(cell.date, cell.data?.currentUserStatus ?? null)"
+        :edit-mode="props.editMode"
+        @set-availability="(status) => handleSetAvailability(cell.date, status)"
         @open-event-viewer="(events, index) => emit('open-event-viewer', events, index)"
+        @open-create-event="(date) => emit('open-create-event', date)"
       />
     </div>
   </div>
@@ -294,6 +298,14 @@ function handleToggleAvailability(date: string, currentStatus: AvailabilityStatu
 
   @include mobile {
     gap: 0.15rem;
+  }
+}
+
+.days-grid {
+  // Prevent cells from overflowing their grid area
+  :deep(.day-cell) {
+    min-width: 0;
+    overflow: hidden;
   }
 }
 

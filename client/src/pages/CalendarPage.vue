@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, provide } from 'vue';
 import CalendarGrid from '@/components/calendar/CalendarGrid.vue';
 import WeekGrid from '@/components/calendar/WeekGrid.vue';
 import EventFormModal from '@/components/calendar/EventFormModal.vue';
@@ -8,7 +8,7 @@ import { useAuth } from '@/composables/useAuth';
 import { loadAllMaps, loadPlayers } from '@/config/config';
 import {
   fetchMonthData,
-  setAvailability,
+  setAvailability as setAvailabilityApi,
   createEvent,
   updateEvent,
   deleteEvent,
@@ -26,9 +26,31 @@ import type {
 
 const { permissions, user } = useAuth();
 
+// Check if teleport target exists (for SSR/test compatibility)
+const teleportDisabled = ref(true);
+onMounted(() => {
+  teleportDisabled.value = !document.getElementById('topbar-dynamic-content');
+});
+
 // View mode state
 type ViewMode = 'month' | 'week';
 const viewMode = ref<ViewMode>('month');
+
+// Edit mode state (for availability editing)
+const editMode = ref(false);
+let lastToggleTime = 0;
+
+// Toggle edit mode - with minimal debounce for mobile double-event issue
+function toggleEditMode() {
+  const now = Date.now();
+  if (now - lastToggleTime < 50) return; // Ignore if less than 50ms since last toggle
+  lastToggleTime = now;
+  editMode.value = !editMode.value;
+}
+
+// Provide editMode and toggle function for TopBar
+provide('calendarEditMode', editMode);
+provide('toggleCalendarEditMode', toggleEditMode);
 
 // Current month state
 const currentYear = ref(new Date().getFullYear());
@@ -176,17 +198,10 @@ function syncWeekToMonth() {
   }
 }
 
-// Toggle availability (cycle: null -> AVAILABLE -> UNAVAILABLE -> null)
-async function handleToggleAvailability(date: string, currentStatus: AvailabilityStatus | null) {
-  let newStatus: AvailabilityStatus | null;
-
-  if (currentStatus === null) {
-    newStatus = 'AVAILABLE';
-  } else if (currentStatus === 'AVAILABLE') {
-    newStatus = 'UNAVAILABLE';
-  } else {
-    newStatus = null;
-  }
+// Set availability (direct status, not cycling)
+async function handleSetAvailability(date: string, newStatus: AvailabilityStatus | null) {
+  // Store previous status for rollback
+  const previousStatus = days.value[date]?.currentUserStatus ?? null;
 
   // Optimistic update - update local state immediately for responsiveness
   if (days.value[date]) {
@@ -205,20 +220,20 @@ async function handleToggleAvailability(date: string, currentStatus: Availabilit
   }
 
   try {
-    await setAvailability(date, newStatus);
+    await setAvailabilityApi(date, newStatus);
     // No need to reload - we already updated locally
   } catch (err) {
     console.error('Error setting availability:', err);
     // Revert on error
     if (days.value[date]) {
-      days.value[date].currentUserStatus = currentStatus;
+      days.value[date].currentUserStatus = previousStatus;
       const currentUserId = user.value?.id;
       if (currentUserId) {
         const playerAvail = days.value[date].playerAvailabilities.find(
           p => p.userId === currentUserId
         );
         if (playerAvail) {
-          playerAvail.status = currentStatus;
+          playerAvail.status = previousStatus;
         }
       }
     }
@@ -239,6 +254,30 @@ function handleOpenEventViewer(events: CalendarEvent[], initialIndex: number) {
 function closeEventViewer() {
   showEventViewer.value = false;
   viewerEvents.value = [];
+}
+
+// Open edit modal for an event (from viewer)
+function handleEditEventFromViewer(event: CalendarEvent) {
+  closeEventViewer();
+  editingEvent.value = event;
+  selectedDate.value = event.date;
+  showEventModal.value = true;
+}
+
+// Open create modal for a date (from viewer)
+function handleCreateEventFromViewer(date: string) {
+  closeEventViewer();
+  editingEvent.value = undefined;
+  selectedDate.value = date;
+  showEventModal.value = true;
+}
+
+// Open create event modal directly (when clicking on day without events)
+function handleOpenCreateEvent(date: string) {
+  if (!canCreateEvents.value) return;
+  editingEvent.value = undefined;
+  selectedDate.value = date;
+  showEventModal.value = true;
 }
 
 // Create or update event
@@ -285,6 +324,19 @@ async function handleGamePlanUpdate(eventId: string, gamePlan: MatchGamePlan) {
 
 <template>
   <div class="calendar-page">
+    <!-- Teleport edit button to TopBar -->
+    <Teleport v-if="!teleportDisabled" to="#topbar-dynamic-content">
+      <button
+        class="edit-mode-btn"
+        :class="{ active: editMode }"
+        @pointerdown.prevent="toggleEditMode"
+        :title="editMode ? 'Quitter le mode édition' : 'Modifier mes disponibilités'"
+      >
+        <span class="edit-icon">✏️</span>
+        <span class="edit-label">{{ editMode ? 'Terminer' : 'Dispos' }}</span>
+      </button>
+    </Teleport>
+
     <!-- Loading state -->
     <div v-if="isLoading" class="loading-state">
       <div class="spinner"></div>
@@ -323,10 +375,12 @@ async function handleGamePlanUpdate(eventId: string, gamePlan: MatchGamePlan) {
         :year="currentYear"
         :month="currentMonth"
         :days="days"
+        :edit-mode="editMode"
         @prev-month="goToPrevMonth"
         @next-month="goToNextMonth"
-        @toggle-availability="handleToggleAvailability"
+        @set-availability="handleSetAvailability"
         @open-event-viewer="handleOpenEventViewer"
+        @open-create-event="handleOpenCreateEvent"
       />
 
       <!-- Week view -->
@@ -336,10 +390,12 @@ async function handleGamePlanUpdate(eventId: string, gamePlan: MatchGamePlan) {
         :month="currentMonth"
         :week-start="currentWeekStart"
         :days="days"
+        :edit-mode="editMode"
         @prev-week="goToPrevWeek"
         @next-week="goToNextWeek"
-        @toggle-availability="handleToggleAvailability"
+        @set-availability="handleSetAvailability"
         @open-event-viewer="handleOpenEventViewer"
+        @open-create-event="handleOpenCreateEvent"
       />
     </template>
 
@@ -347,7 +403,11 @@ async function handleGamePlanUpdate(eventId: string, gamePlan: MatchGamePlan) {
     <EventViewerModal
       :events="viewerEvents"
       :initial-index="viewerInitialIndex"
+      :is-admin="canCreateEvents"
+      :selected-date="viewerEvents[0]?.date"
       @close="closeEventViewer"
+      @edit-event="handleEditEventFromViewer"
+      @create-event="handleCreateEventFromViewer"
     />
 
     <!-- Event creation/edit/view modal -->
@@ -488,3 +548,53 @@ async function handleGamePlanUpdate(eventId: string, gamePlan: MatchGamePlan) {
   }
 }
 </style>
+
+<style lang="scss">
+@use '@/styles/variables' as *;
+
+// Global styles for teleported button
+.edit-mode-btn {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: 0.5rem 1rem;
+  background: $color-bg-tertiary;
+  border: 2px solid $color-border-light;
+  border-radius: $radius-md;
+  color: $color-text-secondary;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+
+  &:hover {
+    background: $color-border-light;
+    border-color: $color-accent;
+    color: #fff;
+  }
+
+  &.active {
+    background: rgba($color-success, 0.2);
+    border-color: $color-success;
+    color: $color-success;
+  }
+
+  .edit-icon {
+    font-size: 1rem;
+  }
+
+  @include mobile-lg {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.85rem;
+    gap: $spacing-xs;
+
+    .edit-label {
+      display: none;
+    }
+  }
+}
+</style>
+

@@ -101,7 +101,7 @@ describe('CalendarGrid Component', () => {
     }
   });
 
-  it('should emit toggle-availability event when clicking on day availability indicator', async () => {
+  it('should emit set-availability event when setting availability', async () => {
     const wrapper = mount(CalendarGrid, {
       props: {
         year: 2026,
@@ -110,11 +110,11 @@ describe('CalendarGrid Component', () => {
       },
     });
 
-    wrapper.vm.$emit('toggle-availability', '2026-01-01', 'UNAVAILABLE');
+    wrapper.vm.$emit('set-availability', '2026-01-01', 'UNAVAILABLE');
     await wrapper.vm.$nextTick();
 
-    expect(wrapper.emitted('toggle-availability')).toBeTruthy();
-    expect(wrapper.emitted('toggle-availability')?.[0]).toEqual(['2026-01-01', 'UNAVAILABLE']);
+    expect(wrapper.emitted('set-availability')).toBeTruthy();
+    expect(wrapper.emitted('set-availability')?.[0]).toEqual(['2026-01-01', 'UNAVAILABLE']);
   });
 
 
