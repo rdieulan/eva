@@ -36,5 +36,5 @@ USER appuser
 
 EXPOSE 3001
 
-CMD ["sh", "-c", "npx prisma db push && node dist-server/index.js"]
+CMD ["sh", "-c", "npx prisma db push && node dist-server/server/index.js"]
 
