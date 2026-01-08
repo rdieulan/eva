@@ -13,8 +13,7 @@ const emit = defineEmits<{
   'prev-month': [];
   'next-month': [];
   'toggle-availability': [date: string, currentStatus: AvailabilityStatus | null];
-  'click-day': [date: string];
-  'click-event': [event: CalendarEvent];
+  'open-event-viewer': [events: CalendarEvent[], initialIndex: number];
 }>();
 
 // Month names in French
@@ -159,8 +158,7 @@ function handleToggleAvailability(date: string, currentStatus: AvailabilityStatu
         :player-availabilities="cell.data?.playerAvailabilities ?? []"
         :events="cell.data?.events ?? []"
         @toggle-availability="handleToggleAvailability(cell.date, cell.data?.currentUserStatus ?? null)"
-        @click-day="emit('click-day', cell.date)"
-        @click-event="emit('click-event', $event)"
+        @open-event-viewer="(events, index) => emit('open-event-viewer', events, index)"
       />
     </div>
   </div>

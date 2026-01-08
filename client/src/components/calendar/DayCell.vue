@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import type { AvailabilityStatus, PlayerAvailability, CalendarEvent } from '@shared/types';
 
 interface Props {
@@ -7,11 +7,11 @@ interface Props {
   dayNumber: number;
   isCurrentMonth: boolean;
   isToday: boolean;
-  isPast: boolean; // Jour déjà passé
+  isPast: boolean;
   currentUserStatus: AvailabilityStatus | null;
   playerAvailabilities: PlayerAvailability[];
   events: CalendarEvent[];
-  showDayNumber?: boolean; // Show day number in header (default: true)
+  showDayNumber?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -20,9 +20,13 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   'toggle-availability': [];
-  'click-day': [];
-  'click-event': [event: CalendarEvent];
+  'open-event-viewer': [events: CalendarEvent[], initialIndex: number];
 }>();
+
+// Long press handling
+const longPressTimer = ref<ReturnType<typeof setTimeout> | null>(null);
+const isLongPress = ref(false);
+const LONG_PRESS_DURATION = 500; // ms
 
 // Cell background class based on current user's availability
 const cellStatusClass = computed(() => {
@@ -54,19 +58,37 @@ function getEventTypeClass(type: string): string {
   return type === 'MATCH' ? 'event-match' : 'event-event';
 }
 
-// Handle cell click - toggle availability if not past
-function handleCellClick() {
-  if (!props.isPast) {
-    emit('toggle-availability');
+// Handle pointer down - start long press timer
+function handlePointerDown() {
+  if (props.isPast) return;
+
+  isLongPress.value = false;
+  longPressTimer.value = setTimeout(() => {
+    isLongPress.value = true;
+    // Open event viewer on long press (if events exist)
+    if (props.events.length > 0) {
+      emit('open-event-viewer', props.events, 0);
+    }
+  }, LONG_PRESS_DURATION);
+}
+
+// Handle pointer up - clear timer
+function handlePointerUp() {
+  if (longPressTimer.value) {
+    clearTimeout(longPressTimer.value);
+    longPressTimer.value = null;
   }
 }
 
-// Handle day number click for admin event creation
-function handleDayClick(e: MouseEvent) {
-  e.stopPropagation();
-  if (!props.isPast) {
-    emit('click-day');
-  }
+// Handle pointer leave - clear timer
+function handlePointerLeave() {
+  handlePointerUp();
+}
+
+// Handle cell click - toggle availability (short click only)
+function handleCellClick() {
+  if (props.isPast || isLongPress.value) return;
+  emit('toggle-availability');
 }
 </script>
 
@@ -79,19 +101,19 @@ function handleDayClick(e: MouseEvent) {
         'other-month': !isCurrentMonth,
         'is-today': isToday,
         'is-past': isPast,
+        'has-events': events.length > 0,
       }
     ]"
     @click="handleCellClick"
-    :title="isPast ? 'Jour passé' : 'Cliquer pour changer votre disponibilité'"
+    @pointerdown="handlePointerDown"
+    @pointerup="handlePointerUp"
+    @pointerleave="handlePointerLeave"
+    @contextmenu.prevent
+    :title="isPast ? 'Jour passé' : 'Clic = disponibilité | Appui long = événements'"
   >
     <!-- Day number -->
     <div v-if="props.showDayNumber" class="day-header">
-      <span
-        class="day-number"
-        @click="handleDayClick"
-        :class="{ 'clickable': !isPast }"
-        :title="!isPast ? 'Créer un événement' : undefined"
-      >
+      <span class="day-number">
         {{ dayNumber }}
       </span>
       <!-- Status indicator icon -->
@@ -109,8 +131,6 @@ function handleDayClick(e: MouseEvent) {
         :key="event.id"
         class="event-badge"
         :class="getEventTypeClass(event.type)"
-        @click.stop="emit('click-event', event)"
-        :title="`${event.title} (${event.startTime} - ${event.endTime})`"
       >
         <span class="event-time">{{ event.startTime }}</span>
         <span class="event-title">{{ event.title }}</span>
@@ -202,11 +222,6 @@ function handleDayClick(e: MouseEvent) {
 
   &.is-past {
     pointer-events: none;
-
-    .events-list,
-    .event-badge {
-      pointer-events: auto;
-    }
   }
 
   @include tablet {
@@ -223,7 +238,7 @@ function handleDayClick(e: MouseEvent) {
   }
 
   @include mobile {
-    min-height: 55px;
+    min-height: 60px;
     padding: 0.2rem;
     gap: 0.15rem;
     border-radius: $radius-sm;
@@ -251,11 +266,6 @@ function handleDayClick(e: MouseEvent) {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  transition: background 0.15s;
-
-  &.clickable:hover {
-    background: rgba($color-accent, 0.3);
-  }
 
   .is-today & {
     background: $color-accent;
@@ -401,7 +411,8 @@ function handleDayClick(e: MouseEvent) {
   }
 
   @include mobile {
-    display: none;
+    gap: 1px;
+    // Keep visible on mobile with compact dots
   }
 }
 
@@ -431,6 +442,14 @@ function handleDayClick(e: MouseEvent) {
     width: 16px;
     height: 16px;
     font-size: 0.45rem;
+  }
+
+  @include mobile {
+    // Compact dots without text
+    width: 8px;
+    height: 8px;
+    font-size: 0;
+    border-width: 0;
   }
 }
 

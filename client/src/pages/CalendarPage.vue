@@ -3,6 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import CalendarGrid from '@/components/calendar/CalendarGrid.vue';
 import WeekGrid from '@/components/calendar/WeekGrid.vue';
 import EventFormModal from '@/components/calendar/EventFormModal.vue';
+import EventViewerModal from '@/components/calendar/EventViewerModal.vue';
 import { useAuth } from '@/composables/useAuth';
 import { loadAllMaps, loadPlayers } from '@/config/config';
 import {
@@ -49,6 +50,11 @@ const players = ref<Player[]>([]);
 const showEventModal = ref(false);
 const selectedDate = ref('');
 const editingEvent = ref<CalendarEvent | undefined>(undefined);
+
+// Event viewer modal state (read-only view with navigation)
+const showEventViewer = ref(false);
+const viewerEvents = ref<CalendarEvent[]>([]);
+const viewerInitialIndex = ref(0);
 
 // Can user create events?
 const canCreateEvents = computed(() => permissions.value.canEdit);
@@ -220,20 +226,19 @@ async function handleToggleAvailability(date: string, currentStatus: Availabilit
   }
 }
 
-// Day click - open event creation if admin
-function handleDayClick(date: string) {
-  if (canCreateEvents.value) {
-    selectedDate.value = date;
-    editingEvent.value = undefined;
-    showEventModal.value = true;
-  }
+
+// Open event viewer modal (read-only with navigation)
+function handleOpenEventViewer(events: CalendarEvent[], initialIndex: number) {
+  if (events.length === 0) return;
+  viewerEvents.value = events;
+  viewerInitialIndex.value = initialIndex;
+  showEventViewer.value = true;
 }
 
-// Event click - view/edit event (all users can view, only admins can edit)
-function handleEventClick(event: CalendarEvent) {
-  editingEvent.value = event;
-  selectedDate.value = event.date;
-  showEventModal.value = true;
+// Close event viewer
+function closeEventViewer() {
+  showEventViewer.value = false;
+  viewerEvents.value = [];
 }
 
 // Create or update event
@@ -321,8 +326,7 @@ async function handleGamePlanUpdate(eventId: string, gamePlan: MatchGamePlan) {
         @prev-month="goToPrevMonth"
         @next-month="goToNextMonth"
         @toggle-availability="handleToggleAvailability"
-        @click-day="handleDayClick"
-        @click-event="handleEventClick"
+        @open-event-viewer="handleOpenEventViewer"
       />
 
       <!-- Week view -->
@@ -335,10 +339,16 @@ async function handleGamePlanUpdate(eventId: string, gamePlan: MatchGamePlan) {
         @prev-week="goToPrevWeek"
         @next-week="goToNextWeek"
         @toggle-availability="handleToggleAvailability"
-        @click-day="handleDayClick"
-        @click-event="handleEventClick"
+        @open-event-viewer="handleOpenEventViewer"
       />
     </template>
+
+    <!-- Event viewer modal (read-only with navigation) -->
+    <EventViewerModal
+      :events="viewerEvents"
+      :initial-index="viewerInitialIndex"
+      @close="closeEventViewer"
+    />
 
     <!-- Event creation/edit/view modal -->
     <EventFormModal

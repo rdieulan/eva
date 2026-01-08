@@ -117,21 +117,6 @@ describe('CalendarGrid Component', () => {
     expect(wrapper.emitted('toggle-availability')?.[0]).toEqual(['2026-01-01', 'UNAVAILABLE']);
   });
 
-  it('should emit click-day event when clicking on a day cell', async () => {
-    const wrapper = mount(CalendarGrid, {
-      props: {
-        year: 2026,
-        month: 1,
-        days: mockDays,
-      },
-    });
-
-    wrapper.vm.$emit('click-day', '2026-01-15');
-    await wrapper.vm.$nextTick();
-
-    expect(wrapper.emitted('click-day')).toBeTruthy();
-    expect(wrapper.emitted('click-day')?.[0]).toEqual(['2026-01-15']);
-  });
 
   it('should display events on days that have them', () => {
     const wrapper = mount(CalendarGrid, {
@@ -191,7 +176,7 @@ describe('CalendarGrid Component', () => {
     }
   });
 
-  it('should emit click-event when clicking on an event', async () => {
+  it('should emit open-event-viewer when viewing events', async () => {
     const wrapper = mount(CalendarGrid, {
       props: {
         year: 2026,
@@ -200,12 +185,12 @@ describe('CalendarGrid Component', () => {
       },
     });
 
-    const mockEvent = mockDays['2026-01-15'].events[0];
-    wrapper.vm.$emit('click-event', mockEvent);
+    const dayEvents = mockDays['2026-01-15'].events;
+    wrapper.vm.$emit('open-event-viewer', dayEvents, 0);
     await wrapper.vm.$nextTick();
 
-    expect(wrapper.emitted('click-event')).toBeTruthy();
-    expect(wrapper.emitted('click-event')?.[0]).toEqual([mockEvent]);
+    expect(wrapper.emitted('open-event-viewer')).toBeTruthy();
+    expect(wrapper.emitted('open-event-viewer')?.[0]).toEqual([dayEvents, 0]);
   });
 });
 

@@ -14,8 +14,7 @@ const emit = defineEmits<{
   'prev-week': [];
   'next-week': [];
   'toggle-availability': [date: string, currentStatus: AvailabilityStatus | null];
-  'click-day': [date: string];
-  'click-event': [event: CalendarEvent];
+  'open-event-viewer': [events: CalendarEvent[], initialIndex: number];
 }>();
 
 // Month names in French
@@ -144,8 +143,7 @@ function handleToggleAvailability(date: string, currentStatus: AvailabilityStatu
           class="week-day-cell"
           :show-day-number="false"
           @toggle-availability="handleToggleAvailability(cell.date, cell.data?.currentUserStatus ?? null)"
-          @click-day="emit('click-day', cell.date)"
-          @click-event="emit('click-event', $event)"
+          @open-event-viewer="(events, index) => emit('open-event-viewer', events, index)"
         />
       </div>
     </div>
@@ -393,10 +391,57 @@ function handleToggleAvailability(date: string, currentStatus: AvailabilityStatu
 
   @include mobile-lg {
     min-height: 80px;
+    // Switch to row layout for week view on mobile
+    flex-direction: row;
+    align-items: stretch;
   }
 
   @include mobile {
     min-height: 70px;
+  }
+}
+
+// Week view mobile: reorganize DayCell content
+@include mobile-lg {
+  :deep(.day-cell) {
+    // Main content area (events)
+    .events-list {
+      flex: 1;
+      justify-content: center;
+    }
+
+    // Player summary on right side, vertical
+    .players-summary {
+      flex-direction: column;
+      flex-wrap: nowrap;
+      margin-top: 0;
+      margin-left: auto;
+      justify-content: center;
+      gap: 2px;
+      padding-left: 0.25rem;
+      border-left: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    // Hide day header (already shown in week-day-header)
+    .day-header {
+      display: none;
+    }
+  }
+}
+
+@include mobile {
+  :deep(.day-cell) {
+    .players-summary {
+      gap: 2px;
+      padding-left: 0.2rem;
+    }
+
+    // Keep same size as mobile-lg with visible initials
+    .player-avatar {
+      width: 16px;
+      height: 16px;
+      font-size: 0.45rem;
+    }
   }
 }
 </style>
