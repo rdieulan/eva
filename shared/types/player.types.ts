@@ -9,5 +9,6 @@ export interface Player {
 export interface PlayerAssignment {
   userId: string;
   assignmentIds: number[];
+  mainAssignmentId?: number; // Primary/preferred assignment ID
 }
 

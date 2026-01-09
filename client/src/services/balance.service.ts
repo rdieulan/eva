@@ -18,6 +18,14 @@ export function getPlayerAssignments(map: MapConfig, userId: string): number[] {
 }
 
 /**
+ * Get main assignment ID for a specific user on a map
+ */
+export function getPlayerMainAssignment(map: MapConfig, userId: string): number | null {
+  const playerAssignment = map.players.find(p => p.userId === userId);
+  return playerAssignment?.mainAssignmentId ?? null;
+}
+
+/**
  * Get user IDs assigned to a specific assignment on a map
  */
 export function getAssignmentPlayers(map: MapConfig, assignmentId: number): string[] {

@@ -29,6 +29,7 @@ router.get('/', async (_req: Request, res: Response) => {
       const players = firstPlan?.players.map(gpp => ({
         userId: gpp.userId,
         assignmentIds: gpp.assignmentIds,
+        mainAssignmentId: gpp.mainAssignmentId,
       })) || [];
 
       return {
@@ -76,6 +77,7 @@ router.get('/:mapId', async (req: Request, res: Response) => {
     const players = firstPlan?.players.map(gpp => ({
       userId: gpp.userId,
       assignmentIds: gpp.assignmentIds,
+      mainAssignmentId: gpp.mainAssignmentId,
     })) || [];
 
     const mapForFrontend = {
@@ -149,6 +151,7 @@ router.get('/:mapId/plans', async (req: Request, res: Response) => {
       players: plan.players.map(gpp => ({
         userId: gpp.userId,
         assignmentIds: gpp.assignmentIds,
+        mainAssignmentId: gpp.mainAssignmentId,
       })),
     }));
 

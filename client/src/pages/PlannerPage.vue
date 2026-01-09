@@ -108,6 +108,17 @@ function handlePlayerAssignmentChanged(playerId: string, assignmentId: number, a
   }
 }
 
+function handleMainAssignmentChanged(playerId: string, assignmentId: number | null) {
+  // Update the main assignment for this player in the current map
+  const map = editableMaps.value.find(m => m.id === selectedMapId.value);
+  if (!map) return;
+
+  const playerAssignment = map.players.find(p => p.userId === playerId);
+  if (playerAssignment) {
+    playerAssignment.mainAssignmentId = assignmentId ?? undefined;
+  }
+}
+
 async function saveChanges() {
   console.log('[PLANNER] Save triggered');
 
@@ -233,6 +244,7 @@ function cancelEdit() {
           :editMode="editMode"
           @update:map="handleMapUpdate"
           @player-assignment-changed="handlePlayerAssignmentChanged"
+          @main-assignment-changed="handleMainAssignmentChanged"
         />
 
         <div v-else class="no-map">

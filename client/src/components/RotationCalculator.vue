@@ -1,6 +1,6 @@
 ﻿<script setup lang="ts">
 import { ref, computed } from 'vue';
-import { assignmentColors, getPlayerAssignments } from '@/config/config';
+import { assignmentColors, getPlayerAssignments, getPlayerMainAssignment } from '@/config/config';
 import GamePlanTable from '@/components/common/GamePlanTable.vue';
 import type { MapConfig, Player, MatchGamePlan } from '@shared/types';
 
@@ -33,6 +33,7 @@ const exportContentRef = ref<HTMLDivElement | null>(null);
 
 interface ConfigurationResult {
   assignments: Record<number, string>; // assignmentId -> playerId
+  mainRoleScore: number; // Number of players on their main role
 }
 
 interface MapResult {
@@ -108,13 +109,15 @@ function calculateConfigurations() {
     }
 
     // Find all valid configurations (backtracking)
-    const configurations = findAllConfigurations(assignmentIds, presentPlayers, playerToAssignments);
+    const configurations = findAllConfigurations(assignmentIds, presentPlayers, playerToAssignments, map);
 
     if (configurations.length === 0) {
       mapResult.errors.push("Aucune configuration valide trouvée");
     } else {
+      // Sort configurations by mainRoleScore (descending) - best configs first
+      configurations.sort((a, b) => b.mainRoleScore - a.mainRoleScore);
       mapResult.configurations = configurations;
-      // Automatically select first configuration
+      // Automatically select first configuration (best score)
       selectedConfigurations.value[mapResult.mapId] = 0;
     }
 
@@ -126,7 +129,8 @@ function calculateConfigurations() {
 function findAllConfigurations(
   assignmentIds: number[],
   playerIds: string[],
-  playerToAssignments: Record<string, number[]>
+  playerToAssignments: Record<string, number[]>,
+  map: MapConfig
 ): ConfigurationResult[] {
   const configResults: ConfigurationResult[] = [];
   const assignment: Record<number, string> = {};
@@ -134,8 +138,16 @@ function findAllConfigurations(
 
   function backtrack(assignmentIndex: number) {
     if (assignmentIndex === assignmentIds.length) {
-      // Complete configuration found
-      configResults.push({ assignments: { ...assignment } });
+      // Complete configuration found - calculate mainRoleScore
+      let mainRoleScore = 0;
+      for (const [assignmentIdStr, playerId] of Object.entries(assignment)) {
+        const assignmentId = Number(assignmentIdStr);
+        const playerMainRole = getPlayerMainAssignment(map, playerId);
+        if (playerMainRole === assignmentId) {
+          mainRoleScore++;
+        }
+      }
+      configResults.push({ assignments: { ...assignment }, mainRoleScore });
       return;
     }
 
@@ -175,6 +187,13 @@ function getAssignmentName(mapId: string, assignmentId: number): string {
 
 function getAssignmentColor(assignmentId: number): string {
   return assignmentColors[assignmentId] || '#888';
+}
+
+// Check if an assignment is the main role for a player on a specific map
+function isMainRoleForPlayer(mapId: string, playerId: string, assignmentId: number): boolean {
+  const map = props.maps.find(m => m.id === mapId);
+  if (!map) return false;
+  return getPlayerMainAssignment(map, playerId) === assignmentId;
 }
 
 const canCalculate = computed(() => {
@@ -217,7 +236,8 @@ const exportableMaps = computed(() => {
             playerId,
             assignmentName: getAssignmentName(r.mapId, assignmentId),
             playerName: getPlayerName(playerId),
-            assignmentColor: getAssignmentColor(assignmentId)
+            assignmentColor: getAssignmentColor(assignmentId),
+            isMainRole: isMainRoleForPlayer(r.mapId, playerId, assignmentId)
           };
         }) : []
       };
@@ -357,6 +377,7 @@ function buildMatchGamePlan(): MatchGamePlan | null {
         assignmentId: a.assignmentId,
         assignmentName: a.assignmentName,
         assignmentColor: a.assignmentColor,
+        isMainRole: a.isMainRole,
       })),
     })),
   };
@@ -389,6 +410,7 @@ const previewGamePlan = computed(() => {
         assignmentId: a.assignmentId,
         assignmentName: a.assignmentName,
         assignmentColor: a.assignmentColor,
+        isMainRole: a.isMainRole,
       }))
     }))
   } as const;
@@ -500,6 +522,7 @@ const previewGamePlan = computed(() => {
                       color: getAssignmentColor(Number(assignmentId))
                     }"
                   >
+                    <span v-if="isMainRoleForPlayer(result.mapId, playerId, Number(assignmentId))" class="main-star">★</span>
                     {{ getAssignmentName(result.mapId, Number(assignmentId)) }}
                   </span>
                   <span class="joueur-name">{{ getPlayerName(playerId) }}</span>
@@ -955,6 +978,7 @@ const previewGamePlan = computed(() => {
   margin-right: $spacing-xs;
 }
 
+
 .assignment {
   display: flex;
   align-items: center;
@@ -967,6 +991,12 @@ const previewGamePlan = computed(() => {
   border-radius: 3px;
   font-size: 0.75rem;
   font-weight: 600;
+
+  .main-star {
+    margin-right: 0.15rem;
+    font-size: 0.9em;
+    color: $color-star;
+  }
 
   @include mobile-lg {
     font-size: 0.65rem;

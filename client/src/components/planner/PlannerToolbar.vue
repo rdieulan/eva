@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { assignmentColors, checkMapBalance, getPlayerAssignments, getAssignmentPlayers } from '@/config/config';
+import { assignmentColors, checkMapBalance, getPlayerAssignments, getPlayerMainAssignment, getAssignmentPlayers } from '@/config/config';
 import type { MapConfig, Player } from '@/types';
 import RotationCalculator from '@/components/RotationCalculator.vue';
 import SvgIcon from '@/components/common/SvgIcon.vue';
@@ -98,6 +98,12 @@ function isPlayerHighlighted(playerId: string): boolean {
   const assignedPlayers = getAssignmentPlayers(props.map, selectedAssignmentId);
   return assignedPlayers.includes(playerId);
 }
+
+// Check if an assignment is the main role for selected player
+function isMainRoleForSelectedPlayer(assignmentId: number): boolean {
+  if (!props.selectedPlayerId || !props.map) return false;
+  return getPlayerMainAssignment(props.map, props.selectedPlayerId) === assignmentId;
+}
 </script>
 
 <template>
@@ -154,12 +160,14 @@ function isPlayerHighlighted(playerId: string): boolean {
           :key="assignment.id"
           :class="{
             active: isAssignmentActive(assignment.id),
-            disabled: !isAssignmentAssociated(assignment.id)
+            disabled: !isAssignmentAssociated(assignment.id),
+            'main-role': isMainRoleForSelectedPlayer(assignment.id)
           }"
           :style="{ '--assignment-color': getAssignmentColor(assignment.id) }"
           :disabled="!isAssignmentAssociated(assignment.id)"
           @click="toggleAssignment(assignment.id)"
         >
+          <span class="main-star" v-if="isMainRoleForSelectedPlayer(assignment.id)">★</span>
           {{ assignment.name }}
         </button>
       </nav>
@@ -514,6 +522,17 @@ function isPlayerHighlighted(playerId: string): boolean {
       color: #555;
       cursor: not-allowed;
       opacity: 0.5;
+    }
+
+    &.main-role {
+      background: color-mix(in srgb, var(--assignment-color) 25%, transparent);
+      box-shadow: 0 0 6px color-mix(in srgb, var(--assignment-color) 30%, transparent);
+    }
+
+    .main-star {
+      margin-right: 0.2rem;
+      font-size: 0.8em;
+      color: $color-star;
     }
 
     @include tablet {

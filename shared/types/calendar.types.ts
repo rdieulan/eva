@@ -11,6 +11,7 @@ export interface MapAssignment {
   assignmentId: number;
   assignmentName: string;
   assignmentColor: string;
+  isMainRole?: boolean; // True if this is the player's main role
 }
 
 // Game plan for a map

@@ -47,6 +47,7 @@ export {
 export {
   checkMapBalance,
   getPlayerAssignments,
+  getPlayerMainAssignment,
   getAssignmentPlayers,
 } from '@/services/balance.service';
 

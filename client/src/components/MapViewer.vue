@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import type { MapConfig, Player, Point, Assignment } from '@/types';
-import { assignmentColors, getPlayerAssignments } from '@/config/config';
+import { assignmentColors, getPlayerAssignments, getPlayerMainAssignment } from '@/config/config';
 import { getZonePolygons } from '@/utils/zones';
 
 const props = defineProps<{
@@ -15,6 +15,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:map': [map: MapConfig];
   'player-assignment-changed': [playerId: string, assignmentId: number, associated: boolean];
+  'main-assignment-changed': [playerId: string, assignmentId: number | null];
 }>();
 
 // Image loading state
@@ -409,6 +410,19 @@ function togglePlayerAssignmentAssociation(playerId: string, assignmentId: numbe
   emit('player-assignment-changed', playerId, assignmentId, associated);
 }
 
+// Check if an assignment is the main role for a player
+function isMainAssignment(playerId: string, assignmentId: number): boolean {
+  return getPlayerMainAssignment(props.map, playerId) === assignmentId;
+}
+
+// Toggle main assignment for a player
+function toggleMainAssignment(playerId: string, assignmentId: number) {
+  const currentMain = getPlayerMainAssignment(props.map, playerId);
+  // If already main, unset it; otherwise set it
+  const newMain = currentMain === assignmentId ? null : assignmentId;
+  emit('main-assignment-changed', playerId, newMain);
+}
+
 // Get assignment name being edited
 const editingPosteName = computed(() => {
   if (!editingAssignmentId.value) return '';
@@ -604,19 +618,32 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
           <button class="panel-close" @click="closePlayerEditPanel">✕</button>
         </div>
         <div class="panel-content">
-          <label
+          <div
             v-for="player in players"
             :key="player.id"
-            class="player-checkbox"
-            :class="{ checked: isPlayerAssociatedToAssignment(player.id, editingAssignmentId) }"
+            class="player-row"
           >
-            <input
-              type="checkbox"
-              :checked="isPlayerAssociatedToAssignment(player.id, editingAssignmentId)"
-              @change="togglePlayerAssignmentAssociation(player.id, editingAssignmentId!)"
-            />
-            {{ player.name }}
-          </label>
+            <label
+              class="player-checkbox"
+              :class="{ checked: isPlayerAssociatedToAssignment(player.id, editingAssignmentId) }"
+            >
+              <input
+                type="checkbox"
+                :checked="isPlayerAssociatedToAssignment(player.id, editingAssignmentId)"
+                @change="togglePlayerAssignmentAssociation(player.id, editingAssignmentId!)"
+              />
+              {{ player.name }}
+            </label>
+            <button
+              v-if="isPlayerAssociatedToAssignment(player.id, editingAssignmentId)"
+              class="main-role-btn"
+              :class="{ active: isMainAssignment(player.id, editingAssignmentId!) }"
+              @click="toggleMainAssignment(player.id, editingAssignmentId!)"
+              title="Définir comme rôle principal"
+            >
+              {{ isMainAssignment(player.id, editingAssignmentId!) ? '★' : '☆' }}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1004,6 +1031,12 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
   }
 }
 
+.player-row {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
 .player-checkbox {
   display: flex;
   align-items: center;
@@ -1013,6 +1046,7 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
   cursor: pointer;
   color: $color-text-secondary;
   font-size: 0.85rem;
+  flex: 1;
 
   &:hover {
     background: $color-bg-tertiary;
@@ -1038,6 +1072,28 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
     padding: 0.3rem;
     font-size: 0.75rem;
     gap: 0.35rem;
+  }
+}
+
+.main-role-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  padding: 0.2rem;
+  color: $color-text-secondary;
+  opacity: 0.5;
+  transition: all 0.15s;
+
+  &:hover {
+    opacity: 1;
+    transform: scale(1.2);
+    color: $color-star;
+  }
+
+  &.active {
+    opacity: 1;
+    color: $color-star;
   }
 }
 </style>

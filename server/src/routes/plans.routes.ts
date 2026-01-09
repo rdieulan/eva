@@ -33,6 +33,7 @@ router.get('/:planId', async (req: Request, res: Response) => {
     const playerAssignments = plan.players.map(gpp => ({
       userId: gpp.userId,
       assignmentIds: gpp.assignmentIds,
+      mainAssignmentId: gpp.mainAssignmentId,
     }));
 
     res.json({
@@ -76,13 +77,14 @@ router.put('/:planId', authMiddleware, adminMiddleware, async (req: AuthRequest,
         where: { gamePlanId: planId },
       });
 
-      for (const playerAssignment of players as { userId: string; assignmentIds: number[] }[]) {
+      for (const playerAssignment of players as { userId: string; assignmentIds: number[]; mainAssignmentId?: number }[]) {
         if (playerAssignment.userId && playerAssignment.assignmentIds?.length > 0) {
           await prisma.gamePlanPlayer.create({
             data: {
               gamePlanId: planId,
               userId: playerAssignment.userId,
               assignmentIds: playerAssignment.assignmentIds,
+              mainAssignmentId: playerAssignment.mainAssignmentId ?? null,
             },
           });
         }

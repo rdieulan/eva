@@ -14,14 +14,14 @@ const rows = computed(() => {
   if (!props.gamePlan || !props.gamePlan.maps || props.gamePlan.maps.length === 0) return [] as Array<{
     key: string;
     label: string;
-    cells: Record<string, { name: string; color: string } | null>;
+    cells: Record<string, { name: string; color: string; isMainRole?: boolean } | null>;
   }>;
 
   return props.gamePlan.maps.map(mapPlan => {
-    const cells: Record<string, { name: string; color: string } | null> = {};
+    const cells: Record<string, { name: string; color: string; isMainRole?: boolean } | null> = {};
     for (const h of props.headers) {
       const assign = mapPlan.assignments.find(a => a.visibleplayerId === h.id);
-      cells[h.id] = assign ? { name: assign.assignmentName, color: assign.assignmentColor } : null;
+      cells[h.id] = assign ? { name: assign.assignmentName, color: assign.assignmentColor, isMainRole: assign.isMainRole } : null;
     }
     return { key: mapPlan.mapId, label: mapPlan.mapName, cells };
   });
@@ -48,6 +48,7 @@ const hasData = computed(() => props.headers.length > 0 && rows.value.length > 0
               class="assignment-badge"
               :style="{ color: row.cells[h.id]!.color, borderColor: row.cells[h.id]!.color }"
             >
+              <span v-if="row.cells[h.id]!.isMainRole" class="main-star">★</span>
               {{ row.cells[h.id]!.name }}
             </span>
             <span v-else class="assignment-badge" style="opacity:0.6">—</span>
@@ -125,6 +126,11 @@ const hasData = computed(() => props.headers.length > 0 && rows.value.length > 0
   border-radius: $radius-sm;
   font-size: 0.75rem;
   font-weight: 600;
+
+  .main-star {
+    color: $color-star;
+    margin-right: 0.15rem;
+  }
 
   @include tablet {
     padding: 0.15rem 0.4rem;

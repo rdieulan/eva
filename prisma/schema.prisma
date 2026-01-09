@@ -75,10 +75,11 @@ model GamePlan {
 
 // GamePlanPlayer = Liaison entre un utilisateur et ses assignments dans un game plan
 model GamePlanPlayer {
-  id            String   @id @default(cuid())
-  gamePlanId    String
-  userId        String
-  assignmentIds Int[]    // Array of assignment IDs the player can play (e.g. [1, 3])
+  id               String   @id @default(cuid())
+  gamePlanId       String
+  userId           String
+  assignmentIds    Int[]    // Array of assignment IDs the player can play (e.g. [1, 3])
+  mainAssignmentId Int?     // Primary/preferred assignment ID for this player
 
   gamePlan GamePlan @relation(fields: [gamePlanId], references: [id], onDelete: Cascade)
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
