@@ -33,7 +33,8 @@ app.use('/api', routes);
 
 // Serve frontend in production
 if (isProduction) {
-  const distPath = path.join(__dirname, '..', 'dist');
+  // From dist-server/server/, go up 2 levels to reach /app/, then into dist/
+  const distPath = path.join(__dirname, '..', '..', 'dist');
   app.use(express.static(distPath));
   app.use((_req, res) => {
     res.sendFile(path.join(distPath, 'index.html'));
