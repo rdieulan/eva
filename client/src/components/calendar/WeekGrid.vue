@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import DayCell from './DayCell.vue';
+import SvgIcon from '@/components/common/SvgIcon.vue';
 import type { DayData, CalendarEvent, AvailabilityStatus } from '@shared/types';
 
 const props = defineProps<{
@@ -107,15 +108,11 @@ function handleSetAvailability(date: string, status: AvailabilityStatus | null) 
     <!-- Header with navigation -->
     <div class="week-header">
       <button class="nav-btn" @click="emit('prev-week')" title="Semaine précédente">
-        <svg viewBox="0 0 24 24" class="nav-icon">
-          <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
-        </svg>
+        <SvgIcon name="chevron-left" class="nav-icon" />
       </button>
       <h2 class="week-title">{{ weekDisplay }}</h2>
       <button class="nav-btn" @click="emit('next-week')" title="Semaine suivante">
-        <svg viewBox="0 0 24 24" class="nav-icon">
-          <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
-        </svg>
+        <SvgIcon name="chevron-right" class="nav-icon" />
       </button>
     </div>
 

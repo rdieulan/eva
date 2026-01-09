@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { assignmentColors, checkMapBalance, getPlayerAssignments, getAssignmentPlayers } from '@/config/config';
 import type { MapConfig, Player } from '@/types';
 import RotationCalculator from '@/components/RotationCalculator.vue';
+import SvgIcon from '@/components/common/SvgIcon.vue';
 
 const props = defineProps<{
   players: Player[];
@@ -109,16 +110,7 @@ function isPlayerHighlighted(playerId: string): boolean {
       @click="showCalculator = true"
       title="Ouvrir le calculateur de rotation"
     >
-      <svg viewBox="0 0 24 24" class="calculator-icon">
-        <path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1s-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1z"/>
-        <path d="M7 12l1.5-1.5M8.5 10.5L7 9M7 9l1.5 1.5M8.5 10.5L7 12" stroke="currentColor" stroke-width="1.5" fill="none"/>
-        <path d="M7 17l1.5-1.5M8.5 15.5L7 14M7 14l1.5 1.5M8.5 15.5L7 17" stroke="currentColor" stroke-width="1.5" fill="none"/>
-        <path d="M16 12l1.5-1.5M17.5 10.5L16 9M16 9l1.5 1.5M17.5 10.5L16 12" stroke="currentColor" stroke-width="1.5" fill="none"/>
-        <path d="M16 17l1.5-1.5M17.5 15.5L16 14M16 14l1.5 1.5M17.5 15.5L16 17" stroke="currentColor" stroke-width="1.5" fill="none"/>
-        <circle cx="12" cy="10" r="1.5"/>
-        <circle cx="12" cy="15" r="1.5"/>
-        <path d="M10 11.5l-1.5 1.5M14 11.5l1.5 1.5" stroke="currentColor" stroke-width="1" fill="none"/>
-      </svg>
+      <SvgIcon name="calculator" class="calculator-icon" />
     </button>
 
     <div
@@ -180,9 +172,7 @@ function isPlayerHighlighted(playerId: string): boolean {
         @click="$emit('reset')"
         title="Réinitialiser la sélection"
       >
-        <svg viewBox="0 0 24 24" class="reset-icon">
-          <path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
-        </svg>
+        <SvgIcon name="reset" class="reset-icon" />
       </button>
     </div>
   </div>

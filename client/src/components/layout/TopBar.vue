@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
+import SvgIcon from '@/components/common/SvgIcon.vue';
 
-const props = defineProps<{
+defineProps<{
   isAuthenticated?: boolean;
   userName?: string;
 }>();
@@ -26,10 +27,7 @@ function goToProfile() {
     <!-- Section Logo - tout à gauche (immuable) -->
     <div class="section-logo">
       <button class="btn-home" @click="goToHome" title="Retour à l'accueil">
-        <svg viewBox="0 0 24 24" class="home-icon">
-          <!-- Placeholder icon - house -->
-          <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
-        </svg>
+        <SvgIcon name="home" class="home-icon" />
       </button>
     </div>
 
@@ -42,17 +40,13 @@ function goToProfile() {
     <div class="section-auth">
       <template v-if="isAuthenticated">
         <button class="btn-profile" @click="goToProfile">
-          <svg viewBox="0 0 24 24" class="profile-icon">
-            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-          </svg>
+          <SvgIcon name="user" class="profile-icon" />
           <span>{{ userName || 'Profil' }}</span>
         </button>
       </template>
       <template v-else>
         <button class="btn-login" @click="goToLogin">
-          <svg viewBox="0 0 24 24" class="login-icon">
-            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-          </svg>
+          <SvgIcon name="user" class="login-icon" />
           <span>Login</span>
         </button>
       </template>
