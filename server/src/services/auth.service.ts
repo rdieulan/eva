@@ -56,10 +56,17 @@ export async function deleteSession(token: string): Promise<number> {
 }
 
 /**
- * Find user by email
+ * Find user by email (case-insensitive)
  */
 export async function findUserByEmail(email: string) {
-  return prisma.user.findUnique({ where: { email } });
+  return prisma.user.findFirst({
+    where: {
+      email: {
+        equals: email,
+        mode: 'insensitive',
+      },
+    },
+  });
 }
 
 /**

@@ -30,7 +30,6 @@ function goToCalendar() {
         <div class="card-icon">📅</div>
         <h2>Calendrier</h2>
         <p>Planifiez vos sessions d'entraînement</p>
-        <span class="badge coming-soon">À venir</span>
       </button>
     </nav>
   </div>
