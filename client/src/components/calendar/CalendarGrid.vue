@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import DayCell from './DayCell.vue';
-import SvgIcon from '@/components/common/SvgIcon.vue';
 import type { DayData, CalendarEvent, AvailabilityStatus } from '@shared/types';
 
 const props = defineProps<{
@@ -19,15 +18,6 @@ const emit = defineEmits<{
   'open-create-event': [date: string];
 }>();
 
-// Month names in French
-const monthNames = [
-  'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
-];
-
-// Day names
-const dayNames = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
-
 // Format date to YYYY-MM-DD string
 function formatDateStr(date: Date): string {
   const year = date.getFullYear();
@@ -36,8 +26,6 @@ function formatDateStr(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-// Current month display
-const monthDisplay = computed(() => `${monthNames[props.month - 1]} ${props.year}`);
 
 // Today's date string for comparison
 const todayStr = computed(() => formatDateStr(new Date()));
@@ -125,23 +113,7 @@ function handleSetAvailability(date: string, status: AvailabilityStatus | null) 
 
 <template>
   <div class="calendar-grid">
-    <!-- Header with navigation -->
-    <div class="calendar-header">
-      <button class="nav-btn" @click="emit('prev-month')" title="Mois précédent">
-        <SvgIcon name="chevron-left" class="nav-icon" />
-      </button>
-      <h2 class="month-title">{{ monthDisplay }}</h2>
-      <button class="nav-btn" @click="emit('next-month')" title="Mois suivant">
-        <SvgIcon name="chevron-right" class="nav-icon" />
-      </button>
-    </div>
 
-    <!-- Day names header -->
-    <div class="weekdays-header">
-      <div v-for="dayName in dayNames" :key="dayName" class="weekday-name">
-        {{ dayName }}
-      </div>
-    </div>
 
     <!-- Calendar grid -->
     <div class="days-grid">
@@ -171,115 +143,20 @@ function handleSetAvailability(date: string, status: AvailabilityStatus | null) 
 .calendar-grid {
   display: flex;
   flex-direction: column;
-  gap: $spacing-md;
+  gap: $spacing-sm;
   width: 100%;
   max-width: 1200px;
 
   @include tablet {
-    gap: 0.75rem;
+    gap: 0.35rem;
   }
 
   @include mobile-lg {
-    gap: $spacing-sm;
+    gap: $spacing-xs;
   }
 }
 
-.calendar-header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: $spacing-lg;
 
-  @include tablet {
-    gap: $spacing-md;
-  }
-
-  @include mobile-lg {
-    gap: 0.75rem;
-  }
-
-  @include mobile {
-    gap: $spacing-sm;
-  }
-}
-
-.month-title {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #fff;
-  min-width: 200px;
-  text-align: center;
-
-  @include tablet {
-    font-size: 1.25rem;
-    min-width: 180px;
-  }
-
-  @include mobile-lg {
-    font-size: 1.1rem;
-    min-width: 150px;
-  }
-
-  @include mobile {
-    font-size: 1rem;
-    min-width: 120px;
-  }
-}
-
-.nav-btn {
-  width: 40px;
-  height: 40px;
-  border: 1px solid $color-border-light;
-  background: $color-bg-tertiary;
-  border-radius: $radius-md;
-  cursor: pointer;
-  padding: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-
-  &:hover {
-    background: $color-border-light;
-    border-color: $color-accent;
-  }
-
-  @include mobile-lg {
-    width: 36px;
-    height: 36px;
-    padding: 6px;
-  }
-
-  @include mobile {
-    width: 32px;
-    height: 32px;
-    padding: 4px;
-    border-radius: 6px;
-  }
-}
-
-.nav-icon {
-  width: 24px;
-  height: 24px;
-  fill: $color-text-secondary;
-
-  .nav-btn:hover & {
-    fill: #fff;
-  }
-
-  @include mobile-lg {
-    width: 20px;
-    height: 20px;
-  }
-
-  @include mobile {
-    width: 18px;
-    height: 18px;
-  }
-}
-
-.weekdays-header,
 .days-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -296,31 +173,11 @@ function handleSetAvailability(date: string, status: AvailabilityStatus | null) 
   @include mobile {
     gap: 0.15rem;
   }
-}
 
-.days-grid {
   // Prevent cells from overflowing their grid area
   :deep(.day-cell) {
     min-width: 0;
     overflow: hidden;
-  }
-}
-
-.weekday-name {
-  text-align: center;
-  font-weight: 600;
-  font-size: 0.85rem;
-  color: $color-accent;
-  padding: $spacing-sm;
-
-  @include mobile-lg {
-    font-size: 0.7rem;
-    padding: $spacing-xs;
-  }
-
-  @include mobile {
-    font-size: 0.65rem;
-    padding: 0.2rem;
   }
 }
 </style>

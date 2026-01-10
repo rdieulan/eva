@@ -95,6 +95,7 @@ model GamePlanPlayer {
 
 enum AvailabilityStatus {
   AVAILABLE
+  CONDITIONAL
   UNAVAILABLE
 }
 

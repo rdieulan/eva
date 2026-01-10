@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, onMounted, watch, nextTick } from 'vue';
 import DayCell from './DayCell.vue';
-import SvgIcon from '@/components/common/SvgIcon.vue';
 import type { DayData, CalendarEvent, AvailabilityStatus } from '@shared/types';
 
 const props = defineProps<{
@@ -19,12 +18,6 @@ const emit = defineEmits<{
   'open-event-viewer': [events: CalendarEvent[], initialIndex: number];
   'open-create-event': [date: string];
 }>();
-
-// Month names in French
-const monthNames = [
-  'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
-];
 
 // Day names (full) - tuple type for type safety
 const dayNamesFull: [string, string, string, string, string, string, string] = [
@@ -47,25 +40,6 @@ function isPastDate(dateStr: string): boolean {
   return dateStr < todayStr.value;
 }
 
-// Week display title
-const weekDisplay = computed(() => {
-  const start = props.weekStart;
-  const end = new Date(start);
-  end.setDate(end.getDate() + 6);
-
-  const startDay = start.getDate();
-  const endDay = end.getDate();
-  const startMonth = monthNames[start.getMonth()];
-  const endMonth = monthNames[end.getMonth()];
-
-  if (start.getMonth() === end.getMonth()) {
-    return `${startDay} - ${endDay} ${startMonth} ${start.getFullYear()}`;
-  } else if (start.getFullYear() === end.getFullYear()) {
-    return `${startDay} ${startMonth} - ${endDay} ${endMonth} ${start.getFullYear()}`;
-  } else {
-    return `${startDay} ${startMonth} ${start.getFullYear()} - ${endDay} ${endMonth} ${end.getFullYear()}`;
-  }
-});
 
 // Generate week grid (7 days)
 const weekGrid = computed(() => {
@@ -101,23 +75,45 @@ const weekGrid = computed(() => {
 function handleSetAvailability(date: string, status: AvailabilityStatus | null) {
   emit('set-availability', date, status);
 }
+
+// Ref for the week days container
+const weekDaysRef = ref<HTMLElement | null>(null);
+
+// Scroll to current day on mobile
+function scrollToToday() {
+  if (!weekDaysRef.value) return;
+
+  // Only on mobile (vertical layout)
+  if (window.innerWidth > 768) return;
+
+  const todayElement = weekDaysRef.value.querySelector('.is-today') as HTMLElement;
+  if (todayElement) {
+    // Scroll within the parent scrollable container
+    const scrollContainer = weekDaysRef.value.closest('.calendar-content');
+    if (scrollContainer) {
+      const containerRect = scrollContainer.getBoundingClientRect();
+      const elementRect = todayElement.getBoundingClientRect();
+      const scrollTop = scrollContainer.scrollTop + elementRect.top - containerRect.top;
+      scrollContainer.scrollTop = scrollTop;
+    }
+  }
+}
+
+// Scroll to today on mount and when week changes
+onMounted(() => {
+  nextTick(scrollToToday);
+});
+
+watch(() => props.weekStart, () => {
+  nextTick(scrollToToday);
+});
 </script>
 
 <template>
   <div class="week-grid">
-    <!-- Header with navigation -->
-    <div class="week-header">
-      <button class="nav-btn" @click="emit('prev-week')" title="Semaine précédente">
-        <SvgIcon name="chevron-left" class="nav-icon" />
-      </button>
-      <h2 class="week-title">{{ weekDisplay }}</h2>
-      <button class="nav-btn" @click="emit('next-week')" title="Semaine suivante">
-        <SvgIcon name="chevron-right" class="nav-icon" />
-      </button>
-    </div>
 
     <!-- Week days -->
-    <div class="week-days">
+    <div class="week-days" ref="weekDaysRef">
       <div
         v-for="cell in weekGrid"
         :key="cell.date"
@@ -170,100 +166,6 @@ function handleSetAvailability(date: string, status: AvailabilityStatus | null) 
   }
 }
 
-.week-header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: $spacing-lg;
-
-  @include tablet {
-    gap: $spacing-md;
-  }
-
-  @include mobile-lg {
-    gap: 0.75rem;
-  }
-
-  @include mobile {
-    gap: $spacing-sm;
-  }
-}
-
-.week-title {
-  margin: 0;
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #fff;
-  min-width: 300px;
-  text-align: center;
-
-  @include tablet {
-    font-size: 1.1rem;
-    min-width: 260px;
-  }
-
-  @include mobile-lg {
-    font-size: 0.95rem;
-    min-width: 200px;
-  }
-
-  @include mobile {
-    font-size: 0.85rem;
-    min-width: 160px;
-  }
-}
-
-.nav-btn {
-  width: 40px;
-  height: 40px;
-  border: 1px solid $color-border-light;
-  background: $color-bg-tertiary;
-  border-radius: $radius-md;
-  cursor: pointer;
-  padding: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-
-  &:hover {
-    background: $color-border-light;
-    border-color: $color-accent;
-  }
-
-  @include mobile-lg {
-    width: 36px;
-    height: 36px;
-    padding: 6px;
-  }
-
-  @include mobile {
-    width: 32px;
-    height: 32px;
-    padding: 4px;
-    border-radius: 6px;
-  }
-}
-
-.nav-icon {
-  width: 24px;
-  height: 24px;
-  fill: $color-text-secondary;
-
-  .nav-btn:hover & {
-    fill: #fff;
-  }
-
-  @include mobile-lg {
-    width: 20px;
-    height: 20px;
-  }
-
-  @include mobile {
-    width: 18px;
-    height: 18px;
-  }
-}
 
 .week-days {
   display: grid;

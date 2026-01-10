@@ -22,23 +22,23 @@ const icons: Record<string, string> = {
   calculator: calculatorIcon,
 };
 
-const props = withDefaults(
-  defineProps<{
-    name: keyof typeof icons;
-    size?: string;
-  }>(),
-  {
-    size: '1em',
-  }
-);
+const props = defineProps<{
+  name: keyof typeof icons;
+  size?: string;
+}>();
 
 const svgContent = computed(() => icons[props.name] || '');
+
+const sizeStyle = computed(() => {
+  if (!props.size) return {};
+  return { width: props.size, height: props.size };
+});
 </script>
 
 <template>
   <span
     class="svg-icon"
-    :style="{ width: size, height: size }"
+    :style="sizeStyle"
     v-html="svgContent"
   ></span>
 </template>

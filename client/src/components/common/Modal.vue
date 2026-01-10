@@ -102,7 +102,7 @@ onUnmounted(() => {
 
   @include mobile-lg {
     padding: 0;
-    align-items: flex-end;
+    align-items: flex-start;
   }
 }
 
@@ -117,7 +117,7 @@ onUnmounted(() => {
 
   @include mobile-lg {
     max-height: 95vh;
-    border-radius: $radius-xl $radius-xl 0 0;
+    border-radius: 0 0 $radius-xl $radius-xl;
     width: 100% !important;
     max-width: 100% !important;
   }
@@ -273,7 +273,7 @@ onUnmounted(() => {
   transform: scale(0.95) translateY(-20px);
 
   @include mobile-lg {
-    transform: translateY(100%);
+    transform: translateY(-100%);
   }
 }
 
@@ -281,7 +281,7 @@ onUnmounted(() => {
   transform: scale(0.95);
 
   @include mobile-lg {
-    transform: translateY(100%);
+    transform: translateY(-100%);
   }
 }
 </style>

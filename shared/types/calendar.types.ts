@@ -1,6 +1,6 @@
 // Calendar types for availability and events
 
-export type AvailabilityStatus = 'AVAILABLE' | 'UNAVAILABLE';
+export type AvailabilityStatus = 'AVAILABLE' | 'CONDITIONAL' | 'UNAVAILABLE';
 
 export type EventType = 'MATCH' | 'EVENT';
 

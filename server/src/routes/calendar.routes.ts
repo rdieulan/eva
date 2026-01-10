@@ -165,7 +165,7 @@ router.post('/availability', authMiddleware, async (req: AuthRequest, res: Respo
         where: { userId, date: dateObj },
       });
       res.json({ success: true, deleted: true });
-    } else if (status === 'AVAILABLE' || status === 'UNAVAILABLE') {
+    } else if (status === 'AVAILABLE' || status === 'CONDITIONAL' || status === 'UNAVAILABLE') {
       // Upsert availability
       const availability = await prisma.availability.upsert({
         where: {

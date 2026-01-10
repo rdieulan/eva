@@ -40,6 +40,7 @@ const hasEvents = computed(() => props.events.length > 0);
 const cellStatusClass = computed(() => {
   if (props.isPast) return 'status-past';
   if (props.currentUserStatus === 'AVAILABLE') return 'status-available';
+  if (props.currentUserStatus === 'CONDITIONAL') return 'status-conditional';
   if (props.currentUserStatus === 'UNAVAILABLE') return 'status-unavailable';
   return 'status-unknown';
 });
@@ -47,6 +48,7 @@ const cellStatusClass = computed(() => {
 // Get player avatar color based on their availability
 function getPlayerStatusClass(status: AvailabilityStatus | null): string {
   if (status === 'AVAILABLE') return 'player-available';
+  if (status === 'CONDITIONAL') return 'player-conditional';
   if (status === 'UNAVAILABLE') return 'player-unavailable';
   return 'player-unknown';
 }
@@ -95,16 +97,19 @@ function handleEventClick(e: MouseEvent, index: number) {
   }
 }
 
-// Cycle availability: null -> AVAILABLE -> UNAVAILABLE -> null
+// Cycle availability: AVAILABLE -> CONDITIONAL -> UNAVAILABLE -> null -> AVAILABLE...
 function cycleAvailability() {
   if (props.isPast) return;
 
   let newStatus: AvailabilityStatus | null;
-  if (props.currentUserStatus === null) {
+  if (props.currentUserStatus === null || props.currentUserStatus === undefined) {
     newStatus = 'AVAILABLE';
   } else if (props.currentUserStatus === 'AVAILABLE') {
+    newStatus = 'CONDITIONAL';
+  } else if (props.currentUserStatus === 'CONDITIONAL') {
     newStatus = 'UNAVAILABLE';
   } else {
+    // UNAVAILABLE -> back to null (grey)
     newStatus = null;
   }
 
@@ -163,6 +168,7 @@ function cycleAvailability() {
     <!-- Background status icon (only in edit mode) -->
     <div v-if="!isPast && editMode" class="status-bg-icon">
       <template v-if="currentUserStatus === 'AVAILABLE'">✓</template>
+      <template v-else-if="currentUserStatus === 'CONDITIONAL'">~</template>
       <template v-else-if="currentUserStatus === 'UNAVAILABLE'">✗</template>
       <template v-else>?</template>
     </div>
@@ -205,6 +211,16 @@ function cycleAvailability() {
     &:hover {
       background: rgba($color-success, 0.25);
       border-color: rgba($color-success, 0.6);
+    }
+  }
+
+  &.status-conditional {
+    background: rgba($color-conditional, 0.15);
+    border-color: rgba($color-conditional, 0.4);
+
+    &:hover {
+      background: rgba($color-conditional, 0.25);
+      border-color: rgba($color-conditional, 0.6);
     }
   }
 
@@ -319,6 +335,10 @@ function cycleAvailability() {
 
   .status-available & {
     color: $color-success;
+  }
+
+  .status-conditional & {
+    color: $color-conditional;
   }
 
   .status-unavailable & {
@@ -485,6 +505,11 @@ function cycleAvailability() {
 .player-available {
   background: #166534;
   border: 1px solid $color-success;
+}
+
+.player-conditional {
+  background: #854d0e;
+  border: 1px solid $color-conditional;
 }
 
 .player-unavailable {

@@ -192,7 +192,7 @@ function goToProfile() {
     padding: $spacing-sm;
     gap: 0;
 
-    span {
+    > span:not(.svg-icon) {
       display: none;
     }
   }
@@ -218,13 +218,19 @@ function goToProfile() {
 
 .login-icon,
 .profile-icon {
-  width: 20px;
-  height: 20px;
+  width: 20px !important;
+  height: 20px !important;
   fill: currentColor;
+  flex-shrink: 0;
 
   @include mobile-lg {
-    width: 24px;
-    height: 24px;
+    width: 24px !important;
+    height: 24px !important;
+  }
+
+  @include mobile {
+    width: 22px !important;
+    height: 22px !important;
   }
 }
 </style>

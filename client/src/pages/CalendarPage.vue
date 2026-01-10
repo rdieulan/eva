@@ -4,6 +4,7 @@ import CalendarGrid from '@/components/calendar/CalendarGrid.vue';
 import WeekGrid from '@/components/calendar/WeekGrid.vue';
 import EventFormModal from '@/components/calendar/EventFormModal.vue';
 import EventViewerModal from '@/components/calendar/EventViewerModal.vue';
+import SvgIcon from '@/components/common/SvgIcon.vue';
 import { useAuth } from '@/composables/useAuth';
 import { loadAllMaps, loadPlayers } from '@/config/config';
 import {
@@ -86,6 +87,59 @@ const monthString = computed(() => {
   const m = currentMonth.value.toString().padStart(2, '0');
   return `${currentYear.value}-${m}`;
 });
+
+// Month names for display
+const monthNames = [
+  'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+];
+
+// Month display title
+const monthDisplay = computed(() => {
+  return `${monthNames[currentMonth.value - 1]} ${currentYear.value}`;
+});
+
+// Week display title
+const weekDisplay = computed(() => {
+  const start = currentWeekStart.value;
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+
+  const startDay = start.getDate();
+  const endDay = end.getDate();
+  const startMonth = monthNames[start.getMonth()];
+  const endMonth = monthNames[end.getMonth()];
+
+  if (start.getMonth() === end.getMonth()) {
+    return `${startDay} - ${endDay} ${startMonth} ${start.getFullYear()}`;
+  } else if (start.getFullYear() === end.getFullYear()) {
+    return `${startDay} ${startMonth} - ${endDay} ${endMonth} ${start.getFullYear()}`;
+  } else {
+    return `${startDay} ${startMonth} ${start.getFullYear()} - ${endDay} ${endMonth} ${end.getFullYear()}`;
+  }
+});
+
+// Navigation title based on view mode
+const navigationTitle = computed(() => {
+  return viewMode.value === 'month' ? monthDisplay.value : weekDisplay.value;
+});
+
+// Navigation functions
+function goToPrev() {
+  if (viewMode.value === 'month') {
+    goToPrevMonth();
+  } else {
+    goToPrevWeek();
+  }
+}
+
+function goToNext() {
+  if (viewMode.value === 'month') {
+    goToNextMonth();
+  } else {
+    goToNextWeek();
+  }
+}
 
 // Load calendar data for current month
 async function loadCalendarData() {
@@ -326,15 +380,38 @@ async function handleGamePlanUpdate(eventId: string, gamePlan: MatchGamePlan) {
   <div class="calendar-page">
     <!-- Teleport edit button to TopBar -->
     <Teleport v-if="!teleportDisabled" to="#topbar-dynamic-content">
-      <button
-        class="edit-mode-btn"
-        :class="{ active: editMode }"
-        @pointerdown.prevent="toggleEditMode"
-        :title="editMode ? 'Quitter le mode édition' : 'Modifier mes disponibilités'"
-      >
-        <span class="edit-icon">✏️</span>
-        <span class="edit-label">{{ editMode ? 'Terminer' : 'Dispos' }}</span>
-      </button>
+      <div class="calendar-toolbar">
+        <!-- Availability legend -->
+        <div class="availability-legend">
+          <span class="legend-item available">
+            <span class="legend-dot"></span>
+            <span class="legend-label">Dispo</span>
+          </span>
+          <span class="legend-item conditional">
+            <span class="legend-dot"></span>
+            <span class="legend-label">Possible</span>
+          </span>
+          <span class="legend-item unavailable">
+            <span class="legend-dot"></span>
+            <span class="legend-label">Indispo</span>
+          </span>
+          <span class="legend-item unknown">
+            <span class="legend-dot"></span>
+            <span class="legend-label">?</span>
+          </span>
+        </div>
+
+        <!-- Edit mode button -->
+        <button
+          class="edit-mode-btn"
+          :class="{ active: editMode }"
+          @pointerdown.prevent="toggleEditMode"
+          :title="editMode ? 'Quitter le mode édition' : 'Modifier mes disponibilités'"
+        >
+          <span class="edit-icon">✏️</span>
+          <span class="edit-label">{{ editMode ? 'Terminer' : 'Dispos' }}</span>
+        </button>
+      </div>
     </Teleport>
 
     <!-- Loading state -->
@@ -351,52 +428,76 @@ async function handleGamePlanUpdate(eventId: string, gamePlan: MatchGamePlan) {
 
     <!-- Calendar -->
     <template v-else>
-      <!-- View mode switch -->
-      <div class="view-switch">
-        <button
-          class="view-btn"
-          :class="{ active: viewMode === 'month' }"
-          @click="viewMode = 'month'"
-        >
-          📅 Mois
-        </button>
-        <button
-          class="view-btn"
-          :class="{ active: viewMode === 'week' }"
-          @click="viewMode = 'week'"
-        >
-          📆 Semaine
-        </button>
+      <!-- Calendar controls (fixed at top) -->
+      <div class="calendar-controls">
+        <!-- View mode switch -->
+        <div class="view-switch">
+          <button
+            class="view-btn"
+            :class="{ active: viewMode === 'month' }"
+            @click="viewMode = 'month'"
+          >
+            📅 Mois
+          </button>
+          <button
+            class="view-btn"
+            :class="{ active: viewMode === 'week' }"
+            @click="viewMode = 'week'"
+          >
+            📆 Semaine
+          </button>
+        </div>
+
+        <!-- Navigation header -->
+        <div class="nav-header">
+          <button class="nav-btn" @click="goToPrev" :title="viewMode === 'month' ? 'Mois précédent' : 'Semaine précédente'">
+            <SvgIcon name="chevron-left" class="nav-icon" />
+          </button>
+          <h2 class="nav-title">{{ navigationTitle }}</h2>
+          <button class="nav-btn" @click="goToNext" :title="viewMode === 'month' ? 'Mois suivant' : 'Semaine suivante'">
+            <SvgIcon name="chevron-right" class="nav-icon" />
+          </button>
+        </div>
+
+        <!-- Weekdays header (only for month view) -->
+        <div v-if="viewMode === 'month'" class="weekdays-header">
+          <div v-for="dayName in ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']" :key="dayName" class="weekday-name">
+            {{ dayName }}
+          </div>
+        </div>
       </div>
 
-      <!-- Month view -->
-      <CalendarGrid
-        v-if="viewMode === 'month'"
-        :year="currentYear"
-        :month="currentMonth"
-        :days="days"
-        :edit-mode="editMode"
-        @prev-month="goToPrevMonth"
-        @next-month="goToNextMonth"
-        @set-availability="handleSetAvailability"
-        @open-event-viewer="handleOpenEventViewer"
-        @open-create-event="handleOpenCreateEvent"
-      />
+      <!-- Scrollable calendar content -->
+      <div class="calendar-content">
+        <!-- Month view -->
+        <CalendarGrid
+          v-if="viewMode === 'month'"
+          :year="currentYear"
+          :month="currentMonth"
+          :days="days"
+          :edit-mode="editMode"
+          @prev-month="goToPrevMonth"
+          @next-month="goToNextMonth"
+          @set-availability="handleSetAvailability"
+          @open-event-viewer="handleOpenEventViewer"
+          @open-create-event="handleOpenCreateEvent"
+        />
 
-      <!-- Week view -->
-      <WeekGrid
-        v-else
-        :year="currentYear"
-        :month="currentMonth"
-        :week-start="currentWeekStart"
-        :days="days"
-        :edit-mode="editMode"
-        @prev-week="goToPrevWeek"
-        @next-week="goToNextWeek"
-        @set-availability="handleSetAvailability"
-        @open-event-viewer="handleOpenEventViewer"
-        @open-create-event="handleOpenCreateEvent"
-      />
+        <!-- Week view -->
+        <WeekGrid
+          v-else
+          :year="currentYear"
+          :month="currentMonth"
+          :week-start="currentWeekStart"
+          :days="days"
+          :edit-mode="editMode"
+          @prev-week="goToPrevWeek"
+          @next-week="goToNextWeek"
+          @set-availability="handleSetAvailability"
+          @open-event-viewer="handleOpenEventViewer"
+          @open-create-event="handleOpenCreateEvent"
+        />
+      </div>
     </template>
 
     <!-- Event viewer modal (read-only with navigation) -->
@@ -430,26 +531,13 @@ async function handleGamePlanUpdate(eventId: string, gamePlan: MatchGamePlan) {
 @use '@/styles/variables' as *;
 
 .calendar-page {
-  min-height: 100%;
+  height: 100%;
   width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: $spacing-xl;
   background: linear-gradient(135deg, $color-bg-secondary 0%, #16213e 100%);
-  overflow-y: auto;
-
-  @include tablet {
-    padding: $spacing-lg;
-  }
-
-  @include mobile-lg {
-    padding: $spacing-md;
-  }
-
-  @include mobile {
-    padding: $spacing-sm;
-  }
+  overflow: hidden;
 }
 
 .loading-state,
@@ -493,25 +581,187 @@ async function handleGamePlanUpdate(eventId: string, gamePlan: MatchGamePlan) {
   }
 }
 
+.calendar-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-sm;
+  width: 100%;
+  padding: $spacing-sm $spacing-xl;
+  background: linear-gradient(135deg, $color-bg-secondary 0%, #16213e 100%);
+  flex-shrink: 0;
+
+  @include tablet {
+    gap: $spacing-sm;
+    padding: $spacing-sm $spacing-lg;
+  }
+
+  @include mobile-lg {
+    gap: $spacing-xs;
+    padding: $spacing-sm $spacing-md;
+  }
+
+  @include mobile {
+    padding: $spacing-xs $spacing-sm;
+  }
+}
+
+.calendar-content {
+  flex: 1;
+  width: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 $spacing-xl $spacing-md;
+
+  @include tablet {
+    padding: 0 $spacing-lg $spacing-sm;
+  }
+
+  @include mobile-lg {
+    padding: 0 $spacing-md $spacing-sm;
+  }
+
+  @include mobile {
+    padding: 0 $spacing-sm $spacing-sm;
+  }
+}
+
 .view-switch {
   display: flex;
   gap: $spacing-sm;
-  margin-bottom: $spacing-lg;
   padding: $spacing-xs;
   background: rgba($color-bg-tertiary, 0.5);
   border-radius: 10px;
 
-  @include tablet {
-    margin-bottom: $spacing-md;
-  }
-
-  @include mobile-lg {
-    margin-bottom: 0.75rem;
-  }
-
   @include mobile {
     padding: 0.2rem;
     border-radius: $radius-md;
+  }
+}
+
+.nav-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-lg;
+
+  @include tablet {
+    gap: $spacing-md;
+  }
+
+  @include mobile-lg {
+    gap: 0.75rem;
+  }
+
+  @include mobile {
+    gap: $spacing-sm;
+  }
+}
+
+.nav-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $color-bg-tertiary;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: $color-border-light;
+    border-color: $color-accent;
+  }
+
+  @include mobile-lg {
+    width: 36px;
+    height: 36px;
+  }
+
+  @include mobile {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+.nav-icon {
+  width: 20px;
+  height: 20px;
+  fill: $color-text-secondary;
+
+  .nav-btn:hover & {
+    fill: #fff;
+  }
+
+  @include mobile {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.nav-title {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #fff;
+  text-align: center;
+  min-width: 200px;
+
+  @include tablet {
+    font-size: 1.15rem;
+    min-width: 180px;
+  }
+
+  @include mobile-lg {
+    font-size: 1rem;
+    min-width: 150px;
+  }
+
+  @include mobile {
+    font-size: 0.9rem;
+    min-width: 130px;
+  }
+}
+
+.weekdays-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: $spacing-sm;
+  width: 100%;
+  max-width: 1200px;
+
+  @include tablet {
+    gap: 0.35rem;
+  }
+
+  @include mobile-lg {
+    gap: $spacing-xs;
+  }
+
+  @include mobile {
+    gap: 0.15rem;
+  }
+}
+
+.weekday-name {
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: $color-accent;
+  padding: $spacing-xs;
+
+  @include mobile-lg {
+    font-size: 0.7rem;
+    padding: 0.15rem;
+  }
+
+  @include mobile {
+    font-size: 0.65rem;
+    padding: 0.1rem;
   }
 }
 
@@ -552,7 +802,112 @@ async function handleGamePlanUpdate(eventId: string, gamePlan: MatchGamePlan) {
 <style lang="scss">
 @use '@/styles/variables' as *;
 
-// Global styles for teleported button
+// Global styles for teleported content
+.calendar-toolbar {
+  display: flex;
+  align-items: center;
+  gap: $spacing-lg;
+
+  @include mobile-lg {
+    gap: $spacing-sm;
+  }
+}
+
+.availability-legend {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: 0.4rem 0.75rem;
+  background: rgba($color-bg-tertiary, 0.5);
+  border-radius: $radius-md;
+  font-size: 0.8rem;
+
+  @include tablet {
+    gap: $spacing-sm;
+  }
+
+  @include mobile-lg {
+    gap: 0.35rem;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.7rem;
+  }
+
+  @include mobile {
+    display: grid;
+    grid-template-columns: repeat(2, auto);
+    gap: 0.2rem 0.5rem;
+    padding: 0.25rem 0.4rem;
+    font-size: 0.6rem;
+  }
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+
+  @include mobile-lg {
+    gap: 0.2rem;
+  }
+
+  @include mobile {
+    gap: 0.15rem;
+  }
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid;
+
+  .available & {
+    background: #166534;
+    border-color: $color-success;
+  }
+
+  .conditional & {
+    background: #854d0e;
+    border-color: $color-conditional;
+  }
+
+  .unavailable & {
+    background: #991b1b;
+    border-color: #f87171;
+  }
+
+  .unknown & {
+    background: #444;
+    border-color: #666;
+  }
+
+  @include mobile-lg {
+    width: 10px;
+    height: 10px;
+  }
+
+  @include mobile {
+    width: 8px;
+    height: 8px;
+  }
+}
+
+.legend-label {
+  color: $color-text-secondary;
+
+  .available & {
+    color: $color-success;
+  }
+
+  .conditional & {
+    color: $color-conditional;
+  }
+
+  .unavailable & {
+    color: #f87171;
+  }
+}
+
 .edit-mode-btn {
   display: flex;
   align-items: center;
