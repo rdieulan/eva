@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { assignmentColors, checkMapBalance, getPlayerAssignments, getPlayerMainAssignment, getAssignmentPlayers } from '@/config/config';
-import type { MapConfig, Player } from '@/types';
+import { assignmentColors } from '@/config/config';
+import { checkMapBalance, getPlayerAssignments, getPlayerMainAssignment, getAssignmentPlayers } from '@/services';
+import type { MapConfig, Player, GamePhase, GamePlanSummary } from '@/types';
 import RotationCalculator from '@/components/RotationCalculator.vue';
+import PhaseSelector from '@/components/planner/PhaseSelector.vue';
+import PlanSelector from '@/components/planner/PlanSelector.vue';
 import SvgIcon from '@/components/common/SvgIcon.vue';
 
 const props = defineProps<{
@@ -14,6 +17,10 @@ const props = defineProps<{
   editMode: boolean;
   isLoading: boolean;
   canEdit: boolean;
+  // Phase section props
+  currentPhase: GamePhase;
+  plans: GamePlanSummary[];
+  selectedPlanId: string | null;
 }>();
 
 const showCalculator = ref(false);
@@ -24,6 +31,13 @@ const emit = defineEmits<{
   'toggle-edit': [];
   'save': [];
   'cancel': [];
+  // Phase section events
+  'update:currentPhase': [phase: GamePhase];
+  'select-plan': [planId: string];
+  'create-plan': [];
+  'duplicate-plan': [planId: string];
+  'delete-plan': [planId: string];
+  'rename-plan': [planId: string, newName: string];
 }>();
 
 // List of available assignments (from current map or fallback)
@@ -132,9 +146,24 @@ function isMainRoleForSelectedPlayer(assignmentId: number): boolean {
       </div>
     </div>
 
-    <!-- Section 2: Phase (slot for external PhaseSelector) -->
+    <!-- Section 2: Phase -->
     <div class="section section-phase">
-      <slot name="phase"></slot>
+      <PlanSelector
+        v-if="plans.length > 0"
+        :plans="plans"
+        :selectedPlanId="selectedPlanId"
+        :disabled="editMode"
+        :canEdit="canEdit"
+        @select="$emit('select-plan', $event)"
+        @create="$emit('create-plan')"
+        @duplicate="$emit('duplicate-plan', $event)"
+        @delete="$emit('delete-plan', $event)"
+        @rename="(id, name) => $emit('rename-plan', id, name)"
+      />
+      <PhaseSelector
+        :modelValue="currentPhase"
+        @update:modelValue="$emit('update:currentPhase', $event)"
+      />
     </div>
 
     <!-- Section 3: Roles/Effectifs -->
@@ -330,16 +359,6 @@ function isMainRoleForSelectedPlayer(assignmentId: number): boolean {
 
 .message-text {
   line-height: 1.3;
-}
-
-.cartouches-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-xs;
-
-  @include mobile-lg {
-    width: 100%;
-  }
 }
 
 

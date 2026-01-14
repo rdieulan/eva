@@ -1,9 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import {
-  assignmentColors,
-  getPlayerAssignments,
-  getAssignmentPlayers,
-} from '@/config/config';
+import { assignmentColors } from '@/config/config';
+import { getPlayerAssignments, getAssignmentPlayers } from '@/services';
 import type { MapConfig } from '@/types';
 
 // Mock map configuration for testing

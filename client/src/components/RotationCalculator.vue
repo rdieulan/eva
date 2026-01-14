@@ -1,6 +1,7 @@
-﻿<script setup lang="ts">
+﻿﻿<script setup lang="ts">
 import { ref, computed } from 'vue';
-import { assignmentColors, getPlayerAssignments, getPlayerMainAssignment } from '@/config/config';
+import { assignmentColors } from '@/config/config';
+import { getPlayerAssignments, getPlayerMainAssignment } from '@/services';
 import GamePlanTable from '@/components/common/GamePlanTable.vue';
 import PhaseSelector from '@/components/planner/PhaseSelector.vue';
 import type { MapConfig, Player, MatchGamePlan, GamePhase } from '@shared/types';

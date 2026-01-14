@@ -71,7 +71,7 @@ export async function fetchGamePlan(planId: string): Promise<MapConfig & { planI
  */
 export async function saveGamePlan(
   planId: string,
-  data: { name?: string; assignments?: object[]; players?: object[] },
+  data: { name?: string; assignments?: object[]; players?: object[]; notes?: object },
   token: string
 ): Promise<{ success: boolean }> {
   const response = await fetch(`/api/plans/${planId}`, {

@@ -23,17 +23,17 @@ vi.mock('@/composables/useAuth', () => ({
   }),
 }));
 
-// Mock config
-vi.mock('@/config/config', () => ({
-  loadAllMaps: vi.fn(() => Promise.resolve([])),
-  loadPlayers: vi.fn(() => Promise.resolve([
+// Mock API barrel
+vi.mock('@/api', () => ({
+  fetchAllMaps: vi.fn(() => Promise.resolve([])),
+  fetchPlayers: vi.fn(() => Promise.resolve([
     { id: 'player-1', name: 'Alice' },
     { id: 'player-2', name: 'Bob' },
   ])),
 }));
 
 import * as calendarApi from '@/api/calendar.api';
-import * as config from '@/config/config';
+import * as api from '@/api';
 
 describe('Calendar Integration Tests', () => {
   const mockMonthData: MonthData = {
@@ -77,8 +77,8 @@ describe('Calendar Integration Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (calendarApi.fetchMonthData as any).mockResolvedValue(mockMonthData);
-    (config.loadAllMaps as any).mockResolvedValue([]);
-    (config.loadPlayers as any).mockResolvedValue([
+    (api.fetchAllMaps as any).mockResolvedValue([]);
+    (api.fetchPlayers as any).mockResolvedValue([
       { id: 'player-1', name: 'Alice' },
       { id: 'player-2', name: 'Bob' },
     ]);
@@ -90,7 +90,7 @@ describe('Calendar Integration Tests', () => {
     await new Promise(resolve => setTimeout(resolve, 50));
 
     expect(calendarApi.fetchMonthData).toHaveBeenCalled();
-    expect(config.loadPlayers).toHaveBeenCalled();
+    expect(api.fetchPlayers).toHaveBeenCalled();
   });
 
   it('should cycle through availability states when toggling', async () => {

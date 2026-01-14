@@ -160,7 +160,13 @@ import type { MapConfig, Player } from '@/types';
 import type { Zone } from '@shared/types';
 
 // API calls
-import { loadAllMaps, loadPlayers } from '@/config/config';
+import { fetchAllMaps, fetchPlayers } from '@/api';
+
+// Services
+import { checkMapBalance } from '@/services';
+
+// Config
+import { assignmentColors } from '@/config/config';
 
 // Components
 import MapViewer from '@/components/MapViewer.vue';
@@ -190,5 +196,5 @@ Uses same `@/` and `@shared/` aliases (configured in `vitest.config.mts` and `te
 
 ```typescript
 import type { MapConfig } from '@/types';
-import { checkMapBalance } from '@/config/config';
+import { checkMapBalance } from '@/services';
 ```

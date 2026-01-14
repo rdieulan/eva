@@ -3,22 +3,16 @@ import { ref, computed, onMounted, watch } from 'vue';
 import MapList from '@/components/MapList.vue';
 import MapViewer from '@/components/MapViewer.vue';
 import PlannerToolbar from '@/components/planner/PlannerToolbar.vue';
-import PhaseSelector from '@/components/planner/PhaseSelector.vue';
-import PlanSelector from '@/components/planner/PlanSelector.vue';
 import Drawer from '@/components/common/Drawer.vue';
-import { loadAllMaps, loadPlayers, getPlayerAssignments, fetchGamePlan, createGamePlan, deleteGamePlan } from '@/config/config';
+import { fetchAllMaps, fetchPlayers, fetchGamePlan, createGamePlan, deleteGamePlan, saveGamePlan } from '@/api';
+import { getPlayerAssignments } from '@/services';
 import { useAuth } from '@/composables/useAuth';
 import { DEFAULT_GAME_PLAN_NOTES, PHASE_LABELS } from '@shared/types';
 import type { MapConfig, Player, GamePhase, GamePlanNotes, GamePlanSummary } from '@/types';
 
-const { permissions, user } = useAuth();
+const { permissions } = useAuth();
 
-// Debug: check permissions
-const canEdit = computed(() => {
-  console.log('User:', user.value);
-  console.log('Permissions:', permissions.value);
-  return permissions.value.canEdit;
-});
+const canEdit = computed(() => permissions.value.canEdit);
 
 const selectedMapId = ref<string | null>(null);
 const selectedPlanId = ref<string | null>(null);
@@ -37,8 +31,8 @@ onMounted(async () => {
   try {
     // Load players and maps in parallel
     const [loadedPlayers, loadedMaps] = await Promise.all([
-      loadPlayers(),
-      loadAllMaps()
+      fetchPlayers(),
+      fetchAllMaps()
     ]);
 
     players.value = loadedPlayers;
@@ -113,8 +107,12 @@ function updatePhaseNotes() {
   }
 }
 
-// Update selectedPlanId when map changes
+// Update selectedPlanId and reset activeAssignments when map changes
 watch(selectedMapId, () => {
+  // Reset active assignments
+  activeAssignments.value = [];
+
+  // Select first plan of new map
   const map = maps.value.find(m => m.id === selectedMapId.value);
   const firstPlan = map?.gamePlans?.[0];
   if (firstPlan) {
@@ -194,18 +192,11 @@ async function handleDuplicatePlan(planId: string) {
     const newPlan = await createGamePlan(selectedMapId.value, name.trim(), token);
     if (newPlan && currentMap.value) {
       // Save current data to new plan
-      await fetch(`/api/plans/${newPlan.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          assignments: currentMap.value.assignments,
-          players: currentMap.value.players,
-          notes: currentMap.value.notes,
-        }),
-      });
+      await saveGamePlan(newPlan.id, {
+        assignments: currentMap.value.assignments,
+        players: currentMap.value.players,
+        notes: currentMap.value.notes,
+      }, token);
 
       // Add to plans list
       const map = maps.value.find(m => m.id === selectedMapId.value);
@@ -248,16 +239,11 @@ async function handleDeletePlan(planId: string) {
 }
 
 async function handleRenamePlan(planId: string, newName: string) {
+  const token = localStorage.getItem('token');
+  if (!token) return;
+
   try {
-    const token = localStorage.getItem('token');
-    await fetch(`/api/plans/${planId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify({ name: newName }),
-    });
+    await saveGamePlan(planId, { name: newName }, token);
 
     // Update in local list
     const map = maps.value.find(m => m.id === selectedMapId.value);
@@ -298,10 +284,6 @@ function toggleAssignment(assignmentId: number) {
 }
 
 
-watch(selectedMapId, () => {
-  activeAssignments.value = [];
-});
-
 function toggleEditMode() {
   if (!editMode.value) {
     editableMaps.value = JSON.parse(JSON.stringify(maps.value));
@@ -334,66 +316,27 @@ function handleMainAssignmentChanged(playerId: string, assignmentId: number | nu
 }
 
 async function saveChanges() {
-  console.log('[PLANNER] Save triggered');
-
   const mapToSave = editableMaps.value.find(m => m.id === selectedMapId.value);
-  if (!mapToSave) {
-    console.error('[PLANNER] No map to save');
-    return;
-  }
-  console.log('[PLANNER] Saving map:', mapToSave.id, mapToSave.name);
+  if (!mapToSave) return;
 
   const token = localStorage.getItem('token');
   if (!token) {
-    console.error('[PLANNER] No auth token');
     alert('❌ Non authentifié');
     return;
   }
-  console.log('[PLANNER] Auth token present');
+
+  const gamePlanId = selectedPlanId.value;
+  if (!gamePlanId) {
+    alert('❌ Aucun plan de jeu sélectionné');
+    return;
+  }
 
   try {
-    // Use selected plan ID
-    const gamePlanId = selectedPlanId.value;
-    console.log('[PLANNER] Game plan ID:', gamePlanId);
-
-    if (!gamePlanId) {
-      console.error('[PLANNER] No game plan selected');
-      alert('❌ Aucun plan de jeu sélectionné');
-      return;
-    }
-
-    const payload = {
+    await saveGamePlan(gamePlanId, {
       assignments: mapToSave.assignments,
       players: mapToSave.players,
       notes: mapToSave.notes,
-    };
-    console.log('[PLANNER] Sending payload:', payload);
-
-    const response = await fetch(`/api/plans/${gamePlanId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(payload),
-    });
-
-    console.log('[PLANNER] Response status:', response.status);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[PLANNER] Server error response:', errorText);
-      let error;
-      try {
-        error = JSON.parse(errorText);
-      } catch {
-        error = { error: errorText };
-      }
-      throw new Error(error.error || `Erreur serveur (${response.status})`);
-    }
-
-    const result = await response.json();
-    console.log('[PLANNER] Save success, result:', result);
+    }, token);
 
     // Update local maps with saved data
     const index = maps.value.findIndex(m => m.id === mapToSave.id);
@@ -401,10 +344,9 @@ async function saveChanges() {
       maps.value[index] = JSON.parse(JSON.stringify(mapToSave));
     }
 
-    console.log('[PLANNER] Map saved successfully:', mapToSave.id);
     alert(`✅ Map "${mapToSave.name}" sauvegardée !`);
   } catch (error) {
-    console.error('[PLANNER] Save error:', error);
+    console.error('Save error:', error);
     alert(`❌ Erreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
   }
 }
@@ -428,28 +370,21 @@ function cancelEdit() {
         :editMode="editMode"
         :isLoading="isLoading"
         :canEdit="canEdit"
+        :currentPhase="currentPhase"
+        :plans="currentMapPlans"
+        :selectedPlanId="selectedPlanId"
         @select-player="selectPlayer"
         @toggle-assignment="toggleAssignment"
         @toggle-edit="toggleEditMode"
         @save="saveChanges"
         @cancel="cancelEdit"
-      >
-        <template #phase>
-          <PlanSelector
-            v-if="currentMapPlans.length > 0"
-            :plans="currentMapPlans"
-            :selectedPlanId="selectedPlanId"
-            :disabled="editMode"
-            :canEdit="canEdit"
-            @select="handleSelectPlan"
-            @create="handleCreatePlan"
-            @duplicate="handleDuplicatePlan"
-            @delete="handleDeletePlan"
-            @rename="handleRenamePlan"
-          />
-          <PhaseSelector v-model="currentPhase" />
-        </template>
-      </PlannerToolbar>
+        @update:currentPhase="currentPhase = $event"
+        @select-plan="handleSelectPlan"
+        @create-plan="handleCreatePlan"
+        @duplicate-plan="handleDuplicatePlan"
+        @delete-plan="handleDeletePlan"
+        @rename-plan="handleRenamePlan"
+      />
     </Teleport>
 
     <!-- Loading state -->

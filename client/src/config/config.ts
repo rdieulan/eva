@@ -1,9 +1,4 @@
-// Configuration and data loading
-
-
-// =============================================================================
-// CONFIGURATION
-// =============================================================================
+// Application configuration constants
 
 // Assignment colors (fixed for all maps, by assignment ID)
 export const assignmentColors: Record<number, string> = {
@@ -18,36 +13,4 @@ export function getAssignmentColor(assignmentId: number): string {
   return assignmentColors[assignmentId] || '#888888';
 }
 
-// =============================================================================
-// API FUNCTIONS
-// =============================================================================
-
-export {
-  fetchPlayers as loadPlayers,
-  getPlayers,
-  getPlayerById,
-  getPlayerName,
-  clearPlayersCache
-} from '@/api/players.api';
-
-export {
-  fetchAllMaps as loadAllMaps,
-  fetchMap as loadMap,
-  saveGamePlan,
-  fetchGamePlan,
-  fetchGamePlans,
-  createGamePlan,
-  deleteGamePlan,
-} from '@/api/maps.api';
-
-// =============================================================================
-// BALANCE VALIDATION
-// =============================================================================
-
-export {
-  checkMapBalance,
-  getPlayerAssignments,
-  getPlayerMainAssignment,
-  getAssignmentPlayers,
-} from '@/services/balance.service';
 

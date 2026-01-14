@@ -6,7 +6,7 @@ import EventFormModal from '@/components/calendar/EventFormModal.vue';
 import EventViewerModal from '@/components/calendar/EventViewerModal.vue';
 import SvgIcon from '@/components/common/SvgIcon.vue';
 import { useAuth } from '@/composables/useAuth';
-import { loadAllMaps, loadPlayers } from '@/config/config';
+import { fetchAllMaps, fetchPlayers } from '@/api';
 import {
   fetchMonthData,
   setAvailability as setAvailabilityApi,
@@ -174,8 +174,8 @@ onMounted(async () => {
   // Load maps and players for RotationCalculator (in parallel with calendar)
   try {
     const [loadedMaps, loadedPlayers] = await Promise.all([
-      loadAllMaps(),
-      loadPlayers(),
+      fetchAllMaps(),
+      fetchPlayers(),
     ]);
     maps.value = loadedMaps;
     players.value = loadedPlayers;

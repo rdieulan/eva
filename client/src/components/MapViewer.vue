@@ -2,7 +2,8 @@
 import { ref, computed, watch } from 'vue';
 import type { MapConfig, Player, Point, Assignment, GamePhase, Zone } from '@/types';
 import { getZoneForPhase } from '@shared/types';
-import { assignmentColors, getPlayerAssignments, getPlayerMainAssignment } from '@/config/config';
+import { assignmentColors } from '@/config/config';
+import { getPlayerAssignments, getPlayerMainAssignment } from '@/services';
 import { getZonePolygons } from '@/utils/zones';
 
 const props = withDefaults(defineProps<{
