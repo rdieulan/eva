@@ -3,6 +3,7 @@ import { ref, watch, computed } from 'vue';
 import Modal from '@/components/common/Modal.vue';
 import RotationCalculator from '@/components/RotationCalculator.vue';
 import GamePlanTable from '@/components/common/GamePlanTable.vue';
+import PhaseSelector from '@/components/planner/PhaseSelector.vue';
 import type {
   EventType,
   CreateEventRequest,
@@ -10,6 +11,7 @@ import type {
   MatchGamePlan,
   MapConfig,
   Player,
+  GamePhase,
 } from '@shared/types';
 
 const props = defineProps<{
@@ -39,6 +41,7 @@ const gamePlan = ref<MatchGamePlan | null>(null);
 
 // UI state
 const showRotationCalculator = ref(false);
+const currentPhase = ref<GamePhase>('START');
 
 // Error message
 const error = ref('');
@@ -210,7 +213,8 @@ const gamePlanPlayers = computed(() => {
           <span class="event-view-label">🎯 Plan de jeu</span>
           <span class="absent-badge">{{ gamePlan.absentPlayerName }} absent(e)</span>
         </div>
-        <GamePlanTable :headers="gamePlanPlayers" :gamePlan="gamePlan" />
+        <PhaseSelector v-model="currentPhase" compact class="phase-selector-centered" />
+        <GamePlanTable :headers="gamePlanPlayers" :gamePlan="gamePlan" :currentPhase="currentPhase" />
       </div>
     </div>
 
@@ -317,8 +321,9 @@ const gamePlanPlayers = computed(() => {
               ✏️ Modifier
             </button>
           </div>
+          <PhaseSelector v-model="currentPhase" compact class="phase-selector-centered" />
           <div class="game-plan-table">
-            <GamePlanTable :headers="gamePlanPlayers" :gamePlan="gamePlan" />
+            <GamePlanTable :headers="gamePlanPlayers" :gamePlan="gamePlan" :currentPhase="currentPhase" />
           </div>
         </div>
 
@@ -664,6 +669,12 @@ const gamePlanPlayers = computed(() => {
     gap: $spacing-sm;
     align-items: flex-start;
   }
+}
+
+.phase-selector-centered {
+  display: flex;
+  justify-content: center;
+  margin-bottom: $spacing-md;
 }
 
 .absent-badge {

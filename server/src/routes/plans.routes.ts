@@ -44,6 +44,10 @@ router.get('/:planId', async (req: Request, res: Response) => {
       players: playerAssignments,
       planId: plan.id,
       planName: plan.name,
+      notes: {
+        general: plan.generalNotes || '',
+        phases: plan.phaseNotes || { START: '', ATTACK: '', DEFENSE: '' },
+      },
     });
   } catch (error) {
     console.error('Error fetching game plan:', error);
@@ -51,10 +55,44 @@ router.get('/:planId', async (req: Request, res: Response) => {
   }
 });
 
+// Helper: Migrate legacy zone to zonesByPhase
+interface Assignment {
+  id: number;
+  name: string;
+  x: number;
+  y: number;
+  zone?: object;
+  zonesByPhase?: Record<string, object>;
+  floor?: number;
+}
+
+function migrateAssignmentsToPhases(assignments: Assignment[]): Assignment[] {
+  return assignments.map(assignment => {
+    // Already migrated
+    if (assignment.zonesByPhase) {
+      return assignment;
+    }
+    // Has legacy zone - migrate it
+    if (assignment.zone) {
+      return {
+        ...assignment,
+        zonesByPhase: {
+          START: JSON.parse(JSON.stringify(assignment.zone)),
+          ATTACK: JSON.parse(JSON.stringify(assignment.zone)),
+          DEFENSE: JSON.parse(JSON.stringify(assignment.zone)),
+        },
+        zone: undefined,
+      };
+    }
+    // No zone at all
+    return assignment;
+  });
+}
+
 // PUT /api/plans/:planId - Update a game plan (admin only)
 router.put('/:planId', authMiddleware, adminMiddleware, async (req: AuthRequest, res: Response) => {
   const { planId } = req.params;
-  const { name, assignments, players } = req.body;
+  const { name, assignments, players, notes } = req.body;
 
   console.log(`[API] PUT /api/plans/${planId}`);
   console.log('[API] User:', req.user?.email, '- Role:', req.user?.role);
@@ -62,7 +100,18 @@ router.put('/:planId', authMiddleware, adminMiddleware, async (req: AuthRequest,
   try {
     const updateData: Record<string, unknown> = {};
     if (name !== undefined) updateData.name = name;
-    if (assignments !== undefined) updateData.assignments = JSON.parse(JSON.stringify(assignments));
+
+    // Migrate legacy zones if assignments provided
+    if (assignments !== undefined) {
+      const migratedAssignments = migrateAssignmentsToPhases(assignments as Assignment[]);
+      updateData.assignments = JSON.parse(JSON.stringify(migratedAssignments));
+      console.log('[API] Assignments migrated to phase-based zones');
+    }
+
+    if (notes !== undefined) {
+      if (notes.general !== undefined) updateData.generalNotes = notes.general;
+      if (notes.phases !== undefined) updateData.phaseNotes = JSON.parse(JSON.stringify(notes.phases));
+    }
 
     const plan = await prisma.gamePlan.update({
       where: { id: planId },

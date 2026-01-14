@@ -1,13 +1,19 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { MatchGamePlan } from '@shared/types';
+import type { MatchGamePlan, GamePhase } from '@shared/types';
 
 export interface Header {
   id: string;
   name: string;
 }
 
-const props = defineProps<{ headers: Header[]; gamePlan: MatchGamePlan }>();
+const props = withDefaults(defineProps<{
+  headers: Header[];
+  gamePlan: MatchGamePlan;
+  currentPhase?: GamePhase;
+}>(), {
+  currentPhase: 'START',
+});
 
 // Build rows from gamePlan internally to avoid parent-side mapping
 const rows = computed(() => {

@@ -60,12 +60,14 @@ model Map {
 
 // GamePlan = Implémentation spécifique d'une stratégie sur une map
 model GamePlan {
-  id          String   @id @default(cuid())
-  name        String                          // ex: "Défense standard", "Rush B"
-  mapId       String
-  assignments Json                            // Array of Assignment objects (zones/markers positions)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(cuid())
+  name         String                          // ex: "Défense standard", "Rush B"
+  mapId        String
+  assignments  Json                            // Array of Assignment objects (with zonesByPhase)
+  generalNotes String?                         // General notes for the plan
+  phaseNotes   Json?                           // Notes per phase: { START: "", ATTACK: "", DEFENSE: "" }
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   map     Map              @relation(fields: [mapId], references: [id], onDelete: Cascade)
   players GamePlanPlayer[]

@@ -1,16 +1,23 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import type { MapConfig, Player, Point, Assignment } from '@/types';
+import type { MapConfig, Player, Point, Assignment, GamePhase, Zone } from '@/types';
+import { getZoneForPhase } from '@shared/types';
 import { assignmentColors, getPlayerAssignments, getPlayerMainAssignment } from '@/config/config';
 import { getZonePolygons } from '@/utils/zones';
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   map: MapConfig;
   players: Player[];
   selectedPlayerId: string | null;
   activeAssignments: number[];
   editMode?: boolean;
-}>();
+  currentPhase?: GamePhase;
+  drawerOpen?: boolean;
+}>(), {
+  editMode: false,
+  currentPhase: 'START',
+  drawerOpen: false,
+});
 
 const emit = defineEmits<{
   'update:map': [map: MapConfig];
@@ -91,6 +98,37 @@ function isAssignmentActive(assignmentId: number): boolean {
   return props.activeAssignments.includes(assignmentId);
 }
 
+// Get zone for current phase (with legacy fallback)
+function getCurrentPhaseZone(assignment: Assignment): Zone | undefined {
+  return getZoneForPhase(assignment, props.currentPhase);
+}
+
+// Get zone polygons for current phase
+function getPhaseZonePolygons(assignment: Assignment): Point[][] {
+  const zone = getCurrentPhaseZone(assignment);
+  return getZonePolygons(zone);
+}
+
+// Update zone for current phase in an assignment
+function updateAssignmentZoneForPhase(assignment: Assignment, polygons: Point[][]): void {
+  const phase = props.currentPhase as GamePhase;
+
+  // Initialize zonesByPhase if not present
+  if (!assignment.zonesByPhase) {
+    // Migrate from legacy zone
+    const legacyZone = assignment.zone;
+    assignment.zonesByPhase = {
+      START: legacyZone ? JSON.parse(JSON.stringify(legacyZone)) : { polygons: [] },
+      ATTACK: legacyZone ? JSON.parse(JSON.stringify(legacyZone)) : { polygons: [] },
+      DEFENSE: legacyZone ? JSON.parse(JSON.stringify(legacyZone)) : { polygons: [] },
+    };
+    assignment.zone = undefined; // Remove legacy
+  }
+
+  // Update current phase zone
+  assignment.zonesByPhase[phase] = { polygons };
+}
+
 // === Edit mode ===
 
 // Convert mouse coordinates to SVG coordinates (0-100)
@@ -144,8 +182,8 @@ function addPointOnEdge(event: MouseEvent, assignmentId: number, polygonIndex: n
   const targetAssignment = updatedMap.assignments[assignmentIndex];
   if (!targetAssignment) return;
 
-  // Convert to multi-zone if necessary
-  const polygons = getZonePolygons(targetAssignment.zone);
+  // Get polygons for current phase
+  const polygons = getPhaseZonePolygons(targetAssignment);
   const targetPolygon = polygons[polygonIndex];
   if (!targetPolygon) return;
 
@@ -156,7 +194,7 @@ function addPointOnEdge(event: MouseEvent, assignmentId: number, polygonIndex: n
   };
   targetPolygon.splice(edgeIndex + 1, 0, newPoint);
 
-  targetAssignment.zone = { polygons };
+  updateAssignmentZoneForPhase(targetAssignment, polygons);
   emit('update:map', updatedMap);
 
   // Start dragging the new point
@@ -176,12 +214,12 @@ function removePoint(event: MouseEvent, assignmentId: number, polygonIndex: numb
   const targetAssignment = updatedMap.assignments[assignmentIndex];
   if (!targetAssignment) return;
 
-  const polygons = getZonePolygons(targetAssignment.zone);
+  const polygons = getPhaseZonePolygons(targetAssignment);
   const targetPolygon = polygons[polygonIndex];
   if (!targetPolygon || targetPolygon.length <= 3) return; // Minimum 3 points for a polygon
 
   targetPolygon.splice(pointIndex, 1);
-  targetAssignment.zone = { polygons };
+  updateAssignmentZoneForPhase(targetAssignment, polygons);
   emit('update:map', updatedMap);
 }
 
@@ -199,8 +237,8 @@ function addZonePolygon(event: MouseEvent, assignmentId: number) {
   const targetAssignment = updatedMap.assignments[assignmentIndex];
   if (!targetAssignment) return;
 
-  // Get existing polygons
-  const polygons = getZonePolygons(targetAssignment.zone);
+  // Get existing polygons for current phase
+  const polygons = getPhaseZonePolygons(targetAssignment);
 
   // Create new rectangle centered on click
   const size = 5;
@@ -212,7 +250,7 @@ function addZonePolygon(event: MouseEvent, assignmentId: number) {
   ];
 
   polygons.push(newPolygon);
-  targetAssignment.zone = { polygons };
+  updateAssignmentZoneForPhase(targetAssignment, polygons);
   emit('update:map', updatedMap);
 }
 
@@ -229,11 +267,11 @@ function removeZonePolygon(event: MouseEvent, assignmentId: number, polygonIndex
   const targetAssignment = updatedMap.assignments[assignmentIndex];
   if (!targetAssignment) return;
 
-  const polygons = getZonePolygons(targetAssignment.zone);
+  const polygons = getPhaseZonePolygons(targetAssignment);
   if (polygons.length <= 1) return; // At least one polygon must remain
 
   polygons.splice(polygonIndex, 1);
-  targetAssignment.zone = { polygons };
+  updateAssignmentZoneForPhase(targetAssignment, polygons);
   emit('update:map', updatedMap);
 }
 
@@ -254,8 +292,8 @@ function handleMouseMove(event: MouseEvent) {
     targetAssignment.x = Math.round(coords.x * 10) / 10;
     targetAssignment.y = Math.round(coords.y * 10) / 10;
   } else if (dragging.value.type === 'zone-move') {
-    // Move a specific polygon of the zone
-    const polygons = getZonePolygons(targetAssignment.zone);
+    // Move a specific polygon of the zone for current phase
+    const polygons = getPhaseZonePolygons(targetAssignment);
     const polygonIndex = dragging.value.polygonIndex ?? 0;
     const points = polygons[polygonIndex];
     if (!points) return;
@@ -274,10 +312,10 @@ function handleMouseMove(event: MouseEvent) {
       y: Math.round((p.y + dy) * 10) / 10,
     }));
 
-    targetAssignment.zone = { polygons };
+    updateAssignmentZoneForPhase(targetAssignment, polygons);
   } else if (dragging.value.type === 'zone-point' && dragging.value.pointIndex !== undefined) {
-    // Move a specific point
-    const polygons = getZonePolygons(targetAssignment.zone);
+    // Move a specific point for current phase
+    const polygons = getPhaseZonePolygons(targetAssignment);
     const polygonIndex = dragging.value.polygonIndex ?? 0;
     const points = polygons[polygonIndex];
     const pointIndex = dragging.value.pointIndex;
@@ -288,7 +326,7 @@ function handleMouseMove(event: MouseEvent) {
         y: Math.round(coords.y * 10) / 10,
       };
       polygons[polygonIndex] = points;
-      targetAssignment.zone = { polygons };
+      updateAssignmentZoneForPhase(targetAssignment, polygons);
     }
   }
 
@@ -472,7 +510,7 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
     </div>
 
     <!-- Map image -->
-    <div class="map-container">
+    <div class="map-container" :class="{ 'drawer-open': drawerOpen }">
       <img
         :src="currentImage"
         :alt="map.name"
@@ -494,9 +532,9 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
       >
         <!-- Control zones for active assignments on current floor -->
         <g v-for="assignment in visibleAssignments.filter((p: Assignment) => isAssignmentActive(p.id))" :key="'zone-' + assignment.id">
-          <!-- All polygons of the zone -->
+          <!-- All polygons of the zone for current phase -->
           <g
-            v-for="(polygon, polygonIndex) in getZonePolygons(assignment.zone)"
+            v-for="(polygon, polygonIndex) in getPhaseZonePolygons(assignment)"
             :key="'polygon-' + polygonIndex"
           >
             <path
@@ -512,7 +550,7 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
             <template v-if="editMode">
               <!-- Polygon removal indicator (if more than one) -->
               <text
-                v-if="getZonePolygons(assignment.zone).length > 1"
+                v-if="getPhaseZonePolygons(assignment).length > 1"
                 :x="polygon.reduce((s: number, p: Point) => s + p.x, 0) / polygon.length"
                 :y="polygon.reduce((s: number, p: Point) => s + p.y, 0) / polygon.length"
                 class="remove-polygon-btn"
@@ -546,7 +584,7 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
         <!-- Ghost zones (other floors) -->
         <g v-for="assignment in ghostAssignments" :key="'ghost-zone-' + assignment.id">
           <path
-            v-for="(polygon, polygonIndex) in getZonePolygons(assignment.zone)"
+            v-for="(polygon, polygonIndex) in getPhaseZonePolygons(assignment)"
             :key="'ghost-polygon-' + polygonIndex"
             :d="getPolygonPathFromPoints(polygon)"
             class="zone ghost"
@@ -737,6 +775,11 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
   display: inline-block;
   max-width: 100%;
   max-height: 100%;
+  transition: transform 0.25s ease;
+
+  &.drawer-open {
+    transform: translateX(-160px);
+  }
 }
 
 .map-image {
@@ -830,10 +873,10 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
   stroke-width: 0.2;
   cursor: pointer;
   opacity: 0.5;
+  transition: opacity 0.15s;
 
   &:hover {
     opacity: 1;
-    r: 1;
   }
 }
 

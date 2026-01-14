@@ -39,6 +39,10 @@ router.get('/', async (_req: Request, res: Response) => {
         assignments,
         players,
         gamePlans: map.gamePlans.map(gp => ({ id: gp.id, name: gp.name })),
+        notes: firstPlan ? {
+          general: firstPlan.generalNotes || '',
+          phases: firstPlan.phaseNotes || { START: '', ATTACK: '', DEFENSE: '' },
+        } : { general: '', phases: { START: '', ATTACK: '', DEFENSE: '' } },
       };
     });
 
@@ -87,6 +91,10 @@ router.get('/:mapId', async (req: Request, res: Response) => {
       assignments,
       players,
       gamePlans: map.gamePlans.map(gp => ({ id: gp.id, name: gp.name })),
+      notes: firstPlan ? {
+        general: firstPlan.generalNotes || '',
+        phases: firstPlan.phaseNotes || { START: '', ATTACK: '', DEFENSE: '' },
+      } : { general: '', phases: { START: '', ATTACK: '', DEFENSE: '' } },
     };
 
     console.log('[API] Returning map with', players.length, 'players');
@@ -153,6 +161,10 @@ router.get('/:mapId/plans', async (req: Request, res: Response) => {
         assignmentIds: gpp.assignmentIds,
         mainAssignmentId: gpp.mainAssignmentId,
       })),
+      notes: {
+        general: plan.generalNotes || '',
+        phases: plan.phaseNotes || { START: '', ATTACK: '', DEFENSE: '' },
+      },
     }));
 
     res.json(plansForFrontend);

@@ -1,5 +1,7 @@
 // Calendar types for availability and events
 
+import type { GamePhase, PhaseNotes } from './map.types';
+
 export type AvailabilityStatus = 'AVAILABLE' | 'CONDITIONAL' | 'UNAVAILABLE';
 
 export type EventType = 'MATCH' | 'EVENT';
@@ -14,18 +16,21 @@ export interface MapAssignment {
   isMainRole?: boolean; // True if this is the player's main role
 }
 
-// Game plan for a map
+// Game plan for a map (with phase support)
 export interface MapGamePlan {
   mapId: string;
   mapName: string;
   assignments: MapAssignment[];
+  phaseNotes?: PhaseNotes; // Notes per phase for this map
 }
 
-// Complete game plan for a match
+// Complete game plan for a match (with phase support)
 export interface MatchGamePlan {
   absentPlayerId: string;
   absentPlayerName: string;
   maps: MapGamePlan[];
+  generalNotes?: string; // General notes for the entire plan
+  selectedPhase?: GamePhase; // Last selected phase (for UI state)
 }
 
 // Availability record for a user on a specific date

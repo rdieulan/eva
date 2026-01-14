@@ -30,7 +30,10 @@ export function rectToPolygon(zone: ZoneRect): ZonePolygon {
 }
 
 // Get all polygons from a zone (handles all zone types)
-export function getZonePolygons(zone: Zone): Point[][] {
+export function getZonePolygons(zone: Zone | undefined): Point[][] {
+  if (!zone) {
+    return [];
+  }
   if (isZoneMulti(zone)) {
     return zone.polygons;
   }

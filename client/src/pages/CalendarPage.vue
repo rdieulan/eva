@@ -451,7 +451,7 @@ async function handleGamePlanUpdate(eventId: string, gamePlan: MatchGamePlan) {
         <!-- Navigation header -->
         <div class="nav-header">
           <button class="nav-btn" @click="goToPrev" :title="viewMode === 'month' ? 'Mois précédent' : 'Semaine précédente'">
-            <SvgIcon name="chevron-left" class="nav-icon" />
+            <SvgIcon name="chevron-right" class="nav-icon nav-icon-left" />
           </button>
           <h2 class="nav-title">{{ navigationTitle }}</h2>
           <button class="nav-btn" @click="goToNext" :title="viewMode === 'month' ? 'Mois suivant' : 'Semaine suivante'">
@@ -692,6 +692,10 @@ async function handleGamePlanUpdate(eventId: string, gamePlan: MatchGamePlan) {
   width: 20px;
   height: 20px;
   fill: $color-text-secondary;
+
+  &.nav-icon-left {
+    transform: rotate(180deg);
+  }
 
   .nav-btn:hover & {
     fill: #fff;

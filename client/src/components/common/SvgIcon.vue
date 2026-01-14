@@ -6,20 +6,26 @@ import homeIcon from '@/assets/icons/home.svg?raw';
 import userIcon from '@/assets/icons/user.svg?raw';
 import logoutIcon from '@/assets/icons/logout.svg?raw';
 import closeIcon from '@/assets/icons/close.svg?raw';
-import chevronLeftIcon from '@/assets/icons/chevron-left.svg?raw';
 import chevronRightIcon from '@/assets/icons/chevron-right.svg?raw';
 import resetIcon from '@/assets/icons/reset.svg?raw';
 import calculatorIcon from '@/assets/icons/calculator.svg?raw';
+import flagIcon from '@/assets/icons/flag.svg?raw';
+import swordIcon from '@/assets/icons/sword.svg?raw';
+import shieldIcon from '@/assets/icons/shield.svg?raw';
+import notesIcon from '@/assets/icons/notes.svg?raw';
 
 const icons: Record<string, string> = {
   home: homeIcon,
   user: userIcon,
   logout: logoutIcon,
   close: closeIcon,
-  'chevron-left': chevronLeftIcon,
   'chevron-right': chevronRightIcon,
   reset: resetIcon,
   calculator: calculatorIcon,
+  flag: flagIcon,
+  sword: swordIcon,
+  shield: shieldIcon,
+  notes: notesIcon,
 };
 
 const props = defineProps<{

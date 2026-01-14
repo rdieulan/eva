@@ -2,7 +2,8 @@
 import { ref, computed } from 'vue';
 import { assignmentColors, getPlayerAssignments, getPlayerMainAssignment } from '@/config/config';
 import GamePlanTable from '@/components/common/GamePlanTable.vue';
-import type { MapConfig, Player, MatchGamePlan } from '@shared/types';
+import PhaseSelector from '@/components/planner/PhaseSelector.vue';
+import type { MapConfig, Player, MatchGamePlan, GamePhase } from '@shared/types';
 
 const props = withDefaults(
   defineProps<{
@@ -24,6 +25,7 @@ const selectedAbsentPlayer = ref<string | null>(null);
 const selectedMaps = ref<string[]>(props.maps.map(m => m.id));
 const results = ref<MapResult[] | null>(null);
 const hasCalculated = ref(false);
+const currentPhase = ref<GamePhase>('START');
 
 // Selected configurations per map (mapId -> configuration index)
 const selectedConfigurations = ref<Record<string, number>>({});
@@ -541,7 +543,10 @@ const previewGamePlan = computed(() => {
 
 <!-- Export Section -->
         <div v-if="hasCalculated && results && canExport" class="export-section">
-          <h3>Générer le plan de jeu</h3>
+          <div class="export-section-header">
+            <h3>Générer le plan de jeu</h3>
+            <PhaseSelector v-model="currentPhase" compact />
+          </div>
 
           <!-- Table preview -->
           <div ref="exportContentRef" class="export-preview">
@@ -1026,9 +1031,23 @@ const previewGamePlan = computed(() => {
   margin-top: $spacing-md;
 
   h3 {
-    margin: 0 0 $spacing-md 0;
+    margin: 0;
     font-size: 1rem;
     color: #fff;
+  }
+}
+
+.export-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-md;
+  gap: $spacing-md;
+
+  @include mobile-lg {
+    flex-direction: column;
+    align-items: stretch;
+    gap: $spacing-sm;
   }
 }
 
