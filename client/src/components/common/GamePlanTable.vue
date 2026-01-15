@@ -26,7 +26,7 @@ const rows = computed(() => {
   return props.gamePlan.maps.map(mapPlan => {
     const cells: Record<string, { name: string; color: string; isMainRole?: boolean } | null> = {};
     for (const h of props.headers) {
-      const assign = mapPlan.assignments.find(a => a.visibleplayerId === h.id);
+      const assign = mapPlan.assignments.find(a => a.visiblePlayerId === h.id);
       cells[h.id] = assign ? { name: assign.assignmentName, color: assign.assignmentColor, isMainRole: assign.isMainRole } : null;
     }
     return { key: mapPlan.mapId, label: mapPlan.mapName, cells };

@@ -29,11 +29,15 @@ export {
   MARKER_SIZES,
   DEFAULT_MARKER_SIZE,
   DEFAULT_PHASE_MARKERS,
+} from './map.types';
+
+// Re-export utils for convenience
+export {
   getZoneForPhase,
   isLegacyAssignment,
   migrateAssignmentToPhases,
   migrateMapConfigToPhases,
-} from './map.types';
+} from '../utils';
 export type {
   AvailabilityStatus,
   EventType,

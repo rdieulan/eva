@@ -1,4 +1,4 @@
-﻿﻿<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref, computed } from 'vue';
 import { assignmentColors } from '@/config/config';
 import { getPlayerAssignments, getPlayerMainAssignment } from '@/services';
@@ -375,8 +375,8 @@ function buildMatchGamePlan(): MatchGamePlan | null {
       mapId: mapData.mapId,
       mapName: mapData.mapName,
       assignments: mapData.assignments.map(a => ({
-        visibleplayerId: a.playerId,
-        visibleplayerName: a.playerName,
+        visiblePlayerId: a.playerId,
+        visiblePlayerName: a.playerName,
         assignmentId: a.assignmentId,
         assignmentName: a.assignmentName,
         assignmentColor: a.assignmentColor,
@@ -408,8 +408,8 @@ const previewGamePlan = computed(() => {
       mapId: mapData.mapId,
       mapName: mapData.mapName,
       assignments: mapData.assignments.map(a => ({
-        visibleplayerId: a.playerId,
-        visibleplayerName: a.playerName,
+        visiblePlayerId: a.playerId,
+        visiblePlayerName: a.playerName,
         assignmentId: a.assignmentId,
         assignmentName: a.assignmentName,
         assignmentColor: a.assignmentColor,

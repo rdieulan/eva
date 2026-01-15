@@ -20,22 +20,22 @@ describe('GamePlanTable Component', () => {
         mapName: 'Polaris',
         assignments: [
           {
-            visibleplayerId: 'player-1',
-            visibleplayerName: 'Alice',
+            visiblePlayerId: 'player-1',
+            visiblePlayerName: 'Alice',
             assignmentId: 1,
             assignmentName: 'Pilote',
             assignmentColor: '#FF0000',
           },
           {
-            visibleplayerId: 'player-2',
-            visibleplayerName: 'Bob',
+            visiblePlayerId: 'player-2',
+            visiblePlayerName: 'Bob',
             assignmentId: 2,
             assignmentName: 'Gunner',
             assignmentColor: '#00FF00',
           },
           {
-            visibleplayerId: 'player-3',
-            visibleplayerName: 'Charlie',
+            visiblePlayerId: 'player-3',
+            visiblePlayerName: 'Charlie',
             assignmentId: 3,
             assignmentName: 'Engineer',
             assignmentColor: '#0000FF',
@@ -47,22 +47,22 @@ describe('GamePlanTable Component', () => {
         mapName: 'Atlantis',
         assignments: [
           {
-            visibleplayerId: 'player-2',
-            visibleplayerName: 'Bob',
+            visiblePlayerId: 'player-2',
+            visiblePlayerName: 'Bob',
             assignmentId: 1,
             assignmentName: 'Pilote',
             assignmentColor: '#FF0000',
           },
           {
-            visibleplayerId: 'player-1',
-            visibleplayerName: 'Alice',
+            visiblePlayerId: 'player-1',
+            visiblePlayerName: 'Alice',
             assignmentId: 2,
             assignmentName: 'Gunner',
             assignmentColor: '#00FF00',
           },
           {
-            visibleplayerId: 'player-3',
-            visibleplayerName: 'Charlie',
+            visiblePlayerId: 'player-3',
+            visiblePlayerName: 'Charlie',
             assignmentId: 3,
             assignmentName: 'Engineer',
             assignmentColor: '#0000FF',
@@ -135,16 +135,16 @@ describe('GamePlanTable Component', () => {
           mapName: 'Test Map',
           assignments: [
             {
-              visibleplayerId: 'player-1',
-              visibleplayerName: 'Alice',
+              visiblePlayerId: 'player-1',
+              visiblePlayerName: 'Alice',
               assignmentId: 1,
               assignmentName: 'Pilote',
               assignmentColor: '#FF0000',
             },
             // player-2 has no assignment
             {
-              visibleplayerId: 'player-3',
-              visibleplayerName: 'Charlie',
+              visiblePlayerId: 'player-3',
+              visiblePlayerName: 'Charlie',
               assignmentId: 3,
               assignmentName: 'Engineer',
               assignmentColor: '#0000FF',

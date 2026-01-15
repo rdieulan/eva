@@ -513,8 +513,8 @@ describe('Calendar Routes API', () => {
             mapName: 'Artefact',
             assignments: [
               {
-                visibleplayerId: 'player-2',
-                visibleplayerName: 'Player 2',
+                visiblePlayerId: 'player-2',
+                visiblePlayerName: 'Player 2',
                 assignmentId: 1,
                 assignmentName: 'Front',
                 assignmentColor: '#ff0000',

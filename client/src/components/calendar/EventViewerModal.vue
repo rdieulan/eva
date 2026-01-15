@@ -70,10 +70,10 @@ const gamePlanHeaders = computed<Header[]>(() => {
   const headerMap = new Map<string, Header>();
   for (const mapPlan of gamePlan.maps) {
     for (const assign of mapPlan.assignments) {
-      if (!headerMap.has(assign.visibleplayerId)) {
-        headerMap.set(assign.visibleplayerId, {
-          id: assign.visibleplayerId,
-          name: assign.visibleplayerName
+      if (!headerMap.has(assign.visiblePlayerId)) {
+        headerMap.set(assign.visiblePlayerId, {
+          id: assign.visiblePlayerId,
+          name: assign.visiblePlayerName
         });
       }
     }

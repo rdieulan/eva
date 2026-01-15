@@ -167,7 +167,7 @@ const gamePlanPlayers = computed(() => {
   if (!gp || !gp.maps || gp.maps.length === 0) return [] as { id: string; name: string }[];
   const firstMap = gp.maps[0];
   const firstAssignments = firstMap?.assignments || [];
-  return firstAssignments.map(a => ({ id: a.visibleplayerId, name: a.visibleplayerName }));
+  return firstAssignments.map(a => ({ id: a.visiblePlayerId, name: a.visiblePlayerName }));
 });
 </script>
 

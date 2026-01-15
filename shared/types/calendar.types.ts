@@ -8,8 +8,8 @@ export type EventType = 'MATCH' | 'EVENT';
 
 // Assignment in a game plan (player -> assignment on a map)
 export interface MapAssignment {
-  visibleplayerId: string;
-  visibleplayerName: string;
+  visiblePlayerId: string;
+  visiblePlayerName: string;
   assignmentId: number;
   assignmentName: string;
   assignmentColor: string;

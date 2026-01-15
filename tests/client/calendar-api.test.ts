@@ -253,8 +253,8 @@ describe('Calendar API Client', () => {
             mapName: 'Polaris',
             assignments: [
               {
-                visibleplayerId: 'player-2',
-                visibleplayerName: 'Bob',
+                visiblePlayerId: 'player-2',
+                visiblePlayerName: 'Bob',
                 assignmentId: 1,
                 assignmentName: 'Pilote',
                 assignmentColor: '#FF0000',
