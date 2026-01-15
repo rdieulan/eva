@@ -44,10 +44,18 @@ export interface Assignment {
 // Notes per phase
 export type PhaseNotes = Record<GamePhase, string>;
 
+// Notes per role (assignment id as key)
+export type RoleNotes = Record<number, string>;
+
+// Notes per role per phase
+export type RolePhaseNotes = Record<GamePhase, RoleNotes>;
+
 // Complete notes for a game plan
 export interface GamePlanNotes {
   general: string; // General notes for the plan
   phases: PhaseNotes; // Notes per phase
+  roles?: RoleNotes; // General notes per role (assignment id as key)
+  rolePhases?: RolePhaseNotes; // Notes per role per phase
 }
 
 // Default empty notes
@@ -57,9 +65,17 @@ export const DEFAULT_PHASE_NOTES: PhaseNotes = {
   DEFENSE: '',
 };
 
+export const DEFAULT_ROLE_PHASE_NOTES: RolePhaseNotes = {
+  START: {},
+  ATTACK: {},
+  DEFENSE: {},
+};
+
 export const DEFAULT_GAME_PLAN_NOTES: GamePlanNotes = {
   general: '',
   phases: DEFAULT_PHASE_NOTES,
+  roles: {},
+  rolePhases: DEFAULT_ROLE_PHASE_NOTES,
 };
 
 // =============================================================================

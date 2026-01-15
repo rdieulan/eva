@@ -4,10 +4,12 @@ import MapList from '@/components/MapList.vue';
 import MapViewer from '@/components/MapViewer.vue';
 import PlannerToolbar from '@/components/planner/PlannerToolbar.vue';
 import Drawer from '@/components/common/Drawer.vue';
+import SvgIcon from '@/components/common/SvgIcon.vue';
 import { fetchAllMaps, fetchPlayers, fetchGamePlan, createGamePlan, deleteGamePlan, saveGamePlan } from '@/api';
 import { getPlayerAssignments } from '@/services';
+import { getAssignmentColor } from '@/config/config';
 import { useAuth } from '@/composables/useAuth';
-import { DEFAULT_GAME_PLAN_NOTES, PHASE_LABELS } from '@shared/types';
+import { DEFAULT_GAME_PLAN_NOTES, DEFAULT_ROLE_PHASE_NOTES, PHASE_LABELS } from '@shared/types';
 import type { MapConfig, Player, GamePhase, GamePlanNotes, GamePlanSummary } from '@/types';
 
 const { permissions } = useAuth();
@@ -22,6 +24,7 @@ const editMode = ref(false);
 const isLoading = ref(true);
 const currentPhase = ref<GamePhase>('START');
 const showNotesDrawer = ref(false);
+const activeNotesTab = ref<'general' | 'phase'>('general');
 
 const maps = ref<MapConfig[]>([]);
 const editableMaps = ref<MapConfig[]>([]);
@@ -71,15 +74,59 @@ const currentNotes = computed<GamePlanNotes>(() => {
 // Local notes for inline editing
 const localGeneralNotes = ref('');
 const localPhaseNotes = ref('');
+const localRoleNotes = ref('');
+const localRolePhaseNotes = ref('');
 
-// Sync local notes when currentNotes or currentPhase changes
-watch([currentNotes, currentPhase], ([notes, phase]) => {
+// Selected assignment name for display
+const selectedAssignmentName = computed(() => {
+  if (!currentMap.value || activeAssignments.value.length === 0) return null;
+  const assignment = currentMap.value.assignments.find(a => a.id === activeAssignments.value[0]);
+  return assignment?.name || null;
+});
+
+// Selected assignment id
+const selectedAssignmentId = computed<number | null>(() => {
+  return activeAssignments.value.length > 0 ? activeAssignments.value[0] ?? null : null;
+});
+
+// Sync local notes when currentNotes, currentPhase or selectedAssignment changes
+watch([currentNotes, currentPhase, selectedAssignmentId], ([notes, phase, assignmentId]) => {
   localGeneralNotes.value = notes.general;
   localPhaseNotes.value = notes.phases[phase];
+
+  // Role notes
+  if (assignmentId !== null && assignmentId !== undefined) {
+    localRoleNotes.value = notes.roles?.[assignmentId] || '';
+    localRolePhaseNotes.value = notes.rolePhases?.[phase]?.[assignmentId] || '';
+  } else {
+    localRoleNotes.value = '';
+    localRolePhaseNotes.value = '';
+  }
 }, { immediate: true });
 
 // Current phase label
 const currentPhaseLabel = computed(() => PHASE_LABELS[currentPhase.value]);
+
+// Phase display data (icon and color)
+interface PhaseData {
+  icon: string;
+  color: string;
+}
+
+const PHASE_DATA: Record<GamePhase, PhaseData> = {
+  START: { icon: 'flag', color: '#4ade80' },
+  ATTACK: { icon: 'sword', color: '#ff6b6b' },
+  DEFENSE: { icon: 'shield', color: '#60a5fa' },
+};
+
+const currentPhaseData = computed(() => PHASE_DATA[currentPhase.value]);
+
+// Selected assignment color
+const selectedAssignmentColor = computed(() => {
+  const assignmentId = selectedAssignmentId.value;
+  if (assignmentId === null) return undefined;
+  return getAssignmentColor(assignmentId);
+});
 
 function updateGeneralNotes() {
   if (!editMode.value || !selectedMapId.value) return;
@@ -102,6 +149,44 @@ function updatePhaseNotes() {
       phases: {
         ...existingNotes.phases,
         [currentPhase.value]: localPhaseNotes.value,
+      },
+    };
+  }
+}
+
+function updateRoleNotes() {
+  const assignmentId = selectedAssignmentId.value;
+  if (!editMode.value || !selectedMapId.value || assignmentId === null) return;
+  const map = editableMaps.value.find(m => m.id === selectedMapId.value);
+  if (map) {
+    const existingNotes = map.notes || { ...DEFAULT_GAME_PLAN_NOTES };
+    const existingRoles = existingNotes.roles || {};
+    map.notes = {
+      ...existingNotes,
+      roles: {
+        ...existingRoles,
+        [assignmentId]: localRoleNotes.value,
+      },
+    };
+  }
+}
+
+function updateRolePhaseNotes() {
+  const assignmentId = selectedAssignmentId.value;
+  if (!editMode.value || !selectedMapId.value || assignmentId === null) return;
+  const map = editableMaps.value.find(m => m.id === selectedMapId.value);
+  if (map) {
+    const existingNotes = map.notes || { ...DEFAULT_GAME_PLAN_NOTES };
+    const existingRolePhases = existingNotes.rolePhases || { ...DEFAULT_ROLE_PHASE_NOTES };
+    const existingPhaseRoles = existingRolePhases[currentPhase.value] || {};
+    map.notes = {
+      ...existingNotes,
+      rolePhases: {
+        ...existingRolePhases,
+        [currentPhase.value]: {
+          ...existingPhaseRoles,
+          [assignmentId]: localRolePhaseNotes.value,
+        },
       },
     };
   }
@@ -419,30 +504,94 @@ function cancelEdit() {
         </div>
 
         <!-- Notes Panel -->
-        <Drawer v-model="showNotesDrawer" title="Notes du plan" icon="notes">
-          <div class="notes-sections">
-            <div class="notes-section">
-              <label class="section-label">Notes générales</label>
-              <textarea
-                v-if="editMode"
-                v-model="localGeneralNotes"
-                class="notes-textarea"
-                placeholder="Explications générales du plan de jeu..."
-                @blur="updateGeneralNotes"
-              ></textarea>
-              <p v-else class="notes-text">{{ localGeneralNotes || '—' }}</p>
-            </div>
-            <div class="notes-section">
-              <label class="section-label">Notes - Phase {{ currentPhaseLabel }}</label>
-              <textarea
-                v-if="editMode"
-                v-model="localPhaseNotes"
-                class="notes-textarea"
-                :placeholder="`Explications pour la phase ${currentPhaseLabel}...`"
-                @blur="updatePhaseNotes"
-              ></textarea>
-              <p v-else class="notes-text">{{ localPhaseNotes || '—' }}</p>
-            </div>
+        <Drawer v-model="showNotesDrawer" title="Stratégie" icon="notes">
+          <!-- Tabs -->
+          <div class="notes-tabs">
+            <button
+              class="tab-btn"
+              :class="{ active: activeNotesTab === 'general' }"
+              @click="activeNotesTab = 'general'"
+            >
+              Général
+            </button>
+            <button
+              class="tab-btn"
+              :class="{ active: activeNotesTab === 'phase' }"
+              :style="{ '--tab-color': currentPhaseData.color }"
+              @click="activeNotesTab = 'phase'"
+            >
+              <SvgIcon :name="currentPhaseData.icon" class="tab-icon" />
+              {{ currentPhaseLabel }}
+            </button>
+          </div>
+
+          <!-- Tab Content -->
+          <div class="notes-content">
+            <!-- GÉNÉRAL TAB -->
+            <template v-if="activeNotesTab === 'general'">
+              <div class="notes-section">
+                <label class="section-label">Plan global</label>
+                <textarea
+                  v-if="editMode"
+                  v-model="localGeneralNotes"
+                  class="notes-textarea"
+                  placeholder="Explications générales du plan de jeu..."
+                  @blur="updateGeneralNotes"
+                ></textarea>
+                <p v-else class="notes-text">{{ localGeneralNotes || '—' }}</p>
+              </div>
+
+              <div
+                v-if="selectedAssignmentName"
+                class="notes-section"
+                :style="{ '--section-color': selectedAssignmentColor }"
+              >
+                <label class="section-label colored">
+                  Rôle : {{ selectedAssignmentName }}
+                </label>
+                <textarea
+                  v-if="editMode"
+                  v-model="localRoleNotes"
+                  class="notes-textarea"
+                  :placeholder="`Notes générales pour le rôle ${selectedAssignmentName}...`"
+                  @blur="updateRoleNotes"
+                ></textarea>
+                <p v-else class="notes-text">{{ localRoleNotes || '—' }}</p>
+              </div>
+            </template>
+
+            <!-- PHASE TAB -->
+            <template v-if="activeNotesTab === 'phase'">
+              <div class="notes-section">
+                <label class="section-label">Stratégie de phase</label>
+                <textarea
+                  v-if="editMode"
+                  v-model="localPhaseNotes"
+                  class="notes-textarea"
+                  :placeholder="`Explications pour la phase ${currentPhaseLabel}...`"
+                  @blur="updatePhaseNotes"
+                ></textarea>
+                <p v-else class="notes-text">{{ localPhaseNotes || '—' }}</p>
+              </div>
+
+              <div
+                v-if="selectedAssignmentName"
+                class="notes-section"
+                :style="{ '--section-color': selectedAssignmentColor }"
+              >
+                <label class="section-label colored">
+                  Rôle : {{ selectedAssignmentName }}
+                </label>
+                <textarea
+                  v-if="editMode"
+                  v-model="localRolePhaseNotes"
+                  class="notes-textarea"
+                  :placeholder="`Notes pour ${selectedAssignmentName} en phase ${currentPhaseLabel}...`"
+                  @blur="updateRolePhaseNotes"
+                ></textarea>
+                <p v-else class="notes-text">{{ localRolePhaseNotes || '—' }}</p>
+              </div>
+            </template>
           </div>
         </Drawer>
       </div>
@@ -474,24 +623,70 @@ function cancelEdit() {
   }
 }
 
+// Notes tabs styles
+.notes-tabs {
+  display: flex;
+  gap: $spacing-xs;
+  margin-bottom: $spacing-md;
+  border-bottom: 1px solid $color-border;
+  padding-bottom: $spacing-xs;
+}
+
+.tab-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
+  padding: $spacing-sm $spacing-md;
+  background: transparent;
+  border: none;
+  border-radius: $radius-sm $radius-sm 0 0;
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+
+  &:hover {
+    color: $color-text-primary;
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  &.active {
+    color: var(--tab-color, $color-accent);
+    background: rgba(255, 255, 255, 0.08);
+
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: calc(-#{$spacing-xs} - 1px);
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--tab-color, $color-accent);
+    }
+  }
+}
+
+.tab-icon {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
 // Notes content styles
-.notes-sections {
+.notes-content {
   display: flex;
   flex-direction: column;
-  gap: $spacing-lg;
+  gap: $spacing-md;
 }
 
 .notes-section {
   display: flex;
   flex-direction: column;
   gap: $spacing-sm;
-  padding-bottom: $spacing-lg;
-  border-bottom: 1px solid $color-border;
-
-  &:last-child {
-    border-bottom: none;
-    padding-bottom: 0;
-  }
 }
 
 .section-label {
@@ -500,6 +695,11 @@ function cancelEdit() {
   color: $color-text-secondary;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+
+  &.colored {
+    color: var(--section-color, $color-text-secondary);
+    font-weight: 700;
+  }
 }
 
 .notes-textarea {
