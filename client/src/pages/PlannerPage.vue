@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
-import MapList from '@/components/MapList.vue';
 import MapViewer from '@/components/MapViewer.vue';
 import PlannerToolbar from '@/components/planner/PlannerToolbar.vue';
+import PlannerSidebar from '@/components/planner/PlannerSidebar.vue';
 import Drawer from '@/components/common/Drawer.vue';
 import SvgIcon from '@/components/common/SvgIcon.vue';
 import { fetchAllMaps, fetchPlayers, fetchGamePlan, createGamePlan, deleteGamePlan, saveGamePlan } from '@/api';
@@ -29,6 +29,7 @@ const activeNotesTab = ref<'general' | 'phase'>('general');
 const maps = ref<MapConfig[]>([]);
 const editableMaps = ref<MapConfig[]>([]);
 const players = ref<Player[]>([]);
+const mapViewerRef = ref<InstanceType<typeof MapViewer> | null>(null);
 
 onMounted(async () => {
   try {
@@ -436,6 +437,18 @@ async function saveChanges() {
   }
 }
 
+function handleAddMarker() {
+  if (mapViewerRef.value && activeAssignments.value.length > 0) {
+    mapViewerRef.value.addMarkerFromToolbar(activeAssignments.value[0] as number);
+  }
+}
+
+function handleAddZone() {
+  if (mapViewerRef.value && activeAssignments.value.length > 0) {
+    mapViewerRef.value.addZoneFromToolbar(activeAssignments.value[0] as number);
+  }
+}
+
 function cancelEdit() {
   editableMaps.value = JSON.parse(JSON.stringify(maps.value));
   editMode.value = false;
@@ -460,9 +473,6 @@ function cancelEdit() {
         :selectedPlanId="selectedPlanId"
         @select-player="selectPlayer"
         @toggle-assignment="toggleAssignment"
-        @toggle-edit="toggleEditMode"
-        @save="saveChanges"
-        @cancel="cancelEdit"
         @update:currentPhase="currentPhase = $event"
         @select-plan="handleSelectPlan"
         @create-plan="handleCreatePlan"
@@ -479,14 +489,23 @@ function cancelEdit() {
 
     <template v-else>
       <div class="main-content">
-        <MapList
+        <PlannerSidebar
           :maps="maps"
           :selectedMapId="selectedMapId"
-          @select="selectMap"
+          :editMode="editMode"
+          :canEdit="canEdit"
+          :hasActiveAssignment="activeAssignments.length > 0"
+          @select-map="selectMap"
+          @toggle-edit="toggleEditMode"
+          @add-marker="handleAddMarker"
+          @add-zone="handleAddZone"
+          @save="saveChanges"
+          @cancel="cancelEdit"
         />
 
         <MapViewer
           v-if="currentMap"
+          ref="mapViewerRef"
           :map="currentMap"
           :players="players"
           :selectedPlayerId="selectedPlayerId"

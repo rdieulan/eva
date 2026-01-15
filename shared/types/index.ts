@@ -15,6 +15,9 @@ export type {
   Assignment,
   MapConfig,
   AppState,
+  MarkerIcon,
+  Marker,
+  PhaseMarkers,
 } from './map.types';
 export {
   GAME_PHASES,
@@ -22,6 +25,10 @@ export {
   DEFAULT_PHASE_NOTES,
   DEFAULT_ROLE_PHASE_NOTES,
   DEFAULT_GAME_PLAN_NOTES,
+  MARKER_ICONS,
+  MARKER_SIZES,
+  DEFAULT_MARKER_SIZE,
+  DEFAULT_PHASE_MARKERS,
   getZoneForPhase,
   isLegacyAssignment,
   migrateAssignmentToPhases,

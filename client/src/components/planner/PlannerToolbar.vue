@@ -28,9 +28,6 @@ const showCalculator = ref(false);
 const emit = defineEmits<{
   'select-player': [playerId: string | null];
   'toggle-assignment': [assignmentId: number];
-  'toggle-edit': [];
-  'save': [];
-  'cancel': [];
   // Phase section events
   'update:currentPhase': [phase: GamePhase];
   'select-plan': [planId: string];
@@ -121,32 +118,7 @@ function isMainRoleForSelectedPlayer(assignmentId: number): boolean {
 
 <template>
   <div class="planner-toolbar">
-    <!-- Section 1: Calculator -->
-    <div class="section section-calculator">
-      <button
-        class="btn-calculator"
-        @click="showCalculator = true"
-        title="Ouvrir le calculateur de rotation"
-      >
-        <SvgIcon name="calculator" class="calculator-icon" />
-      </button>
-
-      <div
-        class="balance-messages"
-        :class="{ 'is-balanced': balanceCheck.isBalanced, 'is-unbalanced': !balanceCheck.isBalanced }"
-      >
-        <div
-          v-for="(msg, index) in balanceCheck.messages"
-          :key="index"
-          class="balance-message-row"
-        >
-          <span class="message-icon">{{ balanceCheck.isBalanced ? '✓' : '⚠' }}</span>
-          <span class="message-text">{{ msg }}</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Section 2: Phase -->
+    <!-- Section 1: Phase -->
     <div class="section section-phase">
       <PlanSelector
         v-if="plans.length > 0"
@@ -166,7 +138,7 @@ function isMainRoleForSelectedPlayer(assignmentId: number): boolean {
       />
     </div>
 
-    <!-- Section 3: Roles/Effectifs -->
+    <!-- Section 2: Roles/Effectifs -->
     <div class="section section-roles">
       <nav class="player-bar">
         <button
@@ -201,21 +173,28 @@ function isMainRoleForSelectedPlayer(assignmentId: number): boolean {
       </nav>
     </div>
 
-    <!-- Section 4: Edition (admin only) -->
-    <div class="section section-edition">
-      <div v-if="canEdit" class="edit-controls">
-        <template v-if="editMode">
-          <button class="btn-save" @click="$emit('save')">💾 Sauvegarder</button>
-          <button class="btn-cancel" @click="$emit('cancel')">✕ Annuler</button>
-        </template>
-        <button
-          class="btn-edit"
-          :class="{ active: editMode }"
-          @click="$emit('toggle-edit')"
-          :disabled="isLoading"
+    <!-- Section 3: Calculator -->
+    <div class="section section-calculator">
+      <button
+        class="btn-calculator"
+        @click="showCalculator = true"
+        title="Ouvrir le calculateur de rotation"
+      >
+        <SvgIcon name="calculator" class="calculator-icon" />
+      </button>
+
+      <div
+        class="balance-messages"
+        :class="{ 'is-balanced': balanceCheck.isBalanced, 'is-unbalanced': !balanceCheck.isBalanced }"
+      >
+        <div
+          v-for="(msg, index) in balanceCheck.messages"
+          :key="index"
+          class="balance-message-row"
         >
-          {{ editMode ? '🔓 Mode Édition' : '🔒 Éditer' }}
-        </button>
+          <span class="message-icon">{{ balanceCheck.isBalanced ? '✓' : '⚠' }}</span>
+          <span class="message-text">{{ msg }}</span>
+        </div>
       </div>
     </div>
 
@@ -261,12 +240,7 @@ function isMainRoleForSelectedPlayer(assignmentId: number): boolean {
   }
 }
 
-// Section 2: Phase
-.section-phase {
-  gap: $spacing-sm;
-}
-
-// Section 3: Roles
+// Section 2: Roles
 .section-roles {
   flex-direction: column;
   gap: $spacing-xs;
@@ -276,9 +250,9 @@ function isMainRoleForSelectedPlayer(assignmentId: number): boolean {
   }
 }
 
-// Section 4: Edition
-.section-edition {
-  justify-content: flex-end;
+// Section 3: Phase
+.section-phase {
+  gap: $spacing-sm;
 }
 
 .btn-calculator {
@@ -487,72 +461,6 @@ function isMainRoleForSelectedPlayer(assignmentId: number): boolean {
       padding: $spacing-xs 0.4rem;
       font-size: 0.65rem;
     }
-  }
-}
-
-.edit-controls {
-  display: flex;
-  gap: $spacing-sm;
-
-  @include mobile-lg {
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-}
-
-.btn-edit,
-.btn-save,
-.btn-cancel {
-  padding: 0.4rem 0.75rem;
-  border: none;
-  border-radius: $radius-sm;
-  font-weight: 600;
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  @include tablet {
-    padding: 0.35rem 0.6rem;
-    font-size: 0.75rem;
-  }
-
-  @include mobile-lg {
-    padding: 0.3rem $spacing-sm;
-    font-size: 0.7rem;
-  }
-}
-
-.btn-edit {
-  background: $color-bg-tertiary;
-  color: #ccc;
-  border: 1px solid #444;
-
-  &:hover {
-    background: $color-border-light;
-  }
-
-  &.active {
-    background: $color-danger;
-    color: #fff;
-    border-color: $color-danger;
-  }
-}
-
-.btn-save {
-  background: #4ecdc4;
-  color: $color-bg-secondary;
-
-  &:hover {
-    background: #5fd9d0;
-  }
-}
-
-.btn-cancel {
-  background: #666;
-  color: #fff;
-
-  &:hover {
-    background: $color-text-secondary;
   }
 }
 </style>

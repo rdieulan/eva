@@ -30,5 +30,8 @@ export type {
   MapAssignment,
   MapGamePlan,
   MatchGamePlan,
+  MarkerIcon,
+  Marker,
+  PhaseMarkers,
 } from '@shared/types';
 

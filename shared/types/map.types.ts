@@ -27,6 +27,67 @@ export const PHASE_LABELS: Record<GamePhase, string> = {
 // Zones per phase for an assignment
 export type PhaseZones = Record<GamePhase, Zone>;
 
+// =============================================================================
+// MARKERS
+// =============================================================================
+
+// Available marker icons
+export type MarkerIcon =
+  | 'player'      // Player position (main marker)
+  | 'position'    // Default position marker
+  | 'eye'         // Watch/observe
+  | 'target'      // Target/objective
+  | 'warning'     // Warning/danger
+  | 'star'        // Important point
+  | 'arrow-up'    // Direction up
+  | 'arrow-down'  // Direction down
+  | 'arrow-left'  // Direction left
+  | 'arrow-right' // Direction right
+  | 'wait'        // Wait/hold position
+  | 'move'        // Movement
+  | 'group';      // Group/regroup
+
+// All available marker icons (for UI iteration)
+export const MARKER_ICONS: MarkerIcon[] = [
+  'player', 'position', 'eye', 'target', 'warning', 'star',
+  'arrow-up', 'arrow-down', 'arrow-left', 'arrow-right',
+  'wait', 'move', 'group'
+];
+
+// Single marker definition
+export interface Marker {
+  id: string;           // Unique marker ID
+  x: number;            // X position (%)
+  y: number;            // Y position (%)
+  icon: MarkerIcon;     // Icon to display
+  floor?: number;       // Floor for multi-floor maps
+  size?: number;        // Size multiplier (default: 1)
+}
+
+// Default marker size
+export const DEFAULT_MARKER_SIZE = 1;
+
+// Available marker sizes with labels
+export const MARKER_SIZES: { value: number; label: string }[] = [
+  { value: 0.7, label: 'Petit' },
+  { value: 1, label: 'Moyen' },
+  { value: 1.5, label: 'Grand' },
+];
+
+// Markers per phase for an assignment
+export type PhaseMarkers = Record<GamePhase, Marker[]>;
+
+// Default empty markers per phase
+export const DEFAULT_PHASE_MARKERS: PhaseMarkers = {
+  START: [],
+  ATTACK: [],
+  DEFENSE: [],
+};
+
+// =============================================================================
+// ASSIGNMENTS
+// =============================================================================
+
 export interface Assignment {
   id: number;
   name: string;
@@ -34,6 +95,7 @@ export interface Assignment {
   y: number;
   zone?: Zone; // Legacy: single zone (will be migrated to zonesByPhase)
   zonesByPhase?: PhaseZones; // New: zones per phase
+  markersByPhase?: PhaseMarkers; // Markers per phase
   floor?: number; // For multi-floor maps (0, 1, etc.)
 }
 

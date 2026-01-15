@@ -1,10 +1,32 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import type { MapConfig, Player, Point, Assignment, GamePhase, Zone } from '@/types';
-import { getZoneForPhase } from '@shared/types';
+import type { MapConfig, Player, Point, Assignment, GamePhase, Zone, Marker, MarkerIcon } from '@/types';
+import { getZoneForPhase, MARKER_ICONS, MARKER_SIZES } from '@shared/types';
 import { assignmentColors } from '@/config/config';
 import { getPlayerAssignments, getPlayerMainAssignment } from '@/services';
 import { getZonePolygons } from '@/utils/zones';
+
+// SVG paths for marker icons (inline to work in SVG context)
+const MARKER_ICON_PATHS: Record<MarkerIcon, string> = {
+  'player': 'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z',
+  'position': 'M12 12m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0',
+  'eye': 'M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z',
+  'target': 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16zm0-14a6 6 0 1 0 0 12 6 6 0 0 0 0-12zm0 10a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm0-6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z',
+  'warning': 'M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z',
+  'star': 'M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z',
+  'arrow-up': 'M4 12l1.41 1.41L11 7.83V20h2V7.83l5.58 5.59L20 12l-8-8-8 8z',
+  'arrow-down': 'M20 12l-1.41-1.41L13 16.17V4h-2v12.17l-5.58-5.59L4 12l8 8 8-8z',
+  'arrow-left': 'M12 4l1.41 1.41L7.83 11H20v2H7.83l5.59 5.58L12 20l-8-8 8-8z',
+  'arrow-right': 'M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8-8-8z',
+  'wait': 'M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z',
+  'move': 'M13.49 5.48c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm-3.6 13.9l1-4.4 2.1 2v6h2v-7.5l-2.1-2 .6-3c1.3 1.5 3.3 2.5 5.5 2.5v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1l-5.2 2.2v4.7h2v-3.4l1.8-.7-1.6 8.1-4.9-1-.4 2 7 1.4z',
+  'group': 'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z',
+};
+
+// Get marker icon path
+function getMarkerIconPath(icon: MarkerIcon): string {
+  return MARKER_ICON_PATHS[icon] || MARKER_ICON_PATHS['position'];
+}
 
 const props = withDefaults(defineProps<{
   map: MapConfig;
@@ -36,7 +58,7 @@ const currentFloor = ref(0);
 
 // Drag & drop state in edit mode
 const dragging = ref<{
-  type: 'assignment' | 'zone-move' | 'zone-point';
+  type: 'zone-move' | 'zone-point';
   assignmentId: number;
   polygonIndex?: number;
   pointIndex?: number;
@@ -130,7 +152,173 @@ function updateAssignmentZoneForPhase(assignment: Assignment, polygons: Point[][
   assignment.zonesByPhase[phase] = { polygons };
 }
 
-// === Edit mode ===
+// =============================================================================
+// MARKERS
+// =============================================================================
+
+// Get markers for current phase
+function getPhaseMarkers(assignment: Assignment): Marker[] {
+  if (!assignment.markersByPhase) return [];
+  return assignment.markersByPhase[props.currentPhase] || [];
+}
+
+// Get marker size (with default)
+function getMarkerSize(marker: Marker): number {
+  return marker.size ?? 1;
+}
+
+
+// Add a new marker for the current phase
+function addMarker(assignmentId: number, x: number, y: number, icon: MarkerIcon = 'position', size: number = 1): void {
+  const assignmentIndex = props.map.assignments.findIndex(a => a.id === assignmentId);
+  if (assignmentIndex === -1) return;
+
+  const updatedMap = JSON.parse(JSON.stringify(props.map)) as MapConfig;
+  const assignment = updatedMap.assignments[assignmentIndex];
+  if (!assignment) return;
+
+  const phase = props.currentPhase;
+  if (!assignment.markersByPhase) {
+    assignment.markersByPhase = { START: [], ATTACK: [], DEFENSE: [] };
+  }
+  if (!assignment.markersByPhase[phase]) {
+    assignment.markersByPhase[phase] = [];
+  }
+
+  // Generate unique ID
+  const newMarker: Marker = {
+    id: `marker-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    x: Math.round(x * 10) / 10,
+    y: Math.round(y * 10) / 10,
+    icon,
+    floor: currentFloor.value,
+    size,
+  };
+
+  assignment.markersByPhase[phase].push(newMarker);
+  emit('update:map', updatedMap);
+}
+
+// Remove a marker (any marker can be removed)
+function removeMarker(assignmentId: number, markerId: string): void {
+  const assignmentIndex = props.map.assignments.findIndex(a => a.id === assignmentId);
+  if (assignmentIndex === -1) return;
+
+  const updatedMap = JSON.parse(JSON.stringify(props.map)) as MapConfig;
+  const assignment = updatedMap.assignments[assignmentIndex];
+  if (!assignment) return;
+
+  if (!assignment.markersByPhase) return;
+
+  const phase = props.currentPhase;
+  const markers = assignment.markersByPhase[phase];
+  if (!markers) return;
+
+
+  const markerIndex = markers.findIndex(m => m.id === markerId);
+  if (markerIndex !== -1) {
+    markers.splice(markerIndex, 1);
+    emit('update:map', updatedMap);
+  }
+}
+
+// Update marker position
+function updateMarkerPosition(assignmentId: number, markerId: string, x: number, y: number): void {
+  const assignmentIndex = props.map.assignments.findIndex(a => a.id === assignmentId);
+  if (assignmentIndex === -1) return;
+
+  const updatedMap = JSON.parse(JSON.stringify(props.map)) as MapConfig;
+  const assignment = updatedMap.assignments[assignmentIndex];
+  if (!assignment) return;
+
+  if (!assignment.markersByPhase) return;
+
+  const phase = props.currentPhase;
+  const marker = assignment.markersByPhase[phase]?.find(m => m.id === markerId);
+  if (marker) {
+    marker.x = Math.round(x * 10) / 10;
+    marker.y = Math.round(y * 10) / 10;
+    emit('update:map', updatedMap);
+  }
+}
+
+// Update marker icon
+function updateMarkerIcon(assignmentId: number, markerId: string, icon: MarkerIcon): void {
+  const assignmentIndex = props.map.assignments.findIndex(a => a.id === assignmentId);
+  if (assignmentIndex === -1) return;
+
+  const updatedMap = JSON.parse(JSON.stringify(props.map)) as MapConfig;
+  const assignment = updatedMap.assignments[assignmentIndex];
+  if (!assignment) return;
+
+  if (!assignment.markersByPhase) return;
+
+  const phase = props.currentPhase;
+  const marker = assignment.markersByPhase[phase]?.find(m => m.id === markerId);
+  if (marker) {
+    marker.icon = icon;
+    emit('update:map', updatedMap);
+  }
+}
+
+// Update marker size
+function updateMarkerSize(assignmentId: number, markerId: string, size: number): void {
+  const assignmentIndex = props.map.assignments.findIndex(a => a.id === assignmentId);
+  if (assignmentIndex === -1) return;
+
+  const updatedMap = JSON.parse(JSON.stringify(props.map)) as MapConfig;
+  const assignment = updatedMap.assignments[assignmentIndex];
+  if (!assignment) return;
+
+  if (!assignment.markersByPhase) return;
+
+  const phase = props.currentPhase;
+  const marker = assignment.markersByPhase[phase]?.find(m => m.id === markerId);
+  if (marker) {
+    marker.size = size;
+    emit('update:map', updatedMap);
+  }
+}
+
+// Marker editing state
+const editingMarker = ref<{ assignmentId: number; markerId: string } | null>(null);
+const markerEditPosition = ref({ x: 0, y: 0 });
+
+// Open marker edit panel
+function openMarkerEditPanel(event: MouseEvent, assignmentId: number, markerId: string): void {
+  event.preventDefault();
+  event.stopPropagation();
+  editingMarker.value = { assignmentId, markerId };
+  markerEditPosition.value = { x: event.clientX, y: event.clientY };
+}
+
+// Close marker edit panel
+function closeMarkerEditPanel(): void {
+  editingMarker.value = null;
+}
+
+// Get current editing marker
+const currentEditingMarker = computed(() => {
+  if (!editingMarker.value) return null;
+  const assignment = props.map.assignments.find(a => a.id === editingMarker.value?.assignmentId);
+  if (!assignment?.markersByPhase) return null;
+  return assignment.markersByPhase[props.currentPhase]?.find(m => m.id === editingMarker.value?.markerId);
+});
+
+// Marker drag state
+const draggingMarker = ref<{ assignmentId: number; markerId: string } | null>(null);
+
+// Start dragging a marker
+function startDragMarker(event: MouseEvent, assignmentId: number, markerId: string): void {
+  if (!props.editMode) return;
+  event.preventDefault();
+  event.stopPropagation();
+  draggingMarker.value = { assignmentId, markerId };
+}
+
+// =============================================================================
+// EDIT MODE
+// =============================================================================
 
 // Convert mouse coordinates to SVG coordinates (0-100)
 function getSvgCoords(event: MouseEvent): { x: number; y: number } {
@@ -145,13 +333,6 @@ function getSvgCoords(event: MouseEvent): { x: number; y: number } {
   return { x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) };
 }
 
-// Start drag on a position marker
-function startDragAssignment(event: MouseEvent, assignmentId: number) {
-  if (!props.editMode) return;
-  event.preventDefault();
-  event.stopPropagation();
-  dragging.value = { type: 'assignment', assignmentId };
-}
 
 // Start dragging a zone (move)
 function startDragZone(event: MouseEvent, assignmentId: number, polygonIndex: number = 0) {
@@ -278,6 +459,18 @@ function removeZonePolygon(event: MouseEvent, assignmentId: number, polygonIndex
 
 // Handle mouse movement during drag
 function handleMouseMove(event: MouseEvent) {
+  // Handle marker dragging
+  if (draggingMarker.value && props.editMode) {
+    const coords = getSvgCoords(event);
+    updateMarkerPosition(
+      draggingMarker.value.assignmentId,
+      draggingMarker.value.markerId,
+      coords.x,
+      coords.y
+    );
+    return;
+  }
+
   if (!dragging.value || !props.editMode) return;
 
   const coords = getSvgCoords(event);
@@ -288,11 +481,7 @@ function handleMouseMove(event: MouseEvent) {
   const targetAssignment = updatedMap.assignments[assignmentIndex];
   if (!targetAssignment) return;
 
-  if (dragging.value.type === 'assignment') {
-    // Move the marker
-    targetAssignment.x = Math.round(coords.x * 10) / 10;
-    targetAssignment.y = Math.round(coords.y * 10) / 10;
-  } else if (dragging.value.type === 'zone-move') {
+  if (dragging.value.type === 'zone-move') {
     // Move a specific polygon of the zone for current phase
     const polygons = getPhaseZonePolygons(targetAssignment);
     const polygonIndex = dragging.value.polygonIndex ?? 0;
@@ -337,6 +526,7 @@ function handleMouseMove(event: MouseEvent) {
 // Stop dragging
 function handleMouseUp() {
   dragging.value = null;
+  draggingMarker.value = null;
 }
 
 // Open player edit panel for an assignment
@@ -494,6 +684,76 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
 
   return edges;
 }
+
+// =============================================================================
+// TOOLBAR ACTIONS (exposed to parent)
+// =============================================================================
+
+// Add marker from toolbar button (places near player marker or center)
+function addMarkerFromToolbar(assignmentId: number): void {
+  const assignment = props.map.assignments.find(a => a.id === assignmentId);
+  if (!assignment) return;
+
+  // Find the player marker position or use assignment legacy position
+  const markers = getPhaseMarkers(assignment);
+  const playerMarker = markers.find(m => m.icon === 'player');
+  const baseX = playerMarker?.x ?? assignment.x;
+  const baseY = playerMarker?.y ?? assignment.y;
+
+  // Add new marker offset from base position
+  addMarker(assignmentId, baseX + 5, baseY, 'position');
+}
+
+// Add zone from toolbar button (places near center or existing zone)
+function addZoneFromToolbar(assignmentId: number): void {
+  const assignmentIndex = props.map.assignments.findIndex(a => a.id === assignmentId);
+  if (assignmentIndex === -1) return;
+
+  const updatedMap = JSON.parse(JSON.stringify(props.map)) as MapConfig;
+  const assignment = updatedMap.assignments[assignmentIndex];
+  if (!assignment) return;
+
+  // Get existing polygons for current phase
+  const existingPolygons = getPhaseZonePolygons(assignment);
+
+  // Calculate position for new zone
+  let centerX = 50;
+  let centerY = 50;
+
+  if (existingPolygons.length > 0 && existingPolygons[0] && existingPolygons[0].length > 0) {
+    // Place near existing zone
+    const firstPolygon = existingPolygons[0];
+    centerX = firstPolygon.reduce((sum, p) => sum + p.x, 0) / firstPolygon.length + 10;
+    centerY = firstPolygon.reduce((sum, p) => sum + p.y, 0) / firstPolygon.length;
+  } else {
+    // Place near player marker or assignment position
+    const markers = getPhaseMarkers(assignment);
+    const playerMarker = markers.find(m => m.icon === 'player');
+    centerX = playerMarker?.x ?? assignment.x;
+    centerY = playerMarker?.y ?? assignment.y;
+  }
+
+  // Create new rectangle
+  const size = 5;
+  const newPolygon: Point[] = [
+    { x: Math.round((centerX - size) * 10) / 10, y: Math.round((centerY - size) * 10) / 10 },
+    { x: Math.round((centerX + size) * 10) / 10, y: Math.round((centerY - size) * 10) / 10 },
+    { x: Math.round((centerX + size) * 10) / 10, y: Math.round((centerY + size) * 10) / 10 },
+    { x: Math.round((centerX - size) * 10) / 10, y: Math.round((centerY + size) * 10) / 10 },
+  ];
+
+  // Get existing polygons and add new one
+  const polygons = getPhaseZonePolygons(assignment);
+  polygons.push(newPolygon);
+  updateAssignmentZoneForPhase(assignment, polygons);
+  emit('update:map', updatedMap);
+}
+
+// Expose methods for parent component
+defineExpose({
+  addMarkerFromToolbar,
+  addZoneFromToolbar,
+});
 </script>
 
 <template>
@@ -596,31 +856,117 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
 
         <!-- Active assignment markers on current floor -->
         <g v-for="assignment in visibleAssignments.filter((p: Assignment) => isAssignmentActive(p.id))" :key="'marker-' + assignment.id">
-          <ellipse
-            :cx="assignment.x"
-            :cy="assignment.y"
-            :rx="1.5"
-            :ry="1.5 * imageRatio"
-            class="marker active"
+          <!-- Phase-specific markers -->
+          <g
+            v-for="marker in getPhaseMarkers(assignment)"
+            :key="marker.id"
+            class="phase-marker"
             :class="{ editable: editMode }"
-            :style="{ '--assignment-color': getAssignmentColor(assignment.id) }"
-            @mousedown="startDragAssignment($event, assignment.id)"
-            @contextmenu="openPlayerEditPanel($event, assignment.id)"
-          />
+            :style="{ '--marker-color': getAssignmentColor(assignment.id) }"
+            :transform="`translate(${marker.x}, ${marker.y}) scale(1, ${imageRatio})`"
+            @mousedown="startDragMarker($event, assignment.id, marker.id)"
+            @contextmenu.prevent="editMode ? openMarkerEditPanel($event, assignment.id, marker.id) : openPlayerEditPanel($event, assignment.id)"
+            @dblclick="editMode && removeMarker(assignment.id, marker.id)"
+          >
+            <!-- Marker circle background (in scaled space, so appears round) -->
+            <circle
+              cx="0"
+              cy="0"
+              :r="2 * getMarkerSize(marker)"
+              class="marker-bg"
+            />
+            <!-- Marker icon (scaled path) -->
+            <g :transform="`translate(${-1.2 * getMarkerSize(marker)}, ${-1.2 * getMarkerSize(marker)}) scale(${0.1 * getMarkerSize(marker)})`">
+              <path
+                :d="getMarkerIconPath(marker.icon)"
+                class="marker-icon-path"
+              />
+            </g>
+          </g>
         </g>
 
         <!-- Ghost markers (other floors) -->
         <g v-for="assignment in ghostAssignments" :key="'ghost-marker-' + assignment.id">
-          <ellipse
-            :cx="assignment.x"
-            :cy="assignment.y"
-            :rx="1.5"
-            :ry="1.5 * imageRatio"
-            class="marker ghost"
-            :style="{ '--assignment-color': getAssignmentColor(assignment.id) }"
-          />
+          <g
+            v-for="marker in getPhaseMarkers(assignment)"
+            :key="'ghost-' + marker.id"
+            class="phase-marker ghost"
+            :style="{ '--marker-color': getAssignmentColor(assignment.id) }"
+            :transform="`translate(${marker.x}, ${marker.y}) scale(1, ${imageRatio})`"
+          >
+            <circle
+              cx="0"
+              cy="0"
+              :r="2 * getMarkerSize(marker)"
+              class="marker-bg"
+            />
+          </g>
         </g>
       </svg>
+
+<!-- Marker edit panel -->
+      <div
+        v-if="editMode && editingMarker && currentEditingMarker"
+        class="marker-edit-panel"
+        :style="{ left: markerEditPosition.x + 'px', top: markerEditPosition.y + 'px' }"
+      >
+        <div class="marker-panel-header">
+          <span>Édition du marqueur</span>
+          <button class="panel-close" @click="closeMarkerEditPanel">✕</button>
+        </div>
+
+        <div class="marker-panel-body">
+          <!-- Icon selection -->
+          <div class="marker-section">
+            <label class="section-label">Icône</label>
+            <div class="marker-icons-grid">
+              <button
+                v-for="icon in MARKER_ICONS"
+                :key="icon"
+                class="marker-icon-btn"
+                :class="{ active: currentEditingMarker.icon === icon }"
+                @click="updateMarkerIcon(editingMarker!.assignmentId, editingMarker!.markerId, icon)"
+                :title="icon"
+              >
+                <svg viewBox="0 0 24 24" class="marker-icon-svg">
+                  <path :d="getMarkerIconPath(icon)" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Size selection -->
+          <div class="marker-section">
+            <label class="section-label">Taille</label>
+            <div class="marker-sizes-row">
+              <button
+                v-for="sizeOption in MARKER_SIZES"
+                :key="sizeOption.value"
+                class="marker-size-btn"
+                :class="{ active: getMarkerSize(currentEditingMarker) === sizeOption.value }"
+                @click="updateMarkerSize(editingMarker!.assignmentId, editingMarker!.markerId, sizeOption.value)"
+              >
+                {{ sizeOption.label }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Delete button -->
+        <button
+          class="marker-delete-btn"
+          @click="removeMarker(editingMarker!.assignmentId, editingMarker!.markerId); closeMarkerEditPanel()"
+        >
+          🗑️ Supprimer
+        </button>
+      </div>
+
+      <!-- Marker panel backdrop -->
+      <div
+        v-if="editMode && editingMarker"
+        class="panel-backdrop marker-backdrop"
+        @click="closeMarkerEditPanel"
+      ></div>
 
       <!-- Player edit panel -->
       <div
@@ -853,6 +1199,172 @@ function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number;
     stroke-dasharray: 0.5, 0.3;
     opacity: 0.4;
   }
+}
+
+// Phase-specific markers
+.phase-marker {
+  cursor: default;
+
+  &.editable {
+    cursor: move;
+  }
+
+  .marker-bg {
+    fill: var(--marker-color);
+    stroke: #fff;
+    stroke-width: 0.3;
+    opacity: 0.9;
+  }
+
+  .marker-icon-path {
+    fill: #fff;
+    pointer-events: none;
+  }
+
+  &:hover .marker-bg {
+    opacity: 1;
+    stroke-width: 0.5;
+  }
+
+  // Ghost markers
+  &.ghost {
+    .marker-bg {
+      opacity: 0.4;
+      stroke-dasharray: 0.5, 0.3;
+    }
+  }
+}
+
+
+// Marker edit panel
+.marker-edit-panel {
+  position: fixed;
+  z-index: 1001;
+  background: $color-bg-secondary;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  padding: $spacing-sm;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  min-width: 180px;
+  transform: translate(-50%, 10px);
+
+  .marker-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: $spacing-sm;
+    padding-bottom: $spacing-xs;
+    border-bottom: 1px solid $color-border;
+    font-size: $font-size-sm;
+    color: $color-text-primary;
+  }
+
+  .marker-panel-body {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
+
+  .marker-section {
+    .section-label {
+      display: block;
+      font-size: $font-size-xs;
+      color: $color-text-secondary;
+      margin-bottom: $spacing-xs;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+  }
+
+  .marker-icons-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px;
+  }
+
+  .marker-icon-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: $color-bg-tertiary;
+    border: 1px solid $color-border;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    transition: all 0.15s;
+    padding: 0;
+
+    &:hover {
+      background: $color-bg-primary;
+      border-color: $color-accent;
+    }
+
+    &.active {
+      background: $color-accent;
+      border-color: $color-accent;
+    }
+
+    .marker-icon-svg {
+      width: 16px;
+      height: 16px;
+      fill: $color-text-primary;
+    }
+  }
+
+  .marker-sizes-row {
+    display: flex;
+    gap: 4px;
+  }
+
+  .marker-size-btn {
+    flex: 1;
+    padding: $spacing-xs $spacing-sm;
+    background: $color-bg-tertiary;
+    border: 1px solid $color-border;
+    border-radius: $radius-sm;
+    color: $color-text-primary;
+    font-size: $font-size-xs;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+
+    &:hover {
+      background: $color-bg-primary;
+      border-color: $color-accent;
+    }
+
+    &.active {
+      background: $color-accent;
+      border-color: $color-accent;
+      color: #fff;
+    }
+  }
+
+  .marker-delete-btn {
+    width: 100%;
+    margin-top: $spacing-sm;
+    padding: $spacing-sm;
+    background: rgba($color-danger, 0.1);
+    border: 1px solid $color-danger;
+    border-radius: $radius-sm;
+    color: $color-danger;
+    font-size: $font-size-sm;
+    cursor: pointer;
+    transition: all 0.15s;
+
+    &:hover {
+      background: $color-danger;
+      color: #fff;
+    }
+  }
+}
+
+.marker-backdrop {
+  z-index: 1000;
 }
 
 .point-handle {
