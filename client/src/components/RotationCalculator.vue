@@ -1,10 +1,10 @@
 ﻿<script setup lang="ts">
 import { ref, computed } from 'vue';
-import { assignmentColors } from '@/config/config';
 import { getPlayerAssignments, getPlayerMainAssignment } from '@/services';
 import GamePlanTable from '@/components/common/GamePlanTable.vue';
 import PhaseSelector from '@/components/planner/PhaseSelector.vue';
 import type { MapConfig, Player, MatchGamePlan, GamePhase } from '@shared/types';
+import { getAssignmentColor } from "@/utils/colors";
 
 const props = withDefaults(
   defineProps<{
@@ -186,10 +186,6 @@ function getPlayerName(playerId: string): string {
 function getAssignmentName(mapId: string, assignmentId: number): string {
   const map = props.maps.find(m => m.id === mapId);
   return map?.assignments.find(p => p.id === assignmentId)?.name || `Assignment #${assignmentId}`;
-}
-
-function getAssignmentColor(assignmentId: number): string {
-  return assignmentColors[assignmentId] || '#888';
 }
 
 // Check if an assignment is the main role for a player on a specific map

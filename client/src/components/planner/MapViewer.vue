@@ -1,32 +1,14 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import type { MapConfig, Player, Point, Assignment, GamePhase, Zone, Marker, MarkerIcon } from '@/types';
-import { getZoneForPhase, MARKER_ICONS, MARKER_SIZES } from '@shared/types';
-import { assignmentColors } from '@/config/config';
-import { getPlayerAssignments, getPlayerMainAssignment } from '@/services';
+import { getZoneForPhase } from '@shared/types';
+import { getAssignmentColor } from '@/utils/colors';
+import { getMarkerIconPath } from '@/utils/markers';
+import { getPlayerMainAssignment } from '@/services';
 import { getZonePolygons } from '@/utils/zones';
+import MarkerEditPanel from '@/components/planner/MarkerEditPanel.vue';
+import PlayerEditPanel from '@/components/planner/PlayerEditPanel.vue';
 
-// SVG paths for marker icons (inline to work in SVG context)
-const MARKER_ICON_PATHS: Record<MarkerIcon, string> = {
-  'player': 'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z',
-  'position': 'M12 12m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0',
-  'eye': 'M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z',
-  'target': 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16zm0-14a6 6 0 1 0 0 12 6 6 0 0 0 0-12zm0 10a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm0-6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z',
-  'warning': 'M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z',
-  'star': 'M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z',
-  'arrow-up': 'M4 12l1.41 1.41L11 7.83V20h2V7.83l5.58 5.59L20 12l-8-8-8 8z',
-  'arrow-down': 'M20 12l-1.41-1.41L13 16.17V4h-2v12.17l-5.58-5.59L4 12l8 8 8-8z',
-  'arrow-left': 'M12 4l1.41 1.41L7.83 11H20v2H7.83l5.59 5.58L12 20l-8-8 8-8z',
-  'arrow-right': 'M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8-8-8z',
-  'wait': 'M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z',
-  'move': 'M13.49 5.48c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm-3.6 13.9l1-4.4 2.1 2v6h2v-7.5l-2.1-2 .6-3c1.3 1.5 3.3 2.5 5.5 2.5v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1l-5.2 2.2v4.7h2v-3.4l1.8-.7-1.6 8.1-4.9-1-.4 2 7 1.4z',
-  'group': 'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z',
-};
-
-// Get marker icon path
-function getMarkerIconPath(icon: MarkerIcon): string {
-  return MARKER_ICON_PATHS[icon] || MARKER_ICON_PATHS['position'];
-}
 
 const props = withDefaults(defineProps<{
   map: MapConfig;
@@ -68,8 +50,6 @@ const svgRef = ref<SVGSVGElement | null>(null);
 // Player editing panel state
 const editingAssignmentId = ref<number | null>(null);
 const editPanelPosition = ref({ x: 0, y: 0 });
-const editingAssignmentName_input = ref(false);
-const tempAssignmentName = ref('');
 
 // Reset floor when map changes
 watch(() => props.map.id, () => {
@@ -110,11 +90,6 @@ const ghostAssignments = computed(() => {
     .filter((p: Assignment) => p.floor !== undefined && p.floor !== currentFloor.value)
     .filter((p: Assignment) => props.activeAssignments.includes(p.id));
 });
-
-// Get assignment color
-function getAssignmentColor(assignmentId: number): string {
-  return assignmentColors[assignmentId] || '#888';
-}
 
 // Check if an assignment is active
 function isAssignmentActive(assignmentId: number): boolean {
@@ -575,42 +550,17 @@ function openPlayerEditPanel(event: MouseEvent, assignmentId: number) {
 // Close edit panel
 function closePlayerEditPanel() {
   editingAssignmentId.value = null;
-  editingAssignmentName_input.value = false;
 }
 
-// Start editing assignment name
-function startEditingPosteName() {
+// Handle assignment name update from panel
+function handleAssignmentNameUpdate(newName: string) {
   if (!editingAssignmentId.value) return;
-  const poste = props.map.assignments.find(p => p.id === editingAssignmentId.value);
-  tempAssignmentName.value = poste?.name || '';
-  editingAssignmentName_input.value = true;
-}
-
-// Save new assignment name
-function saveAssignmentName() {
-  if (!editingAssignmentId.value || !tempAssignmentName.value.trim()) {
-    editingAssignmentName_input.value = false;
-    return;
-  }
-
   const updatedMap = JSON.parse(JSON.stringify(props.map)) as MapConfig;
   const targetAssignment = updatedMap.assignments.find(p => p.id === editingAssignmentId.value);
   if (targetAssignment) {
-    targetAssignment.name = tempAssignmentName.value.trim();
+    targetAssignment.name = newName;
     emit('update:map', updatedMap);
   }
-  editingAssignmentName_input.value = false;
-}
-
-// Cancel name editing
-function cancelEditingAssignmentName() {
-  editingAssignmentName_input.value = false;
-}
-
-// Check if a player is associated to an assignment
-function isPlayerAssociatedToAssignment(playerId: string, assignmentId: number): boolean {
-  const playerAssignments = getPlayerAssignments(props.map, playerId);
-  return playerAssignments.includes(assignmentId);
 }
 
 // Toggle player-assignment association
@@ -639,10 +589,6 @@ function togglePlayerAssignmentAssociation(playerId: string, assignmentId: numbe
   emit('player-assignment-changed', playerId, assignmentId, associated);
 }
 
-// Check if an assignment is the main role for a player
-function isMainAssignment(playerId: string, assignmentId: number): boolean {
-  return getPlayerMainAssignment(props.map, playerId) === assignmentId;
-}
 
 // Toggle main assignment for a player
 function toggleMainAssignment(playerId: string, assignmentId: number) {
@@ -656,7 +602,7 @@ function toggleMainAssignment(playerId: string, assignmentId: number) {
 const editingPosteName = computed(() => {
   if (!editingAssignmentId.value) return '';
   const poste = props.map.assignments.find(p => p.id === editingAssignmentId.value);
-  return poste?.name || editingAssignmentId.value;
+  return poste?.name || String(editingAssignmentId.value);
 });
 
 // Generate SVG path from polygon points
@@ -904,140 +850,31 @@ defineExpose({
         </g>
       </svg>
 
-<!-- Marker edit panel -->
-      <div
+      <!-- Marker edit panel -->
+      <MarkerEditPanel
         v-if="editMode && editingMarker && currentEditingMarker"
-        class="marker-edit-panel"
-        :style="{ left: markerEditPosition.x + 'px', top: markerEditPosition.y + 'px' }"
-      >
-        <div class="marker-panel-header">
-          <span>Édition du marqueur</span>
-          <button class="panel-close" @click="closeMarkerEditPanel">✕</button>
-        </div>
-
-        <div class="marker-panel-body">
-          <!-- Icon selection -->
-          <div class="marker-section">
-            <label class="section-label">Icône</label>
-            <div class="marker-icons-grid">
-              <button
-                v-for="icon in MARKER_ICONS"
-                :key="icon"
-                class="marker-icon-btn"
-                :class="{ active: currentEditingMarker.icon === icon }"
-                @click="updateMarkerIcon(editingMarker!.assignmentId, editingMarker!.markerId, icon)"
-                :title="icon"
-              >
-                <svg viewBox="0 0 24 24" class="marker-icon-svg">
-                  <path :d="getMarkerIconPath(icon)" />
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          <!-- Size selection -->
-          <div class="marker-section">
-            <label class="section-label">Taille</label>
-            <div class="marker-sizes-row">
-              <button
-                v-for="sizeOption in MARKER_SIZES"
-                :key="sizeOption.value"
-                class="marker-size-btn"
-                :class="{ active: getMarkerSize(currentEditingMarker) === sizeOption.value }"
-                @click="updateMarkerSize(editingMarker!.assignmentId, editingMarker!.markerId, sizeOption.value)"
-              >
-                {{ sizeOption.label }}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Delete button -->
-        <button
-          class="marker-delete-btn"
-          @click="removeMarker(editingMarker!.assignmentId, editingMarker!.markerId); closeMarkerEditPanel()"
-        >
-          🗑️ Supprimer
-        </button>
-      </div>
-
-      <!-- Marker panel backdrop -->
-      <div
-        v-if="editMode && editingMarker"
-        class="panel-backdrop marker-backdrop"
-        @click="closeMarkerEditPanel"
-      ></div>
+        :marker="currentEditingMarker"
+        :position="markerEditPosition"
+        @update:icon="(icon) => updateMarkerIcon(editingMarker!.assignmentId, editingMarker!.markerId, icon)"
+        @update:size="(size) => updateMarkerSize(editingMarker!.assignmentId, editingMarker!.markerId, size)"
+        @delete="removeMarker(editingMarker!.assignmentId, editingMarker!.markerId); closeMarkerEditPanel()"
+        @close="closeMarkerEditPanel"
+      />
 
       <!-- Player edit panel -->
-      <div
+      <PlayerEditPanel
         v-if="editMode && editingAssignmentId"
-        class="player-edit-panel"
-        :style="{ left: editPanelPosition.x + 'px', top: editPanelPosition.y + 'px' }"
-      >
-        <div class="panel-header">
-          <!-- Name display mode (clickable to edit) -->
-          <span
-            v-if="!editingAssignmentName_input"
-            class="panel-title editable"
-            :style="{ color: getAssignmentColor(editingAssignmentId) }"
-            @click="startEditingPosteName"
-            title="Click to edit name"
-          >
-            {{ editingPosteName }}
-            <span class="edit-hint">✎</span>
-          </span>
-          <!-- Name edit mode -->
-          <div v-else class="name-edit-wrapper">
-            <input
-              v-model="tempAssignmentName"
-              class="name-input"
-              :style="{ color: getAssignmentColor(editingAssignmentId) }"
-              @keyup.enter="saveAssignmentName"
-              @keyup.escape="cancelEditingAssignmentName"
-              ref="nameInputRef"
-              autofocus
-            />
-            <button class="name-save" @click="saveAssignmentName">✓</button>
-            <button class="name-cancel" @click="cancelEditingAssignmentName">✕</button>
-          </div>
-          <button class="panel-close" @click="closePlayerEditPanel">✕</button>
-        </div>
-        <div class="panel-content">
-          <div
-            v-for="player in players"
-            :key="player.id"
-            class="player-row"
-          >
-            <label
-              class="player-checkbox"
-              :class="{ checked: isPlayerAssociatedToAssignment(player.id, editingAssignmentId) }"
-            >
-              <input
-                type="checkbox"
-                :checked="isPlayerAssociatedToAssignment(player.id, editingAssignmentId)"
-                @change="togglePlayerAssignmentAssociation(player.id, editingAssignmentId!)"
-              />
-              {{ player.name }}
-            </label>
-            <button
-              v-if="isPlayerAssociatedToAssignment(player.id, editingAssignmentId)"
-              class="main-role-btn"
-              :class="{ active: isMainAssignment(player.id, editingAssignmentId!) }"
-              @click="toggleMainAssignment(player.id, editingAssignmentId!)"
-              title="Définir comme rôle principal"
-            >
-              {{ isMainAssignment(player.id, editingAssignmentId!) ? '★' : '☆' }}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Overlay to close panel when clicking outside -->
-      <div
-        v-if="editMode && editingAssignmentId"
-        class="panel-backdrop"
-        @click="closePlayerEditPanel"
-      ></div>
+        :assignment-id="editingAssignmentId"
+        :assignment-name="editingPosteName"
+        :assignment-color="getAssignmentColor(editingAssignmentId)"
+        :position="editPanelPosition"
+        :players="players"
+        :map="map"
+        @toggle-player="(playerId) => togglePlayerAssignmentAssociation(playerId, editingAssignmentId!)"
+        @toggle-main="(playerId) => toggleMainAssignment(playerId, editingAssignmentId!)"
+        @update-name="handleAssignmentNameUpdate"
+        @close="closePlayerEditPanel"
+      />
     </div>
   </div>
 </template>
@@ -1236,137 +1073,6 @@ defineExpose({
 }
 
 
-// Marker edit panel
-.marker-edit-panel {
-  position: fixed;
-  z-index: 1001;
-  background: $color-bg-secondary;
-  border: 1px solid $color-border;
-  border-radius: $radius-md;
-  padding: $spacing-sm;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-  min-width: 180px;
-  transform: translate(-50%, 10px);
-
-  .marker-panel-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: $spacing-sm;
-    padding-bottom: $spacing-xs;
-    border-bottom: 1px solid $color-border;
-    font-size: $font-size-sm;
-    color: $color-text-primary;
-  }
-
-  .marker-panel-body {
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-sm;
-  }
-
-  .marker-section {
-    .section-label {
-      display: block;
-      font-size: $font-size-xs;
-      color: $color-text-secondary;
-      margin-bottom: $spacing-xs;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-  }
-
-  .marker-icons-grid {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 4px;
-  }
-
-  .marker-icon-btn {
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: $color-bg-tertiary;
-    border: 1px solid $color-border;
-    border-radius: $radius-sm;
-    cursor: pointer;
-    transition: all 0.15s;
-    padding: 0;
-
-    &:hover {
-      background: $color-bg-primary;
-      border-color: $color-accent;
-    }
-
-    &.active {
-      background: $color-accent;
-      border-color: $color-accent;
-    }
-
-    .marker-icon-svg {
-      width: 16px;
-      height: 16px;
-      fill: $color-text-primary;
-    }
-  }
-
-  .marker-sizes-row {
-    display: flex;
-    gap: 4px;
-  }
-
-  .marker-size-btn {
-    flex: 1;
-    padding: $spacing-xs $spacing-sm;
-    background: $color-bg-tertiary;
-    border: 1px solid $color-border;
-    border-radius: $radius-sm;
-    color: $color-text-primary;
-    font-size: $font-size-xs;
-    cursor: pointer;
-    transition: all 0.15s;
-    white-space: nowrap;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.15s;
-
-    &:hover {
-      background: $color-bg-primary;
-      border-color: $color-accent;
-    }
-
-    &.active {
-      background: $color-accent;
-      border-color: $color-accent;
-      color: #fff;
-    }
-  }
-
-  .marker-delete-btn {
-    width: 100%;
-    margin-top: $spacing-sm;
-    padding: $spacing-sm;
-    background: rgba($color-danger, 0.1);
-    border: 1px solid $color-danger;
-    border-radius: $radius-sm;
-    color: $color-danger;
-    font-size: $font-size-sm;
-    cursor: pointer;
-    transition: all 0.15s;
-
-    &:hover {
-      background: $color-danger;
-      color: #fff;
-    }
-  }
-}
-
-.marker-backdrop {
-  z-index: 1000;
-}
-
 .point-handle {
   fill: #fff;
   stroke: $color-border;
@@ -1437,220 +1143,5 @@ defineExpose({
   }
 }
 
-.panel-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 99;
-}
-
-.player-edit-panel {
-  position: fixed;
-  z-index: 100;
-  background: $color-bg-secondary;
-  border: 1px solid #444;
-  border-radius: $radius-md;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-  min-width: 150px;
-  transform: translate(-50%, 10px);
-
-  @include mobile-lg {
-    min-width: 130px;
-    transform: translate(-50%, 5px);
-  }
-
-  @include mobile {
-    min-width: 120px;
-  }
-}
-
-.panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: $spacing-sm 0.75rem;
-  border-bottom: 1px solid $color-border;
-
-  @include mobile-lg {
-    padding: 0.4rem 0.6rem;
-  }
-
-  @include mobile {
-    padding: 0.3rem $spacing-sm;
-  }
-}
-
-.panel-title {
-  font-weight: 600;
-  font-size: 0.9rem;
-
-  &.editable {
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-
-    &:hover {
-      opacity: 0.8;
-    }
-  }
-
-  .edit-hint {
-    font-size: 0.7rem;
-    opacity: 0.5;
-  }
-
-  &.editable:hover .edit-hint {
-    opacity: 1;
-  }
-
-  @include mobile-lg {
-    font-size: 0.8rem;
-  }
-
-  @include mobile {
-    font-size: 0.75rem;
-  }
-}
-
-.name-edit-wrapper {
-  display: flex;
-  align-items: center;
-  gap: $spacing-xs;
-}
-
-.name-input {
-  background: #252540;
-  border: 1px solid #444;
-  border-radius: 3px;
-  padding: 0.2rem 0.4rem;
-  font-size: 0.85rem;
-  font-weight: 600;
-  width: 100px;
-  outline: none;
-
-  &:focus {
-    border-color: #666;
-  }
-}
-
-.name-save,
-.name-cancel {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0.1rem 0.3rem;
-  font-size: 0.8rem;
-  border-radius: 3px;
-}
-
-.name-save {
-  color: $color-success;
-
-  &:hover {
-    background: rgba($color-success, 0.2);
-  }
-}
-
-.name-cancel {
-  color: $color-danger;
-
-  &:hover {
-    background: rgba($color-danger, 0.2);
-  }
-}
-
-.panel-close {
-  background: none;
-  border: none;
-  color: $color-text-secondary;
-  cursor: pointer;
-  font-size: 1rem;
-  padding: 0;
-  line-height: 1;
-
-  &:hover {
-    color: #fff;
-  }
-}
-
-.panel-content {
-  padding: $spacing-sm;
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-xs;
-
-  @include mobile-lg {
-    padding: 0.4rem;
-  }
-}
-
-.player-row {
-  display: flex;
-  align-items: center;
-  gap: $spacing-xs;
-}
-
-.player-checkbox {
-  display: flex;
-  align-items: center;
-  gap: $spacing-sm;
-  padding: 0.4rem $spacing-sm;
-  border-radius: $radius-sm;
-  cursor: pointer;
-  color: $color-text-secondary;
-  font-size: 0.85rem;
-  flex: 1;
-
-  &:hover {
-    background: $color-bg-tertiary;
-    color: #ccc;
-  }
-
-  &.checked {
-    color: #fff;
-    background: $color-bg-tertiary;
-  }
-
-  input {
-    accent-color: #4ecdc4;
-    cursor: pointer;
-  }
-
-  @include mobile-lg {
-    padding: 0.35rem 0.4rem;
-    font-size: 0.8rem;
-  }
-
-  @include mobile {
-    padding: 0.3rem;
-    font-size: 0.75rem;
-    gap: 0.35rem;
-  }
-}
-
-.main-role-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 1.1rem;
-  padding: 0.2rem;
-  color: $color-text-secondary;
-  opacity: 0.5;
-  transition: all 0.15s;
-
-  &:hover {
-    opacity: 1;
-    transform: scale(1.2);
-    color: $color-star;
-  }
-
-  &.active {
-    opacity: 1;
-    color: $color-star;
-  }
-}
 </style>
 

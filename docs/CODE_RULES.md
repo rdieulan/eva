@@ -32,9 +32,14 @@ Ce document définit les conventions et règles à respecter pour le développem
 ```
 client/src/
 ├── api/           # Appels API (fetch)
-├── components/    # Composants Vue réutilisables
+├── components/    # Composants Vue (.vue uniquement)
+│   ├── calendar/  # Composants du calendrier
+│   ├── common/    # Composants réutilisables (Modal, Drawer, etc.)
+│   ├── layout/    # Composants de layout (TopBar, etc.)
+│   └── planner/   # Composants du planificateur
 ├── composables/   # Logique réactive réutilisable (useAuth, etc.)
-├── config/        # Configuration client (couleurs, constantes)
+├── config/        # Re-exports pour rétrocompatibilité
+├── constants/     # Données constantes (couleurs, paths SVG, etc.)
 ├── pages/         # Pages/vues principales
 ├── services/      # Logique métier pure (sans Vue)
 ├── styles/        # SCSS partagés
@@ -184,6 +189,50 @@ import { ref, computed } from 'vue';
 import type { MapConfig, Assignment } from '@shared/types';
 import { useAuth } from '@/composables/useAuth';
 import { getZonePolygons } from '@/utils/zones';
+```
+
+---
+
+## 🔄 Composables
+
+### Définition
+Les composables sont des fonctions réutilisables qui encapsulent de la logique réactive Vue.
+
+### Nommage
+- Préfixe `use` : `useAuth`, `useCalendarData`, `useMapZones`
+- Fichier : `client/src/composables/useNomDuComposable.ts`
+
+### Quand extraire un composable
+- Logique réutilisable entre plusieurs composants
+- Logique complexe (> 50 lignes) qui alourdit un composant
+- État partagé entre composants
+
+### Structure type
+```typescript
+// useExemple.ts
+import { ref, computed } from 'vue';
+
+export function useExemple(options?: ExempleOptions) {
+  // State
+  const data = ref<Data | null>(null);
+  const isLoading = ref(false);
+  
+  // Computed
+  const isEmpty = computed(() => !data.value);
+  
+  // Methods
+  async function loadData() { ... }
+  function resetData() { ... }
+  
+  // Return public API
+  return {
+    data,
+    isLoading,
+    isEmpty,
+    loadData,
+    resetData,
+  };
+}
 ```
 
 ---

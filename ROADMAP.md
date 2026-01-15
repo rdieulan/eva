@@ -2,41 +2,69 @@
 
 ## 📋 Prochaines étapes
 
-### 🔧 Refactorisation & Nettoyage ✅
+### 🔧 Découpage des gros composants
 
-#### Étape 1 : Correction des incohérences de nommage camelCase ✅
-- [x] `visibleplayerId` → `visiblePlayerId` dans calendar.types.ts
-- [x] Mise à jour dans RotationCalculator.vue
-- [x] Mise à jour dans EventFormModal.vue
-- [x] Mise à jour dans EventViewerModal.vue
-- [x] Mise à jour dans GamePlanTable.vue
-- [x] Mise à jour dans les fichiers de tests
+**Contexte** : Selon CODE_RULES.md, les composants > 500 lignes doivent être refactorisés.
 
-#### Étape 2 : Séparation types/fonctions dans shared/ ✅
-- [x] Créer `shared/utils/map.utils.ts` pour les fonctions helper
-- [x] Déplacer `getZoneForPhase`, `isLegacyAssignment`, `migrateAssignmentToPhases`, `migrateMapConfigToPhases` depuis map.types.ts
-- [x] Mettre à jour les imports dans tout le projet (réexport depuis shared/types/index.ts)
-- [x] map.types.ts ne contient QUE des types/interfaces/constantes
+#### État actuel
+| Fichier | Avant | Après | Statut |
+|---------|-------|-------|--------|
+| MapViewer.vue | 1405 | 962 | ✅ -31% |
+| RotationCalculator.vue | 989 | - | En attente |
+| CalendarPage.vue | 826 | - | En attente |
+| PlannerPage.vue | 684 | - | En attente |
 
-#### Étape 3 : Vérification des conventions de langue ✅
-- [x] Messages utilisateur final → restent en français (balance.service.ts OK)
-- [x] Code, commentaires, variables, fonctions, logs de debug → anglais
+---
 
-#### Étape 4 : Nettoyage du dossier client/src/types ✅
-- [x] client/src/types/index.ts ne fait que réexporter depuis @shared/types
-- [x] Aucun type dupliqué
+### Phase 2 : MapViewer.vue ✅
 
-#### Étape 5 : Vérification et tests ✅
-- [x] Lancer tous les tests (137 tests passent)
-- [x] Vérifier le build (OK)
-- [x] Aucune erreur
+**Fichiers réorganisés dans `client/src/components/planner/` :**
+- `MapViewer.vue` - composant principal de la carte
+- `MapList.vue` - liste des cartes
+- `MarkerEditPanel.vue` - panel d'édition de marqueur
+- `PlayerEditPanel.vue` - panel d'édition joueur/poste
+- `Toolbar.vue` - barre d'outils (ex PlannerToolbar)
+- `Sidebar.vue` - panneau latéral (ex PlannerSidebar)
+- `PhaseSelector.vue` - sélecteur de phase
+- `PlanSelector.vue` - sélecteur de plan
+- `markerIcons.ts` - constantes SVG paths
 
-#### (Optionnel - Plus tard) Découpage des gros composants
-- [ ] MapViewer.vue (1405 lignes)
-- [ ] RotationCalculator.vue (989 lignes)
-- [ ] CalendarPage.vue (826 lignes)
-- [ ] PlannerPage.vue (684 lignes)
-- Note: Découpage complexe et risqué, à faire dans une itération dédiée
+**Résultat : 1405 → 962 lignes (-443 lignes, -31%)**
+
+---
+
+### Phase 3 : RotationCalculator.vue (à faire)
+- [ ] Créer `client/src/composables/useRotationCalculator.ts` - algorithme de calcul
+- [ ] Refactoriser RotationCalculator.vue
+- [ ] Tests et validation
+
+**Résultat attendu : 989 → X lignes**
+
+---
+
+### Phase 4 : CalendarPage.vue (à faire)
+- [ ] Créer `client/src/composables/useCalendarData.ts`
+- [ ] Créer `client/src/composables/useCalendarEvents.ts`
+- [ ] Refactoriser CalendarPage.vue
+- [ ] Tests et validation
+
+**Résultat attendu : 826 → X lignes**
+
+---
+
+### Phase 5 : PlannerPage.vue (à faire)
+- [ ] Créer `client/src/composables/usePlannerState.ts`
+- [ ] Refactoriser PlannerPage.vue
+- [ ] Tests et validation
+
+**Résultat attendu : 684 → X lignes**
+
+---
+
+### Phase 6 : Validation finale
+- [ ] Tous les tests passent
+- [ ] Build OK
+- [ ] Test manuel complet
 
 ---
 

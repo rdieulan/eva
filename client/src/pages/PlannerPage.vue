@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
-import MapViewer from '@/components/MapViewer.vue';
-import PlannerToolbar from '@/components/planner/PlannerToolbar.vue';
-import PlannerSidebar from '@/components/planner/PlannerSidebar.vue';
+import MapViewer from '@/components/planner/MapViewer.vue';
+import Toolbar from '@/components/planner/Toolbar.vue';
+import Sidebar from '@/components/planner/Sidebar.vue';
 import Drawer from '@/components/common/Drawer.vue';
 import SvgIcon from '@/components/common/SvgIcon.vue';
 import { fetchAllMaps, fetchPlayers, fetchGamePlan, createGamePlan, deleteGamePlan, saveGamePlan } from '@/api';
 import { getPlayerAssignments } from '@/services';
-import { getAssignmentColor } from '@/config/config';
+import { getAssignmentColor } from '@/utils/colors';
 import { useAuth } from '@/composables/useAuth';
 import { DEFAULT_GAME_PLAN_NOTES, DEFAULT_ROLE_PHASE_NOTES, PHASE_LABELS } from '@shared/types';
 import type { MapConfig, Player, GamePhase, GamePlanNotes, GamePlanSummary } from '@/types';
@@ -459,7 +459,7 @@ function cancelEdit() {
   <div class="planner-page">
     <!-- Toolbar injected into TopBar dynamic section -->
     <Teleport to="#topbar-dynamic-content">
-      <PlannerToolbar
+      <Toolbar
         :players="players"
         :selectedPlayerId="selectedPlayerId"
         :map="currentMap"
@@ -489,7 +489,7 @@ function cancelEdit() {
 
     <template v-else>
       <div class="main-content">
-        <PlannerSidebar
+        <Sidebar
           :maps="maps"
           :selectedMapId="selectedMapId"
           :editMode="editMode"

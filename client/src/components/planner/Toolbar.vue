@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { assignmentColors } from '@/config/config';
+import { getAssignmentColor } from '@/utils/colors';
 import { checkMapBalance, getPlayerAssignments, getPlayerMainAssignment, getAssignmentPlayers } from '@/services';
 import type { MapConfig, Player, GamePhase, GamePlanSummary } from '@/types';
 import RotationCalculator from '@/components/RotationCalculator.vue';
@@ -96,10 +96,6 @@ function toggleAssignment(assignmentId: number) {
   emit('toggle-assignment', assignmentId);
 }
 
-// Get assignment color
-function getAssignmentColor(assignmentId: number): string {
-  return assignmentColors[assignmentId] || '#888';
-}
 
 // Check if a player is highlighted (associated to selected assignment)
 function isPlayerHighlighted(playerId: string): boolean {
