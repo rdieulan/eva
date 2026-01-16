@@ -10,13 +10,13 @@
 | Fichier | Avant | Après | Statut |
 |---------|-------|-------|--------|
 | MapViewer.vue | 1405 | 962 | ✅ -31% |
-| RotationCalculator.vue | 989 | - | En attente |
+| RotationCalculator.vue | 1154 | 288 | ✅ -75% |
 | CalendarPage.vue | 826 | - | En attente |
 | PlannerPage.vue | 684 | - | En attente |
 
 ---
 
-### Phase 2 : MapViewer.vue ✅
+### Phase 2 : MapViewer.vue ✅ TERMINÉE
 
 **Fichiers réorganisés dans `client/src/components/planner/` :**
 - `MapViewer.vue` - composant principal de la carte
@@ -27,18 +27,33 @@
 - `Sidebar.vue` - panneau latéral (ex PlannerSidebar)
 - `PhaseSelector.vue` - sélecteur de phase
 - `PlanSelector.vue` - sélecteur de plan
-- `markerIcons.ts` - constantes SVG paths
+
+**Séparation des constantes/utilitaires :**
+- `client/src/constants/markers.ts` - MARKER_ICON_PATHS, DEFAULT_MARKER_ICON
+- `client/src/utils/markers.ts` - getMarkerIconPath(), getMarkerSize()
+- `client/src/constants/colors.ts` - ASSIGNMENT_COLORS
+- `client/src/utils/colors.ts` - getAssignmentColor()
+- `client/src/constants/phases.ts` - PHASE_DISPLAY_DATA (nouveau)
+- `client/src/utils/calendar.ts` - formatDateStr(), isPastDateStr() (centralisés)
+- `client/src/utils/players.ts` - getPlayerStatusClass(), getNextAvailabilityStatus() (corrigés)
 
 **Résultat : 1405 → 962 lignes (-443 lignes, -31%)**
+**Tests : 137/137 ✅ | Build : OK ✅**
 
 ---
 
-### Phase 3 : RotationCalculator.vue (à faire)
-- [ ] Créer `client/src/composables/useRotationCalculator.ts` - algorithme de calcul
-- [ ] Refactoriser RotationCalculator.vue
-- [ ] Tests et validation
+### Phase 3 : RotationCalculator.vue ✅ TERMINÉE
 
-**Résultat attendu : 989 → X lignes**
+**Fichiers créés :**
+- `client/src/composables/useRotationCalculator.ts` - algorithme de calcul + logique métier (~380 lignes)
+- `client/src/components/common/RotationResults.vue` - affichage des résultats (~190 lignes)
+- `client/src/components/common/RotationExport.vue` - section export (~150 lignes)
+
+**Composant refactorisé :**
+- `RotationCalculator.vue` - composant principal allégé (288 lignes)
+
+**Résultat : 1154 → 288 lignes (-866 lignes, -75%)**
+**Tests : 137/137 ✅ | Build : OK ✅**
 
 ---
 

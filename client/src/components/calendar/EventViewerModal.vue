@@ -4,6 +4,7 @@ import Modal from '@/components/common/Modal.vue';
 import GamePlanTable from '@/components/common/GamePlanTable.vue';
 import type { CalendarEvent } from '@shared/types';
 import type { Header } from '@/components/common/GamePlanTable.vue';
+import { getEventTypeLabel as getEventTypeLabelUtil } from '@/utils/calendar';
 
 const props = defineProps<{
   events: CalendarEvent[];
@@ -56,9 +57,10 @@ function formatDate(dateStr: string): string {
   });
 }
 
-// Get event type label
+// Get event type label (with emoji)
 function getEventTypeLabel(type: string): string {
-  return type === 'MATCH' ? '⚔️ Match' : '📅 Événement';
+  const baseLabel = getEventTypeLabelUtil(type);
+  return type === 'MATCH' ? `⚔️ ${baseLabel}` : `📅 ${baseLabel}`;
 }
 
 // Game plan headers for table display - built from gamePlan data

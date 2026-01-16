@@ -3,9 +3,9 @@ import { ref, computed, watch } from 'vue';
 import type { MapConfig, Player, Point, Assignment, GamePhase, Zone, Marker, MarkerIcon } from '@/types';
 import { getZoneForPhase } from '@shared/types';
 import { getAssignmentColor } from '@/utils/colors';
-import { getMarkerIconPath } from '@/utils/markers';
-import { getPlayerMainAssignment } from '@/services';
-import { getZonePolygons } from '@/utils/zones';
+import { getMarkerIconPath, getMarkerSize } from '@/utils/markers';
+import { getPlayerMainAssignment } from '@/utils/balance';
+import { getZonePolygons, getPolygonPath } from '@/utils/zones';
 import MarkerEditPanel from '@/components/planner/MarkerEditPanel.vue';
 import PlayerEditPanel from '@/components/planner/PlayerEditPanel.vue';
 
@@ -137,10 +137,6 @@ function getPhaseMarkers(assignment: Assignment): Marker[] {
   return assignment.markersByPhase[props.currentPhase] || [];
 }
 
-// Get marker size (with default)
-function getMarkerSize(marker: Marker): number {
-  return marker.size ?? 1;
-}
 
 
 // Add a new marker for the current phase
@@ -605,11 +601,6 @@ const editingPosteName = computed(() => {
   return poste?.name || String(editingAssignmentId.value);
 });
 
-// Generate SVG path from polygon points
-function getPolygonPathFromPoints(points: Point[]): string {
-  if (points.length < 3) return '';
-  return points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ') + ' Z';
-}
 
 // Generate edge data for a polygon (to add points)
 function getPolygonEdges(points: Point[]): { x1: number; y1: number; x2: number; y2: number; midX: number; midY: number }[] {
@@ -745,7 +736,7 @@ defineExpose({
             :key="'polygon-' + polygonIndex"
           >
             <path
-              :d="getPolygonPathFromPoints(polygon)"
+              :d="getPolygonPath(polygon)"
               class="zone active"
               :class="{ editable: editMode }"
               :style="{ '--zone-color': getAssignmentColor(assignment.id) }"
@@ -793,7 +784,7 @@ defineExpose({
           <path
             v-for="(polygon, polygonIndex) in getPhaseZonePolygons(assignment)"
             :key="'ghost-polygon-' + polygonIndex"
-            :d="getPolygonPathFromPoints(polygon)"
+            :d="getPolygonPath(polygon)"
             class="zone ghost"
             :style="{ '--zone-color': getAssignmentColor(assignment.id) }"
           />

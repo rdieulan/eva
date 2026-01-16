@@ -7,6 +7,7 @@ import EventViewerModal from '@/components/calendar/EventViewerModal.vue';
 import SvgIcon from '@/components/common/SvgIcon.vue';
 import { useAuth } from '@/composables/useAuth';
 import { fetchAllMaps, fetchPlayers } from '@/api';
+import { getMonday } from '@/utils/calendar';
 import {
   fetchMonthData,
   setAvailability as setAvailabilityApi,
@@ -205,15 +206,6 @@ function goToNextMonth() {
   }
 }
 
-// Get Monday of the week for a given date
-function getMonday(date: Date): Date {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust for Sunday
-  d.setDate(diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
 
 // Week navigation
 function goToPrevWeek() {

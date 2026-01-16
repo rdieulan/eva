@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Marker, MarkerIcon } from '@shared/types';
 import { MARKER_ICONS, MARKER_SIZES } from '@shared/types';
-import { getMarkerIconPath } from '@/utils/markers';
+import { getMarkerIconPath, getMarkerSize } from '@/utils/markers';
 
 const props = defineProps<{
   marker: Marker;
@@ -14,10 +14,6 @@ const emit = defineEmits<{
   'delete': [];
   'close': [];
 }>();
-
-function getMarkerSize(): number {
-  return props.marker.size ?? 1;
-}
 </script>
 
 <template>
@@ -55,7 +51,7 @@ function getMarkerSize(): number {
             v-for="sizeOption in MARKER_SIZES"
             :key="sizeOption.value"
             class="marker-size-btn"
-            :class="{ active: getMarkerSize() === sizeOption.value }"
+            :class="{ active: getMarkerSize(marker) === sizeOption.value }"
             @click="emit('update:size', sizeOption.value)"
           >
             {{ sizeOption.label }}

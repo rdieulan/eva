@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import DayCell from './DayCell.vue';
+import { formatDateStr, isPastDateStr } from '@/utils/calendar';
 import type { DayData, CalendarEvent, AvailabilityStatus } from '@shared/types';
 
 const props = defineProps<{
@@ -18,22 +19,8 @@ const emit = defineEmits<{
   'open-create-event': [date: string];
 }>();
 
-// Format date to YYYY-MM-DD string
-function formatDateStr(date: Date): string {
-  const year = date.getFullYear();
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const day = date.getDate().toString().padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-
 // Today's date string for comparison
 const todayStr = computed(() => formatDateStr(new Date()));
-
-// Check if a date is in the past (before today)
-function isPastDate(dateStr: string): boolean {
-  return dateStr < todayStr.value;
-}
 
 // Generate calendar grid (6 weeks x 7 days)
 const calendarGrid = computed(() => {
@@ -69,7 +56,7 @@ const calendarGrid = computed(() => {
       dayNumber: day,
       isCurrentMonth: false,
       isToday: dateStr === todayStr.value,
-      isPast: isPastDate(dateStr),
+      isPast: isPastDateStr(dateStr),
       data: null,
     });
   }
@@ -83,7 +70,7 @@ const calendarGrid = computed(() => {
       dayNumber: day,
       isCurrentMonth: true,
       isToday: dateStr === todayStr.value,
-      isPast: isPastDate(dateStr),
+      isPast: isPastDateStr(dateStr),
       data: props.days[dateStr] ?? null,
     });
   }
@@ -98,7 +85,7 @@ const calendarGrid = computed(() => {
       dayNumber: day,
       isCurrentMonth: false,
       isToday: dateStr === todayStr.value,
-      isPast: isPastDate(dateStr),
+      isPast: isPastDateStr(dateStr),
       data: null,
     });
   }

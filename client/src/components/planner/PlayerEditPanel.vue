@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import type { Player, MapConfig } from '@shared/types';
-import { getPlayerAssignments, getPlayerMainAssignment } from '@/services';
+import { getPlayerAssignments, getPlayerMainAssignment } from '@/utils/balance';
 
 const props = defineProps<{
   assignmentId: number;

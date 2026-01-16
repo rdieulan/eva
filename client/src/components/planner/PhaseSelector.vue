@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { GamePhase } from '@/types';
-import { PHASE_LABELS } from '@shared/types';
+import { PHASE_LABELS, GAME_PHASES } from '@shared/types';
+import { PHASE_DISPLAY_DATA } from '@/constants';
 import SvgIcon from '@/components/common/SvgIcon.vue';
 
 const props = withDefaults(defineProps<{
@@ -23,11 +24,12 @@ interface PhaseOption {
   color: string;
 }
 
-const phases: PhaseOption[] = [
-  { value: 'START', label: PHASE_LABELS.START, icon: 'flag', color: '#4ade80' },
-  { value: 'ATTACK', label: PHASE_LABELS.ATTACK, icon: 'sword', color: '#ff6b6b' },
-  { value: 'DEFENSE', label: PHASE_LABELS.DEFENSE, icon: 'shield', color: '#60a5fa' },
-];
+const phases: PhaseOption[] = GAME_PHASES.map(phase => ({
+  value: phase,
+  label: PHASE_LABELS[phase],
+  icon: PHASE_DISPLAY_DATA[phase].icon,
+  color: PHASE_DISPLAY_DATA[phase].color,
+}));
 
 function selectPhase(phase: GamePhase) {
   if (!props.disabled) {

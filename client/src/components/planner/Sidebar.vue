@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { MapConfig } from '@/types';
-import { checkMapBalance } from '@/services';
+import { checkMapBalance } from '@/utils/balance';
 
 const props = defineProps<{
   maps: MapConfig[];

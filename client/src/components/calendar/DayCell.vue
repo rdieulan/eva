@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { AvailabilityStatus, PlayerAvailability, CalendarEvent } from '@shared/types';
+import { getPlayerInitials, getPlayerStatusClass as getPlayerStatusClassUtil } from '@/utils/players';
+import { getEventTypeClass } from '@/utils/calendar';
 
 interface Props {
   date: string; // YYYY-MM-DD
@@ -45,27 +47,19 @@ const cellStatusClass = computed(() => {
   return 'status-unknown';
 });
 
-// Get player avatar color based on their availability
+// Get player avatar color based on their availability (wrapper for template)
 function getPlayerStatusClass(status: AvailabilityStatus | null): string {
-  if (status === 'AVAILABLE') return 'player-available';
-  if (status === 'CONDITIONAL') return 'player-conditional';
-  if (status === 'UNAVAILABLE') return 'player-unavailable';
+  const baseClass = getPlayerStatusClassUtil(status);
+  // Map to component-specific class names
+  if (baseClass === 'status-available') return 'player-available';
+  if (baseClass === 'status-maybe') return 'player-conditional';
+  if (baseClass === 'status-unavailable') return 'player-unavailable';
   return 'player-unknown';
 }
 
-// Get initials from player name
+// Get initials from player name (wrapper for template)
 function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .map(word => word[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
-}
-
-// Event type to color class
-function getEventTypeClass(type: string): string {
-  return type === 'MATCH' ? 'event-match' : 'event-event';
+  return getPlayerInitials(name);
 }
 
 // Click on cell

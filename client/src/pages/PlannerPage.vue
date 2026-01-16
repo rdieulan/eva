@@ -6,8 +6,9 @@ import Sidebar from '@/components/planner/Sidebar.vue';
 import Drawer from '@/components/common/Drawer.vue';
 import SvgIcon from '@/components/common/SvgIcon.vue';
 import { fetchAllMaps, fetchPlayers, fetchGamePlan, createGamePlan, deleteGamePlan, saveGamePlan } from '@/api';
-import { getPlayerAssignments } from '@/services';
+import { getPlayerAssignments } from '@/utils/balance';
 import { getAssignmentColor } from '@/utils/colors';
+import { PHASE_DISPLAY_DATA } from '@/constants';
 import { useAuth } from '@/composables/useAuth';
 import { DEFAULT_GAME_PLAN_NOTES, DEFAULT_ROLE_PHASE_NOTES, PHASE_LABELS } from '@shared/types';
 import type { MapConfig, Player, GamePhase, GamePlanNotes, GamePlanSummary } from '@/types';
@@ -108,19 +109,8 @@ watch([currentNotes, currentPhase, selectedAssignmentId], ([notes, phase, assign
 // Current phase label
 const currentPhaseLabel = computed(() => PHASE_LABELS[currentPhase.value]);
 
-// Phase display data (icon and color)
-interface PhaseData {
-  icon: string;
-  color: string;
-}
-
-const PHASE_DATA: Record<GamePhase, PhaseData> = {
-  START: { icon: 'flag', color: '#4ade80' },
-  ATTACK: { icon: 'sword', color: '#ff6b6b' },
-  DEFENSE: { icon: 'shield', color: '#60a5fa' },
-};
-
-const currentPhaseData = computed(() => PHASE_DATA[currentPhase.value]);
+// Phase display data (icon and color) - using centralized constants
+const currentPhaseData = computed(() => PHASE_DISPLAY_DATA[currentPhase.value]);
 
 // Selected assignment color
 const selectedAssignmentColor = computed(() => {

@@ -1,4 +1,4 @@
-// Balance validation service
+// Balance validation utilities
 // Checks if a map configuration has a balanced roster
 
 import type { MapConfig } from '@shared/types';
@@ -128,3 +128,16 @@ export function checkMapBalance(map: MapConfig): BalanceCheckResult {
   };
 }
 
+/**
+ * Get the name of an assignment on a map
+ * @param maps - Array of maps to search in
+ * @param mapId - The map ID
+ * @param assignmentId - The assignment ID
+ * @returns The assignment name or a fallback string
+ */
+export function getAssignmentName(maps: MapConfig[], mapId: string, assignmentId: number): string {
+  const map = maps.find(m => m.id === mapId);
+  if (!map) return `Assignment #${assignmentId}`;
+  const assignment = map.assignments.find(a => a.id === assignmentId);
+  return assignment?.name || `Assignment #${assignmentId}`;
+}

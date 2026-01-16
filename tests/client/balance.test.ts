@@ -3,7 +3,7 @@ import {
   getPlayerAssignments,
   getPlayerMainAssignment,
   getAssignmentPlayers,
-} from '@/services/balance.service';
+} from '@/utils/balance';
 import type { MapConfig } from '@shared/types';
 
 // =============================================================================

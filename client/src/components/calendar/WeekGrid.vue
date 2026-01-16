@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, watch, nextTick } from 'vue';
 import DayCell from './DayCell.vue';
+import { formatDateStr, isPastDateStr } from '@/utils/calendar';
 import type { DayData, CalendarEvent, AvailabilityStatus } from '@shared/types';
 
 const props = defineProps<{
@@ -24,22 +25,8 @@ const dayNamesFull: [string, string, string, string, string, string, string] = [
   'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'
 ];
 
-// Format date to YYYY-MM-DD string
-function formatDateStr(date: Date): string {
-  const year = date.getFullYear();
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const day = date.getDate().toString().padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
 // Today's date string for comparison
 const todayStr = computed(() => formatDateStr(new Date()));
-
-// Check if a date is in the past (before today)
-function isPastDate(dateStr: string): boolean {
-  return dateStr < todayStr.value;
-}
-
 
 // Generate week grid (7 days)
 const weekGrid = computed(() => {
@@ -64,7 +51,7 @@ const weekGrid = computed(() => {
       dayName: dayNamesFull[i as 0 | 1 | 2 | 3 | 4 | 5 | 6],
       isCurrentMonth: date.getMonth() + 1 === props.month,
       isToday: dateStr === todayStr.value,
-      isPast: isPastDate(dateStr),
+      isPast: isPastDateStr(dateStr),
       data: props.days[dateStr] ?? null,
     });
   }
@@ -93,8 +80,7 @@ function scrollToToday() {
     if (scrollContainer) {
       const containerRect = scrollContainer.getBoundingClientRect();
       const elementRect = todayElement.getBoundingClientRect();
-      const scrollTop = scrollContainer.scrollTop + elementRect.top - containerRect.top;
-      scrollContainer.scrollTop = scrollTop;
+      scrollContainer.scrollTop = scrollContainer.scrollTop + elementRect.top - containerRect.top;
     }
   }
 }
