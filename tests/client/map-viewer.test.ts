@@ -10,18 +10,12 @@ import {
   getPolygonCentroid,
 } from '@/utils/zones';
 import {
-  GAME_PHASES,
-  PHASE_LABELS,
-  MARKER_ICONS,
-  MARKER_SIZES,
-  DEFAULT_MARKER_SIZE,
-  DEFAULT_PHASE_MARKERS,
   getZoneForPhase,
   isLegacyAssignment,
   migrateAssignmentToPhases,
   migrateMapConfigToPhases,
 } from '@shared/types';
-import type { ZoneRect, ZonePolygon, ZoneMulti, Point, Assignment, Marker, GamePhase, MapConfig } from '@shared/types';
+import type { ZoneRect, ZonePolygon, ZoneMulti, Point, Assignment, MapConfig } from '@shared/types';
 
 // =============================================================================
 // ZONE UTILITIES TESTS (real code from @/utils/zones)
@@ -161,51 +155,7 @@ describe('Zone Conversion (real code)', () => {
 });
 
 // =============================================================================
-// GAME PHASES & MARKERS CONSTANTS (real code from @shared/types)
-// =============================================================================
-
-describe('Game Phases Constants (real code)', () => {
-  it('should have exactly 3 phases', () => {
-    expect(GAME_PHASES).toHaveLength(3);
-    expect(GAME_PHASES).toEqual(['START', 'ATTACK', 'DEFENSE']);
-  });
-
-  it('should have labels for all phases', () => {
-    GAME_PHASES.forEach(phase => {
-      expect(PHASE_LABELS[phase]).toBeDefined();
-      expect(typeof PHASE_LABELS[phase]).toBe('string');
-    });
-  });
-});
-
-describe('Marker Constants (real code)', () => {
-  it('should have 13 marker icons', () => {
-    expect(MARKER_ICONS).toHaveLength(13);
-    expect(MARKER_ICONS).toContain('player');
-    expect(MARKER_ICONS).toContain('target');
-    expect(MARKER_ICONS).toContain('warning');
-  });
-
-  it('should have 3 marker sizes with labels', () => {
-    expect(MARKER_SIZES).toHaveLength(3);
-    expect(MARKER_SIZES[0]).toEqual({ value: 0.7, label: 'Petit' });
-    expect(MARKER_SIZES[1]).toEqual({ value: 1, label: 'Moyen' });
-    expect(MARKER_SIZES[2]).toEqual({ value: 1.5, label: 'Grand' });
-  });
-
-  it('should have default marker size of 1', () => {
-    expect(DEFAULT_MARKER_SIZE).toBe(1);
-  });
-
-  it('should have empty default phase markers', () => {
-    expect(DEFAULT_PHASE_MARKERS.START).toEqual([]);
-    expect(DEFAULT_PHASE_MARKERS.ATTACK).toEqual([]);
-    expect(DEFAULT_PHASE_MARKERS.DEFENSE).toEqual([]);
-  });
-});
-
-// =============================================================================
-// ZONE FOR PHASE (real code from @shared/types)
+// SVG PATH GENERATION (real code from @/utils/zones)
 // =============================================================================
 
 describe('getZoneForPhase (real code)', () => {
@@ -301,35 +251,6 @@ describe('isLegacyAssignment (real code)', () => {
   });
 });
 
-// =============================================================================
-// TYPE STRUCTURE VALIDATION
-// =============================================================================
-
-describe('Marker Type Structure', () => {
-  it('should accept valid marker with all properties', () => {
-    const marker: Marker = {
-      id: 'test-marker-1',
-      x: 50,
-      y: 50,
-      icon: 'player',
-      floor: 0,
-      size: 1.5,
-    };
-    expect(marker.id).toBe('test-marker-1');
-    expect(marker.size).toBe(1.5);
-  });
-
-  it('should accept marker without optional properties', () => {
-    const marker: Marker = {
-      id: 'test-marker-2',
-      x: 25,
-      y: 75,
-      icon: 'target',
-    };
-    expect(marker.floor).toBeUndefined();
-    expect(marker.size).toBeUndefined();
-  });
-});
 
 // =============================================================================
 // SVG PATH GENERATION (real code from @/utils/zones)

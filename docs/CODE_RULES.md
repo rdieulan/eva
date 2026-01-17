@@ -142,8 +142,8 @@ $breakpoint-large: 1440px;
 ## 🧪 Tests
 
 ### Ce qu'on teste
-- ✅ Fonctions utilitaires exportées
-- ✅ Logique métier (services)
+- ✅ Fonctions utilitaires exportées (`@/utils/*`, `@shared/utils/*`)
+- ✅ Logique métier des composables (`@/composables/*`)
 - ✅ Composants Vue (comportement, pas implémentation)
 - ✅ Contrats API (structure des requêtes/réponses)
 
@@ -151,6 +151,52 @@ $breakpoint-large: 1440px;
 - ❌ Fonctions définies localement dans le fichier de test
 - ❌ Code de librairies tierces
 - ❌ Détails d'implémentation CSS
+- ❌ **Structure de types** (tests qui vérifient juste que TypeScript compile)
+- ❌ **Valeurs de constantes statiques** (si elles changent, c'est volontaire)
+
+#### Exemples de tests inutiles (à NE PAS écrire) :
+```typescript
+// ❌ INUTILE - Vérifie juste que l'objet a les valeurs qu'on lui a données
+const marker = { id: 'test', x: 50 };
+expect(marker.id).toBe('test'); // Évidemment !
+
+// ❌ INUTILE - Vérifie une constante statique
+expect(GAME_PHASES).toEqual(['START', 'ATTACK', 'DEFENSE']);
+```
+
+### ⚠️ Règle critique : Imports réels obligatoires
+**TOUJOURS importer les fonctions depuis le code du projet :**
+```typescript
+// ✅ CORRECT - Import depuis le vrai code
+import { getZonePolygons } from '@/utils/zones';
+import { useCalendar } from '@/composables/useCalendar';
+
+// ❌ INTERDIT - Redéfinir la fonction localement
+function getZonePolygons(zone) { ... } // NE JAMAIS FAIRE ÇA
+```
+
+Si un composable ou une fonction est refactorisée, les tests DOIVENT être mis à jour.
+
+### Tests de composables
+Les composables qui contiennent de la logique métier doivent être testés :
+```typescript
+import { useCalendar } from '@/composables/useCalendar';
+import { ref } from 'vue';
+
+describe('useCalendar', () => {
+  it('should navigate to next month', () => {
+    const userId = ref('user-1');
+    const { currentMonth, currentYear, goToNextMonth } = useCalendar({ userId });
+    
+    currentMonth.value = 12;
+    currentYear.value = 2026;
+    goToNextMonth();
+    
+    expect(currentMonth.value).toBe(1);
+    expect(currentYear.value).toBe(2027);
+  });
+});
+```
 
 ### Structure d'un test
 ```typescript
@@ -160,7 +206,7 @@ describe('NomDeLaFonction', () => {
     const input = { ... };
     
     // Act
-    const result = maVraieFonction(input);
+    const result = maVraieFonction(input); // Import depuis @/ ou @shared/
     
     // Assert
     expect(result).toBe(expected);

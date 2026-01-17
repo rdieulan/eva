@@ -12,7 +12,7 @@
 | MapViewer.vue | 1405 | 962 | ✅ -31% |
 | RotationCalculator.vue | 1154 | 288 | ✅ -75% |
 | CalendarPage.vue | 952 | 236 | ✅ -75% |
-| PlannerPage.vue | 684 | - | En attente |
+| PlannerPage.vue | 772 | 318 | ✅ -59% |
 
 ---
 
@@ -72,18 +72,42 @@
 
 ---
 
-### Phase 5 : PlannerPage.vue (à faire)
-- [ ] Créer `client/src/composables/usePlannerState.ts`
-- [ ] Refactoriser PlannerPage.vue
-- [ ] Tests et validation
+### Phase 5 : PlannerPage.vue ✅ TERMINÉE
 
-**Résultat attendu : 684 → X lignes**
+**Composables créés dans `client/src/composables/` :**
+- `usePlannerPlans.ts` - CRUD plans (~175 lignes)
+- `usePlannerNotes.ts` - gestion notes (~145 lignes)
+
+**Sous-composant créé dans `client/src/components/planner/` :**
+- `PlannerNotesPanel.vue` - contenu du Drawer (~230 lignes)
+
+**Résultat : 772 → 318 lignes (-454 lignes, -59%)**
+**Tests : 137/137 ✅ | Build : OK ✅**
 
 ---
 
-### Phase 6 : Validation finale
-- [ ] Tous les tests passent
-- [ ] Build OK
+### Phase 6 : Tests des composables ✅ TERMINÉE
+
+**Tests créés dans `tests/client/` :**
+- `use-calendar.test.ts` - tests de navigation, computed, edit mode (13 tests)
+- `use-rotation-calculator.test.ts` - tests de calcul, sélection, export (15 tests)
+
+**Nettoyage des tests inutiles :**
+- Suppression des tests de "structure de type" (vérifiaient juste que TypeScript compile)
+- Suppression des tests de constantes statiques (aucune valeur ajoutée)
+- Suppression des imports inutilisés
+
+**Mise à jour de CODE_RULES.md :**
+- Ajout de la règle "Imports réels obligatoires"
+- Ajout des instructions pour tester les composables
+
+**Résultat : 165 → 157 tests pertinents (-8 tests inutiles) ✅ | Build : OK ✅**
+
+---
+
+### Phase 7 : Validation finale
+- [x] Tous les tests passent (157/157)
+- [x] Build OK
 - [ ] Test manuel complet
 
 ---
