@@ -1,8 +1,8 @@
 ﻿<script setup lang="ts">
 import { computed, toRef } from 'vue';
 import { useRotationCalculator } from '@/composables/useRotationCalculator';
-import RotationResults from '@/components/common/RotationResults.vue';
-import RotationExport from '@/components/common/RotationExport.vue';
+import RotationResults from './RotationResults.vue';
+import RotationExport from './RotationExport.vue';
 import type { MapConfig, Player, MatchGamePlan } from '@shared/types';
 
 const props = withDefaults(

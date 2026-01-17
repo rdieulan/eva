@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
 import Modal from '@/components/common/Modal.vue';
-import RotationCalculator from '@/components/common/RotationCalculator.vue';
+import RotationCalculator from '@/components/common/rotation/RotationCalculator.vue';
 import GamePlanTable from '@/components/common/GamePlanTable.vue';
 import PhaseSelector from '@/components/planner/PhaseSelector.vue';
 import type {

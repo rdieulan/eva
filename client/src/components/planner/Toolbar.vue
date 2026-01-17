@@ -3,7 +3,7 @@ import { computed, ref } from 'vue';
 import { getAssignmentColor } from '@/utils/colors';
 import { checkMapBalance, getPlayerAssignments, getPlayerMainAssignment, getAssignmentPlayers } from '@/utils/balance';
 import type { MapConfig, Player, GamePhase, GamePlanSummary } from '@/types';
-import RotationCalculator from '@/components/common/RotationCalculator.vue';
+import RotationCalculator from '@/components/common/rotation/RotationCalculator.vue';
 import PhaseSelector from '@/components/planner/PhaseSelector.vue';
 import PlanSelector from '@/components/planner/PlanSelector.vue';
 import SvgIcon from '@/components/common/SvgIcon.vue';

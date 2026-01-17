@@ -11,7 +11,7 @@
 |---------|-------|-------|--------|
 | MapViewer.vue | 1405 | 962 | ✅ -31% |
 | RotationCalculator.vue | 1154 | 288 | ✅ -75% |
-| CalendarPage.vue | 826 | - | En attente |
+| CalendarPage.vue | 952 | 236 | ✅ -75% |
 | PlannerPage.vue | 684 | - | En attente |
 
 ---
@@ -44,26 +44,31 @@
 
 ### Phase 3 : RotationCalculator.vue ✅ TERMINÉE
 
-**Fichiers créés :**
-- `client/src/composables/useRotationCalculator.ts` - algorithme de calcul + logique métier (~380 lignes)
-- `client/src/components/common/RotationResults.vue` - affichage des résultats (~190 lignes)
-- `client/src/components/common/RotationExport.vue` - section export (~150 lignes)
-
-**Composant refactorisé :**
+**Fichiers créés dans `client/src/components/common/rotation/` :**
 - `RotationCalculator.vue` - composant principal allégé (288 lignes)
+- `RotationResults.vue` - affichage des résultats (~190 lignes)
+- `RotationExport.vue` - section export (~150 lignes)
+
+**Composable créé :**
+- `client/src/composables/useRotationCalculator.ts` - algorithme de calcul + logique métier (~380 lignes)
 
 **Résultat : 1154 → 288 lignes (-866 lignes, -75%)**
 **Tests : 137/137 ✅ | Build : OK ✅**
 
 ---
 
-### Phase 4 : CalendarPage.vue (à faire)
-- [ ] Créer `client/src/composables/useCalendarData.ts`
-- [ ] Créer `client/src/composables/useCalendarEvents.ts`
-- [ ] Refactoriser CalendarPage.vue
-- [ ] Tests et validation
+### Phase 4 : CalendarPage.vue ✅ TERMINÉE
 
-**Résultat attendu : 826 → X lignes**
+**Composables créés dans `client/src/composables/` :**
+- `useCalendar.ts` - navigation + données + disponibilités (~260 lignes)
+- `useCalendarEvents.ts` - gestion des events/modales (~160 lignes)
+
+**Sous-composants créés dans `client/src/components/calendar/` :**
+- `CalendarToolbar.vue` - légende + bouton edit mode (~170 lignes)
+- `CalendarControls.vue` - switch vue + navigation + weekdays (~235 lignes)
+
+**Résultat : 952 → 236 lignes (-716 lignes, -75%)**
+**Tests : 137/137 ✅ | Build : OK ✅**
 
 ---
 
