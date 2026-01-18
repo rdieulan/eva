@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { getPlayerName } from '@/api';
-import { getAssignmentName } from '@/utils/balance';
 import { getAssignmentColor } from '@/utils/colors';
 import type { MapConfig } from '@shared/types';
 import type { MapResult } from '@/composables/useRotationCalculator';
@@ -9,10 +8,13 @@ const props = defineProps<{
   results: MapResult[];
   maps: MapConfig[];
   selectedConfigurations: Record<string, number>;
+  selectedPlans: Record<string, string>;
+  loadedPlans: Record<string, MapConfig>;
 }>();
 
 defineEmits<{
   selectConfiguration: [mapId: string, configIndex: number];
+  selectPlan: [mapId: string, planId: string];
 }>();
 
 function isConfigSelected(mapId: string, configIndex: number): boolean {
@@ -20,10 +22,30 @@ function isConfigSelected(mapId: string, configIndex: number): boolean {
 }
 
 function isMainRoleForPlayer(mapId: string, playerId: string, assignmentId: number): boolean {
-  const map = props.maps.find(m => m.id === mapId);
-  if (!map) return false;
-  const playerAssignment = map.players.find(p => p.userId === playerId);
+  // Use loaded plan if available
+  const planId = props.selectedPlans[mapId];
+  const effectiveMap = (planId && props.loadedPlans[planId])
+    ? props.loadedPlans[planId]
+    : props.maps.find(m => m.id === mapId);
+  if (!effectiveMap) return false;
+  const playerAssignment = effectiveMap.players.find(p => p.userId === playerId);
   return playerAssignment?.mainAssignmentId === assignmentId;
+}
+
+function getMapPlans(mapId: string) {
+  const map = props.maps.find(m => m.id === mapId);
+  return map?.gamePlans || [];
+}
+
+// Get assignment name from loaded plan or fallback to base map
+function getAssignmentName(mapId: string, assignmentId: number): string {
+  const planId = props.selectedPlans[mapId];
+  const effectiveMap = (planId && props.loadedPlans[planId])
+    ? props.loadedPlans[planId]
+    : props.maps.find(m => m.id === mapId);
+  if (!effectiveMap) return `Assignment #${assignmentId}`;
+  const assignment = effectiveMap.assignments.find(a => a.id === assignmentId);
+  return assignment?.name || `Assignment #${assignmentId}`;
 }
 </script>
 
@@ -35,7 +57,24 @@ function isMainRoleForPlayer(mapId: string, playerId: string, assignmentId: numb
       class="result-card"
       :class="{ 'has-errors': result.errors.length > 0 }"
     >
-      <h3>{{ result.mapName }}</h3>
+      <div class="result-header">
+        <h3>{{ result.mapName }}</h3>
+        <select
+          v-if="getMapPlans(result.mapId).length > 1"
+          class="plan-select"
+          :value="selectedPlans[result.mapId] || ''"
+          @change="$emit('selectPlan', result.mapId, ($event.target as HTMLSelectElement).value)"
+        >
+          <option
+            v-for="plan in getMapPlans(result.mapId)"
+            :key="plan.id"
+            :value="plan.id"
+          >
+            {{ plan.name }}
+          </option>
+        </select>
+        <span v-else-if="result.planName" class="plan-name">{{ result.planName }}</span>
+      </div>
 
       <div v-if="result.errors.length > 0" class="result-errors">
         <div v-for="(error, i) in result.errors" :key="i" class="error-row">
@@ -72,7 +111,7 @@ function isMainRoleForPlayer(mapId: string, playerId: string, assignmentId: numb
               }"
             >
               <span v-if="isMainRoleForPlayer(result.mapId, playerId, Number(assignmentId))" class="main-star">★</span>
-              {{ getAssignmentName(maps, result.mapId, Number(assignmentId)) }}
+              {{ getAssignmentName(result.mapId, Number(assignmentId)) }}
             </span>
             <span class="player-name">{{ getPlayerName(playerId) }}</span>
           </span>
@@ -108,9 +147,38 @@ function isMainRoleForPlayer(mapId: string, playerId: string, assignmentId: numb
   }
 
   h3 {
-    margin: 0 0 0.75rem 0;
+    margin: 0;
     font-size: 1rem;
     color: #fff;
+  }
+}
+
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.plan-name {
+  font-size: 0.75rem;
+  color: $color-text-secondary;
+  background: $color-bg-tertiary;
+  padding: 0.2rem 0.5rem;
+  border-radius: $radius-sm;
+}
+
+.plan-select {
+  padding: 0.25rem 0.5rem;
+  background: $color-bg-secondary;
+  border: 1px solid #555;
+  border-radius: $radius-sm;
+  color: #ccc;
+  font-size: 0.8rem;
+  cursor: pointer;
+
+  option {
+    background: $color-bg-secondary;
   }
 }
 

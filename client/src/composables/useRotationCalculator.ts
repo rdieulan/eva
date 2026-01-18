@@ -3,11 +3,11 @@
  * Handles configuration calculation, selection, and export
  */
 
-import { ref, computed, type Ref, type ComputedRef } from 'vue';
-import { getPlayerAssignments, getPlayerMainAssignment, getAssignmentName } from '@/utils/balance';
+import { ref, computed, watch, type Ref, type ComputedRef } from 'vue';
+import { getPlayerAssignments, getPlayerMainAssignment } from '@/utils/balance';
 import { getPlayerName } from '@/api';
 import { getAssignmentColor } from '@/utils/colors';
-import type { MapConfig, Player, MatchGamePlan, GamePhase } from '@shared/types';
+import type { MapConfig, Player, MatchGamePlan } from '@shared/types';
 
 // Types
 export interface ConfigurationResult {
@@ -18,6 +18,8 @@ export interface ConfigurationResult {
 export interface MapResult {
   mapId: string;
   mapName: string;
+  planId: string;
+  planName: string;
   configurations: ConfigurationResult[];
   errors: string[];
 }
@@ -25,6 +27,7 @@ export interface MapResult {
 export interface ExportableMap {
   mapId: string;
   mapName: string;
+  planName: string;
   assignments: {
     assignmentId: number;
     playerId: string;
@@ -50,10 +53,12 @@ export interface UseRotationCalculatorReturn {
   // State
   selectedAbsentPlayer: Ref<string | null>;
   selectedMaps: Ref<string[]>;
+  selectedPlans: Ref<Record<string, string>>; // mapId -> planId
+  loadedPlans: Ref<Record<string, MapConfig>>; // planId -> loaded plan data
   results: Ref<MapResult[] | null>;
   hasCalculated: Ref<boolean>;
-  currentPhase: Ref<GamePhase>;
   selectedConfigurations: Ref<Record<string, number>>;
+  isLoading: Ref<boolean>;
 
   // Computed
   canCalculate: ComputedRef<boolean>;
@@ -68,6 +73,7 @@ export interface UseRotationCalculatorReturn {
   selectAllMaps: () => void;
   deselectAllMaps: () => void;
   toggleMap: (mapId: string) => void;
+  selectPlan: (mapId: string, planId: string) => void;
   calculateConfigurations: () => void;
   selectConfiguration: (mapId: string, configIndex: number) => void;
   isConfigSelected: (mapId: string, configIndex: number) => boolean;
@@ -86,10 +92,77 @@ export function useRotationCalculator(
   // State
   const selectedAbsentPlayer = ref<string | null>(null);
   const selectedMaps = ref<string[]>(maps.value.map(m => m.id));
+  const selectedPlans = ref<Record<string, string>>({}); // mapId -> planId
   const results = ref<MapResult[] | null>(null);
   const hasCalculated = ref(false);
-  const currentPhase = ref<GamePhase>('START');
   const selectedConfigurations = ref<Record<string, number>>({});
+  const isLoading = ref(false);
+  const isInitialized = ref(false);
+
+  // Initialize: set default plans (no API calls needed - data is in maps)
+  function initialize() {
+    const defaultPlans: Record<string, string> = {};
+
+    for (const map of maps.value) {
+      if (map.gamePlans && map.gamePlans.length > 0 && map.gamePlans[0]) {
+        defaultPlans[map.id] = map.gamePlans[0].id;
+      }
+    }
+
+    selectedPlans.value = defaultPlans;
+    isInitialized.value = true;
+  }
+
+  // Initialize immediately (synchronous - no API calls)
+  initialize();
+
+  // Get map config for calculation (from gamePlans data in maps)
+  function getMapConfigForCalculation(mapId: string): MapConfig | null {
+    const map = maps.value.find(m => m.id === mapId);
+    if (!map) return null;
+
+    const planId = selectedPlans.value[mapId];
+    if (planId && map.gamePlans) {
+      const plan = map.gamePlans.find(p => p.id === planId);
+      if (plan) {
+        // Return a MapConfig with the plan's data
+        return {
+          id: map.id,
+          name: map.name,
+          images: map.images,
+          assignments: plan.assignments,
+          players: plan.players,
+          gamePlans: map.gamePlans,
+          notes: plan.notes,
+        };
+      }
+    }
+
+    // Fallback to first plan or base map data
+    return map;
+  }
+
+  // Expose loadedPlans for compatibility (computed from maps.gamePlans)
+  const loadedPlans = computed<Record<string, MapConfig>>(() => {
+    const result: Record<string, MapConfig> = {};
+    for (const map of maps.value) {
+      if (map.gamePlans) {
+        for (const plan of map.gamePlans) {
+          result[plan.id] = {
+            id: map.id,
+            name: map.name,
+            images: map.images,
+            assignments: plan.assignments,
+            players: plan.players,
+            gamePlans: map.gamePlans,
+            notes: plan.notes,
+          };
+        }
+      }
+    }
+    return result;
+  });
+
 
   // Map selection methods
   function selectAllMaps() {
@@ -105,6 +178,100 @@ export function useRotationCalculator(
       selectedMaps.value = selectedMaps.value.filter(id => id !== mapId);
     } else {
       selectedMaps.value.push(mapId);
+    }
+  }
+
+  function selectPlan(mapId: string, planId: string) {
+    selectedPlans.value = { ...selectedPlans.value, [mapId]: planId };
+    // Recalculate this map with the new plan (plan is already loaded)
+    if (selectedAbsentPlayer.value) {
+      calculateMapConfigurations(mapId);
+    }
+  }
+
+  // Calculate configurations for a single map
+  function calculateMapConfigurations(mapId: string) {
+    const baseMap = maps.value.find(m => m.id === mapId);
+    if (!baseMap || !selectedAbsentPlayer.value) return;
+
+    // Get effective map config (from loaded plan or fallback)
+    const effectiveMap = getMapConfigForCalculation(mapId);
+    if (!effectiveMap) return;
+
+    const presentPlayerIds = players.value
+      .filter(p => p.id !== selectedAbsentPlayer.value)
+      .map(p => p.id);
+
+    // Get selected plan for this map
+    const planId = selectedPlans.value[mapId] || '';
+    const plan = baseMap.gamePlans?.find(p => p.id === planId);
+    const planName = plan?.name || 'Plan par défaut';
+
+    const mapResult: MapResult = {
+      mapId: baseMap.id,
+      mapName: baseMap.name,
+      planId,
+      planName,
+      configurations: [],
+      errors: []
+    };
+
+    // Get assignments from the effective map (loaded plan)
+    const assignmentIds = effectiveMap.assignments.map(p => p.id);
+
+    // For each present player, which assignments can they take? (from effective map)
+    const playerToAssignments: Record<string, number[]> = {};
+    for (const playerId of presentPlayerIds) {
+      playerToAssignments[playerId] = getPlayerAssignments(effectiveMap, playerId)
+        .filter(p => assignmentIds.includes(p));
+    }
+
+    // Check basic errors
+    for (const assignmentId of assignmentIds) {
+      const playersForAssignment = presentPlayerIds.filter(j =>
+        playerToAssignments[j]?.includes(assignmentId)
+      );
+      if (playersForAssignment.length === 0) {
+        const assignment = effectiveMap.assignments.find(p => p.id === assignmentId);
+        mapResult.errors.push(
+          `${assignment?.name || assignmentId} ne peut être occupé par aucun joueur présent`
+        );
+      }
+    }
+
+    if (mapResult.errors.length === 0) {
+      // Find all valid configurations
+      const configurations = findAllConfigurations(
+        assignmentIds,
+        presentPlayerIds,
+        playerToAssignments,
+        effectiveMap
+      );
+
+      if (configurations.length === 0) {
+        mapResult.errors.push("Aucune configuration valide trouvée");
+      } else {
+        // Sort configurations by mainRoleScore (descending)
+        configurations.sort((a, b) => b.mainRoleScore - a.mainRoleScore);
+        mapResult.configurations = configurations;
+        // Automatically select first configuration (best score)
+        selectedConfigurations.value = {
+          ...selectedConfigurations.value,
+          [mapId]: 0
+        };
+      }
+    }
+
+    // Update results for this map
+    if (!results.value) {
+      results.value = [mapResult];
+    } else {
+      const existingIndex = results.value.findIndex(r => r.mapId === mapId);
+      if (existingIndex >= 0) {
+        results.value[existingIndex] = mapResult;
+      } else {
+        results.value.push(mapResult);
+      }
     }
   }
 
@@ -158,78 +325,34 @@ export function useRotationCalculator(
     return configResults;
   }
 
-  // Main calculation function
+  // Main calculation function - calculates all selected maps
   function calculateConfigurations() {
     if (!selectedAbsentPlayer.value) return;
 
     hasCalculated.value = true;
     results.value = [];
-    selectedConfigurations.value = {}; // Reset selections
+    selectedConfigurations.value = {};
 
-    const presentPlayerIds = players.value
-      .filter(p => p.id !== selectedAbsentPlayer.value)
-      .map(p => p.id);
-
+    // Calculate all selected maps (plans are already loaded)
     for (const mapId of selectedMaps.value) {
-      const map = maps.value.find(m => m.id === mapId);
-      if (!map) continue;
-
-      const mapResult: MapResult = {
-        mapId: map.id,
-        mapName: map.name,
-        configurations: [],
-        errors: []
-      };
-
-      // Get map assignments
-      const assignmentIds = map.assignments.map(p => p.id);
-
-      // For each present player, which assignments can they take?
-      const playerToAssignments: Record<string, number[]> = {};
-      for (const playerId of presentPlayerIds) {
-        playerToAssignments[playerId] = getPlayerAssignments(map, playerId)
-          .filter(p => assignmentIds.includes(p));
-      }
-
-      // Check basic errors
-      for (const assignmentId of assignmentIds) {
-        const playersForAssignment = presentPlayerIds.filter(j =>
-          playerToAssignments[j]?.includes(assignmentId)
-        );
-        if (playersForAssignment.length === 0) {
-          const assignment = map.assignments.find(p => p.id === assignmentId);
-          mapResult.errors.push(
-            `${assignment?.name || assignmentId} ne peut être occupé par aucun joueur présent`
-          );
-        }
-      }
-
-      if (mapResult.errors.length > 0) {
-        results.value.push(mapResult);
-        continue;
-      }
-
-      // Find all valid configurations
-      const configurations = findAllConfigurations(
-        assignmentIds,
-        presentPlayerIds,
-        playerToAssignments,
-        map
-      );
-
-      if (configurations.length === 0) {
-        mapResult.errors.push("Aucune configuration valide trouvée");
-      } else {
-        // Sort configurations by mainRoleScore (descending)
-        configurations.sort((a, b) => b.mainRoleScore - a.mainRoleScore);
-        mapResult.configurations = configurations;
-        // Automatically select first configuration (best score)
-        selectedConfigurations.value[mapResult.mapId] = 0;
-      }
-
-      results.value.push(mapResult);
+      calculateMapConfigurations(mapId);
     }
   }
+
+  // Watch for changes that should trigger recalculation
+  watch(
+    [selectedAbsentPlayer, selectedMaps],
+    () => {
+      if (!isInitialized.value) return;
+      if (selectedAbsentPlayer.value && selectedMaps.value.length > 0) {
+        calculateConfigurations();
+      } else {
+        results.value = null;
+        hasCalculated.value = false;
+      }
+    },
+    { deep: true }
+  );
 
   // Configuration selection
   function selectConfiguration(mapId: string, configIndex: number) {
@@ -246,9 +369,9 @@ export function useRotationCalculator(
     playerId: string,
     assignmentId: number
   ): boolean {
-    const map = maps.value.find(m => m.id === mapId);
-    if (!map) return false;
-    return getPlayerMainAssignment(map, playerId) === assignmentId;
+    const effectiveMap = getMapConfigForCalculation(mapId);
+    if (!effectiveMap) return false;
+    return getPlayerMainAssignment(effectiveMap, playerId) === assignmentId;
   }
 
   // Computed properties
@@ -268,19 +391,28 @@ export function useRotationCalculator(
       .map(r => {
         const configIndex = selectedConfigurations.value[r.mapId];
         const config = configIndex !== undefined ? r.configurations[configIndex] : undefined;
+        // Get effective map once for this result
+        const effectiveMap = getMapConfigForCalculation(r.mapId);
         return {
           mapId: r.mapId,
           mapName: r.mapName,
+          planName: r.planName,
           assignments: config
             ? Object.entries(config.assignments).map(([assignmentIdStr, playerId]) => {
                 const assignmentId = Number(assignmentIdStr);
+                // Get assignment name from the loaded plan, not the base map
+                const assignment = effectiveMap?.assignments.find(a => a.id === assignmentId);
+                const assignmentName = assignment?.name || `Assignment #${assignmentId}`;
+                // Get main role directly from effectiveMap to avoid extra function call
+                const playerAssignment = effectiveMap?.players.find(p => p.userId === playerId);
+                const isMainRole = playerAssignment?.mainAssignmentId === assignmentId;
                 return {
                   assignmentId,
                   playerId,
-                  assignmentName: getAssignmentName(maps.value, r.mapId, assignmentId),
+                  assignmentName,
                   playerName: getPlayerName(playerId),
                   assignmentColor: getAssignmentColor(assignmentId),
-                  isMainRole: isMainRoleForPlayer(r.mapId, playerId, assignmentId)
+                  isMainRole
                 };
               })
             : []
@@ -331,6 +463,7 @@ export function useRotationCalculator(
       maps: exportableMaps.value.map(mapData => ({
         mapId: mapData.mapId,
         mapName: mapData.mapName,
+        planName: mapData.planName,
         assignments: mapData.assignments.map(a => ({
           visiblePlayerId: a.playerId,
           visiblePlayerName: a.playerName,
@@ -430,6 +563,7 @@ export function useRotationCalculator(
       maps: exportableMaps.value.map(mapData => ({
         mapId: mapData.mapId,
         mapName: mapData.mapName,
+        planName: mapData.planName,
         assignments: mapData.assignments.map(a => ({
           visiblePlayerId: a.playerId,
           visiblePlayerName: a.playerName,
@@ -446,10 +580,12 @@ export function useRotationCalculator(
     // State
     selectedAbsentPlayer,
     selectedMaps,
+    selectedPlans,
+    loadedPlans,
     results,
     hasCalculated,
-    currentPhase,
     selectedConfigurations,
+    isLoading,
 
     // Computed
     canCalculate,
@@ -464,6 +600,7 @@ export function useRotationCalculator(
     selectAllMaps,
     deselectAllMaps,
     toggleMap,
+    selectPlan,
     calculateConfigurations,
     selectConfiguration,
     isConfigSelected,

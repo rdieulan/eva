@@ -9,10 +9,7 @@ import type { MapConfig, Player } from '@shared/types';
 
 // Mock dependencies
 vi.mock('@/api', () => ({
-  getPlayerName: vi.fn((players: Player[], id: string) => {
-    const player = players.find(p => p.id === id);
-    return player?.name || id;
-  }),
+  getPlayerName: vi.fn((id: string) => id),
 }));
 
 vi.mock('@/utils/colors', () => ({
@@ -37,6 +34,25 @@ describe('useRotationCalculator', () => {
         { userId: 'player-3', assignmentIds: [3, 4], mainAssignmentId: 3 },
         { userId: 'player-4', assignmentIds: [1, 4], mainAssignmentId: 4 },
         { userId: 'player-5', assignmentIds: [1, 2, 3, 4] },
+      ],
+      gamePlans: [
+        {
+          id: 'plan-1',
+          name: 'Default Plan',
+          assignments: [
+            { id: 1, name: 'Role A', x: 25, y: 25 },
+            { id: 2, name: 'Role B', x: 75, y: 25 },
+            { id: 3, name: 'Role C', x: 25, y: 75 },
+            { id: 4, name: 'Role D', x: 75, y: 75 },
+          ],
+          players: [
+            { userId: 'player-1', assignmentIds: [1, 2], mainAssignmentId: 1 },
+            { userId: 'player-2', assignmentIds: [2, 3], mainAssignmentId: 2 },
+            { userId: 'player-3', assignmentIds: [3, 4], mainAssignmentId: 3 },
+            { userId: 'player-4', assignmentIds: [1, 4], mainAssignmentId: 4 },
+            { userId: 'player-5', assignmentIds: [1, 2, 3, 4] },
+          ],
+        },
       ],
     },
   ];

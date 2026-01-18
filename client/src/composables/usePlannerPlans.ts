@@ -87,10 +87,15 @@ export function usePlannerPlans(options: UsePlannerPlansOptions): UsePlannerPlan
     try {
       const newPlan = await createGamePlan(selectedMapId.value, name.trim(), token);
       if (newPlan) {
-        // Add to current map's plans list
+        // Add to current map's plans list with full data
         const map = maps.value.find(m => m.id === selectedMapId.value);
         if (map) {
-          map.gamePlans = [...(map.gamePlans || []), { id: newPlan.id, name: newPlan.name }];
+          map.gamePlans = [...(map.gamePlans || []), {
+            id: newPlan.id,
+            name: newPlan.name,
+            assignments: [], // New plan starts empty
+            players: [],
+          }];
         }
         // Select the new plan
         await selectPlan(newPlan.id);
@@ -122,10 +127,16 @@ export function usePlannerPlans(options: UsePlannerPlansOptions): UsePlannerPlan
           notes: currentMap.notes,
         }, token);
 
-        // Add to plans list
+        // Add to plans list with full data
         const map = maps.value.find(m => m.id === selectedMapId.value);
         if (map) {
-          map.gamePlans = [...(map.gamePlans || []), { id: newPlan.id, name: newPlan.name }];
+          map.gamePlans = [...(map.gamePlans || []), {
+            id: newPlan.id,
+            name: newPlan.name,
+            assignments: currentMap.assignments,
+            players: currentMap.players,
+            notes: currentMap.notes,
+          }];
         }
         await selectPlan(newPlan.id);
       }

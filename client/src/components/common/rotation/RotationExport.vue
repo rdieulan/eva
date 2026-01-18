@@ -2,19 +2,16 @@
 import { ref } from 'vue';
 import { getPlayerName } from '@/api';
 import GamePlanTable from '@/components/common/GamePlanTable.vue';
-import PhaseSelector from '@/components/planner/PhaseSelector.vue';
-import type { GamePhase, MatchGamePlan } from '@shared/types';
+import type { MatchGamePlan } from '@shared/types';
 
 defineProps<{
   selectedAbsentPlayerId: string;
-  currentPhase: GamePhase;
   exportHeaders: { id: string; name: string }[];
   previewGamePlan: MatchGamePlan | null;
   mode: 'standalone' | 'associate';
 }>();
 
 const emit = defineEmits<{
-  'update:currentPhase': [phase: GamePhase];
   exportClipboard: [];
   exportPng: [element: HTMLElement];
   associate: [];
@@ -33,11 +30,6 @@ function handleExportPng() {
   <div class="export-section">
     <div class="export-section-header">
       <h3>Générer le plan de jeu</h3>
-      <PhaseSelector
-        :modelValue="currentPhase"
-        @update:modelValue="$emit('update:currentPhase', $event)"
-        compact
-      />
     </div>
 
     <!-- Table preview -->

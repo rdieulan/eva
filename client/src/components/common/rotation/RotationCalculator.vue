@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+﻿﻿<script setup lang="ts">
 import { computed, toRef } from 'vue';
 import { useRotationCalculator } from '@/composables/useRotationCalculator';
 import RotationResults from './RotationResults.vue';
@@ -27,16 +27,17 @@ const {
   selectedMaps,
   results,
   hasCalculated,
-  currentPhase,
   selectedConfigurations,
-  canCalculate,
+  selectedPlans,
+  loadedPlans,
+  isLoading,
   canExport,
   exportHeaders,
   previewGamePlan,
   selectAllMaps,
   deselectAllMaps,
   toggleMap,
-  calculateConfigurations,
+  selectPlan,
   selectConfiguration,
   exportToClipboard,
   exportToPng,
@@ -113,33 +114,30 @@ const showExport = computed(() => hasCalculated.value && results.value && canExp
           </div>
         </div>
 
-        <!-- Calculate button -->
-        <button
-          class="btn-calculate"
-          :disabled="!canCalculate"
-          @click="calculateConfigurations"
-        >
-          Calculer
-        </button>
+        <!-- Loading indicator -->
+        <div v-if="isLoading" class="loading-indicator">
+          Chargement des plans...
+        </div>
 
         <!-- Results -->
         <RotationResults
-          v-if="showResults"
+          v-if="showResults && !isLoading"
           :results="results!"
           :maps="maps"
           :selectedConfigurations="selectedConfigurations"
+          :selectedPlans="selectedPlans"
+          :loadedPlans="loadedPlans"
           @selectConfiguration="selectConfiguration"
+          @selectPlan="selectPlan"
         />
 
         <!-- Export Section -->
         <RotationExport
           v-if="showExport && selectedAbsentPlayer"
           :selectedAbsentPlayerId="selectedAbsentPlayer"
-          :currentPhase="currentPhase"
           :exportHeaders="exportHeaders"
           :previewGamePlan="previewGamePlan"
           :mode="mode"
-          @update:currentPhase="currentPhase = $event"
           @exportClipboard="exportToClipboard"
           @exportPng="handleExportPng"
           @associate="handleAssociate"
@@ -315,27 +313,10 @@ const showExport = computed(() => hasCalculated.value && results.value && canExp
   }
 }
 
-.btn-calculate {
-  padding: 0.75rem $spacing-lg;
-  background: $color-success;
-  border: none;
-  border-radius: 6px;
-  color: $color-bg-secondary;
-  font-weight: 700;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  align-self: center;
-
-  &:hover:not(:disabled) {
-    background: #6ee7a0;
-    transform: translateY(-1px);
-  }
-
-  &:disabled {
-    background: #444;
-    color: $color-text-secondary;
-    cursor: not-allowed;
-  }
+.loading-indicator {
+  text-align: center;
+  padding: $spacing-lg;
+  color: $color-text-secondary;
+  font-style: italic;
 }
 </style>

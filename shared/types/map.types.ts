@@ -154,10 +154,19 @@ export interface GamePlan {
   notes: GamePlanNotes;
 }
 
-// Summary for list display
+// Summary for list display (legacy, kept for compatibility)
 export interface GamePlanSummary {
   id: string;
   name: string;
+}
+
+// Full game plan data (includes assignments, players, notes)
+export interface GamePlanData {
+  id: string;
+  name: string;
+  assignments: Assignment[];
+  players: PlayerAssignment[];
+  notes?: GamePlanNotes;
 }
 
 // =============================================================================
@@ -170,7 +179,7 @@ export interface MapConfig {
   images: string[]; // Support for multiple images (floors)
   assignments: Assignment[];
   players: PlayerAssignment[];
-  gamePlans?: GamePlanSummary[]; // List of available game plans
+  gamePlans?: GamePlanData[]; // List of available game plans with full data
   notes?: GamePlanNotes; // Notes for current plan
 }
 

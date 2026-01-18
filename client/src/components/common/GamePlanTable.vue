@@ -20,6 +20,7 @@ const rows = computed(() => {
   if (!props.gamePlan || !props.gamePlan.maps || props.gamePlan.maps.length === 0) return [] as Array<{
     key: string;
     label: string;
+    planName?: string;
     cells: Record<string, { name: string; color: string; isMainRole?: boolean } | null>;
   }>;
 
@@ -29,7 +30,7 @@ const rows = computed(() => {
       const assign = mapPlan.assignments.find(a => a.visiblePlayerId === h.id);
       cells[h.id] = assign ? { name: assign.assignmentName, color: assign.assignmentColor, isMainRole: assign.isMainRole } : null;
     }
-    return { key: mapPlan.mapId, label: mapPlan.mapName, cells };
+    return { key: mapPlan.mapId, label: mapPlan.mapName, planName: mapPlan.planName, cells };
   });
 });
 
@@ -47,7 +48,10 @@ const hasData = computed(() => props.headers.length > 0 && rows.value.length > 0
       </thead>
       <tbody>
         <tr v-for="row in rows" :key="row.key">
-          <td class="map-name">{{ row.label }}</td>
+          <td class="map-name">
+            {{ row.label }}
+            <span v-if="row.planName" class="plan-name">{{ row.planName }}</span>
+          </td>
           <td v-for="h in props.headers" :key="h.id" class="assignment-cell">
             <span
               v-if="row.cells[h.id]"
@@ -122,6 +126,14 @@ const hasData = computed(() => props.headers.length > 0 && rows.value.length > 0
     text-align: left;
     color: #fff;
     font-weight: 500;
+
+    .plan-name {
+      display: block;
+      font-size: 0.7rem;
+      font-weight: 400;
+      color: $color-text-secondary;
+      margin-top: 0.1rem;
+    }
   }
 }
 

@@ -22,7 +22,7 @@ router.get('/', async (_req: Request, res: Response) => {
       },
     });
 
-    // Transform for frontend - use first GamePlan's data
+    // Transform for frontend - include full plan data
     const mapsForFrontend = maps.map(map => {
       const firstPlan = map.gamePlans[0];
       const assignments = firstPlan?.assignments as unknown[] || [];
@@ -32,13 +32,29 @@ router.get('/', async (_req: Request, res: Response) => {
         mainAssignmentId: gpp.mainAssignmentId,
       })) || [];
 
+      // Include full data for each game plan
+      const gamePlansWithData = map.gamePlans.map(gp => ({
+        id: gp.id,
+        name: gp.name,
+        assignments: gp.assignments,
+        players: gp.players.map(p => ({
+          userId: p.userId,
+          assignmentIds: p.assignmentIds,
+          mainAssignmentId: p.mainAssignmentId,
+        })),
+        notes: {
+          general: gp.generalNotes || '',
+          phases: gp.phaseNotes || { START: '', ATTACK: '', DEFENSE: '' },
+        },
+      }));
+
       return {
         id: map.id,
         name: map.name,
         images: map.images as string[],
         assignments,
         players,
-        gamePlans: map.gamePlans.map(gp => ({ id: gp.id, name: gp.name })),
+        gamePlans: gamePlansWithData,
         notes: firstPlan ? {
           general: firstPlan.generalNotes || '',
           phases: firstPlan.phaseNotes || { START: '', ATTACK: '', DEFENSE: '' },

@@ -20,6 +20,7 @@ export interface MapAssignment {
 export interface MapGamePlan {
   mapId: string;
   mapName: string;
+  planName?: string; // Name of the selected game plan
   assignments: MapAssignment[];
   phaseNotes?: PhaseNotes; // Notes per phase for this map
 }
