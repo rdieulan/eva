@@ -3,7 +3,7 @@ import { ref, computed, watch } from 'vue';
 import Modal from '@/components/common/Modal.vue';
 import GamePlanViewer from '@/components/common/GamePlanViewer.vue';
 import type { CalendarEvent } from '@shared/types';
-import { getEventTypeLabel as getEventTypeLabelUtil } from '@/utils/calendar';
+import { getEventTypeLabel as getEventTypeLabelUtil, isPastDateStr } from '@/utils/calendar';
 
 const props = defineProps<{
   events: CalendarEvent[];
@@ -28,6 +28,15 @@ watch(() => props.events, () => {
 
 // Current event
 const currentEvent = computed(() => props.events[currentIndex.value] ?? null);
+
+// Check if current event is in the past
+const isEventPast = computed(() => {
+  if (!currentEvent.value) return false;
+  return isPastDateStr(currentEvent.value.date);
+});
+
+// Can edit (admin and not past)
+const canEdit = computed(() => props.isAdmin && !isEventPast.value);
 
 // Navigation
 const hasPrev = computed(() => currentIndex.value > 0);
@@ -152,8 +161,8 @@ function handleCreateEvent() {
 
     <template #footer>
       <div class="footer-actions">
-        <!-- Admin buttons -->
-        <div v-if="isAdmin" class="admin-actions">
+        <!-- Admin buttons (only for non-past events) -->
+        <div v-if="canEdit" class="admin-actions">
           <button class="btn btn-primary" @click="handleEditEvent" title="Modifier cet événement">
             ✏️ Modifier
           </button>

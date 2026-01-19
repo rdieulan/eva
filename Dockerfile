@@ -31,10 +31,13 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/scripts ./scripts
+
+RUN chmod +x ./scripts/start.sh
 
 USER appuser
 
 EXPOSE 3001
 
-CMD ["sh", "-c", "npx prisma db push && node dist-server/server/index.js"]
+CMD ["./scripts/start.sh"]
 

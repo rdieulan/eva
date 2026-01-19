@@ -10,12 +10,17 @@ const exportContentRef = ref<HTMLDivElement | null>(null);
 
 // Build headers from gamePlan (sorted alphabetically)
 const headers = computed(() => {
-  if (!props.gamePlan?.maps?.[0]?.assignments) return [];
-  return props.gamePlan.maps[0].assignments
+  const assignments = props.gamePlan?.maps?.[0]?.assignments;
+  if (!assignments || !Array.isArray(assignments) || assignments.length === 0) {
+    return [];
+  }
+
+  return assignments
     .map(a => ({
-      id: a.visiblePlayerId,
-      name: a.visiblePlayerName,
+      id: a.visiblePlayerId || '',
+      name: a.visiblePlayerName || '',
     }))
+    .filter(h => h.id && h.name)
     .sort((a, b) => a.name.localeCompare(b.name));
 });
 

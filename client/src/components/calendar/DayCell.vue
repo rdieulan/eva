@@ -64,16 +64,16 @@ function getInitials(name: string): string {
 
 // Click on cell
 function handleCellClick() {
-  if (props.isPast) return;
-
   if (props.editMode) {
-    // Edit mode: cycle through availability states
-    cycleAvailability();
+    // Edit mode: cycle through availability states (not for past days)
+    if (!props.isPast) {
+      cycleAvailability();
+    }
   } else if (hasEvents.value) {
-    // Normal mode with events: open event viewer
+    // Normal mode with events: open event viewer (even for past days)
     emit('open-event-viewer', sortedEvents.value, 0);
-  } else {
-    // Normal mode without events: emit to open create modal (for admins)
+  } else if (!props.isPast) {
+    // Normal mode without events: emit to open create modal (for admins, not past)
     emit('open-create-event', props.date);
   }
 }
@@ -81,12 +81,14 @@ function handleCellClick() {
 // Click on specific event = open viewer at that event index (or cycle in edit mode)
 function handleEventClick(e: MouseEvent, index: number) {
   e.stopPropagation();
-  if (props.isPast) return;
 
   if (props.editMode) {
-    // In edit mode, cycle availability
-    cycleAvailability();
+    // In edit mode, cycle availability (not for past days)
+    if (!props.isPast) {
+      cycleAvailability();
+    }
   } else {
+    // Open event viewer (even for past days)
     emit('open-event-viewer', sortedEvents.value, index);
   }
 }
@@ -241,10 +243,6 @@ function cycleAvailability() {
 
   &.is-today {
     box-shadow: 0 0 0 2px $color-accent;
-  }
-
-  &.is-past {
-    pointer-events: none;
   }
 
   @include tablet {
