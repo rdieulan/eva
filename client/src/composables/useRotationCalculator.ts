@@ -38,15 +38,11 @@ export interface ExportableMap {
   }[];
 }
 
-export interface TableDataRow {
-  mapId: string;
-  mapName: string;
-  players: Record<string, { assignmentName: string; assignmentColor: string } | null>;
-}
 
 export interface UseRotationCalculatorOptions {
   maps: Ref<MapConfig[]>;
   players: Ref<Player[]>;
+  initialGamePlan?: Ref<MatchGamePlan | null>;
 }
 
 export interface UseRotationCalculatorReturn {
@@ -62,11 +58,8 @@ export interface UseRotationCalculatorReturn {
 
   // Computed
   canCalculate: ComputedRef<boolean>;
-  canExport: ComputedRef<boolean>;
   exportableMaps: ComputedRef<ExportableMap[]>;
   presentPlayers: ComputedRef<Player[]>;
-  tableData: ComputedRef<TableDataRow[]>;
-  exportHeaders: ComputedRef<{ id: string; name: string }[]>;
   previewGamePlan: ComputedRef<MatchGamePlan | null>;
 
   // Methods
@@ -78,16 +71,13 @@ export interface UseRotationCalculatorReturn {
   selectConfiguration: (mapId: string, configIndex: number) => void;
   isConfigSelected: (mapId: string, configIndex: number) => boolean;
   isMainRoleForPlayer: (mapId: string, playerId: string, assignmentId: number) => boolean;
-  generateExportText: () => string;
-  exportToClipboard: () => Promise<void>;
-  exportToPng: (element: HTMLElement | null) => Promise<void>;
   buildMatchGamePlan: () => MatchGamePlan | null;
 }
 
 export function useRotationCalculator(
   options: UseRotationCalculatorOptions
 ): UseRotationCalculatorReturn {
-  const { maps, players } = options;
+  const { maps, players, initialGamePlan } = options;
 
   // State
   const selectedAbsentPlayer = ref<string | null>(null);
@@ -99,22 +89,93 @@ export function useRotationCalculator(
   const isLoading = ref(false);
   const isInitialized = ref(false);
 
+  // Initialize from existing game plan if provided
+  function initializeFromGamePlan(gamePlan: MatchGamePlan) {
+    // Set absent player
+    selectedAbsentPlayer.value = gamePlan.absentPlayerId;
+
+    // Set selected maps from the game plan
+    const planMapIds = gamePlan.maps.map(m => m.mapId);
+    selectedMaps.value = planMapIds;
+
+    // Set selected plans for each map (if planName matches)
+    const newSelectedPlans: Record<string, string> = {};
+    for (const mapPlan of gamePlan.maps) {
+      const map = maps.value.find(m => m.id === mapPlan.mapId);
+      if (map?.gamePlans) {
+        // Find the plan that matches by name
+        const matchingPlan = map.gamePlans.find(p => p.name === mapPlan.planName);
+        if (matchingPlan) {
+          newSelectedPlans[mapPlan.mapId] = matchingPlan.id;
+        } else if (map.gamePlans[0]) {
+          newSelectedPlans[mapPlan.mapId] = map.gamePlans[0].id;
+        }
+      }
+    }
+    selectedPlans.value = newSelectedPlans;
+  }
+
   // Initialize: set default plans (no API calls needed - data is in maps)
   function initialize() {
-    const defaultPlans: Record<string, string> = {};
+    // If we have an initial game plan, initialize from it
+    if (initialGamePlan?.value) {
+      initializeFromGamePlan(initialGamePlan.value);
+      isInitialized.value = true;
+      // Trigger calculation with the loaded plan
+      calculateConfigurations();
+      // Match existing configurations from the game plan
+      matchConfigurationsFromGamePlan(initialGamePlan.value);
+    } else {
+      // Set default plans for all maps
+      const defaultPlans: Record<string, string> = {};
+      for (const map of maps.value) {
+        if (map.gamePlans && map.gamePlans.length > 0 && map.gamePlans[0]) {
+          defaultPlans[map.id] = map.gamePlans[0].id;
+        }
+      }
+      selectedPlans.value = defaultPlans;
+      isInitialized.value = true;
+    }
+  }
 
-    for (const map of maps.value) {
-      if (map.gamePlans && map.gamePlans.length > 0 && map.gamePlans[0]) {
-        defaultPlans[map.id] = map.gamePlans[0].id;
+  // Match configurations from an existing game plan
+  function matchConfigurationsFromGamePlan(gamePlan: MatchGamePlan) {
+    if (!results.value) return;
+
+    const newConfigs: Record<string, number> = {};
+
+    for (const mapPlan of gamePlan.maps) {
+      const mapResult = results.value.find(r => r.mapId === mapPlan.mapId);
+      if (!mapResult || mapResult.configurations.length === 0) continue;
+
+      // Build assignment map from the game plan: assignmentId -> playerId
+      const targetAssignments: Record<number, string> = {};
+      for (const assign of mapPlan.assignments) {
+        targetAssignments[assign.assignmentId] = assign.visiblePlayerId;
+      }
+
+      // Find the configuration that matches these assignments
+      const matchingIndex = mapResult.configurations.findIndex(config => {
+        // Check if all assignments match
+        for (const [assignmentIdStr, playerId] of Object.entries(config.assignments)) {
+          const assignmentId = Number(assignmentIdStr);
+          if (targetAssignments[assignmentId] !== playerId) {
+            return false;
+          }
+        }
+        return true;
+      });
+
+      if (matchingIndex >= 0) {
+        newConfigs[mapPlan.mapId] = matchingIndex;
+      } else {
+        // Fallback to first if no match found
+        newConfigs[mapPlan.mapId] = 0;
       }
     }
 
-    selectedPlans.value = defaultPlans;
-    isInitialized.value = true;
+    selectedConfigurations.value = newConfigs;
   }
-
-  // Initialize immediately (synchronous - no API calls)
-  initialize();
 
   // Get map config for calculation (from gamePlans data in maps)
   function getMapConfigForCalculation(mapId: string): MapConfig | null {
@@ -183,20 +244,33 @@ export function useRotationCalculator(
 
   function selectPlan(mapId: string, planId: string) {
     selectedPlans.value = { ...selectedPlans.value, [mapId]: planId };
-    // Recalculate this map with the new plan (plan is already loaded)
-    if (selectedAbsentPlayer.value) {
-      calculateMapConfigurations(mapId);
+    // Recalculate this map with the new plan
+    if (selectedAbsentPlayer.value && results.value) {
+      const newResult = calculateMapConfigurations(mapId);
+      if (newResult) {
+        const existingIndex = results.value.findIndex(r => r.mapId === mapId);
+        if (existingIndex >= 0) {
+          results.value[existingIndex] = newResult;
+        }
+        // Auto-select first configuration for the new plan
+        if (newResult.configurations.length > 0) {
+          selectedConfigurations.value = {
+            ...selectedConfigurations.value,
+            [mapId]: 0
+          };
+        }
+      }
     }
   }
 
-  // Calculate configurations for a single map
-  function calculateMapConfigurations(mapId: string) {
+  // Calculate configurations for a single map - returns result without modifying state
+  function calculateMapConfigurations(mapId: string): MapResult | null {
     const baseMap = maps.value.find(m => m.id === mapId);
-    if (!baseMap || !selectedAbsentPlayer.value) return;
+    if (!baseMap || !selectedAbsentPlayer.value) return null;
 
     // Get effective map config (from loaded plan or fallback)
     const effectiveMap = getMapConfigForCalculation(mapId);
-    if (!effectiveMap) return;
+    if (!effectiveMap) return null;
 
     const presentPlayerIds = players.value
       .filter(p => p.id !== selectedAbsentPlayer.value)
@@ -254,25 +328,10 @@ export function useRotationCalculator(
         // Sort configurations by mainRoleScore (descending)
         configurations.sort((a, b) => b.mainRoleScore - a.mainRoleScore);
         mapResult.configurations = configurations;
-        // Automatically select first configuration (best score)
-        selectedConfigurations.value = {
-          ...selectedConfigurations.value,
-          [mapId]: 0
-        };
       }
     }
 
-    // Update results for this map
-    if (!results.value) {
-      results.value = [mapResult];
-    } else {
-      const existingIndex = results.value.findIndex(r => r.mapId === mapId);
-      if (existingIndex >= 0) {
-        results.value[existingIndex] = mapResult;
-      } else {
-        results.value.push(mapResult);
-      }
-    }
+    return mapResult;
   }
 
   // Backtracking algorithm to find all valid configurations
@@ -330,13 +389,38 @@ export function useRotationCalculator(
     if (!selectedAbsentPlayer.value) return;
 
     hasCalculated.value = true;
-    results.value = [];
-    selectedConfigurations.value = {};
 
-    // Calculate all selected maps (plans are already loaded)
-    for (const mapId of selectedMaps.value) {
-      calculateMapConfigurations(mapId);
+    // Keep track of which maps already had configurations selected
+    const previousSelections = { ...selectedConfigurations.value };
+
+    // Get selected maps sorted alphabetically
+    const sortedMapIds = [...selectedMaps.value].sort((a, b) => {
+      const mapA = maps.value.find(m => m.id === a);
+      const mapB = maps.value.find(m => m.id === b);
+      return (mapA?.name || '').localeCompare(mapB?.name || '');
+    });
+
+    // Calculate configurations for each selected map
+    const newResults: MapResult[] = [];
+    const newConfigs: Record<string, number> = {};
+
+    for (const mapId of sortedMapIds) {
+      const result = calculateMapConfigurations(mapId);
+      if (result) {
+        newResults.push(result);
+
+        // Preserve previous selection if still valid, otherwise auto-select first
+        if (previousSelections[mapId] !== undefined &&
+            previousSelections[mapId] < result.configurations.length) {
+          newConfigs[mapId] = previousSelections[mapId];
+        } else if (result.configurations.length > 0) {
+          newConfigs[mapId] = 0; // Auto-select first (best score)
+        }
+      }
     }
+
+    results.value = newResults;
+    selectedConfigurations.value = newConfigs;
   }
 
   // Watch for changes that should trigger recalculation
@@ -421,39 +505,6 @@ export function useRotationCalculator(
       .filter(m => m.assignments.length > 0);
   });
 
-  const canExport = computed(() => {
-    if (!results.value) return false;
-    const validMaps = results.value.filter(
-      r => r.errors.length === 0 && r.configurations.length > 0
-    );
-    if (validMaps.length === 0) return false;
-    return validMaps.every(r => selectedConfigurations.value[r.mapId] !== undefined);
-  });
-
-  const tableData = computed<TableDataRow[]>(() => {
-    if (!exportableMaps.value.length) return [];
-
-    return exportableMaps.value.map(mapData => {
-      const row: Record<string, { assignmentName: string; assignmentColor: string } | null> = {};
-
-      for (const player of presentPlayers.value) {
-        const assign = mapData.assignments.find(a => a.playerId === player.id);
-        row[player.id] = assign
-          ? { assignmentName: assign.assignmentName, assignmentColor: assign.assignmentColor }
-          : null;
-      }
-
-      return {
-        mapId: mapData.mapId,
-        mapName: mapData.mapName,
-        players: row
-      };
-    });
-  });
-
-  const exportHeaders = computed(() => {
-    return presentPlayers.value.map(p => ({ id: p.id, name: p.name }));
-  });
 
   const previewGamePlan = computed<MatchGamePlan | null>(() => {
     if (!selectedAbsentPlayer.value) return null;
@@ -476,80 +527,6 @@ export function useRotationCalculator(
     };
   });
 
-  // Export functions
-  function generateExportText(): string {
-    if (!results.value || !selectedAbsentPlayer.value || !tableData.value.length) return '';
-
-    const absentName = getPlayerName(selectedAbsentPlayer.value);
-    const playerList = presentPlayers.value;
-
-    // Calculate column widths
-    const mapColWidth = Math.max(10, ...tableData.value.map(r => r.mapName.length)) + 2;
-    const playerColWidth = Math.max(8, ...playerList.map(j => j.name.length)) + 2;
-
-    let text = `\n  PLAN DE JEU - ${absentName} absent(e)\n`;
-    text += `${'═'.repeat(mapColWidth + playerColWidth * playerList.length + playerList.length + 1)}\n\n`;
-
-    // Header
-    text += `  ${'Map'.padEnd(mapColWidth)}`;
-    for (const player of playerList) {
-      text += `│ ${player.name.padEnd(playerColWidth - 2)} `;
-    }
-    text += `\n`;
-
-    // Separator line
-    text += `  ${'─'.repeat(mapColWidth)}`;
-    for (let i = 0; i < playerList.length; i++) {
-      text += `┼${'─'.repeat(playerColWidth)}`;
-    }
-    text += `\n`;
-
-    // Data
-    for (const row of tableData.value) {
-      text += `  ${row.mapName.padEnd(mapColWidth)}`;
-      for (const player of playerList) {
-        const cell = row.players[player.id];
-        const cellText = cell ? cell.assignmentName : '-';
-        text += `│ ${cellText.padEnd(playerColWidth - 2)} `;
-      }
-      text += `\n`;
-    }
-
-    text += `\n`;
-    return text;
-  }
-
-  async function exportToClipboard(): Promise<void> {
-    const text = generateExportText();
-    try {
-      await navigator.clipboard.writeText(text);
-      alert('Plan de jeu copié dans le presse-papier !');
-    } catch (err) {
-      console.error('Copy error:', err);
-      alert('Erreur lors de la copie');
-    }
-  }
-
-  async function exportToPng(element: HTMLElement | null): Promise<void> {
-    if (!element) return;
-
-    try {
-      const html2canvas = (await import('html2canvas')).default;
-
-      const canvas = await html2canvas(element, {
-        backgroundColor: '#1a1a2e',
-        scale: 2,
-      });
-
-      const link = document.createElement('a');
-      link.download = `plan-de-jeu-${selectedAbsentPlayer.value}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-    } catch (err) {
-      console.error('PNG export error:', err);
-      alert("Erreur lors de l'export PNG. Assurez-vous que html2canvas est installé.");
-    }
-  }
 
   function buildMatchGamePlan(): MatchGamePlan | null {
     if (!selectedAbsentPlayer.value || !exportableMaps.value.length) return null;
@@ -576,6 +553,9 @@ export function useRotationCalculator(
     };
   }
 
+  // Initialize (must be after all functions are defined)
+  initialize();
+
   return {
     // State
     selectedAbsentPlayer,
@@ -589,11 +569,8 @@ export function useRotationCalculator(
 
     // Computed
     canCalculate,
-    canExport,
     exportableMaps,
     presentPlayers,
-    tableData,
-    exportHeaders,
     previewGamePlan,
 
     // Methods
@@ -605,9 +582,6 @@ export function useRotationCalculator(
     selectConfiguration,
     isConfigSelected,
     isMainRoleForPlayer,
-    generateExportText,
-    exportToClipboard,
-    exportToPng,
     buildMatchGamePlan,
   };
 }

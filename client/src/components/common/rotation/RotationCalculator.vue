@@ -1,8 +1,8 @@
-﻿﻿<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, toRef } from 'vue';
 import { useRotationCalculator } from '@/composables/useRotationCalculator';
 import RotationResults from './RotationResults.vue';
-import RotationExport from './RotationExport.vue';
+import GamePlanViewer from '@/components/common/GamePlanViewer.vue';
 import type { MapConfig, Player, MatchGamePlan } from '@shared/types';
 
 const props = withDefaults(
@@ -10,9 +10,11 @@ const props = withDefaults(
     maps: MapConfig[];
     players: Player[];
     mode?: 'standalone' | 'associate';
+    initialGamePlan?: MatchGamePlan | null;
   }>(),
   {
     mode: 'standalone',
+    initialGamePlan: null,
   }
 );
 
@@ -31,20 +33,17 @@ const {
   selectedPlans,
   loadedPlans,
   isLoading,
-  canExport,
-  exportHeaders,
   previewGamePlan,
   selectAllMaps,
   deselectAllMaps,
   toggleMap,
   selectPlan,
   selectConfiguration,
-  exportToClipboard,
-  exportToPng,
   buildMatchGamePlan,
 } = useRotationCalculator({
   maps: toRef(props, 'maps'),
   players: toRef(props, 'players'),
+  initialGamePlan: toRef(props, 'initialGamePlan'),
 });
 
 // Handle "Associer" button click
@@ -55,13 +54,7 @@ function handleAssociate() {
   }
 }
 
-// Wrap exportToPng to handle the element ref
-function handleExportPng(element: HTMLElement) {
-  exportToPng(element);
-}
-
 const showResults = computed(() => hasCalculated.value && results.value);
-const showExport = computed(() => hasCalculated.value && results.value && canExport.value);
 </script>
 
 <template>
@@ -131,17 +124,19 @@ const showExport = computed(() => hasCalculated.value && results.value && canExp
           @selectPlan="selectPlan"
         />
 
-        <!-- Export Section -->
-        <RotationExport
-          v-if="showExport && selectedAbsentPlayer"
-          :selectedAbsentPlayerId="selectedAbsentPlayer"
-          :exportHeaders="exportHeaders"
-          :previewGamePlan="previewGamePlan"
-          :mode="mode"
-          @exportClipboard="exportToClipboard"
-          @exportPng="handleExportPng"
-          @associate="handleAssociate"
-        />
+        <!-- Game Plan Viewer with export -->
+        <div v-if="previewGamePlan" class="export-section">
+          <GamePlanViewer :gamePlan="previewGamePlan" />
+
+          <!-- Associate button (only in associate mode) -->
+          <button
+            v-if="mode === 'associate'"
+            class="btn-associate"
+            @click="handleAssociate"
+          >
+            ✓ Associer au match
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -318,5 +313,29 @@ const showExport = computed(() => hasCalculated.value && results.value && canExp
   padding: $spacing-lg;
   color: $color-text-secondary;
   font-style: italic;
+}
+
+.export-section {
+  border-top: 1px solid $color-border;
+  padding-top: $spacing-lg;
+  margin-top: $spacing-md;
+}
+
+.btn-associate {
+  width: 100%;
+  margin-top: $spacing-md;
+  padding: 0.75rem;
+  background: rgba($color-success, 0.2);
+  border: 1px solid $color-success;
+  border-radius: $radius-md;
+  color: $color-success;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: rgba($color-success, 0.3);
+  }
 }
 </style>

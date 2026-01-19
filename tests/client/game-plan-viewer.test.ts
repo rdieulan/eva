@@ -1,16 +1,10 @@
-// Tests for GamePlanTable component
+// Tests for GamePlanViewer component
 import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
-import GamePlanTable from '@/components/common/GamePlanTable.vue';
+import GamePlanViewer from '@/components/common/GamePlanViewer.vue';
 import type { MatchGamePlan } from '@shared/types';
 
-describe('GamePlanTable Component', () => {
-  const mockHeaders = [
-    { id: 'player-1', name: 'Alice' },
-    { id: 'player-2', name: 'Bob' },
-    { id: 'player-3', name: 'Charlie' },
-  ];
-
+describe('GamePlanViewer Component', () => {
   const mockGamePlan: MatchGamePlan = {
     absentPlayerId: 'player-4',
     absentPlayerName: 'David',
@@ -72,10 +66,9 @@ describe('GamePlanTable Component', () => {
     ],
   };
 
-  it('should render table with headers', () => {
-    const wrapper = mount(GamePlanTable, {
+  it('should render table with headers from gamePlan', () => {
+    const wrapper = mount(GamePlanViewer, {
       props: {
-        headers: mockHeaders,
         gamePlan: mockGamePlan,
       },
     });
@@ -89,9 +82,8 @@ describe('GamePlanTable Component', () => {
   });
 
   it('should render all maps as rows', () => {
-    const wrapper = mount(GamePlanTable, {
+    const wrapper = mount(GamePlanViewer, {
       props: {
-        headers: mockHeaders,
         gamePlan: mockGamePlan,
       },
     });
@@ -107,9 +99,8 @@ describe('GamePlanTable Component', () => {
   });
 
   it('should display assignments with correct colors', () => {
-    const wrapper = mount(GamePlanTable, {
+    const wrapper = mount(GamePlanViewer, {
       props: {
-        headers: mockHeaders,
         gamePlan: mockGamePlan,
       },
     });
@@ -126,46 +117,6 @@ describe('GamePlanTable Component', () => {
     expect(badges[1].attributes('style')).toContain('#00FF00');
   });
 
-  it('should handle player with no assignment (show dash)', () => {
-    const gamePlanWithMissingAssignment: MatchGamePlan = {
-      ...mockGamePlan,
-      maps: [
-        {
-          mapId: 'map-1',
-          mapName: 'Test Map',
-          assignments: [
-            {
-              visiblePlayerId: 'player-1',
-              visiblePlayerName: 'Alice',
-              assignmentId: 1,
-              assignmentName: 'Pilote',
-              assignmentColor: '#FF0000',
-            },
-            // player-2 has no assignment
-            {
-              visiblePlayerId: 'player-3',
-              visiblePlayerName: 'Charlie',
-              assignmentId: 3,
-              assignmentName: 'Engineer',
-              assignmentColor: '#0000FF',
-            },
-          ],
-        },
-      ],
-    };
-
-    const wrapper = mount(GamePlanTable, {
-      props: {
-        headers: mockHeaders,
-        gamePlan: gamePlanWithMissingAssignment,
-      },
-    });
-
-    const badges = wrapper.findAll('.assignment-badge');
-    expect(badges[1].text()).toBe('—'); // Bob has no assignment
-    expect(badges[1].attributes('style')).toContain('opacity');
-  });
-
   it('should render empty table when no maps', () => {
     const emptyGamePlan: MatchGamePlan = {
       absentPlayerId: 'player-4',
@@ -173,9 +124,8 @@ describe('GamePlanTable Component', () => {
       maps: [],
     };
 
-    const wrapper = mount(GamePlanTable, {
+    const wrapper = mount(GamePlanViewer, {
       props: {
-        headers: mockHeaders,
         gamePlan: emptyGamePlan,
       },
     });
@@ -185,9 +135,8 @@ describe('GamePlanTable Component', () => {
 
   it('should handle assignments in different order per map', () => {
     // This tests that the component correctly aligns players by ID, not by array position
-    const wrapper = mount(GamePlanTable, {
+    const wrapper = mount(GamePlanViewer, {
       props: {
-        headers: mockHeaders,
         gamePlan: mockGamePlan,
       },
     });
@@ -205,6 +154,27 @@ describe('GamePlanTable Component', () => {
     expect(secondRowBadges[0].text()).toBe('Gunner'); // Alice (not Pilote)
     expect(secondRowBadges[1].text()).toBe('Pilote'); // Bob (not Gunner)
     expect(secondRowBadges[2].text()).toBe('Engineer'); // Charlie
+  });
+
+  it('should display absent player name', () => {
+    const wrapper = mount(GamePlanViewer, {
+      props: {
+        gamePlan: mockGamePlan,
+      },
+    });
+
+    expect(wrapper.text()).toContain('David absent(e)');
+  });
+
+  it('should have export button', () => {
+    const wrapper = mount(GamePlanViewer, {
+      props: {
+        gamePlan: mockGamePlan,
+      },
+    });
+
+    const exportBtn = wrapper.find('.btn-export-png');
+    expect(exportBtn.exists()).toBe(true);
   });
 });
 

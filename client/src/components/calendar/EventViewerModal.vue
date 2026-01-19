@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import Modal from '@/components/common/Modal.vue';
-import GamePlanTable from '@/components/common/GamePlanTable.vue';
+import GamePlanViewer from '@/components/common/GamePlanViewer.vue';
 import type { CalendarEvent } from '@shared/types';
-import type { Header } from '@/components/common/GamePlanTable.vue';
 import { getEventTypeLabel as getEventTypeLabelUtil } from '@/utils/calendar';
 
 const props = defineProps<{
@@ -63,25 +62,6 @@ function getEventTypeLabel(type: string): string {
   return type === 'MATCH' ? `⚔️ ${baseLabel}` : `📅 ${baseLabel}`;
 }
 
-// Game plan headers for table display - built from gamePlan data
-const gamePlanHeaders = computed<Header[]>(() => {
-  const gamePlan = currentEvent.value?.gamePlan;
-  if (!gamePlan || !gamePlan.maps || gamePlan.maps.length === 0) return [];
-
-  // Extract unique player headers from assignments
-  const headerMap = new Map<string, Header>();
-  for (const mapPlan of gamePlan.maps) {
-    for (const assign of mapPlan.assignments) {
-      if (!headerMap.has(assign.visiblePlayerId)) {
-        headerMap.set(assign.visiblePlayerId, {
-          id: assign.visiblePlayerId,
-          name: assign.visiblePlayerName
-        });
-      }
-    }
-  }
-  return Array.from(headerMap.values());
-});
 
 // Show modal when events are provided
 const showModal = computed(() => props.events.length > 0);
@@ -163,18 +143,10 @@ function handleCreateEvent() {
         </div>
 
         <!-- Game Plan (for MATCH events) -->
-        <div v-if="currentEvent.type === 'MATCH' && currentEvent.gamePlan" class="game-plan-section">
-          <div class="game-plan-header">
-            <span class="detail-label">🎮 Plan de jeu</span>
-            <span v-if="currentEvent.gamePlan.absentPlayerName" class="absent-badge">
-              {{ currentEvent.gamePlan.absentPlayerName }} absent(e)
-            </span>
-          </div>
-          <GamePlanTable
-            :headers="gamePlanHeaders"
-            :gamePlan="currentEvent.gamePlan"
-          />
-        </div>
+        <GamePlanViewer
+          v-if="currentEvent.type === 'MATCH' && currentEvent.gamePlan"
+          :gamePlan="currentEvent.gamePlan"
+        />
       </div>
     </template>
 

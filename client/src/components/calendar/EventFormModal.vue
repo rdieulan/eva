@@ -2,8 +2,7 @@
 import { ref, watch, computed } from 'vue';
 import Modal from '@/components/common/Modal.vue';
 import RotationCalculator from '@/components/common/rotation/RotationCalculator.vue';
-import GamePlanTable from '@/components/common/GamePlanTable.vue';
-import PhaseSelector from '@/components/planner/PhaseSelector.vue';
+import GamePlanViewer from '@/components/common/GamePlanViewer.vue';
 import type {
   EventType,
   CreateEventRequest,
@@ -11,7 +10,6 @@ import type {
   MatchGamePlan,
   MapConfig,
   Player,
-  GamePhase,
 } from '@shared/types';
 
 const props = defineProps<{
@@ -41,7 +39,6 @@ const gamePlan = ref<MatchGamePlan | null>(null);
 
 // UI state
 const showRotationCalculator = ref(false);
-const currentPhase = ref<GamePhase>('START');
 
 // Error message
 const error = ref('');
@@ -160,15 +157,6 @@ const hasGamePlan = computed(() => {
 const modalSize = computed(() => {
   return hasGamePlan.value ? 'lg' : 'sm';
 });
-
-// Normalize game plan display: consistent player headers across maps
-const gamePlanPlayers = computed(() => {
-  const gp = gamePlan.value;
-  if (!gp || !gp.maps || gp.maps.length === 0) return [] as { id: string; name: string }[];
-  const firstMap = gp.maps[0];
-  const firstAssignments = firstMap?.assignments || [];
-  return firstAssignments.map(a => ({ id: a.visiblePlayerId, name: a.visiblePlayerName }));
-});
 </script>
 
 <template>
@@ -177,6 +165,7 @@ const gamePlanPlayers = computed(() => {
     v-if="showRotationCalculator && maps && players"
     :maps="maps"
     :players="players"
+    :initialGamePlan="gamePlan"
     mode="associate"
     @close="showRotationCalculator = false"
     @associate="handleGamePlanAssociate"
@@ -207,15 +196,11 @@ const gamePlanPlayers = computed(() => {
         <p>{{ description }}</p>
       </div>
 
-      <!-- Game Plan Display (readonly) -->
-      <div v-if="hasGamePlan && gamePlan" class="game-plan-view">
-        <div class="game-plan-header">
-          <span class="event-view-label">🎯 Plan de jeu</span>
-          <span class="absent-badge">{{ gamePlan.absentPlayerName }} absent(e)</span>
-        </div>
-        <PhaseSelector v-model="currentPhase" compact class="phase-selector-centered" />
-        <GamePlanTable :headers="gamePlanPlayers" :gamePlan="gamePlan" :currentPhase="currentPhase" />
-      </div>
+      <!-- Game Plan Display (readonly) - with export -->
+      <GamePlanViewer
+        v-if="hasGamePlan && gamePlan"
+        :gamePlan="gamePlan"
+      />
     </div>
 
     <!-- Edit form for admin users -->
@@ -313,18 +298,12 @@ const gamePlanPlayers = computed(() => {
       <div v-if="canSetGamePlan" class="form-group">
         <label class="form-label">🎯 Plan de jeu</label>
 
-        <!-- Game plan visualization if set (same as readonly view, with modify button) -->
-        <div v-if="hasGamePlan && gamePlan" class="game-plan-view game-plan-edit">
-          <div class="game-plan-header">
-            <span class="absent-badge">{{ gamePlan.absentPlayerName }} absent(e)</span>
-            <button type="button" class="btn-change-plan" @click="openRotationCalculator">
-              ✏️ Modifier
-            </button>
-          </div>
-          <PhaseSelector v-model="currentPhase" compact class="phase-selector-centered" />
-          <div class="game-plan-table">
-            <GamePlanTable :headers="gamePlanPlayers" :gamePlan="gamePlan" :currentPhase="currentPhase" />
-          </div>
+        <!-- Game plan visualization if set (with modify button) -->
+        <div v-if="hasGamePlan && gamePlan" class="game-plan-edit">
+          <button type="button" class="btn-change-plan" @click="openRotationCalculator">
+            ✏️ Modifier le plan
+          </button>
+          <GamePlanViewer :gamePlan="gamePlan" />
         </div>
 
         <!-- Button to open rotation calculator if no plan yet -->
