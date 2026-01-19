@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue';
 import SvgIcon from '@/components/common/SvgIcon.vue';
 import { PHASE_DISPLAY_DATA } from '@/constants';
-import { PHASE_LABELS } from '@shared/types';
+import { PHASE_LABELS } from '@shared/constants';
 import type { GamePhase } from '@shared/types';
 
 const props = defineProps<{

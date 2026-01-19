@@ -5,6 +5,7 @@ import type { Request, Response } from 'express';
 import { prisma } from '@db/prisma';
 import { authMiddleware, adminMiddleware } from '@middleware/auth.middleware';
 import type { AuthRequest } from '@middleware/auth.middleware';
+import { DEFAULT_GAME_PLAN_NOTES } from '@shared/constants';
 
 const router = Router();
 
@@ -44,10 +45,7 @@ router.get('/:planId', async (req: Request, res: Response) => {
       players: playerAssignments,
       planId: plan.id,
       planName: plan.name,
-      notes: {
-        general: plan.generalNotes || '',
-        phases: plan.phaseNotes || { START: '', ATTACK: '', DEFENSE: '' },
-      },
+      notes: plan.notes || DEFAULT_GAME_PLAN_NOTES,
     });
   } catch (error) {
     console.error('Error fetching game plan:', error);
@@ -109,8 +107,7 @@ router.put('/:planId', authMiddleware, adminMiddleware, async (req: AuthRequest,
     }
 
     if (notes !== undefined) {
-      if (notes.general !== undefined) updateData.generalNotes = notes.general;
-      if (notes.phases !== undefined) updateData.phaseNotes = JSON.parse(JSON.stringify(notes.phases));
+      updateData.notes = JSON.parse(JSON.stringify(notes));
     }
 
     const plan = await prisma.gamePlan.update({

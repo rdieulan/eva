@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Marker, MarkerIcon } from '@shared/types';
-import { MARKER_ICONS, MARKER_SIZES } from '@shared/types';
+import { MARKER_ICONS, MARKER_SIZES } from '@shared/constants';
 import { getMarkerIconPath, getMarkerSize } from '@/utils/markers';
 
 const props = defineProps<{

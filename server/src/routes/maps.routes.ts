@@ -5,6 +5,7 @@ import type { Request, Response } from 'express';
 import { prisma } from '@db/prisma';
 import { authMiddleware, adminMiddleware } from '@middleware/auth.middleware';
 import type { AuthRequest } from '@middleware/auth.middleware';
+import { DEFAULT_GAME_PLAN_NOTES } from '@shared/constants';
 
 const router = Router();
 
@@ -42,10 +43,7 @@ router.get('/', async (_req: Request, res: Response) => {
           assignmentIds: p.assignmentIds,
           mainAssignmentId: p.mainAssignmentId,
         })),
-        notes: {
-          general: gp.generalNotes || '',
-          phases: gp.phaseNotes || { START: '', ATTACK: '', DEFENSE: '' },
-        },
+        notes: gp.notes || DEFAULT_GAME_PLAN_NOTES,
       }));
 
       return {
@@ -55,10 +53,7 @@ router.get('/', async (_req: Request, res: Response) => {
         assignments,
         players,
         gamePlans: gamePlansWithData,
-        notes: firstPlan ? {
-          general: firstPlan.generalNotes || '',
-          phases: firstPlan.phaseNotes || { START: '', ATTACK: '', DEFENSE: '' },
-        } : { general: '', phases: { START: '', ATTACK: '', DEFENSE: '' } },
+        notes: firstPlan?.notes || DEFAULT_GAME_PLAN_NOTES,
       };
     });
 
@@ -107,10 +102,7 @@ router.get('/:mapId', async (req: Request, res: Response) => {
       assignments,
       players,
       gamePlans: map.gamePlans.map(gp => ({ id: gp.id, name: gp.name })),
-      notes: firstPlan ? {
-        general: firstPlan.generalNotes || '',
-        phases: firstPlan.phaseNotes || { START: '', ATTACK: '', DEFENSE: '' },
-      } : { general: '', phases: { START: '', ATTACK: '', DEFENSE: '' } },
+      notes: firstPlan?.notes || DEFAULT_GAME_PLAN_NOTES,
     };
 
     console.log('[API] Returning map with', players.length, 'players');
@@ -177,10 +169,7 @@ router.get('/:mapId/plans', async (req: Request, res: Response) => {
         assignmentIds: gpp.assignmentIds,
         mainAssignmentId: gpp.mainAssignmentId,
       })),
-      notes: {
-        general: plan.generalNotes || '',
-        phases: plan.phaseNotes || { START: '', ATTACK: '', DEFENSE: '' },
-      },
+      notes: plan.notes || DEFAULT_GAME_PLAN_NOTES,
     }));
 
     res.json(plansForFrontend);

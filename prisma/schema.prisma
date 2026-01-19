@@ -42,16 +42,15 @@ model Map {
 }
 
 model GamePlan {
-  id           String           @id @default(cuid())
-  name         String
-  mapId        String
-  assignments  Json
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-  generalNotes String?
-  phaseNotes   Json?
-  map          Map              @relation(fields: [mapId], references: [id], onDelete: Cascade)
-  players      GamePlanPlayer[]
+  id          String           @id @default(cuid())
+  name        String
+  mapId       String
+  assignments Json
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  notes       Json?
+  map         Map              @relation(fields: [mapId], references: [id], onDelete: Cascade)
+  players     GamePlanPlayer[]
 
   @@index([mapId])
 }

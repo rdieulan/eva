@@ -4,7 +4,7 @@
  */
 
 import { ref, computed, watch, type Ref, type ComputedRef } from 'vue';
-import { DEFAULT_GAME_PLAN_NOTES, DEFAULT_ROLE_PHASE_NOTES } from '@shared/types';
+import { DEFAULT_GAME_PLAN_NOTES, DEFAULT_ROLE_PHASE_NOTES } from '@shared/constants';
 import type { MapConfig, GamePhase, GamePlanNotes } from '@shared/types';
 
 export interface UsePlannerNotesOptions {

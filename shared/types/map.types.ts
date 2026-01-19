@@ -10,15 +10,6 @@ import type { PlayerAssignment } from './player.types';
 // Game phases for strategic planning
 export type GamePhase = 'START' | 'ATTACK' | 'DEFENSE';
 
-// All available phases (for iteration)
-export const GAME_PHASES: GamePhase[] = ['START', 'ATTACK', 'DEFENSE'];
-
-// Phase display names
-export const PHASE_LABELS: Record<GamePhase, string> = {
-  START: 'Start',
-  ATTACK: 'Attaque',
-  DEFENSE: 'Défense',
-};
 
 // =============================================================================
 // ASSIGNMENTS & ZONES
@@ -47,12 +38,6 @@ export type MarkerIcon =
   | 'move'        // Movement
   | 'group';      // Group/regroup
 
-// All available marker icons (for UI iteration)
-export const MARKER_ICONS: MarkerIcon[] = [
-  'player', 'position', 'eye', 'target', 'warning', 'star',
-  'arrow-up', 'arrow-down', 'arrow-left', 'arrow-right',
-  'wait', 'move', 'group'
-];
 
 // Single marker definition
 export interface Marker {
@@ -64,25 +49,9 @@ export interface Marker {
   size?: number;        // Size multiplier (default: 1)
 }
 
-// Default marker size
-export const DEFAULT_MARKER_SIZE = 1;
-
-// Available marker sizes with labels
-export const MARKER_SIZES: { value: number; label: string }[] = [
-  { value: 0.7, label: 'Petit' },
-  { value: 1, label: 'Moyen' },
-  { value: 1.5, label: 'Grand' },
-];
-
 // Markers per phase for an assignment
 export type PhaseMarkers = Record<GamePhase, Marker[]>;
 
-// Default empty markers per phase
-export const DEFAULT_PHASE_MARKERS: PhaseMarkers = {
-  START: [],
-  ATTACK: [],
-  DEFENSE: [],
-};
 
 // =============================================================================
 // ASSIGNMENTS
@@ -120,25 +89,6 @@ export interface GamePlanNotes {
   rolePhases?: RolePhaseNotes; // Notes per role per phase
 }
 
-// Default empty notes
-export const DEFAULT_PHASE_NOTES: PhaseNotes = {
-  START: '',
-  ATTACK: '',
-  DEFENSE: '',
-};
-
-export const DEFAULT_ROLE_PHASE_NOTES: RolePhaseNotes = {
-  START: {},
-  ATTACK: {},
-  DEFENSE: {},
-};
-
-export const DEFAULT_GAME_PLAN_NOTES: GamePlanNotes = {
-  general: '',
-  phases: DEFAULT_PHASE_NOTES,
-  roles: {},
-  rolePhases: DEFAULT_ROLE_PHASE_NOTES,
-};
 
 // =============================================================================
 // GAME PLAN

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { GamePhase } from '@/types';
-import { PHASE_LABELS, GAME_PHASES } from '@shared/types';
+import { PHASE_LABELS, GAME_PHASES } from '@shared/constants';
 import { PHASE_DISPLAY_DATA } from '@/constants';
 import SvgIcon from '@/components/common/SvgIcon.vue';
 
