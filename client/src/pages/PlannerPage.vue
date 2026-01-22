@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
+import PlannerTopBar from '@/components/planner/layout/PlannerTopBar.vue';
+import PlannerLeftBar from '@/components/planner/layout/PlannerLeftBar.vue';
+import PlannerRightDrawer from '@/components/planner/layout/PlannerRightDrawer.vue';
 import MapViewer from '@/components/planner/MapViewer.vue';
-import Toolbar from '@/components/planner/Toolbar.vue';
-import Sidebar from '@/components/planner/Sidebar.vue';
-import Drawer from '@/components/common/Drawer.vue';
-import PlannerNotesPanel from '@/components/planner/PlannerNotesPanel.vue';
 import { fetchAllMaps, fetchPlayers, saveGamePlan } from '@/api';
 import { getPlayerAssignments } from '@/utils/balance';
 import { getAssignmentColor } from '@/utils/colors';
@@ -229,7 +228,7 @@ function handleAddZone() {
   <div class="planner-page">
     <!-- Toolbar injected into TopBar -->
     <Teleport to="#topbar-dynamic-content">
-      <Toolbar
+      <PlannerTopBar
         :players="players"
         :selectedPlayerId="selectedPlayerId"
         :map="currentMap"
@@ -259,7 +258,7 @@ function handleAddZone() {
 
     <template v-else>
       <div class="main-content">
-        <Sidebar
+        <PlannerLeftBar
           :maps="maps"
           :selectedMapId="selectedMapId"
           :editMode="editMode"
@@ -293,26 +292,25 @@ function handleAddZone() {
         </div>
 
         <!-- Notes Drawer -->
-        <Drawer v-model="showNotesDrawer" title="Stratégie" icon="notes">
-          <PlannerNotesPanel
-            :editMode="editMode"
-            :currentPhase="currentPhase"
-            :selectedAssignmentName="selectedAssignmentName"
-            :selectedAssignmentColor="selectedAssignmentColor"
-            :localGeneralNotes="localGeneralNotes"
-            :localPhaseNotes="localPhaseNotes"
-            :localRoleNotes="localRoleNotes"
-            :localRolePhaseNotes="localRolePhaseNotes"
-            @update:localGeneralNotes="localGeneralNotes = $event"
-            @update:localPhaseNotes="localPhaseNotes = $event"
-            @update:localRoleNotes="localRoleNotes = $event"
-            @update:localRolePhaseNotes="localRolePhaseNotes = $event"
-            @updateGeneralNotes="updateGeneralNotes"
-            @updatePhaseNotes="updatePhaseNotes"
-            @updateRoleNotes="updateRoleNotes"
-            @updateRolePhaseNotes="updateRolePhaseNotes"
-          />
-        </Drawer>
+        <PlannerRightDrawer
+          v-model="showNotesDrawer"
+          :editMode="editMode"
+          :currentPhase="currentPhase"
+          :selectedAssignmentName="selectedAssignmentName"
+          :selectedAssignmentColor="selectedAssignmentColor"
+          :localGeneralNotes="localGeneralNotes"
+          :localPhaseNotes="localPhaseNotes"
+          :localRoleNotes="localRoleNotes"
+          :localRolePhaseNotes="localRolePhaseNotes"
+          @update:localGeneralNotes="localGeneralNotes = $event"
+          @update:localPhaseNotes="localPhaseNotes = $event"
+          @update:localRoleNotes="localRoleNotes = $event"
+          @update:localRolePhaseNotes="localRolePhaseNotes = $event"
+          @updateGeneralNotes="updateGeneralNotes"
+          @updatePhaseNotes="updatePhaseNotes"
+          @updateRoleNotes="updateRoleNotes"
+          @updateRolePhaseNotes="updateRolePhaseNotes"
+        />
       </div>
     </template>
   </div>

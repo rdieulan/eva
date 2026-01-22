@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { AvailabilityStatus, PlayerAvailability, CalendarEvent } from '@shared/types';
-import { getPlayerInitials, getPlayerStatusClass as getPlayerStatusClassUtil } from '@/utils/players';
+import {
+  getPlayerInitials,
+  getPlayerStatusClass as getPlayerStatusClassUtil,
+  sortPlayersByAvailability,
+} from '@/utils/players';
 import { getEventTypeClass } from '@/utils/calendar';
 
 interface Props {
@@ -33,6 +37,11 @@ const sortedEvents = computed(() => {
   return [...props.events].sort((a, b) => {
     return a.startTime.localeCompare(b.startTime);
   });
+});
+
+// Sort players by availability status then by name
+const sortedPlayers = computed(() => {
+  return sortPlayersByAvailability(props.playerAvailabilities);
 });
 
 // Check if there are events
@@ -152,7 +161,7 @@ function cycleAvailability() {
     <!-- Player availability summary (always visible) -->
     <div class="players-summary">
       <div
-        v-for="player in playerAvailabilities"
+        v-for="player in sortedPlayers"
         :key="player.userId"
         class="player-avatar"
         :class="getPlayerStatusClass(player.status)"

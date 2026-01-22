@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import TopBar from '@/components/layout/TopBar.vue';
+import DynamicTopBar from '@/components/common/layout/DynamicTopBar.vue';
 import { useAuth } from '@/composables/useAuth';
 
 const { isAuthenticated, user, isLoading, initAuth } = useAuth();
@@ -29,14 +29,14 @@ const showTopBar = computed(() => route.name !== 'login');
 
     <template v-else>
       <!-- Global TopBar with dynamic section -->
-      <TopBar
+      <DynamicTopBar
         v-if="showTopBar"
         :isAuthenticated="isAuthenticated"
         :userName="userName"
       >
         <!-- Dynamic content will be injected by each page via teleport -->
         <div id="topbar-dynamic-content" class="dynamic-content"></div>
-      </TopBar>
+      </DynamicTopBar>
 
       <!-- Page content -->
       <main class="page-content" :class="{ 'no-topbar': !showTopBar }">

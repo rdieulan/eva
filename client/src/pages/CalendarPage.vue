@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, provide } from 'vue';
+import CalendarTopBar from '@/components/calendar/layout/CalendarTopBar.vue';
+import CalendarHeader from '@/components/calendar/layout/CalendarHeader.vue';
 import CalendarGrid from '@/components/calendar/CalendarGrid.vue';
 import WeekGrid from '@/components/calendar/WeekGrid.vue';
-import CalendarToolbar from '@/components/calendar/CalendarToolbar.vue';
-import CalendarControls from '@/components/calendar/CalendarControls.vue';
 import EventFormModal from '@/components/calendar/EventFormModal.vue';
 import EventViewerModal from '@/components/calendar/EventViewerModal.vue';
 import { useAuth } from '@/composables/useAuth';
@@ -96,7 +96,7 @@ onMounted(async () => {
   <div class="calendar-page">
     <!-- Teleport toolbar to TopBar -->
     <Teleport v-if="!teleportDisabled" to="#topbar-dynamic-content">
-      <CalendarToolbar
+      <CalendarTopBar
         :edit-mode="editMode"
         @toggle-edit-mode="toggleEditMode"
       />
@@ -117,7 +117,7 @@ onMounted(async () => {
     <!-- Calendar -->
     <template v-else>
       <!-- Calendar controls -->
-      <CalendarControls
+      <CalendarHeader
         :view-mode="viewMode"
         :navigation-title="navigationTitle"
         @update:view-mode="viewMode = $event"

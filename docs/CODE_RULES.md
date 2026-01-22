@@ -34,9 +34,14 @@ client/src/
 ├── api/           # Appels API (fetch)
 ├── components/    # Composants Vue (.vue uniquement)
 │   ├── calendar/  # Composants du calendrier
-│   ├── common/    # Composants réutilisables (Modal, Drawer, etc.)
-│   ├── layout/    # Composants de layout (TopBar, etc.)
+│   │   ├── layout/    # Composants layout (TopBar, Header, Body)
+│   │   └── *.vue      # Composants fonctionnels
+│   ├── common/    # Composants réutilisables
+│   │   ├── layout/    # Layout global (DynamicTopBar)
+│   │   └── *.vue      # Composants génériques (Modal, Drawer)
 │   └── planner/   # Composants du planificateur
+│       ├── layout/    # Composants layout
+│       └── *.vue      # Composants fonctionnels
 ├── composables/   # Logique réactive réutilisable (useAuth, etc.)
 ├── config/        # Re-exports pour rétrocompatibilité
 ├── constants/     # Données constantes (couleurs, paths SVG, etc.)
@@ -85,6 +90,45 @@ server/src/
 - **Fichiers TS** : kebab-case ou camelCase (`balance.service.ts`, `zones.ts`)
 - **Types** : suffixe `.types.ts` (`map.types.ts`, `calendar.types.ts`)
 - **Tests** : suffixe `.test.ts` (`balance.test.ts`)
+
+### Nomenclature des composants : Layout vs Fonctionnel
+
+Chaque feature (calendar, planner, etc.) sépare ses composants en deux catégories :
+
+#### Composants Layout (`*/layout/`)
+Gèrent **uniquement** l'agencement visuel (flexbox, grid, position). Pas de logique métier.
+
+| Position | Format | Exemples |
+|----------|--------|----------|
+| Haut (téléporté) | `*TopBar` | `CalendarTopBar`, `PlannerTopBar` |
+| Haut (intégré) | `*Header` | `CalendarHeader` |
+| Gauche | `*LeftBar` | `PlannerLeftBar` |
+| Centre | `*Body` | `CalendarBody`, `PlannerBody` |
+| Droite (drawer) | `*RightDrawer` | `PlannerRightDrawer` |
+
+#### Composants Fonctionnels (`*/`)
+Contiennent la logique métier, l'état, les interactions.
+
+```
+planner/
+├── layout/
+│   ├── PlannerTopBar.vue      # Agencement des contrôles
+│   ├── PlannerLeftBar.vue     # Wrapper sidebar
+│   ├── PlannerBody.vue        # Wrapper contenu central
+│   └── PlannerRightDrawer.vue # Wrapper drawer notes
+├── MapViewer.vue              # Logique affichage carte
+├── MapList.vue                # Logique liste maps
+├── PlannerNotes.vue           # Logique notes
+└── ...
+```
+
+#### Layout global (`common/layout/`)
+Composants de structure présents sur toutes les pages :
+- `DynamicTopBar.vue` : Barre de navigation avec zone téléport
+
+#### Composants réutilisables (`common/`)
+Composants génériques sans logique métier spécifique :
+- `Drawer.vue`, `Modal.vue`, etc.
 
 ---
 
