@@ -178,7 +178,7 @@ function isMainRoleForSelectedPlayer(assignmentId: number): boolean {
         @click="showCalculator = true"
         title="Ouvrir le calculateur de rotation"
       >
-        <span class="calculator-emoji">🔄</span>
+        <span class="calculator-emoji">📋</span>
       </button>
 
       <div
