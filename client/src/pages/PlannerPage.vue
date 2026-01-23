@@ -7,6 +7,7 @@ import PlannerLeftBar from '@/components/planner/layout/PlannerLeftBar.vue';
 import PlannerRightDrawer from '@/components/planner/layout/PlannerRightDrawer.vue';
 import PlannerBody from '@/components/planner/layout/PlannerBody.vue';
 import Modal from '@/components/common/Modal.vue';
+import BalanceRulesModal from '@/components/planner/BalanceRulesModal.vue';
 import { fetchAllMaps, fetchPlayers, saveGamePlan } from '@/api';
 import { getPlayerAssignments } from '@/utils/balance';
 import { getAssignmentColor } from '@/utils/colors';
@@ -20,6 +21,7 @@ const router = useRouter();
 const canCreate = computed(() => permissions.value.planner.canCreate);
 const canEdit = computed(() => permissions.value.planner.canEdit);
 const canDelete = computed(() => permissions.value.planner.canDelete);
+const canManageBalanceRules = computed(() => permissions.value.planner.canManageBalanceRules);
 
 // Core state
 const selectedMapId = ref<string | null>(null);
@@ -29,6 +31,7 @@ const editMode = ref(false);
 const isLoading = ref(true);
 const currentPhase = ref<GamePhase>('START');
 const showNotesDrawer = ref(false);
+const showBalanceRulesModal = ref(false);
 const saveState = ref<'idle' | 'saving' | 'success' | 'error'>('idle');
 
 const maps = ref<MapConfig[]>([]);
@@ -450,6 +453,7 @@ function handleCancelLeave() {
         :canCreate="canCreate"
         :canEdit="canEdit"
         :canDelete="canDelete"
+        :canManageBalanceRules="canManageBalanceRules"
         :currentPhase="currentPhase"
         :plans="currentMapPlans"
         :selectedPlanId="selectedPlanId"
@@ -461,6 +465,7 @@ function handleCancelLeave() {
         @duplicate-plan="duplicatePlan"
         @delete-plan="deletePlan"
         @rename-plan="renamePlan"
+        @open-balance-rules="showBalanceRulesModal = true"
       />
     </Teleport>
 
@@ -564,6 +569,12 @@ function handleCancelLeave() {
         </div>
       </template>
     </Modal>
+
+    <!-- Balance Rules Modal -->
+    <BalanceRulesModal
+      v-if="showBalanceRulesModal"
+      @close="showBalanceRulesModal = false"
+    />
   </div>
 </template>
 

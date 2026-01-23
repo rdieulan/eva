@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import DynamicTopBar from '@/components/common/layout/DynamicTopBar.vue';
 import { useAuth } from '@/composables/useAuth';
+import { useBalanceRules } from '@/composables/useBalanceRules';
 
 const { isAuthenticated, user, isLoading, initAuth } = useAuth();
+const { fetchRules } = useBalanceRules();
 
 const route = useRoute();
 
@@ -12,6 +14,13 @@ const route = useRoute();
 onMounted(async () => {
   await initAuth();
 });
+
+// Load balance rules when authenticated
+watch(isAuthenticated, async (authenticated) => {
+  if (authenticated) {
+    await fetchRules();
+  }
+}, { immediate: true });
 
 // User name for the TopBar
 const userName = computed(() => user.value?.name);

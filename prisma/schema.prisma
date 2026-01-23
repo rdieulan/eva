@@ -24,15 +24,33 @@ model User {
 }
 
 model Team {
-  id          String   @id @default(cuid())
-  name        String
-  logo        String?
-  location    String?
-  leaderId    String   @unique
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  leader      User     @relation("TeamLeader", fields: [leaderId], references: [id])
-  members     User[]   @relation("TeamMembers")
+  id           String        @id @default(cuid())
+  name         String
+  logo         String?
+  location     String?
+  leaderId     String        @unique
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  leader       User          @relation("TeamLeader", fields: [leaderId], references: [id])
+  members      User[]        @relation("TeamMembers")
+  balanceRules BalanceRule[]
+}
+
+model BalanceRule {
+  id          String          @id @default(cuid())
+  teamId      String
+  ruleKey     String          // Unique key identifying the rule type
+  name        String          // Display name
+  description String?         // Rule description
+  severity    BalanceSeverity @default(ERROR)
+  enabled     Boolean         @default(true)
+  params      Json?           // Rule-specific parameters
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  team        Team            @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, ruleKey])
+  @@index([teamId])
 }
 
 model Session {
@@ -123,3 +141,9 @@ enum EventType {
   MATCH
   EVENT
 }
+
+enum BalanceSeverity {
+  ERROR
+  WARNING
+}
+

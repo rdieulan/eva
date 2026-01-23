@@ -1,6 +1,11 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import type { MapConfig } from '@/types';
 import { checkMapBalance } from '@/utils/balance';
+import { useBalanceRules } from '@/composables/useBalanceRules';
+
+// Get rulesVersion to trigger reactivity when rules change
+const { rulesVersion } = useBalanceRules();
 
 const props = defineProps<{
   maps: MapConfig[];
@@ -21,23 +26,44 @@ const emit = defineEmits<{
   'cancel': [];
 }>();
 
+// Computed map of balance results, recalculated when rulesVersion changes
+const mapBalanceResults = computed(() => {
+  // Access rulesVersion to trigger recalculation
+  void rulesVersion.value;
+
+  const results: Record<string, { isBalanced: boolean; hasWarnings: boolean }> = {};
+  for (const map of props.maps) {
+    const result = checkMapBalance(map);
+    results[map.id] = {
+      isBalanced: result.isBalanced,
+      hasWarnings: result.hasWarnings,
+    };
+  }
+  return results;
+});
 
 // Get balance status icon for a map
 function getBalanceIcon(map: MapConfig): string {
-  const result = checkMapBalance(map);
-  if (result.isBalanced) {
+  const result = mapBalanceResults.value[map.id];
+  if (!result) return '?';
+  if (result.isBalanced && !result.hasWarnings) {
     return '✓';
   }
-  // Check if there are minor issues (warnings) vs critical errors
-  // For now, any error is considered critical
+  if (result.isBalanced && result.hasWarnings) {
+    return '⚠';
+  }
   return '✗';
 }
 
 // Get balance status class for icon styling
 function getBalanceClass(map: MapConfig): string {
-  const result = checkMapBalance(map);
-  if (result.isBalanced) {
+  const result = mapBalanceResults.value[map.id];
+  if (!result) return 'status-error';
+  if (result.isBalanced && !result.hasWarnings) {
     return 'status-ok';
+  }
+  if (result.isBalanced && result.hasWarnings) {
+    return 'status-warning';
   }
   return 'status-error';
 }
@@ -107,6 +133,7 @@ function getBalanceClass(map: MapConfig): string {
           <li><strong>Points</strong> : Modifier forme de zone</li>
         </ul>
       </div>
+
 
       <div v-if="!hasActiveAssignment" class="edit-warning">
         ⚠️ Sélectionnez un rôle pour éditer
@@ -423,6 +450,7 @@ function getBalanceClass(map: MapConfig): string {
     }
   }
 }
+
 
 .instructions {
   list-style: none;

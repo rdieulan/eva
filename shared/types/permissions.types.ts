@@ -7,6 +7,7 @@ export interface PlannerPermissions {
   canCreate: boolean;  // Create new game plans
   canEdit: boolean;    // Edit everything (markers, zones, notes, roles, player assignments)
   canDelete: boolean;  // Delete game plans
+  canManageBalanceRules: boolean; // Manage balance validation rules
 }
 
 /**
@@ -46,6 +47,7 @@ export const DEFAULT_PLAYER_PERMISSIONS: UserPermissions = {
     canCreate: false,
     canEdit: false,
     canDelete: false,
+    canManageBalanceRules: false,
   },
   calendar: {
     canCreateEvents: false,
@@ -69,6 +71,7 @@ export const LEADER_PERMISSIONS: UserPermissions = {
     canCreate: true,
     canEdit: true,
     canDelete: true,
+    canManageBalanceRules: true,
   },
   calendar: {
     canCreateEvents: true,

@@ -6,6 +6,16 @@ This document describes the utility scripts available for the coding agent to au
 
 ---
 
+## 🚨 Règles de Comportement Obligatoires
+
+1. **NE JAMAIS modifier** ROADMAP.md, README.md ou tout fichier de documentation sans validation explicite de l'utilisateur
+2. **TOUJOURS proposer** un plan détaillé et attendre validation AVANT d'implémenter
+3. **NE JAMAIS supprimer** ou écraser du contenu existant sans le montrer d'abord
+4. **NE PAS agir** sur une simple interprétation - demander clarification si ambiguïté
+5. **ATTENDRE la validation** avant de passer à l'étape suivante d'un plan
+
+---
+
 ## 📂 Scripts Location
 
 All scripts are located in `/scripts/` directory.

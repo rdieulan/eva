@@ -60,3 +60,15 @@ export type {
   TeamLocation,
 } from './team.types';
 export { TEAM_LOCATIONS } from './team.types';
+
+export type {
+  BalanceSeverity,
+  RuleKey,
+  BalanceRule,
+  BalanceRuleCreate,
+  BalanceRuleUpdate,
+  BalanceValidation,
+  BalanceCheckResult,
+} from './balance.types';
+export { DEFAULT_BALANCE_RULES } from './balance.types';
+

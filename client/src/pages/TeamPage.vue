@@ -309,6 +309,14 @@ onMounted(loadData);
             />
             Supprimer des plans
           </label>
+          <label class="perm-item">
+            <input
+              type="checkbox"
+              :checked="editingPermissions.planner.canManageBalanceRules"
+              @change="togglePermission('planner', 'canManageBalanceRules')"
+            />
+            Gérer les règles d'équilibre
+          </label>
         </div>
 
         <!-- Calendar permissions -->
@@ -717,6 +725,12 @@ section {
     height: 16px;
     cursor: pointer;
   }
+}
+
+.section-description {
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+  margin: 0;
 }
 
 @media (max-width: $breakpoint-tablet) {

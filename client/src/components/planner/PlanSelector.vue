@@ -198,6 +198,8 @@ function closeDropdown() {
     border-color: $color-border-light;
   }
 
+
+
   .plan-name {
     flex: 1;
     text-align: left;
