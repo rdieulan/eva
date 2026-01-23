@@ -2,30 +2,25 @@
  * Master Script Runner
  *
  * Executes child scripts and then runs build + tests to validate changes.
- * In dry-run mode, only simulates changes without running build/tests.
  *
  * Usage:
- *   npm run script -- <script-name> [args...]
- *   npm run script -- <script-name> --dry-run [args...]
- *
- * Options:
- *   --dry-run    Simulate changes without modifying files (skips build/tests)
+ *   npm run script -- <script-name> [args...]        # Normal mode
+ *   npm run script:dry -- <script-name> [args...]    # Dry-run mode
  *
  * Examples:
  *   npm run script -- rename-file client/src/Old.vue client/src/New.vue
- *   npm run script -- rename-file --dry-run client/src/Old.vue client/src/New.vue
+ *   npm run script:dry -- rename-file client/src/Old.vue client/src/New.vue
  *
  * Available scripts:
- *   - rename-file [--dry-run] <source> <target>  : Rename/move a file and update imports
+ *   - rename-file <source> <target>  : Rename/move a file and update imports
  */
 
 import { spawnSync } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
-import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Scripts directory
+const SCRIPTS_DIR = path.join(process.cwd(), 'scripts');
 
 // Available scripts
 const AVAILABLE_SCRIPTS: Record<string, { description: string; minArgs: number }> = {
@@ -47,7 +42,7 @@ interface ScriptResult {
  * Run a child script
  */
 function runScript(scriptName: string, args: string[]): { success: boolean; output: string } {
-  const scriptPath = path.join(__dirname, `${scriptName}.ts`);
+  const scriptPath = path.join(SCRIPTS_DIR, `${scriptName}.ts`);
 
   if (!fs.existsSync(scriptPath)) {
     return {
@@ -152,9 +147,8 @@ function printHelp() {
   console.log('\n📜 Master Script Runner');
   console.log('========================\n');
   console.log('Usage:');
-  console.log('  npm run script -- <script-name> [--dry-run] [args...]\n');
-  console.log('Options:');
-  console.log('  --dry-run    Simulate changes without modifying files (skips build/tests)\n');
+  console.log('  npm run script -- <script-name> [args...]');
+  console.log('  npm run script:dry -- <script-name> [args...]  (dry-run mode)\n');
   console.log('Available scripts:');
 
   for (const [name, info] of Object.entries(AVAILABLE_SCRIPTS)) {
@@ -164,7 +158,7 @@ function printHelp() {
 
   console.log('\nExamples:');
   console.log('  npm run script -- rename-file client/src/Old.vue client/src/New.vue');
-  console.log('  npm run script -- rename-file --dry-run client/src/Old.vue client/src/New.vue');
+  console.log('  npm run script:dry -- rename-file client/src/Old.vue client/src/New.vue');
 }
 
 /**
@@ -178,18 +172,24 @@ function main(): ScriptResult {
     errors: [],
   };
 
+  // Detect dry-run mode (--dry-run passed as first arg by npm run script:dry)
+  const isDryRun = args[0] === '--dry-run';
+  const effectiveArgs = isDryRun ? args.slice(1) : args;
+
   // Check for help
-  if (args.length === 0 || args[0] === '--help' || args[0] === '-h') {
+  if (effectiveArgs.length === 0 || effectiveArgs[0] === '--help' || effectiveArgs[0] === '-h') {
     printHelp();
     result.success = true;
     return result;
   }
 
-  const scriptName = args[0]!;
-  const scriptArgs = args.slice(1);
+  const scriptName = effectiveArgs[0]!;
+  const scriptArgs = effectiveArgs.slice(1);
 
-  // Detect dry-run mode
-  const isDryRun = scriptArgs.includes('--dry-run');
+  // Add --dry-run flag to script args if in dry-run mode
+  if (isDryRun) {
+    scriptArgs.unshift('--dry-run');
+  }
 
   // Validate script exists
   if (!AVAILABLE_SCRIPTS[scriptName]) {
@@ -199,7 +199,7 @@ function main(): ScriptResult {
     return result;
   }
 
-  // Validate args count (excluding --dry-run from count)
+  // Validate args count (excluding flags from count)
   const scriptInfo = AVAILABLE_SCRIPTS[scriptName]!;
   const argsWithoutFlags = scriptArgs.filter(arg => !arg.startsWith('--'));
   if (argsWithoutFlags.length < scriptInfo.minArgs) {
@@ -231,7 +231,7 @@ function main(): ScriptResult {
   if (isDryRun) {
     result.success = true;
     console.log('\n✅ Dry-run completed successfully!');
-    console.log('💡 Run without --dry-run to apply changes and validate with build/tests.');
+    console.log('💡 Use "npm run script" instead to apply changes.');
     console.log('========================\n');
     return result;
   }

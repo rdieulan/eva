@@ -6,14 +6,11 @@
  *
  * Usage:
  *   npm run script -- rename-file <source-path> <target-path>
- *   npm run script -- rename-file --dry-run <source-path> <target-path>
- *
- * Options:
- *   --dry-run    Simulate the rename without modifying any files
+ *   npm run script:dry -- rename-file <source-path> <target-path>
  *
  * Examples:
  *   npm run script -- rename-file client/src/components/Old.vue client/src/components/New.vue
- *   npm run script -- rename-file --dry-run client/src/utils/old.ts client/src/utils/new.ts
+ *   npm run script:dry -- rename-file client/src/utils/old.ts client/src/utils/new.ts
  */
 
 import * as fs from 'fs';
@@ -86,7 +83,6 @@ function getImportVariants(filePath: string, projectRoot: string): string[] {
 
   // Remove extension for imports
   const withoutExt = relativePath.replace(/\.(ts|vue|js|tsx|jsx)$/, '');
-  const withExt = relativePath;
 
   // Handle @ alias for client/src
   if (relativePath.startsWith('client/src/')) {
@@ -120,17 +116,26 @@ function getImportVariants(filePath: string, projectRoot: string): string[] {
     }
   }
 
-  // Add relative paths
-  variants.push(withExt);
+  // Add relative paths (full and without extension)
+  variants.push(relativePath);
   variants.push(withoutExt);
 
-  // Add just the filename (for same-directory imports)
+  // Add just the filename (for same-directory imports like ./Modal)
   const fileName = path.basename(filePath);
   const fileNameWithoutExt = fileName.replace(/\.(ts|vue|js|tsx|jsx)$/, '');
   variants.push('./' + fileName);
   variants.push('./' + fileNameWithoutExt);
 
+  // Add just the base name for re-exports in index.ts
+  variants.push(fileNameWithoutExt);
+
   return [...new Set(variants)];
+}
+
+interface ImportChange {
+  lineNumber: number;
+  oldLine: string;
+  newLine: string;
 }
 
 /**
@@ -142,8 +147,10 @@ function updateImportsInFile(
   newVariants: string[],
   projectRoot: string,
   dryRun: boolean = false
-): boolean {
-  let content = fs.readFileSync(filePath, 'utf-8');
+): { modified: boolean; changes: ImportChange[] } {
+  const content = fs.readFileSync(filePath, 'utf-8');
+  const lines = content.split('\n');
+  const changes: ImportChange[] = [];
   let modified = false;
 
   // Build replacement map (old -> new)
@@ -153,69 +160,56 @@ function updateImportsInFile(
     replacements.set(oldVariants[i]!, newVariants[i]!);
   }
 
-  // Find and replace imports
-  // Matches: import ... from 'path' or import ... from "path"
-  // Also matches: import('path') for dynamic imports
-  // Also matches: @use 'path' for SCSS
+  // Process each line
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+    const originalLine = lines[lineIndex]!;
+    let newLine = originalLine;
 
-  for (const [oldPath, newPath] of replacements) {
-    // Standard imports with single quotes
-    const singleQuoteRegex = new RegExp(
-      `(from\\s+')${escapeRegex(oldPath)}(')`
-      , 'g'
-    );
-    if (singleQuoteRegex.test(content)) {
-      content = content.replace(singleQuoteRegex, `$1${newPath}$2`);
-      modified = true;
+    for (const [oldPath, newPath] of replacements) {
+      // Standard imports: from 'path' or from "path"
+      const singleQuoteRegex = new RegExp(`(from\\s+')${escapeRegex(oldPath)}(')`, 'g');
+      const doubleQuoteRegex = new RegExp(`(from\\s+")${escapeRegex(oldPath)}(")`, 'g');
+
+      // Dynamic imports
+      const dynamicSingleRegex = new RegExp(`(import\\s*\\(\\s*')${escapeRegex(oldPath)}('\\s*\\))`, 'g');
+      const dynamicDoubleRegex = new RegExp(`(import\\s*\\(\\s*")${escapeRegex(oldPath)}("\\s*\\))`, 'g');
+
+      // Re-exports
+      const reExportSingleRegex = new RegExp(`(export\\s+(?:\\{[^}]*}|\\*)\\s+from\\s+')${escapeRegex(oldPath)}(')`, 'g');
+      const reExportDoubleRegex = new RegExp(`(export\\s+(?:\\{[^}]*}|\\*)\\s+from\\s+")${escapeRegex(oldPath)}(")`, 'g');
+
+      // SCSS
+      const scssUseRegex = new RegExp(`(@use\\s+['"])${escapeRegex(oldPath)}(['"])`, 'g');
+      const scssImportRegex = new RegExp(`(@import\\s+['"])${escapeRegex(oldPath)}(['"])`, 'g');
+
+      newLine = newLine
+        .replace(singleQuoteRegex, `$1${newPath}$2`)
+        .replace(doubleQuoteRegex, `$1${newPath}$2`)
+        .replace(dynamicSingleRegex, `$1${newPath}$2`)
+        .replace(dynamicDoubleRegex, `$1${newPath}$2`)
+        .replace(reExportSingleRegex, `$1${newPath}$2`)
+        .replace(reExportDoubleRegex, `$1${newPath}$2`)
+        .replace(scssUseRegex, `$1${newPath}$2`)
+        .replace(scssImportRegex, `$1${newPath}$2`);
     }
 
-    // Standard imports with double quotes
-    const doubleQuoteRegex = new RegExp(
-      `(from\\s+")${escapeRegex(oldPath)}(")`
-      , 'g'
-    );
-    if (doubleQuoteRegex.test(content)) {
-      content = content.replace(doubleQuoteRegex, `$1${newPath}$2`);
+    if (newLine !== originalLine) {
       modified = true;
-    }
-
-    // Dynamic imports
-    const dynamicImportRegex = new RegExp(
-      `(import\\s*\\(\\s*['"])${escapeRegex(oldPath)}(['"]\\s*\\))`
-      , 'g'
-    );
-    if (dynamicImportRegex.test(content)) {
-      content = content.replace(dynamicImportRegex, `$1${newPath}$2`);
-      modified = true;
-    }
-
-    // SCSS @use
-    const scssUseRegex = new RegExp(
-      `(@use\\s+['"])${escapeRegex(oldPath)}(['"])`
-      , 'g'
-    );
-    if (scssUseRegex.test(content)) {
-      content = content.replace(scssUseRegex, `$1${newPath}$2`);
-      modified = true;
-    }
-
-    // SCSS @import
-    const scssImportRegex = new RegExp(
-      `(@import\\s+['"])${escapeRegex(oldPath)}(['"])`
-      , 'g'
-    );
-    if (scssImportRegex.test(content)) {
-      content = content.replace(scssImportRegex, `$1${newPath}$2`);
-      modified = true;
+      lines[lineIndex] = newLine;
+      changes.push({
+        lineNumber: lineIndex + 1,
+        oldLine: originalLine.trim(),
+        newLine: newLine.trim(),
+      });
     }
   }
 
-  // Only write if not in dry-run mode
+  // Only write if not in dry-run mode and there were changes
   if (modified && !dryRun) {
-    fs.writeFileSync(filePath, content, 'utf-8');
+    fs.writeFileSync(filePath, lines.join('\n'), 'utf-8');
   }
 
-  return modified;
+  return { modified, changes };
 }
 
 /**
@@ -288,13 +282,22 @@ export function renameFile(sourcePath: string, targetPath: string, dryRun: boole
       // Don't update the source file itself
       if (file === absoluteSource) continue;
 
-      const updated = updateImportsInFile(file, oldVariants, newVariants, projectRoot, dryRun);
+      const { modified, changes } = updateImportsInFile(file, oldVariants, newVariants, projectRoot, dryRun);
 
-      if (updated) {
+      if (modified) {
         const relativePath = path.relative(projectRoot, file);
         result.updatedImports.push(relativePath);
-        const prefix = dryRun ? '   [would update]' : '   ✓ Updated:';
-        console.log(`${prefix} ${relativePath}`);
+
+        if (dryRun) {
+          console.log(`   [would update] ${relativePath}`);
+          for (const change of changes) {
+            console.log(`     L${change.lineNumber}:`);
+            console.log(`       - ${change.oldLine}`);
+            console.log(`       + ${change.newLine}`);
+          }
+        } else {
+          console.log(`   ✓ Updated: ${relativePath}`);
+        }
       }
     }
   }
@@ -348,14 +351,12 @@ if (process.argv[1]?.includes('rename-file')) {
   }
 
   if (args.length !== 2) {
-    console.error('Usage: npm run script -- rename-file [--dry-run] <source-path> <target-path>');
-    console.error('');
-    console.error('Options:');
-    console.error('  --dry-run    Simulate the rename without modifying any files');
+    console.error('Usage: npm run script -- rename-file <source-path> <target-path>');
+    console.error('       npm run script:dry -- rename-file <source-path> <target-path>');
     console.error('');
     console.error('Examples:');
     console.error('  npm run script -- rename-file client/src/Old.vue client/src/New.vue');
-    console.error('  npm run script -- rename-file --dry-run client/src/Old.vue client/src/New.vue');
+    console.error('  npm run script:dry -- rename-file client/src/Old.vue client/src/New.vue');
     process.exit(1);
   }
 
@@ -369,7 +370,7 @@ if (process.argv[1]?.includes('rename-file')) {
   }
 
   if (dryRun) {
-    console.log('\n💡 This was a dry-run. Run without --dry-run to apply changes.');
+    console.log('\n💡 This was a dry-run. Use "npm run script" to apply changes.');
   }
 
   process.exit(0);
