@@ -256,19 +256,19 @@ th {
 }
 
 .btn-export-png {
-  align-self: flex-end;
-  padding: 0.5rem 1rem;
-  background: rgba($color-accent, 0.2);
-  border: 1px solid $color-accent;
+  align-self: center;
+  padding: 0.75rem 1.5rem;
+  background: rgba($color-success, 0.2);
+  border: 1px solid $color-success;
   border-radius: $radius-md;
-  color: $color-accent;
-  font-size: 0.85rem;
+  color: $color-success;
+  font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover {
-    background: rgba($color-accent, 0.3);
+    background: rgba($color-success, 0.3);
   }
 
   @include mobile-lg {

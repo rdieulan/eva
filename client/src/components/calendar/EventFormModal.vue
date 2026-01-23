@@ -2,7 +2,7 @@
 import { ref, watch, computed } from 'vue';
 import Modal from '@/components/common/Modal.vue';
 import ConfirmModal from '@/components/common/ConfirmModal.vue';
-import RotationCalculator from '@/components/common/rotation/RotationCalculator.vue';
+import RotationCalculatorModal from '@/components/common/rotation/RotationCalculatorModal.vue';
 import GamePlanViewer from '@/components/common/GamePlanViewer.vue';
 import type {
   EventType,
@@ -168,10 +168,10 @@ const modalSize = computed(() => {
 
 <template>
   <!-- Rotation Calculator Modal -->
-  <RotationCalculator
-    v-if="showRotationCalculator && maps && players"
-    :maps="maps"
-    :players="players"
+  <RotationCalculatorModal
+    :open="showRotationCalculator && !!maps && !!players"
+    :maps="maps!"
+    :players="players!"
     :initialGamePlan="gamePlan"
     mode="associate"
     @close="showRotationCalculator = false"

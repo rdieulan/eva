@@ -3,10 +3,9 @@ import { computed, ref } from 'vue';
 import { getAssignmentColor } from '@/utils/colors';
 import { checkMapBalance, getPlayerAssignments, getPlayerMainAssignment, getAssignmentPlayers } from '@/utils/balance';
 import type { MapConfig, Player, GamePhase, GamePlanSummary } from '@/types';
-import RotationCalculator from '@/components/common/rotation/RotationCalculator.vue';
+import RotationCalculatorModal from '@/components/common/rotation/RotationCalculatorModal.vue';
 import PhaseSelector from '@/components/planner/PhaseSelector.vue';
 import PlanSelector from '@/components/planner/PlanSelector.vue';
-import SvgIcon from '@/components/common/SvgIcon.vue';
 
 const props = defineProps<{
   players: Player[];
@@ -175,7 +174,7 @@ function isMainRoleForSelectedPlayer(assignmentId: number): boolean {
         @click="showCalculator = true"
         title="Ouvrir le calculateur de rotation"
       >
-        <SvgIcon name="calculator" class="calculator-icon" />
+        <span class="calculator-emoji">🔄</span>
       </button>
 
       <div
@@ -194,8 +193,8 @@ function isMainRoleForSelectedPlayer(assignmentId: number): boolean {
     </div>
 
     <!-- Rotation calculator modal -->
-    <RotationCalculator
-      v-if="showCalculator"
+    <RotationCalculatorModal
+      :open="showCalculator"
       :maps="maps"
       :players="players"
       @close="showCalculator = false"

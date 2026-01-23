@@ -63,6 +63,8 @@ npm run script -- rename-file client/src/utils/helper.ts client/src/utils/helper
 - ✅ Updates dynamic imports (`import('...')`)
 - ✅ Updates re-exports (`export * from '...'`, `export { ... } from '...'`)
 - ✅ Updates SCSS imports (`@use`, `@import`)
+- ✅ Renames import variable names (e.g., `import OldName` → `import NewName`)
+- ✅ Renames component usage in Vue templates (`<OldName>` → `<NewName>`)
 - ✅ Handles all project aliases (`@/`, `@shared/`, `@db/`, etc.)
 - ✅ Handles relative imports (`./`, `../`)
 - ✅ Creates target directory if it doesn't exist

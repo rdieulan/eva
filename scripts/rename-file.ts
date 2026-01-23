@@ -160,6 +160,11 @@ function updateImportsInFile(
     replacements.set(oldVariants[i]!, newVariants[i]!);
   }
 
+  // Extract component names from file paths for renaming imports
+  const oldComponentName = getComponentNameFromPath(oldVariants[0] || '');
+  const newComponentName = getComponentNameFromPath(newVariants[0] || '');
+  const shouldRenameComponent = oldComponentName && newComponentName && oldComponentName !== newComponentName;
+
   // Process each line
   for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
     const originalLine = lines[lineIndex]!;
@@ -193,6 +198,23 @@ function updateImportsInFile(
         .replace(scssImportRegex, `$1${newPath}$2`);
     }
 
+    // Rename component/variable names in imports if the file was renamed
+    if (shouldRenameComponent && newLine !== originalLine) {
+      // Rename default import: import OldName from '...'
+      const defaultImportRegex = new RegExp(`(import\\s+)${escapeRegex(oldComponentName)}(\\s+from)`, 'g');
+      newLine = newLine.replace(defaultImportRegex, `$1${newComponentName}$2`);
+    }
+
+    // Also check for component usage in template (for Vue files)
+    if (shouldRenameComponent && filePath.endsWith('.vue')) {
+      // Rename component usage in templates: <OldName ... /> or <OldName>
+      const componentOpenTagRegex = new RegExp(`(<)${escapeRegex(oldComponentName)}(\\s|>|\\/)`, 'g');
+      const componentCloseTagRegex = new RegExp(`(</)${escapeRegex(oldComponentName)}(>)`, 'g');
+      newLine = newLine
+        .replace(componentOpenTagRegex, `$1${newComponentName}$2`)
+        .replace(componentCloseTagRegex, `$1${newComponentName}$2`);
+    }
+
     if (newLine !== originalLine) {
       modified = true;
       lines[lineIndex] = newLine;
@@ -210,6 +232,16 @@ function updateImportsInFile(
   }
 
   return { modified, changes };
+}
+
+/**
+ * Extract component name from file path (e.g., '@/components/Modal.vue' -> 'Modal')
+ */
+function getComponentNameFromPath(filePath: string): string {
+  const basename = path.basename(filePath);
+  // Remove extension
+  const withoutExt = basename.replace(/\.(vue|ts|js|tsx|jsx)$/, '');
+  return withoutExt;
 }
 
 /**
