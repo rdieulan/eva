@@ -21,8 +21,25 @@ const emit = defineEmits<{
   'cancel': [];
 }>();
 
-function isMapBalanced(map: MapConfig): boolean {
-  return checkMapBalance(map).isBalanced;
+
+// Get balance status icon for a map
+function getBalanceIcon(map: MapConfig): string {
+  const result = checkMapBalance(map);
+  if (result.isBalanced) {
+    return '✓';
+  }
+  // Check if there are minor issues (warnings) vs critical errors
+  // For now, any error is considered critical
+  return '✗';
+}
+
+// Get balance status class for icon styling
+function getBalanceClass(map: MapConfig): string {
+  const result = checkMapBalance(map);
+  if (result.isBalanced) {
+    return 'status-ok';
+  }
+  return 'status-error';
 }
 </script>
 
@@ -48,14 +65,11 @@ function isMapBalanced(map: MapConfig): boolean {
         <li
           v-for="map in maps"
           :key="map.id"
-          :class="{
-            active: selectedMapId === map.id,
-            balanced: isMapBalanced(map),
-            unbalanced: !isMapBalanced(map)
-          }"
+          :class="{ active: selectedMapId === map.id }"
           @click="$emit('select-map', map.id)"
         >
-          {{ map.name }}
+          <span class="map-name">{{ map.name }}</span>
+          <span class="balance-icon" :class="getBalanceClass(map)">{{ getBalanceIcon(map) }}</span>
         </li>
       </ul>
     </div>
@@ -292,15 +306,37 @@ function isMapBalanced(map: MapConfig): boolean {
         border-bottom-color: $color-accent;
       }
     }
-
-    &.balanced {
-      color: $color-success;
-    }
-
-    &.unbalanced {
-      color: $color-danger;
-    }
   }
+}
+
+.map-name {
+  flex: 1;
+  color: $color-text-primary;
+}
+
+.balance-icon {
+  flex-shrink: 0;
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin-left: $spacing-sm;
+
+  &.status-ok {
+    color: $color-success;
+  }
+
+  &.status-warning {
+    color: $color-warning;
+  }
+
+  &.status-error {
+    color: $color-danger;
+  }
+}
+
+.map-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 // Edit mode
