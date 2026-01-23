@@ -156,10 +156,10 @@ defineEmits<{
   align-items: center;
   gap: $spacing-sm;
   padding: 0.5rem 1rem;
-  background: $color-bg-tertiary;
-  border: 2px solid $color-border-light;
+  background: rgba($color-edit, 0.1);
+  border: 2px solid $color-edit;
   border-radius: $radius-md;
-  color: $color-text-secondary;
+  color: $color-edit;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
@@ -169,8 +169,8 @@ defineEmits<{
   -webkit-tap-highlight-color: transparent;
 
   &:hover {
-    background: $color-border-light;
-    border-color: $color-accent;
+    background: rgba($color-edit, 0.2);
+    border-color: $color-edit;
     color: $color-white;
   }
 

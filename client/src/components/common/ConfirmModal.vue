@@ -9,7 +9,8 @@ const props = defineProps<{
   confirmText?: string;
   cancelText?: string;
   requireInput?: string; // If set, user must type this to confirm
-  danger?: boolean;
+  danger?: boolean; // Style confirm button as danger
+  cancelDanger?: boolean; // Style cancel button as danger
 }>();
 
 const emit = defineEmits<{
@@ -60,17 +61,24 @@ function handleCancel() {
     </div>
 
     <template #footer>
-      <button class="btn-cancel" @click="handleCancel">
-        {{ cancelText || 'Annuler' }}
-      </button>
-      <button
-        class="btn-confirm"
-        :class="{ danger: danger }"
-        :disabled="!canConfirm"
-        @click="handleConfirm"
-      >
-        {{ confirmText || 'Confirmer' }}
-      </button>
+      <div class="footer-actions">
+        <slot name="extra-actions"></slot>
+        <button
+          class="btn-cancel"
+          :class="{ danger: cancelDanger }"
+          @click="handleCancel"
+        >
+          {{ cancelText || 'Annuler' }}
+        </button>
+        <button
+          class="btn-confirm"
+          :class="{ danger: danger }"
+          :disabled="!canConfirm"
+          @click="handleConfirm"
+        >
+          {{ confirmText || 'Confirmer' }}
+        </button>
+      </div>
     </template>
   </Modal>
 </template>
@@ -127,6 +135,13 @@ h3 {
   }
 }
 
+.footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $spacing-sm;
+  width: 100%;
+}
+
 .btn-cancel,
 .btn-confirm {
   padding: $spacing-sm $spacing-md;
@@ -144,6 +159,16 @@ h3 {
   &:hover {
     background: $color-bg-tertiary;
     color: $color-text-primary;
+  }
+
+  &.danger {
+    background: $color-danger;
+    border-color: $color-danger;
+    color: white;
+
+    &:hover {
+      background: color.adjust($color-danger, $lightness: -5%);
+    }
   }
 }
 

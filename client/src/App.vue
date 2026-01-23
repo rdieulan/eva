@@ -71,7 +71,7 @@ const showTopBar = computed(() => route.name !== 'login');
   width: 40px;
   height: 40px;
   border: 3px solid $color-border;
-  border-top-color: $color-edit;
+  border-top-color: $color-accent;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }

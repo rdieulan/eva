@@ -69,16 +69,18 @@ function isMapBalanced(map: MapConfig): boolean {
           :disabled="!hasActiveAssignment"
           @click="$emit('add-marker')"
         >
-          <span class="btn-icon">📍</span>
+          <span class="btn-icon-left">+</span>
           <span class="btn-label">Marqueur</span>
+          <span class="btn-icon-right">📍</span>
         </button>
         <button
           class="edit-btn"
           :disabled="!hasActiveAssignment"
           @click="$emit('add-zone')"
         >
-          <span class="btn-icon">🔲</span>
+          <span class="btn-icon-left">+</span>
           <span class="btn-label">Zone</span>
+          <span class="btn-icon-right">🔲</span>
         </button>
       </div>
 
@@ -133,18 +135,23 @@ function isMapBalanced(map: MapConfig): boolean {
 
 .planner-sidebar {
   background: $color-bg-secondary;
+  width: 100%;
   min-width: 180px;
+  max-width: 220px;
   border-right: 1px solid $color-border;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 
   @include tablet {
     min-width: 150px;
+    max-width: 180px;
   }
 
   @include mobile-lg {
-    min-width: 100%;
-    max-width: 100%;
+    width: 100%;
+    min-width: unset;
+    max-width: unset;
     border-right: none;
     border-bottom: 1px solid $color-border;
   }
@@ -180,10 +187,11 @@ function isMapBalanced(map: MapConfig): boolean {
   display: flex;
   width: 100%;
   background: $color-bg-tertiary;
-  border: 1px solid $color-border;
+  border: 1px solid $color-accent;
   border-radius: $radius-md;
   padding: 2px;
   cursor: pointer;
+  transition: border-color 0.2s;
 
   .mode-option {
     flex: 1;
@@ -198,6 +206,16 @@ function isMapBalanced(map: MapConfig): boolean {
     &.active {
       background: $color-accent;
       color: $color-white;
+    }
+  }
+
+  // When edit mode is active, style in yellow
+  &.edit-active {
+    border-color: $color-edit;
+
+    .mode-option.active {
+      background: $color-edit;
+      color: $color-black;
     }
   }
 }
@@ -317,6 +335,7 @@ function isMapBalanced(map: MapConfig): boolean {
 .edit-btn {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: $spacing-sm;
   width: 100%;
   padding: $spacing-sm $spacing-md;
@@ -340,7 +359,18 @@ function isMapBalanced(map: MapConfig): boolean {
     cursor: not-allowed;
   }
 
-  .btn-icon {
+  .btn-icon-left {
+    font-size: 1.2em;
+    font-weight: 700;
+    color: $color-success;
+  }
+
+  .btn-label {
+    flex: 1;
+    text-align: left;
+  }
+
+  .btn-icon-right {
     font-size: 1.2em;
   }
 
@@ -349,6 +379,10 @@ function isMapBalanced(map: MapConfig): boolean {
     padding: $spacing-sm;
 
     .btn-label {
+      display: none;
+    }
+
+    .btn-icon-left {
       display: none;
     }
   }
@@ -427,12 +461,15 @@ function isMapBalanced(map: MapConfig): boolean {
 .btn-save {
   background: $color-bg-tertiary;
   color: $color-text-secondary;
-  min-width: 120px;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: $spacing-xs;
   border: 1px solid $color-border;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 
   &:disabled {
     cursor: not-allowed;
@@ -444,7 +481,7 @@ function isMapBalanced(map: MapConfig): boolean {
     color: white;
     border-color: $color-accent;
 
-    &:hover:not(:disabled) {
+    &:hover:not(:disabled):not(.is-success):not(.is-error) {
       background: color.adjust($color-accent, $lightness: 5%);
     }
   }
@@ -456,16 +493,16 @@ function isMapBalanced(map: MapConfig): boolean {
   }
 
   &.is-success {
-    background: $color-success;
+    background: $color-success !important;
     color: white;
-    border-color: $color-success;
+    border-color: $color-success !important;
     animation: pulse-success 0.3s ease-out;
   }
 
   &.is-error {
-    background: $color-danger;
+    background: $color-danger !important;
     color: white;
-    border-color: $color-danger;
+    border-color: $color-danger !important;
     animation: shake 0.3s ease-out;
   }
 }
@@ -473,7 +510,7 @@ function isMapBalanced(map: MapConfig): boolean {
 .btn-spinner {
   width: 16px;
   height: 16px;
-  border: 2px solid rgba($color-white, 0.05)er;
+  border: 2px solid rgba($color-white, 0.3);
   border-top-color: $color-white;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;

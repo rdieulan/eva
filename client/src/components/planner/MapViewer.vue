@@ -1072,13 +1072,13 @@ defineExpose({
   opacity: 0.9;
 
   &:hover {
-    fill: $color-edit;
+    fill: $color-handle;
     opacity: 1;
   }
 }
 
 .add-point-handle {
-  fill: $color-edit;
+  fill: $color-handle;
   stroke: $color-white;
   stroke-width: 0.2;
   cursor: pointer;

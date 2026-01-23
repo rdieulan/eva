@@ -120,7 +120,6 @@ function isMainRoleForSelectedPlayer(assignmentId: number): boolean {
         v-if="plans.length > 0"
         :plans="plans"
         :selectedPlanId="selectedPlanId"
-        :disabled="editMode"
         :canEdit="canEdit"
         @select="$emit('select-plan', $event)"
         @create="$emit('create-plan')"

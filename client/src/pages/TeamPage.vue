@@ -488,14 +488,14 @@ section {
   gap: $spacing-xs;
   padding: $spacing-xs $spacing-sm;
   background: transparent;
-  border: 1px solid $color-border;
+  border: 1px solid $color-edit;
   border-radius: $radius-sm;
-  color: $color-text-secondary;
+  color: $color-edit;
   cursor: pointer;
 
   &:hover {
-    background: $color-bg-tertiary;
-    color: $color-text-primary;
+    background: rgba($color-edit, 0.2);
+    color: $color-edit;
   }
 
   :deep(svg) {
@@ -660,20 +660,23 @@ section {
   width: 32px;
   height: 32px;
   background: transparent;
-  border: 1px solid $color-border;
+  border: 1px solid $color-accent;
   border-radius: $radius-sm;
-  color: $color-text-secondary;
+  color: $color-accent;
   cursor: pointer;
 
   &:hover {
-    background: $color-bg-secondary;
-    color: $color-text-primary;
+    background: rgba($color-accent, 0.2);
+    color: $color-accent;
   }
 
-  &.danger:hover {
-    background: rgba($color-danger, 0.3);
-    color: $color-danger;
+  &.danger {
     border-color: $color-danger;
+    color: $color-danger;
+
+    &:hover {
+      background: rgba($color-danger, 0.2);
+    }
   }
 
   :deep(svg) {
