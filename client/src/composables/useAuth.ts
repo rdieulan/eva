@@ -1,19 +1,15 @@
 import { ref, computed } from 'vue';
+import type { UserPermissions } from '@shared/types';
+import { DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
 
 // Types
 export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'ADMIN' | 'PLAYER';
-}
-
-export interface Permissions {
-  canEdit: boolean;
-  canManageUsers: boolean;
-  canExportPlans: boolean;
-  canViewPlanner: boolean;
-  canViewCalendar: boolean;
+  permissions: UserPermissions;
+  teamId: string | null;
+  isLeader: boolean;
 }
 
 // Global state
@@ -90,32 +86,22 @@ async function doInitAuth(): Promise<void> {
   isInitialized.value = true;
 }
 
-// Role-based permissions
-const permissions = computed<Permissions>(() => {
-  const role = user.value?.role;
-
-  return {
-    canEdit: role === 'ADMIN',
-    canManageUsers: role === 'ADMIN',
-    canExportPlans: role === 'ADMIN' || role === 'PLAYER',
-    canViewPlanner: role === 'ADMIN' || role === 'PLAYER',
-    canViewCalendar: role === 'ADMIN' || role === 'PLAYER',
-  };
+// Get user permissions (with fallback to default)
+const permissions = computed<UserPermissions>(() => {
+  return user.value?.permissions ?? DEFAULT_PLAYER_PERMISSIONS;
 });
 
 // Exported composable
 export function useAuth() {
   const isAuthenticated = computed(() => !!(token.value && user.value));
-  const isAdmin = computed(() => user.value?.role === 'ADMIN');
-  const isPlayer = computed(() => user.value?.role === 'PLAYER');
+  const isLeader = computed(() => user.value?.isLeader ?? false);
 
   return {
     // State
     user: computed(() => user.value),
     token: computed(() => token.value),
     isAuthenticated,
-    isAdmin,
-    isPlayer,
+    isLeader,
     isLoading: computed(() => isLoading.value),
     permissions,
 
@@ -125,4 +111,3 @@ export function useAuth() {
     initAuth,
   };
 }
-

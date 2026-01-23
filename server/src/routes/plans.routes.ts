@@ -3,7 +3,7 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { prisma } from '@db/prisma';
-import { authMiddleware, adminMiddleware } from '@middleware/auth.middleware';
+import { authMiddleware, requirePermission } from '@middleware/auth.middleware';
 import type { AuthRequest } from '@middleware/auth.middleware';
 import { DEFAULT_GAME_PLAN_NOTES } from '@shared/constants';
 
@@ -87,13 +87,13 @@ function migrateAssignmentsToPhases(assignments: Assignment[]): Assignment[] {
   });
 }
 
-// PUT /api/plans/:planId - Update a game plan (admin only)
-router.put('/:planId', authMiddleware, adminMiddleware, async (req: AuthRequest, res: Response) => {
+// PUT /api/plans/:planId - Update a game plan
+router.put('/:planId', authMiddleware, requirePermission('planner', 'canEdit'), async (req: AuthRequest, res: Response) => {
   const { planId } = req.params;
   const { name, assignments, players, notes } = req.body;
 
   console.log(`[API] PUT /api/plans/${planId}`);
-  console.log('[API] User:', req.user?.email, '- Role:', req.user?.role);
+  console.log('[API] User:', req.user?.email);
 
   try {
     const updateData: Record<string, unknown> = {};
@@ -146,8 +146,8 @@ router.put('/:planId', authMiddleware, adminMiddleware, async (req: AuthRequest,
   }
 });
 
-// DELETE /api/plans/:planId - Delete a game plan (admin only)
-router.delete('/:planId', authMiddleware, adminMiddleware, async (req: AuthRequest, res: Response) => {
+// DELETE /api/plans/:planId - Delete a game plan
+router.delete('/:planId', authMiddleware, requirePermission('planner', 'canDelete'), async (req: AuthRequest, res: Response) => {
   const { planId } = req.params;
 
   try {

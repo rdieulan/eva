@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed, toRef } from 'vue';
 import { useRotationCalculator } from '@/composables/useRotationCalculator';
 import RotationResults from './RotationResults.vue';
@@ -62,7 +62,7 @@ const showResults = computed(() => hasCalculated.value && results.value);
     <div class="modal-content">
       <div class="modal-header">
         <h2>Calculateur de rotation</h2>
-        <button class="btn-close" @click="$emit('close')">✕</button>
+        <button class="btn-close" @click="$emit('close')">?</button>
       </div>
 
       <div class="modal-body">
@@ -134,7 +134,7 @@ const showResults = computed(() => hasCalculated.value && results.value);
             class="btn-associate"
             @click="handleAssociate"
           >
-            ✓ Associer au match
+            ? Associer au match
           </button>
         </div>
       </div>
@@ -151,7 +151,7 @@ const showResults = computed(() => hasCalculated.value && results.value);
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: $color-overlay;
   display: flex;
   justify-content: center;
   align-items: flex-start;
@@ -167,7 +167,7 @@ const showResults = computed(() => hasCalculated.value && results.value);
   max-width: 600px;
   max-height: calc(100vh - 120px);
   overflow-y: auto;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 10px 40px $color-shadow;
 }
 
 .modal-header {
@@ -180,7 +180,7 @@ const showResults = computed(() => hasCalculated.value && results.value);
   h2 {
     margin: 0;
     font-size: 1.2rem;
-    color: #fff;
+    color: $color-white;
   }
 }
 
@@ -194,7 +194,7 @@ const showResults = computed(() => hasCalculated.value && results.value);
   transition: color 0.2s;
 
   &:hover {
-    color: #fff;
+    color: $color-white;
   }
 }
 
@@ -211,7 +211,7 @@ const showResults = computed(() => hasCalculated.value && results.value);
   gap: $spacing-sm;
 
   label {
-    color: #aaa;
+    color: $color-text-secondary;
     font-size: 0.9rem;
     font-weight: 600;
   }
@@ -224,9 +224,9 @@ const showResults = computed(() => hasCalculated.value && results.value);
 
   button {
     padding: 0.4rem 0.8rem;
-    border: 2px solid #666;
+    border: 2px solid $color-text-secondary;
     background: transparent;
-    color: #ccc;
+    color: $color-text-muted;
     border-radius: $radius-sm;
     font-weight: 600;
     font-size: 0.85rem;
@@ -241,7 +241,7 @@ const showResults = computed(() => hasCalculated.value && results.value);
     &.active {
       background: $color-danger;
       border-color: $color-danger;
-      color: #fff;
+      color: $color-white;
     }
   }
 }
@@ -260,8 +260,8 @@ const showResults = computed(() => hasCalculated.value && results.value);
 .btn-small {
   padding: 0.2rem $spacing-sm;
   background: $color-bg-tertiary;
-  border: 1px solid #444;
-  color: #aaa;
+  border: 1px solid $color-border;
+  color: $color-text-secondary;
   border-radius: 3px;
   font-size: 0.75rem;
   cursor: pointer;
@@ -269,7 +269,7 @@ const showResults = computed(() => hasCalculated.value && results.value);
 
   &:hover {
     background: $color-border-light;
-    color: #fff;
+    color: $color-white;
   }
 }
 
@@ -285,16 +285,16 @@ const showResults = computed(() => hasCalculated.value && results.value);
   gap: 0.4rem;
   padding: 0.3rem 0.6rem;
   background: $color-bg-tertiary;
-  border: 1px solid #444;
+  border: 1px solid $color-border;
   border-radius: $radius-sm;
-  color: #aaa;
+  color: $color-text-secondary;
   font-size: 0.8rem;
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover {
     background: $color-border-light;
-    border-color: #666;
+    border-color: $color-text-secondary;
   }
 
   &.checked {

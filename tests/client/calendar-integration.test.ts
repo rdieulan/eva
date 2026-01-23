@@ -18,8 +18,14 @@ vi.mock('@/api/calendar.api', () => ({
 // Mock the auth composable
 vi.mock('@/composables/useAuth', () => ({
   useAuth: () => ({
-    permissions: { value: { canEdit: true } },
-    user: { value: { id: 'user-1', name: 'Test User', role: 'ADMIN' } },
+    permissions: {
+      value: {
+        planner: { canCreate: true, canEdit: true, canDelete: true },
+        calendar: { canCreateEvents: true, canEditEvents: true, canDeleteEvents: true, canAttachGamePlan: true },
+        team: { canManageTeam: true, canInviteMembers: true, canRemoveMembers: true, canManagePermissions: true },
+      }
+    },
+    user: { value: { id: 'user-1', name: 'Test User', isLeader: true, permissions: null, teamId: null } },
   }),
 }));
 
@@ -205,11 +211,17 @@ describe('Calendar Integration Tests', () => {
   });
 
   it('should display event details in read-only mode for non-admin users', async () => {
-    // Mock as PLAYER role
+    // Mock as PLAYER role (no edit permissions)
     vi.mock('@/composables/useAuth', () => ({
       useAuth: () => ({
-        permissions: { value: { canEdit: false } },
-        user: { value: { id: 'user-2', name: 'Player User', role: 'PLAYER' } },
+        permissions: {
+          value: {
+            planner: { canCreate: false, canEdit: false, canDelete: false },
+            calendar: { canCreateEvents: false, canEditEvents: false, canDeleteEvents: false, canAttachGamePlan: false },
+            team: { canManageTeam: false, canInviteMembers: false, canRemoveMembers: false, canManagePermissions: false },
+          }
+        },
+        user: { value: { id: 'user-2', name: 'Player User', isLeader: false, permissions: null, teamId: null } },
       }),
     }));
 

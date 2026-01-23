@@ -31,3 +31,13 @@ export {
   updateEventGamePlan,
 } from '@/api/calendar.api';
 
+// Teams API
+export {
+  fetchCurrentTeam,
+  fetchTeamLocations,
+  updateTeam,
+  fetchTeamMembers,
+  updateMemberPermissions,
+  removeMember,
+} from '@/api/teams.api';
+export type { TeamMember, TeamWithMembers } from '@/api/teams.api';

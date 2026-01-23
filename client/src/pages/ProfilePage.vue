@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
@@ -103,8 +103,10 @@ async function handleLogout() {
             <span>{{ user.email }}</span>
           </div>
           <div class="info-item">
-            <label>Rôle</label>
-            <span class="role-badge" :class="user.role.toLowerCase()">{{ user.role }}</span>
+            <label>Statut</label>
+            <span class="role-badge" :class="user.isLeader ? 'leader' : 'player'">
+              {{ user.isLeader ? 'Leader' : 'Joueur' }}
+            </span>
           </div>
         </div>
       </section>
@@ -182,7 +184,7 @@ async function handleLogout() {
   align-items: flex-start;
   justify-content: center;
   padding: $spacing-xl;
-  background: linear-gradient(135deg, $color-bg-secondary 0%, #16213e 100%);
+  background: linear-gradient(135deg, $color-bg-secondary 0%, $color-bg-tertiary 100%);
   overflow-y: auto;
 
   @include tablet {
@@ -204,7 +206,7 @@ async function handleLogout() {
 }
 
 h1 {
-  color: #fff;
+  color: $color-white;
   margin: 0 0 $spacing-xl;
   font-size: 2rem;
   text-align: center;
@@ -243,7 +245,7 @@ h1 {
   }
 
   h2 {
-    color: $color-accent-light;
+    color: $color-accent;
     margin: 0 0 $spacing-md;
     font-size: 1.1rem;
     font-weight: 600;
@@ -286,7 +288,7 @@ h1 {
   }
 
   span {
-    color: #fff;
+    color: $color-white;
     font-weight: 500;
   }
 }
@@ -305,7 +307,7 @@ h1 {
 
   &.player {
     background: rgba($color-accent, 0.2);
-    color: $color-accent-light;
+    color: $color-accent;
   }
 }
 
@@ -334,7 +336,7 @@ h1 {
     background: $color-bg-secondary;
     border: 2px solid $color-border-light;
     border-radius: $radius-md;
-    color: #fff;
+    color: $color-white;
     font-size: 1rem;
     transition: border-color 0.2s;
 
@@ -344,7 +346,7 @@ h1 {
     }
 
     &::placeholder {
-      color: #555;
+      color: $color-text-secondary;
     }
 
     @include mobile-lg {
@@ -382,14 +384,14 @@ h1 {
   background: $color-accent;
   border: none;
   border-radius: $radius-md;
-  color: #fff;
+  color: $color-white;
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover:not(:disabled) {
-    background: $color-accent-light;
+    background: $color-accent;
   }
 
   &:disabled {

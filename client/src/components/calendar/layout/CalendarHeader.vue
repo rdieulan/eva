@@ -74,7 +74,7 @@ const weekdays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
   gap: $spacing-sm;
   width: 100%;
   padding: $spacing-sm $spacing-xl;
-  background: linear-gradient(135deg, $color-bg-secondary 0%, #16213e 100%);
+  background: linear-gradient(135deg, $color-bg-secondary 0%, $color-bg-tertiary 100%);
   flex-shrink: 0;
 
   @include tablet {
@@ -117,13 +117,13 @@ const weekdays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
   transition: all 0.2s;
 
   &:hover {
-    color: #ccc;
+    color: $color-text-muted;
     background: rgba($color-border-light, 0.5);
   }
 
   &.active {
     background: $color-accent;
-    color: #fff;
+    color: $color-white;
   }
 
   @include mobile-lg {
@@ -195,7 +195,7 @@ const weekdays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
   }
 
   .nav-btn:hover & {
-    fill: #fff;
+    fill: $color-white;
   }
 
   @include mobile {
@@ -208,7 +208,7 @@ const weekdays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
   margin: 0;
   font-size: 1.3rem;
   font-weight: 600;
-  color: #fff;
+  color: $color-white;
   text-align: center;
   min-width: 200px;
 

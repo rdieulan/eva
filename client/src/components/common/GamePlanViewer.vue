@@ -49,7 +49,7 @@ async function exportToPng() {
   try {
     const html2canvas = (await import('html2canvas')).default;
     const canvas = await html2canvas(exportContentRef.value, {
-      backgroundColor: '#1a1a2e',
+      backgroundColor: '-bg-secondary',
       scale: 2,
     });
 
@@ -144,13 +144,13 @@ async function exportToPng() {
 .viewer-title {
   font-size: 1rem;
   font-weight: 700;
-  color: #fff;
+  color: $color-white;
   letter-spacing: 0.05em;
 }
 
 .absent-badge {
-  background: rgba(248, 113, 113, 0.2);
-  color: #f87171;
+  background: rgba($color-danger, 0.2);
+  color: $color-danger;
   padding: $spacing-xs 0.75rem;
   border-radius: 20px;
   font-size: 0.8rem;
@@ -210,7 +210,7 @@ th {
 
 .map-name {
   text-align: left;
-  color: #fff;
+  color: $color-white;
   font-weight: 500;
 
   .plan-name {

@@ -2,14 +2,15 @@
 
 import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import type { Role } from '@prisma/client';
+import { prisma } from '@db/prisma';
+import type { UserPermissions } from '@shared/types';
+import { DEFAULT_PLAYER_PERMISSIONS, LEADER_PERMISSIONS } from '@shared/types';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key';
 
 export interface JwtPayload {
   userId: string;
   email: string;
-  role: Role;
 }
 
 export interface AuthRequest extends Request {
@@ -25,6 +26,40 @@ export function verifyToken(token: string): JwtPayload | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Get user permissions from database
+ * Leaders get full permissions, others get stored permissions or defaults
+ */
+export async function getUserPermissions(userId: string): Promise<UserPermissions> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { ledTeam: true },
+  });
+
+  if (!user) return DEFAULT_PLAYER_PERMISSIONS;
+
+  // If user is a leader, grant full permissions
+  if (user.ledTeam) {
+    return LEADER_PERMISSIONS;
+  }
+
+  // Return stored permissions or defaults
+  return (user.permissions as unknown as UserPermissions) ?? DEFAULT_PLAYER_PERMISSIONS;
+}
+
+/**
+ * Check if user has specific permission
+ */
+export async function hasPermission(
+  userId: string,
+  category: keyof UserPermissions,
+  permission: string
+): Promise<boolean> {
+  const permissions = await getUserPermissions(userId);
+  const categoryPerms = permissions[category];
+  return (categoryPerms as unknown as Record<string, boolean>)?.[permission] ?? false;
 }
 
 /**
@@ -52,15 +87,23 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
 }
 
 /**
- * Admin middleware - requires ADMIN role (must be used after authMiddleware)
+ * Permission middleware factory - checks for specific permission
+ * Usage: requirePermission('planner', 'canEdit')
  */
-export function adminMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
-  console.log('[AUTH] Admin middleware check - User:', req.user?.email, '- Role:', req.user?.role);
-  if (!req.user || req.user.role !== 'ADMIN') {
-    console.log('[AUTH] Admin middleware: Access denied - not an admin');
-    return res.status(403).json({ error: 'Accès refusé - Admin requis' });
-  }
-  console.log('[AUTH] Admin middleware: Access granted');
-  next();
-}
+export function requirePermission(category: keyof UserPermissions, permission: string) {
+  return async (req: AuthRequest, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Non authentifié' });
+    }
 
+    const allowed = await hasPermission(req.user.userId, category, permission);
+
+    if (!allowed) {
+      console.log(`[AUTH] Permission denied: ${category}.${permission} for user ${req.user.email}`);
+      return res.status(403).json({ error: 'Permission refusée' });
+    }
+
+    console.log(`[AUTH] Permission granted: ${category}.${permission} for user ${req.user.email}`);
+    next();
+  };
+}

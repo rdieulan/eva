@@ -206,11 +206,11 @@ function handleCreateEvent() {
   font-weight: 600;
 
   &.match {
-    color: #fdba74;
+    color: $color-warning;
   }
 
   &.event {
-    color: #93c5fd;
+    color: $color-info;
   }
 }
 
@@ -232,7 +232,7 @@ function handleCreateEvent() {
   &:hover:not(.disabled) {
     background: $color-border-light;
     border-color: $color-accent;
-    color: #fff;
+    color: $color-white;
   }
 
   &.disabled {
@@ -251,7 +251,7 @@ function handleCreateEvent() {
 .event-title {
   margin: 0;
   font-size: 1.5rem;
-  color: #fff;
+  color: $color-white;
   text-align: center;
 
   @include mobile-lg {
@@ -286,7 +286,7 @@ function handleCreateEvent() {
 }
 
 .detail-value {
-  color: #fff;
+  color: $color-white;
   font-weight: 500;
 }
 
@@ -302,7 +302,7 @@ function handleCreateEvent() {
 
   p {
     margin: 0;
-    color: #ccc;
+    color: $color-text-muted;
     white-space: pre-wrap;
   }
 }
@@ -327,8 +327,8 @@ function handleCreateEvent() {
 }
 
 .absent-badge {
-  background: rgba(248, 113, 113, 0.2);
-  color: #f87171;
+  background: rgba($color-danger, 0.2);
+  color: $color-danger;
   padding: $spacing-xs 0.75rem;
   border-radius: 20px;
   font-size: 0.8rem;
@@ -347,25 +347,25 @@ function handleCreateEvent() {
 
 .btn-secondary {
   background: $color-border-light;
-  color: #ccc;
+  color: $color-text-muted;
 
   &:hover {
-    background: #4a4a6a;
+    background: $color-bg-tertiary;
   }
 }
 
 .btn-primary {
   background: $color-accent;
-  color: #fff;
+  color: $color-white;
 
   &:hover {
-    background: $color-accent-light;
+    background: $color-accent;
   }
 }
 
 .btn-accent {
   background: $color-success;
-  color: #fff;
+  color: $color-white;
 
   &:hover {
     filter: brightness(1.1);

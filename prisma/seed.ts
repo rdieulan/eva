@@ -1,7 +1,8 @@
-import { PrismaClient, Role } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
 import bcrypt from 'bcryptjs';
+import { LEADER_PERMISSIONS, DEFAULT_PLAYER_PERMISSIONS } from '../shared/types/permissions.types';
 
 const databaseUrl = process.env.DATABASE_URL || 'postgresql://eva_user:eva_secret_password@localhost:5432/eva_db';
 const pool = new pg.Pool({ connectionString: databaseUrl });
@@ -40,32 +41,55 @@ async function main() {
   // ========== USERS ==========
   console.log('Creating users...');
   const users = [
-    { email: 'tailhades8@hotmail.com', name: 'Nyork', role: Role.PLAYER },
-    { email: 'Kevindijusco30@gmail.com', name: 'Kekew', role: Role.PLAYER },
-    { email: 'mathieu.lietsch@gmail.com', name: 'Matic', role: Role.PLAYER },
-    { email: 'sokehur@gmail.com', name: 'Sib', role: Role.ADMIN },
-    { email: 'clemencefadvolf0102@gmail.com', name: 'Celesta', role: Role.PLAYER },
+    { email: 'tailhades8@hotmail.com', name: 'Nyork', isLeader: false },
+    { email: 'Kevindijusco30@gmail.com', name: 'Kekew', isLeader: false },
+    { email: 'mathieu.lietsch@gmail.com', name: 'Matic', isLeader: false },
+    { email: 'sokehur@gmail.com', name: 'Sib', isLeader: true },
+    { email: 'clemencefadvolf0102@gmail.com', name: 'Celesta', isLeader: false },
   ];
+
+  let leaderId: string | null = null;
 
   for (const user of users) {
     const hashedPassword = await bcrypt.hash('changeme123', 10);
+    const permissions = user.isLeader ? LEADER_PERMISSIONS : DEFAULT_PLAYER_PERMISSIONS;
 
-    await prisma.user.upsert({
+    const createdUser = await prisma.user.upsert({
       where: { email: user.email },
       update: {
         name: user.name,
-        role: user.role,
+        permissions: permissions as unknown as object,
         password: hashedPassword,
       },
       create: {
         email: user.email,
         password: hashedPassword,
         name: user.name,
-        role: user.role,
+        permissions: permissions as unknown as object,
       },
     });
 
-    console.log(`  ✓ ${user.name} (${user.email}) - ${user.role}`);
+    if (user.isLeader) {
+      leaderId = createdUser.id;
+    }
+
+    console.log(`  ✓ ${user.name} (${user.email}) - ${user.isLeader ? 'Leader' : 'Player'}`);
+  }
+
+  // ========== TEAM ==========
+  if (leaderId) {
+    console.log('\nCreating team...');
+    await prisma.team.upsert({
+      where: { leaderId },
+      update: {
+        name: 'EVA Team',
+      },
+      create: {
+        name: 'EVA Team',
+        leaderId,
+      },
+    });
+    console.log('  ✓ EVA Team created');
   }
 
   // ========== MAPS ==========

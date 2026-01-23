@@ -46,7 +46,7 @@ function goToCalendar() {
   align-items: center;
   justify-content: center;
   padding: $spacing-xl;
-  background: linear-gradient(135deg, $color-bg-secondary 0%, #16213e 100%);
+  background: linear-gradient(135deg, $color-bg-secondary 0%, $color-bg-tertiary 100%);
 
   @include tablet {
     padding: $spacing-lg;
@@ -145,7 +145,7 @@ function goToCalendar() {
   &:hover {
     transform: translateY(-8px);
     border-color: $color-accent;
-    box-shadow: 0 12px 40px rgba(122, 122, 186, 0.2);
+    box-shadow: 0 12px 40px rgba($color-accent, 0.2);
   }
 
   @include tablet {
@@ -168,7 +168,7 @@ function goToCalendar() {
   }
 
   h2 {
-    color: #fff;
+    color: $color-white;
     margin: 0 0 $spacing-sm;
     font-size: 1.5rem;
 
@@ -218,7 +218,7 @@ function goToCalendar() {
 
   &.coming-soon {
     background: $color-danger;
-    color: #fff;
+    color: $color-white;
   }
 
   @include mobile {

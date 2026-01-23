@@ -2,8 +2,7 @@
 import { ref, computed, onMounted, provide } from 'vue';
 import CalendarTopBar from '@/components/calendar/layout/CalendarTopBar.vue';
 import CalendarHeader from '@/components/calendar/layout/CalendarHeader.vue';
-import CalendarGrid from '@/components/calendar/CalendarGrid.vue';
-import WeekGrid from '@/components/calendar/WeekGrid.vue';
+import CalendarBody from '@/components/calendar/layout/CalendarBody.vue';
 import EventFormModal from '@/components/calendar/EventFormModal.vue';
 import EventViewerModal from '@/components/calendar/EventViewerModal.vue';
 import { useAuth } from '@/composables/useAuth';
@@ -62,7 +61,7 @@ const {
   updateGamePlan,
 } = useCalendarEvents({
   days,
-  canEdit: computed(() => permissions.value.canEdit),
+  canEdit: computed(() => permissions.value.calendar.canEditEvents),
   reloadData: loadCalendarData,
 });
 
@@ -127,28 +126,15 @@ onMounted(async () => {
 
       <!-- Scrollable calendar content -->
       <div class="calendar-content">
-        <!-- Month view -->
-        <CalendarGrid
-          v-if="viewMode === 'month'"
-          :year="currentYear"
-          :month="currentMonth"
-          :days="days"
-          :edit-mode="editMode"
-          @prev-month="goToPrevMonth"
-          @next-month="goToNextMonth"
-          @set-availability="setAvailability"
-          @open-event-viewer="openEventViewer"
-          @open-create-event="openCreateEvent"
-        />
-
-        <!-- Week view -->
-        <WeekGrid
-          v-else
+        <CalendarBody
+          :view-mode="viewMode"
           :year="currentYear"
           :month="currentMonth"
           :week-start="currentWeekStart"
           :days="days"
           :edit-mode="editMode"
+          @prev-month="goToPrevMonth"
+          @next-month="goToNextMonth"
           @prev-week="goToPrevWeek"
           @next-week="goToNextWeek"
           @set-availability="setAvailability"
@@ -194,7 +180,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: linear-gradient(135deg, $color-bg-secondary 0%, #16213e 100%);
+  background: linear-gradient(135deg, $color-bg-secondary 0%, $color-bg-tertiary 100%);
   overflow: hidden;
 }
 
@@ -229,7 +215,7 @@ onMounted(async () => {
   background: $color-bg-tertiary;
   border: 1px solid $color-border-light;
   border-radius: $radius-md;
-  color: #ccc;
+  color: $color-text-muted;
   cursor: pointer;
   transition: all 0.2s;
 
@@ -247,6 +233,13 @@ onMounted(async () => {
   flex-direction: column;
   align-items: center;
   padding: 0 $spacing-xl $spacing-md;
+
+  // Hide scrollbar but keep scroll functionality
+  scrollbar-width: none; // Firefox
+  -ms-overflow-style: none; // IE/Edge
+  &::-webkit-scrollbar {
+    display: none; // Chrome/Safari/Opera
+  }
 
   @include tablet {
     padding: 0 $spacing-lg $spacing-sm;

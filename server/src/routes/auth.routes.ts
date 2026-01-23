@@ -13,6 +13,7 @@ import {
   findUserByEmail,
   findUserById,
   updateUserPassword,
+  buildAuthUserData,
 } from '@services/auth.service';
 
 const router = Router();
@@ -47,20 +48,16 @@ router.post('/login', async (req: Request, res: Response) => {
     const token = generateToken({
       userId: user.id,
       email: user.email,
-      role: user.role,
     });
 
     await createSession(user.id, token);
 
+    const authUser = await buildAuthUserData(user);
+
     console.log('[AUTH] Login success for:', email);
     res.json({
       token,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-      },
+      user: authUser,
     });
   } catch (error) {
     console.error('[AUTH] Login error:', error);

@@ -3,19 +3,20 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { prisma } from '@db/prisma';
-import { authMiddleware, adminMiddleware } from '@middleware/auth.middleware';
+import { authMiddleware, requirePermission } from '@middleware/auth.middleware';
 
 const router = Router();
 
-// GET /api/users - Get all users (admin only)
-router.get('/', authMiddleware, adminMiddleware, async (_req: Request, res: Response) => {
+// GET /api/users - Get all users (team management permission required)
+router.get('/', authMiddleware, requirePermission('team', 'canManagePermissions'), async (_req: Request, res: Response) => {
   try {
     const users = await prisma.user.findMany({
       select: {
         id: true,
         email: true,
         name: true,
-        role: true,
+        permissions: true,
+        teamId: true,
         createdAt: true,
       },
     });

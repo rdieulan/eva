@@ -200,11 +200,11 @@ function cycleAvailability() {
   overflow: hidden;
 
   &.status-unknown {
-    background: #1e1e32;
+    background: $color-bg-secondary;
     border-color: $color-bg-tertiary;
 
     &:hover {
-      background: #252540;
+      background: $color-bg-tertiary;
       border-color: $color-border-light;
     }
   }
@@ -230,18 +230,18 @@ function cycleAvailability() {
   }
 
   &.status-unavailable {
-    background: rgba(248, 113, 113, 0.15);
-    border-color: rgba(248, 113, 113, 0.4);
+    background: rgba($color-danger, 0.15);
+    border-color: rgba($color-danger, 0.4);
 
     &:hover {
-      background: rgba(248, 113, 113, 0.25);
-      border-color: rgba(248, 113, 113, 0.6);
+      background: rgba($color-danger, 0.25);
+      border-color: rgba($color-danger, 0.6);
     }
   }
 
   &.status-past {
-    background: #18181f;
-    border-color: #222;
+    background: $color-bg-primary;
+    border-color: $color-border;
     cursor: not-allowed;
     opacity: 0.5;
   }
@@ -290,7 +290,7 @@ function cycleAvailability() {
 .day-number {
   font-weight: 600;
   font-size: 0.9rem;
-  color: #ccc;
+  color: $color-text-muted;
   width: 24px;
   height: 24px;
   display: flex;
@@ -300,7 +300,7 @@ function cycleAvailability() {
 
   .is-today & {
     background: $color-accent;
-    color: #fff;
+    color: $color-white;
   }
 
   @include tablet {
@@ -343,11 +343,11 @@ function cycleAvailability() {
   }
 
   .status-unavailable & {
-    color: #f87171;
+    color: $color-danger;
   }
 
   .status-unknown & {
-    color: #888;
+    color: $color-text-secondary;
   }
 
   @include tablet {
@@ -412,13 +412,13 @@ function cycleAvailability() {
 .event-match {
   background: rgba($color-warning, 0.3);
   border-left: 2px solid $color-warning;
-  color: #fdba74;
+  color: $color-warning;
 }
 
 .event-event {
   background: rgba($color-info, 0.3);
   border-left: 2px solid $color-info;
-  color: #93c5fd;
+  color: $color-info;
 }
 
 .event-time {
@@ -475,7 +475,7 @@ function cycleAvailability() {
   justify-content: center;
   font-size: 0.55rem;
   font-weight: 700;
-  color: #fff;
+  color: $color-white;
 
   @include tablet {
     width: 20px;
@@ -499,23 +499,23 @@ function cycleAvailability() {
 }
 
 .player-unknown {
-  background: #444;
+  background: $color-border;
   color: $color-text-secondary;
 }
 
 .player-available {
-  background: #166534;
+  background: $color-success;
   border: 1px solid $color-success;
 }
 
 .player-conditional {
-  background: #854d0e;
+  background: $color-warning;
   border: 1px solid $color-conditional;
 }
 
 .player-unavailable {
-  background: #991b1b;
-  border: 1px solid #f87171;
+  background: $color-danger;
+  border: 1px solid $color-danger;
 }
 </style>
 

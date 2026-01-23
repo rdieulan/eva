@@ -3,7 +3,7 @@
 import { Router } from 'express';
 import type { Response } from 'express';
 import { prisma } from '@db/prisma';
-import { authMiddleware, adminMiddleware } from '@middleware/auth.middleware';
+import { authMiddleware, requirePermission } from '@middleware/auth.middleware';
 import type { AuthRequest } from '@middleware/auth.middleware';
 import type {
   SetAvailabilityRequest,
@@ -246,8 +246,8 @@ router.get('/events', authMiddleware, async (req: AuthRequest, res: Response) =>
 });
 
 // POST /api/calendar/events
-// Create a new event (Admin only)
-router.post('/events', authMiddleware, adminMiddleware, async (req: AuthRequest, res: Response) => {
+// Create a new event
+router.post('/events', authMiddleware, requirePermission('calendar', 'canCreateEvents'), async (req: AuthRequest, res: Response) => {
   const { date, startTime, endTime, type, title, description } = req.body as CreateEventRequest;
   const createdById = req.user!.userId;
 
@@ -305,8 +305,8 @@ router.post('/events', authMiddleware, adminMiddleware, async (req: AuthRequest,
 });
 
 // DELETE /api/calendar/events/:id
-// Delete an event (Admin only)
-router.delete('/events/:id', authMiddleware, adminMiddleware, async (req: AuthRequest, res: Response) => {
+// Delete an event
+router.delete('/events/:id', authMiddleware, requirePermission('calendar', 'canDeleteEvents'), async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
 
   try {
@@ -327,8 +327,8 @@ router.delete('/events/:id', authMiddleware, adminMiddleware, async (req: AuthRe
 });
 
 // PUT /api/calendar/events/:id
-// Update an event (Admin only)
-router.put('/events/:id', authMiddleware, adminMiddleware, async (req: AuthRequest, res: Response) => {
+// Update an event
+router.put('/events/:id', authMiddleware, requirePermission('calendar', 'canEditEvents'), async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
   const { date, startTime, endTime, type, title, description } = req.body as CreateEventRequest;
 
@@ -389,8 +389,8 @@ router.put('/events/:id', authMiddleware, adminMiddleware, async (req: AuthReque
 });
 
 // PUT /api/calendar/events/:id/gameplan
-// Update the game plan for an event (Admin only)
-router.put('/events/:id/gameplan', authMiddleware, adminMiddleware, async (req: AuthRequest, res: Response) => {
+// Update the game plan for an event
+router.put('/events/:id/gameplan', authMiddleware, requirePermission('calendar', 'canAttachGamePlan'), async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
   const { gamePlan } = req.body;
 

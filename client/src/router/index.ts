@@ -7,6 +7,7 @@ const HomePage = () => import('@/pages/HomePage.vue');
 const PlannerPage = () => import('@/pages/PlannerPage.vue');
 const CalendarPage = () => import('@/pages/CalendarPage.vue');
 const ProfilePage = () => import('@/pages/ProfilePage.vue');
+const TeamPage = () => import('@/pages/TeamPage.vue');
 const LoginPage = () => import('@/pages/LoginPage.vue');
 
 const routes: RouteRecordRaw[] = [
@@ -27,6 +28,12 @@ const routes: RouteRecordRaw[] = [
     name: 'calendar',
     component: CalendarPage,
     meta: { title: 'Calendrier', requiresAuth: true }
+  },
+  {
+    path: '/team',
+    name: 'team',
+    component: TeamPage,
+    meta: { title: 'Mon équipe', requiresAuth: true }
   },
   {
     path: '/profile',

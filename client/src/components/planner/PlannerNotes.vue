@@ -158,12 +158,12 @@ const currentPhaseData = computed(() => PHASE_DISPLAY_DATA[props.currentPhase]);
 
   &:hover {
     color: $color-text-primary;
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba($color-white, 0.05);
   }
 
   &.active {
     color: var(--tab-color, $color-accent);
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba($color-white, 0.05)er;
 
     &::after {
       content: '';

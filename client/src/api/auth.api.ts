@@ -1,5 +1,7 @@
 // Authentication API client
 
+import type { UserPermissions } from '@shared/types';
+
 export interface LoginCredentials {
   email: string;
   password: string;
@@ -9,7 +11,9 @@ export interface AuthUser {
   id: string;
   email: string;
   name: string;
-  role: 'ADMIN' | 'PLAYER';
+  permissions: UserPermissions;
+  teamId: string | null;
+  isLeader: boolean;  // Computed from team.leaderId === user.id
 }
 
 export interface LoginResponse {

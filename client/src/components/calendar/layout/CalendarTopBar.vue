@@ -105,23 +105,23 @@ defineEmits<{
   border: 1px solid;
 
   .available & {
-    background: #166534;
+    background: $color-success;
     border-color: $color-success;
   }
 
   .conditional & {
-    background: #854d0e;
+    background: $color-warning;
     border-color: $color-conditional;
   }
 
   .unavailable & {
-    background: #991b1b;
-    border-color: #f87171;
+    background: $color-danger;
+    border-color: $color-danger;
   }
 
   .unknown & {
-    background: #444;
-    border-color: #666;
+    background: $color-border;
+    border-color: $color-text-secondary;
   }
 
   @include mobile-lg {
@@ -147,7 +147,7 @@ defineEmits<{
   }
 
   .unavailable & {
-    color: #f87171;
+    color: $color-danger;
   }
 }
 
@@ -171,7 +171,7 @@ defineEmits<{
   &:hover {
     background: $color-border-light;
     border-color: $color-accent;
-    color: #fff;
+    color: $color-white;
   }
 
   &.active {

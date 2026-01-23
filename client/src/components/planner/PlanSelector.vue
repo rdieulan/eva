@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue';
 import type { GamePlanSummary } from '@/types';
 import SvgIcon from '@/components/common/SvgIcon.vue';
+import ConfirmModal from '@/components/common/ConfirmModal.vue';
 
 const props = withDefaults(defineProps<{
   plans: GamePlanSummary[];
@@ -24,9 +25,15 @@ const emit = defineEmits<{
 const showDropdown = ref(false);
 const editingPlanId = ref<string | null>(null);
 const editingName = ref('');
+const showDeleteModal = ref(false);
+const planToDelete = ref<string | null>(null);
 
 const selectedPlan = computed(() =>
   props.plans.find(p => p.id === props.selectedPlanId)
+);
+
+const planToDeleteName = computed(() =>
+  props.plans.find(p => p.id === planToDelete.value)?.name || ''
 );
 
 function toggleDropdown() {
@@ -64,8 +71,15 @@ function handleDuplicate(planId: string, event: Event) {
 
 function handleDelete(planId: string, event: Event) {
   event.stopPropagation();
-  if (confirm('Supprimer ce plan de jeu ?')) {
-    emit('delete', planId);
+  planToDelete.value = planId;
+  showDeleteModal.value = true;
+}
+
+function confirmDelete() {
+  if (planToDelete.value) {
+    emit('delete', planToDelete.value);
+    showDeleteModal.value = false;
+    planToDelete.value = null;
   }
 }
 
@@ -136,6 +150,16 @@ function closeDropdown() {
 
     <!-- Backdrop to close dropdown -->
     <div v-if="showDropdown" class="dropdown-backdrop" @click="closeDropdown"></div>
+
+    <!-- Delete Confirmation Modal -->
+    <ConfirmModal
+      :open="showDeleteModal"
+      title="Supprimer le plan"
+      :message="`Êtes-vous sûr de vouloir supprimer le plan « ${planToDeleteName} » ?`"
+      :danger="true"
+      @confirm="confirmDelete"
+      @cancel="showDeleteModal = false; planToDelete = null"
+    />
   </div>
 </template>
 
@@ -210,7 +234,7 @@ function closeDropdown() {
   background: $color-bg-secondary;
   border: 1px solid $color-border;
   border-radius: $radius-md;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 20px $color-shadow;
   z-index: 100;
   overflow: hidden;
 }

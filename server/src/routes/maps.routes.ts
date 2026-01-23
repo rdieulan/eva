@@ -3,7 +3,7 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { prisma } from '@db/prisma';
-import { authMiddleware, adminMiddleware } from '@middleware/auth.middleware';
+import { authMiddleware, requirePermission } from '@middleware/auth.middleware';
 import type { AuthRequest } from '@middleware/auth.middleware';
 import { DEFAULT_GAME_PLAN_NOTES } from '@shared/constants';
 
@@ -113,8 +113,8 @@ router.get('/:mapId', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/maps/:mapId - Update map metadata and template (admin only)
-router.post('/:mapId', authMiddleware, adminMiddleware, async (req: AuthRequest, res: Response) => {
+// POST /api/maps/:mapId - Update map metadata and template
+router.post('/:mapId', authMiddleware, requirePermission('planner', 'canEdit'), async (req: AuthRequest, res: Response) => {
   const { mapId } = req.params;
   const { name, images, template } = req.body;
 
@@ -179,8 +179,8 @@ router.get('/:mapId/plans', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/maps/:mapId/plans - Create a new game plan (admin only)
-router.post('/:mapId/plans', authMiddleware, adminMiddleware, async (req: AuthRequest, res: Response) => {
+// POST /api/maps/:mapId/plans - Create a new game plan
+router.post('/:mapId/plans', authMiddleware, requirePermission('planner', 'canCreate'), async (req: AuthRequest, res: Response) => {
   const { mapId } = req.params;
   const { name } = req.body;
 

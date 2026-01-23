@@ -8,6 +8,8 @@ const props = defineProps<{
   editMode: boolean;
   canEdit: boolean;
   hasActiveAssignment: boolean;
+  saveState?: 'idle' | 'saving' | 'success' | 'error';
+  hasChanges?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -96,8 +98,30 @@ function isMapBalanced(map: MapConfig): boolean {
 
       <!-- Save/Cancel buttons at bottom -->
       <div class="edit-actions">
-        <button class="btn-save" @click="$emit('save')">💾 Sauvegarder</button>
-        <button class="btn-cancel" @click="$emit('cancel')">✕ Annuler</button>
+        <button
+          class="btn-save"
+          :class="{
+            'is-saving': saveState === 'saving',
+            'is-success': saveState === 'success',
+            'is-error': saveState === 'error',
+            'has-changes': hasChanges && saveState === 'idle'
+          }"
+          :disabled="saveState === 'saving' || (!hasChanges && saveState === 'idle')"
+          @click="$emit('save')"
+        >
+          <span v-if="saveState === 'saving'" class="btn-spinner"></span>
+          <span v-else-if="saveState === 'success'" class="btn-check">✓</span>
+          <span v-else-if="saveState === 'error'" class="btn-error">✕</span>
+          <span v-else>💾 Sauvegarder</span>
+        </button>
+        <button
+          class="btn-cancel"
+          :class="{ 'has-changes': hasChanges }"
+          :disabled="!hasChanges"
+          @click="$emit('cancel')"
+        >
+          ✕ Annuler
+        </button>
       </div>
     </div>
   </aside>
@@ -173,12 +197,8 @@ function isMapBalanced(map: MapConfig): boolean {
 
     &.active {
       background: $color-accent;
-      color: #fff;
+      color: $color-white;
     }
-  }
-
-  &.edit-active .mode-option.active {
-    background: $color-danger;
   }
 }
 
@@ -405,11 +425,108 @@ function isMapBalanced(map: MapConfig): boolean {
 }
 
 .btn-save {
-  background: $color-success;
-  color: $color-bg-secondary;
+  background: $color-bg-tertiary;
+  color: $color-text-secondary;
+  min-width: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
+  border: 1px solid $color-border;
 
-  &:hover {
-    background: color.adjust($color-success, $lightness: 5%);
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  &.has-changes {
+    background: $color-accent;
+    color: white;
+    border-color: $color-accent;
+
+    &:hover:not(:disabled) {
+      background: color.adjust($color-accent, $lightness: 5%);
+    }
+  }
+
+  &.is-saving {
+    background: $color-accent;
+    color: white;
+    border-color: $color-accent;
+  }
+
+  &.is-success {
+    background: $color-success;
+    color: white;
+    border-color: $color-success;
+    animation: pulse-success 0.3s ease-out;
+  }
+
+  &.is-error {
+    background: $color-danger;
+    color: white;
+    border-color: $color-danger;
+    animation: shake 0.3s ease-out;
+  }
+}
+
+.btn-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba($color-white, 0.05)er;
+  border-top-color: $color-white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.btn-check {
+  font-size: 1.2em;
+  animation: fade-in 0.2s ease-out;
+}
+
+.btn-error {
+  font-size: 1.2em;
+  animation: fade-in 0.2s ease-out;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse-success {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px);
+  }
+  75% {
+    transform: translateX(4px);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
@@ -418,9 +535,19 @@ function isMapBalanced(map: MapConfig): boolean {
   color: $color-text-secondary;
   border: 1px solid $color-border;
 
-  &:hover {
-    background: $color-bg-primary;
-    color: $color-text-primary;
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  &.has-changes {
+    background: $color-danger;
+    color: white;
+    border-color: $color-danger;
+
+    &:hover:not(:disabled) {
+      background: color.adjust($color-danger, $lightness: 5%);
+    }
   }
 }
 </style>

@@ -3,7 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import PlannerTopBar from '@/components/planner/layout/PlannerTopBar.vue';
 import PlannerLeftBar from '@/components/planner/layout/PlannerLeftBar.vue';
 import PlannerRightDrawer from '@/components/planner/layout/PlannerRightDrawer.vue';
-import MapViewer from '@/components/planner/MapViewer.vue';
+import PlannerBody from '@/components/planner/layout/PlannerBody.vue';
 import { fetchAllMaps, fetchPlayers, saveGamePlan } from '@/api';
 import { getPlayerAssignments } from '@/utils/balance';
 import { getAssignmentColor } from '@/utils/colors';
@@ -13,7 +13,7 @@ import { usePlannerNotes } from '@/composables/usePlannerNotes';
 import type { MapConfig, Player, GamePhase } from '@shared/types';
 
 const { permissions } = useAuth();
-const canEdit = computed(() => permissions.value.canEdit);
+const canEdit = computed(() => permissions.value.planner.canEdit);
 
 // Core state
 const selectedMapId = ref<string | null>(null);
@@ -23,11 +23,12 @@ const editMode = ref(false);
 const isLoading = ref(true);
 const currentPhase = ref<GamePhase>('START');
 const showNotesDrawer = ref(false);
+const saveState = ref<'idle' | 'saving' | 'success' | 'error'>('idle');
 
 const maps = ref<MapConfig[]>([]);
 const editableMaps = ref<MapConfig[]>([]);
 const players = ref<Player[]>([]);
-const mapViewerRef = ref<InstanceType<typeof MapViewer> | null>(null);
+const plannerBodyRef = ref<InstanceType<typeof PlannerBody> | null>(null);
 
 // Use plans composable
 const {
@@ -85,6 +86,18 @@ const selectedAssignmentColor = computed(() => {
   const assignmentId = selectedAssignmentId.value;
   if (assignmentId === null) return undefined;
   return getAssignmentColor(assignmentId);
+});
+
+// Detect if there are unsaved changes
+const hasChanges = computed(() => {
+  if (!selectedMapId.value || !editMode.value) return false;
+
+  const originalMap = maps.value.find(m => m.id === selectedMapId.value);
+  const editableMap = editableMaps.value.find(m => m.id === selectedMapId.value);
+
+  if (!originalMap || !editableMap) return false;
+
+  return JSON.stringify(originalMap) !== JSON.stringify(editableMap);
 });
 
 // Load initial data
@@ -182,15 +195,19 @@ async function saveChanges() {
 
   const token = localStorage.getItem('token');
   if (!token) {
-    alert('❌ Non authentifié');
+    saveState.value = 'error';
+    setTimeout(() => { saveState.value = 'idle'; }, 2000);
     return;
   }
 
   const gamePlanId = selectedPlanId.value;
   if (!gamePlanId) {
-    alert('❌ Aucun plan de jeu sélectionné');
+    saveState.value = 'error';
+    setTimeout(() => { saveState.value = 'idle'; }, 2000);
     return;
   }
+
+  saveState.value = 'saving';
 
   try {
     await saveGamePlan(gamePlanId, {
@@ -204,22 +221,24 @@ async function saveChanges() {
       maps.value[index] = JSON.parse(JSON.stringify(mapToSave));
     }
 
-    alert(`✅ Map "${mapToSave.name}" sauvegardée !`);
+    saveState.value = 'success';
+    setTimeout(() => { saveState.value = 'idle'; }, 1500);
   } catch (error) {
     console.error('Save error:', error);
-    alert(`❌ Erreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+    saveState.value = 'error';
+    setTimeout(() => { saveState.value = 'idle'; }, 2000);
   }
 }
 
 function handleAddMarker() {
-  if (mapViewerRef.value && activeAssignments.value.length > 0) {
-    mapViewerRef.value.addMarkerFromToolbar(activeAssignments.value[0] as number);
+  if (plannerBodyRef.value && activeAssignments.value.length > 0) {
+    plannerBodyRef.value.addMarkerFromToolbar(activeAssignments.value[0] as number);
   }
 }
 
 function handleAddZone() {
-  if (mapViewerRef.value && activeAssignments.value.length > 0) {
-    mapViewerRef.value.addZoneFromToolbar(activeAssignments.value[0] as number);
+  if (plannerBodyRef.value && activeAssignments.value.length > 0) {
+    plannerBodyRef.value.addZoneFromToolbar(activeAssignments.value[0] as number);
   }
 }
 </script>
@@ -264,6 +283,8 @@ function handleAddZone() {
           :editMode="editMode"
           :canEdit="canEdit"
           :hasActiveAssignment="activeAssignments.length > 0"
+          :saveState="saveState"
+          :hasChanges="hasChanges"
           @select-map="selectMap"
           @toggle-edit="toggleEditMode"
           @add-marker="handleAddMarker"
@@ -272,9 +293,8 @@ function handleAddZone() {
           @cancel="cancelEdit"
         />
 
-        <MapViewer
-          v-if="currentMap"
-          ref="mapViewerRef"
+        <PlannerBody
+          ref="plannerBodyRef"
           :map="currentMap"
           :players="players"
           :selectedPlayerId="selectedPlayerId"
@@ -287,9 +307,6 @@ function handleAddZone() {
           @main-assignment-changed="handleMainAssignmentChanged"
         />
 
-        <div v-else class="no-map">
-          Sélectionnez une map
-        </div>
 
         <!-- Notes Drawer -->
         <PlannerRightDrawer
@@ -340,7 +357,6 @@ function handleAddZone() {
 }
 
 
-.no-map,
 .loading {
   flex: 1;
   display: flex;

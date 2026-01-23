@@ -283,8 +283,8 @@ function isMainRoleForSelectedPlayer(assignmentId: number): boolean {
   color: $color-success;
 
   .btn-calculator:hover & {
-    fill: #6ee7a0;
-    color: #6ee7a0;
+    fill: $color-success;
+    color: $color-success;
   }
 }
 
@@ -345,9 +345,9 @@ function isMainRoleForSelectedPlayer(assignmentId: number): boolean {
 
   button {
     padding: 0.3rem 0.75rem;
-    border: 2px solid #666;
+    border: 2px solid $color-border;
     background: transparent;
-    color: #ccc;
+    color: $color-text-muted;
     border-radius: $radius-sm;
     font-weight: 600;
     font-size: 0.8rem;
@@ -357,23 +357,23 @@ function isMainRoleForSelectedPlayer(assignmentId: number): boolean {
     &:hover {
       background: $color-border-light;
       border-color: $color-text-secondary;
-      color: #fff;
+      color: $color-white;
     }
 
     &.active {
-      background: #4a4a8a;
+      background: rgba($color-accent, 0.4);
       border-color: $color-accent;
-      color: #fff;
-      box-shadow: 0 0 8px rgba(100, 100, 200, 0.3);
+      color: $color-white;
+      box-shadow: 0 0 8px rgba($color-accent, 0.3);
     }
 
     &.highlighted {
       border-color: white;
 
       &.active {
-        background: linear-gradient(135deg, #4a4a8a 0%, rgba($color-success, 0.3) 100%);
+        background: linear-gradient(135deg, rgba($color-accent, 0.4) 0%, rgba($color-success, 0.3) 100%);
         border-color: white;
-        color: #fff;
+        color: $color-white;
       }
     }
 
@@ -426,8 +426,8 @@ function isMainRoleForSelectedPlayer(assignmentId: number): boolean {
     }
 
     &.disabled {
-      border-color: #444;
-      color: #555;
+      border-color: $color-border;
+      color: $color-text-secondary;
       cursor: not-allowed;
       opacity: 0.5;
     }

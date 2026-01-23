@@ -4,6 +4,7 @@
  * Wrapper for the main planner content area.
  * Contains MapViewer functional component.
  */
+import { ref } from 'vue';
 import MapViewer from '@/components/planner/MapViewer.vue';
 import type { MapConfig, Player, GamePhase } from '@shared/types';
 
@@ -23,8 +24,20 @@ defineEmits<{
   'main-assignment-changed': [playerId: string, assignmentId: number | null];
 }>();
 
+const mapViewerRef = ref<InstanceType<typeof MapViewer> | null>(null);
+
+// Expose methods that delegate to MapViewer
+function addMarkerFromToolbar(assignmentId: number) {
+  mapViewerRef.value?.addMarkerFromToolbar(assignmentId);
+}
+
+function addZoneFromToolbar(assignmentId: number) {
+  mapViewerRef.value?.addZoneFromToolbar(assignmentId);
+}
+
 defineExpose({
-  mapViewerRef: null as InstanceType<typeof MapViewer> | null,
+  addMarkerFromToolbar,
+  addZoneFromToolbar,
 });
 </script>
 

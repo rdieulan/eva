@@ -63,7 +63,7 @@ defineEmits<{
 
 <style scoped lang="scss">
 .calendar-body {
-  flex: 1;
-  overflow: auto;
+  width: 100%;
+  display: contents;
 }
 </style>

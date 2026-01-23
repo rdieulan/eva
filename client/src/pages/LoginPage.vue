@@ -100,7 +100,7 @@ async function handleLogin() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, $color-bg-secondary 0%, #16213e 100%);
+  background: linear-gradient(135deg, $color-bg-secondary 0%, $color-bg-tertiary 100%);
   padding: $spacing-xl;
 
   @include tablet {
@@ -143,7 +143,7 @@ async function handleLogin() {
 }
 
 h1 {
-  color: #fff;
+  color: $color-white;
   text-align: center;
   margin: 0 0 $spacing-xl;
   font-size: 1.8rem;
@@ -184,7 +184,7 @@ input {
   background: $color-bg-secondary;
   border: 2px solid $color-border-light;
   border-radius: $radius-md;
-  color: #fff;
+  color: $color-white;
   font-size: 1rem;
   transition: border-color 0.2s;
 
@@ -194,7 +194,7 @@ input {
   }
 
   &::placeholder {
-    color: #555;
+    color: $color-text-secondary;
   }
 
   @include mobile-lg {
@@ -225,14 +225,14 @@ input {
   background: $color-accent;
   border: none;
   border-radius: $radius-md;
-  color: #fff;
+  color: $color-white;
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover:not(:disabled) {
-    background: $color-accent-light;
+    background: $color-accent;
   }
 
   &:disabled {

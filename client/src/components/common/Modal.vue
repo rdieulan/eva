@@ -93,7 +93,7 @@ onUnmounted(() => {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: $color-overlay;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -113,7 +113,7 @@ onUnmounted(() => {
   max-height: 90vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 20px 60px $color-shadow;
 
   @include mobile-lg {
     max-height: 95vh;
@@ -166,7 +166,7 @@ onUnmounted(() => {
   margin: 0;
   font-size: 1.25rem;
   font-weight: 600;
-  color: #fff;
+  color: $color-white;
 
   @include tablet {
     font-size: 1.1rem;
@@ -210,7 +210,7 @@ onUnmounted(() => {
   fill: $color-text-secondary;
 
   .btn-close:hover & {
-    fill: #fff;
+    fill: $color-white;
   }
 }
 

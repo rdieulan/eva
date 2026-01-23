@@ -106,7 +106,7 @@ function isMapBalanced(map: MapConfig): boolean {
       color: $color-success;
 
       &:hover {
-        color: #6ee7a0;
+        color: $color-success;
       }
     }
 
@@ -114,7 +114,7 @@ function isMapBalanced(map: MapConfig): boolean {
       color: $color-danger;
 
       &:hover {
-        color: #ff8a8a;
+        color: $color-danger;
       }
     }
 
@@ -123,7 +123,7 @@ function isMapBalanced(map: MapConfig): boolean {
     }
 
     &.active {
-      background: #4a4a8a;
+      background: rgba($color-accent, 0.4);
       font-weight: 600;
 
       &.balanced {
