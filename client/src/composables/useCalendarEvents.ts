@@ -14,7 +14,9 @@ import type { CalendarEvent, CreateEventRequest, MatchGamePlan, DayData } from '
 
 export interface UseCalendarEventsOptions {
   days: Ref<Record<string, DayData>>;
+  canCreate: ComputedRef<boolean>;
   canEdit: ComputedRef<boolean>;
+  canDelete: ComputedRef<boolean>;
   reloadData: () => Promise<void>;
 }
 
@@ -31,6 +33,8 @@ export interface UseCalendarEventsReturn {
 
   // Permissions
   canCreateEvents: ComputedRef<boolean>;
+  canEditEvents: ComputedRef<boolean>;
+  canDeleteEvents: ComputedRef<boolean>;
 
   // Event viewer methods
   openEventViewer: (events: CalendarEvent[], initialIndex: number) => void;
@@ -48,7 +52,7 @@ export interface UseCalendarEventsReturn {
 }
 
 export function useCalendarEvents(options: UseCalendarEventsOptions): UseCalendarEventsReturn {
-  const { canEdit, reloadData } = options;
+  const { canCreate, canEdit, canDelete, reloadData } = options;
 
   // Event form modal state
   const showEventModal = ref(false);
@@ -60,8 +64,10 @@ export function useCalendarEvents(options: UseCalendarEventsOptions): UseCalenda
   const viewerEvents = ref<CalendarEvent[]>([]);
   const viewerInitialIndex = ref(0);
 
-  // Permissions
-  const canCreateEvents = computed(() => canEdit.value);
+  // Permissions - directly use the passed permissions
+  const canCreateEvents = computed(() => canCreate.value);
+  const canEditEvents = computed(() => canEdit.value);
+  const canDeleteEvents = computed(() => canDelete.value);
 
   // Open event viewer modal (read-only with navigation)
   function openEventViewer(events: CalendarEvent[], initialIndex: number) {
@@ -155,6 +161,8 @@ export function useCalendarEvents(options: UseCalendarEventsOptions): UseCalenda
 
     // Permissions
     canCreateEvents,
+    canEditEvents,
+    canDeleteEvents,
 
     // Event viewer methods
     openEventViewer,

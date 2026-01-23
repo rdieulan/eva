@@ -17,7 +17,10 @@ const props = defineProps<{
   open: boolean;
   selectedDate?: string; // Pre-fill date
   editEvent?: CalendarEvent; // Event to edit (if editing)
-  readOnly?: boolean; // View-only mode (for non-admin users)
+  canCreate?: boolean; // Can create events
+  canEdit?: boolean; // Can edit events
+  canDelete?: boolean; // Can delete events
+  canAttachGamePlan?: boolean; // Can attach game plan to match
   maps?: MapConfig[]; // Maps for RotationCalculator
   players?: Player[]; // Players for RotationCalculator
 }>();
@@ -44,6 +47,17 @@ const showDeleteConfirm = ref(false);
 
 // Error message
 const error = ref('');
+
+// Computed permissions
+const isViewOnly = computed(() => {
+  // View-only if editing an event but no edit permission
+  if (props.editEvent && !props.canEdit) return true;
+  // View-only if creating but no create permission
+  if (!props.editEvent && !props.canCreate) return true;
+  return false;
+});
+
+const canShowDeleteButton = computed(() => props.canDelete && props.editEvent);
 
 // Reset form when modal opens
 watch(
@@ -77,7 +91,7 @@ watch(
 
 // Modal title
 const modalTitle = computed(() => {
-  if (props.readOnly && props.editEvent) {
+  if (isViewOnly.value && props.editEvent) {
     return props.editEvent.type === 'MATCH' ? '🎮 Match' : '📅 Événement';
   }
   return props.editEvent ? 'Modifier l\'événement' : 'Créer un événement';
@@ -152,7 +166,7 @@ function handleGamePlanAssociate(newGamePlan: MatchGamePlan) {
 
 // Check if we can show the game plan button
 const canSetGamePlan = computed(() => {
-  return type.value === 'MATCH' && props.maps && props.maps.length > 0 && props.players && props.players.length > 0;
+  return props.canAttachGamePlan && type.value === 'MATCH' && props.maps && props.maps.length > 0 && props.players && props.players.length > 0;
 });
 
 // Check if there's a game plan to display
@@ -180,7 +194,7 @@ const modalSize = computed(() => {
 
   <Modal :open="open && !showRotationCalculator" :title="modalTitle" :size="modalSize" @close="emit('close')">
     <!-- Read-only view for non-admin users -->
-    <div v-if="readOnly && editEvent" class="event-view">
+    <div v-if="isViewOnly && editEvent" class="event-view">
       <div class="event-view-header" :class="editEvent.type === 'MATCH' ? 'type-match' : 'type-event'">
         <span class="event-view-type">{{ editEvent.type === 'MATCH' ? '🎮 Match' : '📅 Événement' }}</span>
       </div>
@@ -327,7 +341,7 @@ const modalSize = computed(() => {
 
     <template #footer>
       <!-- Read-only mode: only close button -->
-      <template v-if="readOnly">
+      <template v-if="isViewOnly">
         <button type="button" class="btn btn-secondary" @click="emit('close')">
           Fermer
         </button>
@@ -336,7 +350,7 @@ const modalSize = computed(() => {
       <!-- Edit mode: full controls -->
       <template v-else>
         <button
-          v-if="editEvent"
+          v-if="canShowDeleteButton"
           type="button"
           class="btn btn-danger"
           @click="handleDelete"

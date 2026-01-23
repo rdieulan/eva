@@ -17,7 +17,9 @@ import type { MapConfig, Player, GamePhase } from '@shared/types';
 
 const { permissions } = useAuth();
 const router = useRouter();
+const canCreate = computed(() => permissions.value.planner.canCreate);
 const canEdit = computed(() => permissions.value.planner.canEdit);
+const canDelete = computed(() => permissions.value.planner.canDelete);
 
 // Core state
 const selectedMapId = ref<string | null>(null);
@@ -445,7 +447,9 @@ function handleCancelLeave() {
         :activeAssignments="activeAssignments"
         :editMode="editMode"
         :isLoading="isLoading"
+        :canCreate="canCreate"
         :canEdit="canEdit"
+        :canDelete="canDelete"
         :currentPhase="currentPhase"
         :plans="currentMapPlans"
         :selectedPlanId="selectedPlanId"

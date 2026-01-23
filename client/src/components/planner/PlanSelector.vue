@@ -8,10 +8,14 @@ const props = withDefaults(defineProps<{
   plans: GamePlanSummary[];
   selectedPlanId: string | null;
   disabled?: boolean;
+  canCreate?: boolean;
   canEdit?: boolean;
+  canDelete?: boolean;
 }>(), {
   disabled: false,
+  canCreate: false,
   canEdit: false,
+  canDelete: false,
 });
 
 const emit = defineEmits<{
@@ -126,11 +130,11 @@ function closeDropdown() {
             <!-- Display mode -->
             <template v-else>
               <span class="plan-item-name">{{ plan.name }}</span>
-              <div v-if="canEdit" class="plan-actions">
-                <button class="action-btn" title="Renommer" @click="startRename(plan, $event)">✏️</button>
-                <button class="action-btn" title="Dupliquer" @click="handleDuplicate(plan.id, $event)">📋</button>
+              <div v-if="canEdit || canDelete" class="plan-actions">
+                <button v-if="canEdit" class="action-btn" title="Renommer" @click="startRename(plan, $event)">✏️</button>
+                <button v-if="canCreate" class="action-btn" title="Dupliquer" @click="handleDuplicate(plan.id, $event)">📋</button>
                 <button
-                  v-if="plans.length > 1"
+                  v-if="canDelete && plans.length > 1"
                   class="action-btn delete"
                   title="Supprimer"
                   @click="handleDelete(plan.id, $event)"
@@ -140,7 +144,7 @@ function closeDropdown() {
           </div>
         </div>
 
-        <div v-if="canEdit" class="dropdown-footer">
+        <div v-if="canCreate" class="dropdown-footer">
           <button class="btn-create" @click="handleCreate">
             + Nouveau plan
           </button>

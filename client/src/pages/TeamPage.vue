@@ -257,12 +257,12 @@ onMounted(loadData);
               <span class="member-email">{{ member.email }}</span>
             </div>
 
-            <div class="member-actions" v-if="canManagePermissions && !member.isLeader">
+            <div class="member-actions" v-if="canManagePermissions && !member.isLeader && member.id !== user?.id">
               <button class="btn-icon" title="Gérer les permissions" @click="openPermissionsModal(member)">
                 <SvgIcon name="settings" />
               </button>
               <button
-                v-if="canRemoveMembers && member.id !== user?.id"
+                v-if="canRemoveMembers"
                 class="btn-icon danger"
                 title="Retirer de l'équipe"
                 @click="openRemoveModal(member)"

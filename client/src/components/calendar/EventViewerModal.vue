@@ -8,7 +8,9 @@ import { getEventTypeLabel as getEventTypeLabelUtil, isPastDateStr } from '@/uti
 const props = defineProps<{
   events: CalendarEvent[];
   initialIndex?: number;
-  isAdmin?: boolean;
+  canCreate?: boolean;
+  canEdit?: boolean;
+  canDelete?: boolean;
   selectedDate?: string;
 }>();
 
@@ -16,6 +18,7 @@ const emit = defineEmits<{
   close: [];
   'edit-event': [event: CalendarEvent];
   'create-event': [date: string];
+  'delete-event': [eventId: string];
 }>();
 
 // Current event index
@@ -35,8 +38,9 @@ const isEventPast = computed(() => {
   return isPastDateStr(currentEvent.value.date);
 });
 
-// Can edit (admin and not past)
-const canEdit = computed(() => props.isAdmin && !isEventPast.value);
+// Permissions - check if not past date
+const canEditEvent = computed(() => props.canEdit && !isEventPast.value);
+const canCreateEvent = computed(() => props.canCreate && !isEventPast.value);
 
 // Navigation
 const hasPrev = computed(() => currentIndex.value > 0);
@@ -162,11 +166,11 @@ function handleCreateEvent() {
     <template #footer>
       <div class="footer-actions">
         <!-- Admin buttons (only for non-past events) -->
-        <div v-if="canEdit" class="admin-actions">
-          <button class="btn btn-primary" @click="handleEditEvent" title="Modifier cet événement">
+        <div v-if="canEditEvent || canCreateEvent" class="admin-actions">
+          <button v-if="canEditEvent" class="btn btn-primary" @click="handleEditEvent" title="Modifier cet événement">
             ✏️ Modifier
           </button>
-          <button class="btn btn-accent" @click="handleCreateEvent" title="Ajouter un événement">
+          <button v-if="canCreateEvent" class="btn btn-accent" @click="handleCreateEvent" title="Ajouter un événement">
             ➕ Ajouter
           </button>
         </div>

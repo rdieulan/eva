@@ -109,13 +109,15 @@ describe('EventFormModal Component', () => {
       props: {
         open: true,
         editEvent: mockEvent,
-        readOnly: true,
+        canCreate: false,
+        canEdit: false,
+        canDelete: false,
         maps: mockMaps,
         players: mockPlayers,
       },
     });
 
-    expect(wrapper.props('readOnly')).toBe(true);
+    expect(wrapper.props('canEdit')).toBe(false);
     expect(wrapper.props('editEvent')).toEqual(mockEvent);
   });
 

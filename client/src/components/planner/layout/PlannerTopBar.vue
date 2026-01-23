@@ -15,7 +15,9 @@ const props = defineProps<{
   activeAssignments: number[];
   editMode: boolean;
   isLoading: boolean;
+  canCreate: boolean;
   canEdit: boolean;
+  canDelete: boolean;
   // Phase section props
   currentPhase: GamePhase;
   plans: GamePlanSummary[];
@@ -119,7 +121,9 @@ function isMainRoleForSelectedPlayer(assignmentId: number): boolean {
         v-if="plans.length > 0"
         :plans="plans"
         :selectedPlanId="selectedPlanId"
+        :canCreate="canCreate"
         :canEdit="canEdit"
+        :canDelete="canDelete"
         @select="$emit('select-plan', $event)"
         @create="$emit('create-plan')"
         @duplicate="$emit('duplicate-plan', $event)"

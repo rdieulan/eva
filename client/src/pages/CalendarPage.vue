@@ -51,6 +51,8 @@ const {
   viewerEvents,
   viewerInitialIndex,
   canCreateEvents,
+  canEditEvents,
+  canDeleteEvents,
   openEventViewer,
   closeEventViewer,
   openCreateEvent,
@@ -61,7 +63,9 @@ const {
   updateGamePlan,
 } = useCalendarEvents({
   days,
+  canCreate: computed(() => permissions.value.calendar.canCreateEvents),
   canEdit: computed(() => permissions.value.calendar.canEditEvents),
+  canDelete: computed(() => permissions.value.calendar.canDeleteEvents),
   reloadData: loadCalendarData,
 });
 
@@ -148,7 +152,9 @@ onMounted(async () => {
     <EventViewerModal
       :events="viewerEvents"
       :initial-index="viewerInitialIndex"
-      :is-admin="canCreateEvents"
+      :can-create="canCreateEvents"
+      :can-edit="canEditEvents"
+      :can-delete="canDeleteEvents"
       :selected-date="viewerEvents[0]?.date"
       @close="closeEventViewer"
       @edit-event="editEventFromViewer"
@@ -160,7 +166,10 @@ onMounted(async () => {
       :open="showEventModal"
       :selected-date="selectedDate"
       :edit-event="editingEvent"
-      :read-only="!canCreateEvents"
+      :can-create="canCreateEvents"
+      :can-edit="canEditEvents"
+      :can-delete="canDeleteEvents"
+      :can-attach-game-plan="permissions.calendar.canAttachGamePlan"
       :maps="maps"
       :players="players"
       @close="showEventModal = false"
