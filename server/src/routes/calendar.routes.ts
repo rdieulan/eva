@@ -27,9 +27,10 @@ function formatDateStr(date: Date): string {
 // ===========================================
 
 // GET /api/calendar/availability?month=YYYY-MM
-// Get all availabilities for a month (all users)
+// Get all availabilities for a month (all users of the same team)
 router.get('/availability', authMiddleware, async (req: AuthRequest, res: Response) => {
   const { month } = req.query;
+  const teamId = req.user?.teamId;
 
   if (!month || typeof month !== 'string' || !/^\d{4}-\d{2}$/.test(month)) {
     res.status(400).json({ error: 'Paramètre month requis (format YYYY-MM)' });
@@ -42,13 +43,14 @@ router.get('/availability', authMiddleware, async (req: AuthRequest, res: Respon
     const startDate = new Date(year, monthNum - 1, 1);
     const endDate = new Date(year, monthNum, 0); // Last day of month
 
-    // Fetch all availabilities for the month
+    // Fetch all availabilities for the month (filtered by team via user)
     const availabilities = await prisma.availability.findMany({
       where: {
         date: {
           gte: startDate,
           lte: endDate,
         },
+        ...(teamId ? { user: { teamId } } : {}),
       },
       include: {
         user: {
@@ -57,19 +59,21 @@ router.get('/availability', authMiddleware, async (req: AuthRequest, res: Respon
       },
     });
 
-    // Fetch all users for the player list
+    // Fetch all users of the same team for the player list
     const users = await prisma.user.findMany({
+      where: teamId ? { teamId } : {},
       select: { id: true, name: true },
       orderBy: { name: 'asc' },
     });
 
-    // Fetch all events for the month
+    // Fetch all events for the month (filtered by team)
     const events = await prisma.calendarEvent.findMany({
       where: {
         date: {
           gte: startDate,
           lte: endDate,
         },
+        ...(teamId ? { teamId } : {}),
       },
       orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
     });
@@ -204,6 +208,7 @@ router.post('/availability', authMiddleware, async (req: AuthRequest, res: Respo
 // Get all events for a month
 router.get('/events', authMiddleware, async (req: AuthRequest, res: Response) => {
   const { month } = req.query;
+  const teamId = req.user?.teamId;
 
   if (!month || typeof month !== 'string' || !/^\d{4}-\d{2}$/.test(month)) {
     res.status(400).json({ error: 'Paramètre month requis (format YYYY-MM)' });
@@ -221,6 +226,7 @@ router.get('/events', authMiddleware, async (req: AuthRequest, res: Response) =>
           gte: startDate,
           lte: endDate,
         },
+        ...(teamId ? { teamId } : {}),
       },
       orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
     });
@@ -250,6 +256,12 @@ router.get('/events', authMiddleware, async (req: AuthRequest, res: Response) =>
 router.post('/events', authMiddleware, requirePermission('calendar', 'canCreateEvents'), async (req: AuthRequest, res: Response) => {
   const { date, startTime, endTime, type, title, description } = req.body as CreateEventRequest;
   const createdById = req.user!.userId;
+  const teamId = req.user?.teamId;
+
+  if (!teamId) {
+    res.status(400).json({ error: 'User must belong to a team to create events' });
+    return;
+  }
 
   // Validation
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
@@ -283,6 +295,7 @@ router.post('/events', authMiddleware, requirePermission('calendar', 'canCreateE
         title: title.trim(),
         description: description?.trim() || null,
         createdById,
+        teamId,
       },
     });
 

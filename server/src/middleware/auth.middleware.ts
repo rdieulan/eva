@@ -11,6 +11,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key';
 export interface JwtPayload {
   userId: string;
   email: string;
+  teamId?: string;
 }
 
 export interface AuthRequest extends Request {
@@ -26,6 +27,17 @@ export function verifyToken(token: string): JwtPayload | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Get user's team ID from database
+ */
+export async function getUserTeamId(userId: string): Promise<string | undefined> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { teamId: true },
+  });
+  return user?.teamId ?? undefined;
 }
 
 /**
@@ -64,6 +76,7 @@ export async function hasPermission(
 
 /**
  * Authentication middleware - requires valid JWT token
+ * Enriches the payload with teamId from database
  */
 export function authMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
@@ -81,9 +94,16 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
     return res.status(401).json({ error: 'Token invalide' });
   }
 
-  console.log('[AUTH] Middleware: Token valid for user', payload.email);
-  req.user = payload;
-  next();
+  // Enrich payload with teamId from database
+  getUserTeamId(payload.userId).then(teamId => {
+    console.log('[AUTH] Middleware: Token valid for user', payload.email, 'team:', teamId);
+    req.user = { ...payload, teamId };
+    next();
+  }).catch(error => {
+    console.error('[AUTH] Error fetching team:', error);
+    req.user = payload;
+    next();
+  });
 }
 
 /**

@@ -4,13 +4,17 @@ import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { prisma } from '@db/prisma';
 import { authMiddleware, requirePermission } from '@middleware/auth.middleware';
+import type { AuthRequest } from '@middleware/auth.middleware';
 
 const router = Router();
 
 // GET /api/users - Get all users (team management permission required)
-router.get('/', authMiddleware, requirePermission('team', 'canManagePermissions'), async (_req: Request, res: Response) => {
+router.get('/', authMiddleware, requirePermission('team', 'canManagePermissions'), async (req: AuthRequest, res: Response) => {
+  const teamId = req.user?.teamId;
+
   try {
     const users = await prisma.user.findMany({
+      where: teamId ? { teamId } : {},
       select: {
         id: true,
         email: true,
@@ -27,10 +31,13 @@ router.get('/', authMiddleware, requirePermission('team', 'canManagePermissions'
   }
 });
 
-// GET /api/players - Get players list (public - for frontend player selection)
-router.get('/players', async (_req: Request, res: Response) => {
+// GET /api/players - Get players list (for frontend player selection, filtered by team)
+router.get('/players', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const teamId = req.user?.teamId;
+
   try {
     const users = await prisma.user.findMany({
+      where: teamId ? { teamId } : {},
       select: {
         id: true,
         name: true,

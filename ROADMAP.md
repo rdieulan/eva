@@ -2,33 +2,93 @@
 
 ## 📋 À faire
 
-### ⚖️ Règles de Validation d'Équilibre - Tests
+### 🔥 Intégration de la notion d'équipe (Team Isolation)
 
-- [ ] Tests unitaires pour le vérificateur d'équilibre avec règles dynamiques
-- [ ] Tests API pour les routes balance-rules
-- [ ] Tests composant pour BalanceRulesModal
+**Objectif**: Chaque équipe doit avoir ses propres données isolées. Un utilisateur ne doit voir que les données de son équipe.
 
 ---
 
-## ✅ Historique
+#### Phase 1 - Schéma de base de données ✅
 
-### ⚖️ Règles de Validation d'Équilibre Personnalisables (2026-01-23)
+**Modèles à modifier :**
 
-Système permettant à chaque équipe de configurer ses propres règles de validation d'équilibre des maps.
+| Modèle | Changement requis | Statut |
+|--------|-------------------|--------|
+| `User` | ✅ A déjà `teamId` | ✅ OK |
+| `Team` | ✅ Modèle complet | ✅ OK |
+| `BalanceRule` | ✅ A déjà `teamId` | ✅ OK |
+| `GamePlan` | ✅ Ajout de `teamId` | ✅ Fait |
+| `CalendarEvent` | ✅ Ajout de `teamId` | ✅ Fait |
+| `Availability` | Filtrer via `user.teamId` | 🔵 Via routes |
+| `Map` | 🔵 Partagée (globale) | ✅ OK |
 
-**Règles disponibles :**
-- `MIN_PLAYERS_PER_ROLE` : Joueurs minimum par rôle (param: minPlayers, défaut: 2)
-- `MIN_ROLES_PER_PLAYER` : Rôles minimum par joueur (param: minRoles, défaut: 2)
-- `MAX_ROLES_PER_PLAYER` : Rôles maximum par joueur (param: maxRoles, défaut: 2)
-- `NO_DUPLICATE_PAIRS` : Pas de paires dupliquées entre rôles
+**Migration créée**: `0005_add_team_isolation`
+- Ajoute `teamId` à `GamePlan` et `CalendarEvent`
+- Crée les index et foreign keys
+- Script de migration des données existantes inclus
 
-**Fonctionnalités :**
-- Toggle enabled/disabled par règle
-- Sélection severity ERROR/WARNING
-- Paramètres numériques éditables
-- Reset aux valeurs par défaut
-- Affichage 3 états (✓ vert, ⚠ jaune, ✗ rouge)
-- Accès via page Équipe (permission `canManageBalanceRules`)
+---
+
+#### Phase 2 - Routes serveur à adapter
+
+**Routes maps/plans (`maps.routes.ts`, `plans.routes.ts`) :**
+- [ ] `GET /api/maps` - Filtrer les gamePlans par teamId
+- [ ] `GET /api/maps/:mapId` - Filtrer les gamePlans par teamId
+- [ ] `GET /api/maps/:mapId/plans` - Filtrer par teamId
+- [ ] `POST /api/maps/:mapId/plans` - Ajouter teamId à la création
+- [ ] `PUT /api/plans/:planId` - Vérifier que le plan appartient à l'équipe
+- [ ] `DELETE /api/plans/:planId` - Vérifier que le plan appartient à l'équipe
+
+**Routes calendrier (`calendar.routes.ts`) :**
+- [ ] `GET /api/calendar/availability` - Filtrer les users et availabilities par teamId
+- [ ] `PUT /api/calendar/availability` - Vérifier appartenance équipe
+- [ ] `GET /api/calendar/events` - Filtrer par teamId
+- [ ] `POST /api/calendar/events` - Ajouter teamId à la création
+- [ ] `PUT /api/calendar/events/:eventId` - Vérifier appartenance équipe
+- [ ] `DELETE /api/calendar/events/:eventId` - Vérifier appartenance équipe
+
+**Routes utilisateurs (`users.routes.ts`) :**
+- [ ] `GET /api/users` - Filtrer par teamId (membres de l'équipe uniquement)
+- [ ] `GET /api/users/players` - Filtrer par teamId
+
+**Routes balance-rules (`balance-rules.routes.ts`) :**
+- [x] ✅ Déjà filtré par teamId
+
+---
+
+#### Phase 3 - Migrations Prisma ✅
+
+- [x] Migration pour ajouter `teamId` à `GamePlan`
+- [x] Migration pour ajouter `teamId` à `CalendarEvent`
+- [x] Script de migration des données existantes (inclus dans 0005_add_team_isolation)
+
+---
+
+#### Phase 4 - Logique côté client
+
+**Composants à vérifier :**
+- [ ] `PlannerPage.vue` - S'assurer que seuls les joueurs de l'équipe sont proposés
+- [ ] `RotationCalculator` - Charger uniquement les joueurs de l'équipe
+- [ ] `CalendarPage.vue` - Afficher uniquement les disponibilités de l'équipe
+- [ ] `EventFormModal.vue` - Créer les events avec teamId
+- [ ] `TeamPage.vue` - Déjà isolé par équipe ✅
+
+---
+
+#### Phase 5 - Cas edge à gérer
+
+- [ ] Utilisateur sans équipe : afficher message "Rejoignez une équipe"
+- [ ] Création d'équipe : Le créateur devient leader avec toutes les permissions
+- [ ] Changement d'équipe : Que faire des données (plans, events) créées ?
+- [ ] Suppression d'équipe : Cascade delete sur toutes les données liées
+
+---
+
+#### Phase 6 - Tests
+
+- [ ] Tests unitaires : filtrage par équipe
+- [ ] Tests d'intégration : isolation des données entre équipes
+- [ ] Tests de sécurité : impossible d'accéder aux données d'une autre équipe
 
 ---
 

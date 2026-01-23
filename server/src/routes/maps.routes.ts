@@ -10,13 +10,16 @@ import { DEFAULT_GAME_PLAN_NOTES } from '@shared/constants';
 const router = Router();
 
 // GET /api/maps - Get all maps
-router.get('/', async (_req: Request, res: Response) => {
-  console.log('[API] GET /api/maps');
+router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const teamId = req.user?.teamId;
+  console.log('[API] GET /api/maps for team:', teamId);
+
   try {
     const maps = await prisma.map.findMany({
       orderBy: { name: 'asc' },
       include: {
         gamePlans: {
+          where: teamId ? { teamId } : undefined,
           include: { players: true },
           orderBy: { name: 'asc' },
         },
@@ -66,15 +69,17 @@ router.get('/', async (_req: Request, res: Response) => {
 });
 
 // GET /api/maps/:mapId - Get a specific map
-router.get('/:mapId', async (req: Request, res: Response) => {
+router.get('/:mapId', authMiddleware, async (req: AuthRequest, res: Response) => {
   const { mapId } = req.params;
-  console.log('[API] GET /api/maps/' + mapId);
+  const teamId = req.user?.teamId;
+  console.log('[API] GET /api/maps/' + mapId + ' for team:', teamId);
 
   try {
     const map = await prisma.map.findUnique({
       where: { id: mapId },
       include: {
         gamePlans: {
+          where: teamId ? { teamId } : undefined,
           include: { players: true },
           orderBy: { name: 'asc' },
         },
@@ -143,12 +148,16 @@ router.post('/:mapId', authMiddleware, requirePermission('planner', 'canEdit'), 
 });
 
 // GET /api/maps/:mapId/plans - Get all game plans for a map
-router.get('/:mapId/plans', async (req: Request, res: Response) => {
+router.get('/:mapId/plans', authMiddleware, async (req: AuthRequest, res: Response) => {
   const { mapId } = req.params;
+  const teamId = req.user?.teamId;
 
   try {
     const plans = await prisma.gamePlan.findMany({
-      where: { mapId },
+      where: {
+        mapId,
+        ...(teamId ? { teamId } : {}),
+      },
       orderBy: { name: 'asc' },
       include: {
         players: {
@@ -183,6 +192,12 @@ router.get('/:mapId/plans', async (req: Request, res: Response) => {
 router.post('/:mapId/plans', authMiddleware, requirePermission('planner', 'canCreate'), async (req: AuthRequest, res: Response) => {
   const { mapId } = req.params;
   const { name } = req.body;
+  const teamId = req.user?.teamId;
+
+  if (!teamId) {
+    res.status(400).json({ error: 'User must belong to a team to create game plans' });
+    return;
+  }
 
   try {
     const map = await prisma.map.findUnique({ where: { id: mapId } });
@@ -197,6 +212,7 @@ router.post('/:mapId/plans', authMiddleware, requirePermission('planner', 'canCr
       data: {
         name: name || 'Nouveau plan',
         mapId,
+        teamId,
         assignments: template?.assignments || [],
       },
     });

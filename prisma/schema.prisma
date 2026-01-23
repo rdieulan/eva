@@ -24,16 +24,18 @@ model User {
 }
 
 model Team {
-  id           String        @id @default(cuid())
-  name         String
-  logo         String?
-  location     String?
-  leaderId     String        @unique
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  leader       User          @relation("TeamLeader", fields: [leaderId], references: [id])
-  members      User[]        @relation("TeamMembers")
-  balanceRules BalanceRule[]
+  id             String          @id @default(cuid())
+  name           String
+  logo           String?
+  location       String?
+  leaderId       String          @unique
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  leader         User            @relation("TeamLeader", fields: [leaderId], references: [id])
+  members        User[]          @relation("TeamMembers")
+  balanceRules   BalanceRule[]
+  gamePlans      GamePlan[]
+  calendarEvents CalendarEvent[]
 }
 
 model BalanceRule {
@@ -78,14 +80,17 @@ model GamePlan {
   id          String           @id @default(cuid())
   name        String
   mapId       String
+  teamId      String?
   assignments Json
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
   notes       Json?
   map         Map              @relation(fields: [mapId], references: [id], onDelete: Cascade)
+  team        Team?            @relation(fields: [teamId], references: [id], onDelete: Cascade)
   players     GamePlanPlayer[]
 
   @@index([mapId])
+  @@index([teamId])
 }
 
 model GamePlanPlayer {
@@ -121,13 +126,16 @@ model CalendarEvent {
   type        EventType
   title       String
   description String?
+  teamId      String?
   createdById String
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   gamePlan    Json?
+  team        Team?     @relation(fields: [teamId], references: [id], onDelete: Cascade)
   createdBy   User      @relation(fields: [createdById], references: [id])
 
   @@index([date])
+  @@index([teamId])
 }
 
 
