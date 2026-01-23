@@ -1,6 +1,7 @@
 // Teams API client
 
 import type { UserPermissions, Team } from '@shared/types';
+import { getAuthHeaders } from '@/api/utils';
 
 const API_BASE = '/api/teams';
 
@@ -21,9 +22,9 @@ export interface TeamWithMembers extends Team {
 /**
  * Get current user's team
  */
-export async function fetchCurrentTeam(token: string): Promise<TeamWithMembers | null> {
+export async function fetchCurrentTeam(): Promise<TeamWithMembers | null> {
   const response = await fetch(`${API_BASE}/current`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: getAuthHeaders(),
   });
 
   if (response.status === 404) {
@@ -54,15 +55,11 @@ export async function fetchTeamLocations(): Promise<string[]> {
  * Update team info
  */
 export async function updateTeam(
-  token: string,
   data: { name?: string; logo?: string | null; location?: string | null }
 ): Promise<Team> {
   const response = await fetch(`${API_BASE}/current`, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
+    headers: getAuthHeaders(),
     body: JSON.stringify(data),
   });
 
@@ -76,9 +73,9 @@ export async function updateTeam(
 /**
  * Get team members
  */
-export async function fetchTeamMembers(token: string): Promise<TeamMember[]> {
+export async function fetchTeamMembers(): Promise<TeamMember[]> {
   const response = await fetch(`${API_BASE}/current/members`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: getAuthHeaders(),
   });
 
   if (!response.ok) {
@@ -92,16 +89,12 @@ export async function fetchTeamMembers(token: string): Promise<TeamMember[]> {
  * Update member permissions
  */
 export async function updateMemberPermissions(
-  token: string,
   memberId: string,
   permissions: UserPermissions
 ): Promise<void> {
   const response = await fetch(`${API_BASE}/current/members/${memberId}/permissions`, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
+    headers: getAuthHeaders(),
     body: JSON.stringify({ permissions }),
   });
 
@@ -114,10 +107,10 @@ export async function updateMemberPermissions(
 /**
  * Remove member from team
  */
-export async function removeMember(token: string, memberId: string): Promise<void> {
+export async function removeMember(memberId: string): Promise<void> {
   const response = await fetch(`${API_BASE}/current/members/${memberId}`, {
     method: 'DELETE',
-    headers: { Authorization: `Bearer ${token}` },
+    headers: getAuthHeaders(),
   });
 
   if (!response.ok) {

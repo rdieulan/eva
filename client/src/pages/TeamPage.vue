@@ -54,9 +54,9 @@ async function loadData() {
 
   try {
     const [teamData, locationsData, membersData] = await Promise.all([
-      fetchCurrentTeam(token.value),
+      fetchCurrentTeam(),
       fetchTeamLocations(),
-      fetchTeamMembers(token.value),
+      fetchTeamMembers(),
     ]);
 
     team.value = teamData;
@@ -87,7 +87,7 @@ async function saveTeamChanges() {
   if (!token.value || !team.value) return;
 
   try {
-    await updateTeam(token.value, {
+    await updateTeam({
       name: editName.value,
       location: editLocation.value,
     });
@@ -115,7 +115,6 @@ async function savePermissions() {
 
   try {
     await updateMemberPermissions(
-      token.value,
       selectedMember.value.id,
       editingPermissions.value
     );
@@ -145,7 +144,7 @@ async function confirmRemoveMember() {
   if (!token.value || !memberToRemove.value) return;
 
   try {
-    await removeMember(token.value, memberToRemove.value.id);
+    await removeMember(memberToRemove.value.id);
     members.value = members.value.filter(m => m.id !== memberToRemove.value!.id);
     showRemoveModal.value = false;
     memberToRemove.value = null;

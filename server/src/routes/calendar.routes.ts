@@ -321,12 +321,19 @@ router.post('/events', authMiddleware, requirePermission('calendar', 'canCreateE
 // Delete an event
 router.delete('/events/:id', authMiddleware, requirePermission('calendar', 'canDeleteEvents'), async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
+  const teamId = req.user?.teamId;
 
   try {
     const event = await prisma.calendarEvent.findUnique({ where: { id } });
 
     if (!event) {
       res.status(404).json({ error: 'Événement non trouvé' });
+      return;
+    }
+
+    // Verify event belongs to user's team
+    if (teamId && event.teamId && event.teamId !== teamId) {
+      res.status(403).json({ error: 'Accès refusé' });
       return;
     }
 
@@ -344,6 +351,7 @@ router.delete('/events/:id', authMiddleware, requirePermission('calendar', 'canD
 router.put('/events/:id', authMiddleware, requirePermission('calendar', 'canEditEvents'), async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
   const { date, startTime, endTime, type, title, description } = req.body as CreateEventRequest;
+  const teamId = req.user?.teamId;
 
   // Validation
   if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
@@ -368,6 +376,12 @@ router.put('/events/:id', authMiddleware, requirePermission('calendar', 'canEdit
 
     if (!existingEvent) {
       res.status(404).json({ error: 'Événement non trouvé' });
+      return;
+    }
+
+    // Verify event belongs to user's team
+    if (teamId && existingEvent.teamId && existingEvent.teamId !== teamId) {
+      res.status(403).json({ error: 'Accès refusé' });
       return;
     }
 
@@ -406,12 +420,19 @@ router.put('/events/:id', authMiddleware, requirePermission('calendar', 'canEdit
 router.put('/events/:id/gameplan', authMiddleware, requirePermission('calendar', 'canAttachGamePlan'), async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
   const { gamePlan } = req.body;
+  const teamId = req.user?.teamId;
 
   try {
     const existingEvent = await prisma.calendarEvent.findUnique({ where: { id } });
 
     if (!existingEvent) {
       res.status(404).json({ error: 'Événement non trouvé' });
+      return;
+    }
+
+    // Verify event belongs to user's team
+    if (teamId && existingEvent.teamId && existingEvent.teamId !== teamId) {
+      res.status(403).json({ error: 'Accès refusé' });
       return;
     }
 

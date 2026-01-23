@@ -8,17 +8,7 @@ import type {
   CreateEventRequest,
   AvailabilityStatus,
 } from '@shared/types';
-
-/**
- * Get auth headers
- */
-function getAuthHeaders(): HeadersInit {
-  const token = localStorage.getItem('token');
-  return {
-    'Content-Type': 'application/json',
-    ...(token && { Authorization: `Bearer ${token}` }),
-  };
-}
+import { getAuthHeaders } from '@/api/utils';
 
 /**
  * Fetch calendar data for a month

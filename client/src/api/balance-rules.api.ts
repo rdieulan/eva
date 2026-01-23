@@ -1,17 +1,7 @@
 // Balance rules API
 
 import type { BalanceRule, BalanceRuleUpdate } from '@shared/types';
-
-/**
- * Get auth headers
- */
-function getAuthHeaders(): HeadersInit {
-  const token = localStorage.getItem('token');
-  return {
-    'Content-Type': 'application/json',
-    ...(token && { Authorization: `Bearer ${token}` }),
-  };
-}
+import { getAuthHeaders } from '@/api/utils';
 
 /**
  * Get team's balance rules

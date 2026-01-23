@@ -81,11 +81,8 @@ export function usePlannerPlans(options: UsePlannerPlansOptions): UsePlannerPlan
     const name = prompt('Nom du nouveau plan :');
     if (!name?.trim()) return;
 
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
     try {
-      const newPlan = await createGamePlan(selectedMapId.value, name.trim(), token);
+      const newPlan = await createGamePlan(selectedMapId.value, name.trim());
       if (newPlan) {
         // Add to current map's plans list with full data
         const map = maps.value.find(m => m.id === selectedMapId.value);
@@ -113,19 +110,16 @@ export function usePlannerPlans(options: UsePlannerPlansOptions): UsePlannerPlan
     const name = prompt('Nom du plan dupliqué :', `${sourcePlan?.name || 'Plan'} (copie)`);
     if (!name?.trim()) return;
 
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
     try {
       const currentMap = maps.value.find(m => m.id === selectedMapId.value);
-      const newPlan = await createGamePlan(selectedMapId.value, name.trim(), token);
+      const newPlan = await createGamePlan(selectedMapId.value, name.trim());
       if (newPlan && currentMap) {
         // Save current data to new plan
         await saveGamePlan(newPlan.id, {
           assignments: currentMap.assignments,
           players: currentMap.players,
           notes: currentMap.notes,
-        }, token);
+        });
 
         // Add to plans list with full data
         const map = maps.value.find(m => m.id === selectedMapId.value);
@@ -149,11 +143,8 @@ export function usePlannerPlans(options: UsePlannerPlansOptions): UsePlannerPlan
   async function deletePlan(planId: string): Promise<void> {
     if (!selectedMapId.value) return;
 
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
     try {
-      await deleteGamePlan(planId, token);
+      await deleteGamePlan(planId);
 
       // Remove from list
       const map = maps.value.find(m => m.id === selectedMapId.value);
@@ -174,11 +165,8 @@ export function usePlannerPlans(options: UsePlannerPlansOptions): UsePlannerPlan
   }
 
   async function renamePlan(planId: string, newName: string): Promise<void> {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
     try {
-      await saveGamePlan(planId, { name: newName }, token);
+      await saveGamePlan(planId, { name: newName });
 
       // Update in local list
       const map = maps.value.find(m => m.id === selectedMapId.value);

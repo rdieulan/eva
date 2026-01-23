@@ -1,12 +1,15 @@
 // Maps API client
 
 import type { MapConfig } from '@shared/types';
+import { getAuthHeaders } from '@/api/utils';
 
 /**
- * Fetch all maps
+ * Fetch all maps (requires authentication - returns team maps only)
  */
 export async function fetchAllMaps(): Promise<MapConfig[]> {
-  const response = await fetch('/api/maps');
+  const response = await fetch('/api/maps', {
+    headers: getAuthHeaders(),
+  });
   if (!response.ok) {
     throw new Error('Failed to load maps from API');
   }
@@ -14,10 +17,12 @@ export async function fetchAllMaps(): Promise<MapConfig[]> {
 }
 
 /**
- * Fetch a single map by ID
+ * Fetch a single map by ID (requires authentication)
  */
 export async function fetchMap(mapId: string): Promise<MapConfig> {
-  const response = await fetch(`/api/maps/${mapId}`);
+  const response = await fetch(`/api/maps/${mapId}`, {
+    headers: getAuthHeaders(),
+  });
   if (!response.ok) {
     throw new Error(`Failed to load map: ${mapId}`);
   }
@@ -29,15 +34,11 @@ export async function fetchMap(mapId: string): Promise<MapConfig> {
  */
 export async function saveMap(
   mapId: string,
-  data: { name?: string; images?: string[]; template?: object },
-  token: string
+  data: { name?: string; images?: string[]; template?: object }
 ): Promise<{ success: boolean; message: string }> {
   const response = await fetch(`/api/maps/${mapId}`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
+    headers: getAuthHeaders(),
     body: JSON.stringify(data),
   });
 
@@ -45,10 +46,12 @@ export async function saveMap(
 }
 
 /**
- * Fetch game plans for a map
+ * Fetch game plans for a map (requires authentication)
  */
 export async function fetchGamePlans(mapId: string): Promise<{ id: string; name: string }[]> {
-  const response = await fetch(`/api/maps/${mapId}/plans`);
+  const response = await fetch(`/api/maps/${mapId}/plans`, {
+    headers: getAuthHeaders(),
+  });
   if (!response.ok) {
     throw new Error(`Failed to load game plans for map: ${mapId}`);
   }
@@ -56,10 +59,12 @@ export async function fetchGamePlans(mapId: string): Promise<{ id: string; name:
 }
 
 /**
- * Fetch a specific game plan
+ * Fetch a specific game plan (requires authentication)
  */
 export async function fetchGamePlan(planId: string): Promise<MapConfig & { planId: string; planName: string }> {
-  const response = await fetch(`/api/plans/${planId}`);
+  const response = await fetch(`/api/plans/${planId}`, {
+    headers: getAuthHeaders(),
+  });
   if (!response.ok) {
     throw new Error(`Failed to load game plan: ${planId}`);
   }
@@ -71,15 +76,11 @@ export async function fetchGamePlan(planId: string): Promise<MapConfig & { planI
  */
 export async function saveGamePlan(
   planId: string,
-  data: { name?: string; assignments?: object[]; players?: object[]; notes?: object },
-  token: string
+  data: { name?: string; assignments?: object[]; players?: object[]; notes?: object }
 ): Promise<{ success: boolean }> {
   const response = await fetch(`/api/plans/${planId}`, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
+    headers: getAuthHeaders(),
     body: JSON.stringify(data),
   });
 
@@ -95,15 +96,11 @@ export async function saveGamePlan(
  */
 export async function createGamePlan(
   mapId: string,
-  name: string,
-  token: string
+  name: string
 ): Promise<{ id: string; name: string }> {
   const response = await fetch(`/api/maps/${mapId}/plans`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
+    headers: getAuthHeaders(),
     body: JSON.stringify({ name }),
   });
 
@@ -117,12 +114,10 @@ export async function createGamePlan(
 /**
  * Delete a game plan (admin only)
  */
-export async function deleteGamePlan(planId: string, token: string): Promise<void> {
+export async function deleteGamePlan(planId: string): Promise<void> {
   const response = await fetch(`/api/plans/${planId}`, {
     method: 'DELETE',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
+    headers: getAuthHeaders(),
   });
 
   if (!response.ok) {

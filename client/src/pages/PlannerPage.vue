@@ -244,7 +244,7 @@ async function saveChanges() {
       assignments: mapToSave.assignments,
       players: mapToSave.players,
       notes: mapToSave.notes,
-    }, token);
+    });
 
     const index = maps.value.findIndex(m => m.id === mapToSave.id);
     if (index !== -1) {
@@ -371,7 +371,7 @@ async function handleSaveAndLeave() {
       assignments: mapToSave.assignments,
       players: mapToSave.players,
       notes: mapToSave.notes,
-    }, token);
+    });
 
     const index = maps.value.findIndex(m => m.id === mapToSave.id);
     if (index !== -1) {

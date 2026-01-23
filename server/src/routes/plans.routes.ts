@@ -1,7 +1,7 @@
 // Game Plans routes
 
 import { Router } from 'express';
-import type { Request, Response } from 'express';
+import type { Response } from 'express';
 import { prisma } from '@db/prisma';
 import { authMiddleware, requirePermission } from '@middleware/auth.middleware';
 import type { AuthRequest } from '@middleware/auth.middleware';
@@ -10,8 +10,9 @@ import { DEFAULT_GAME_PLAN_NOTES } from '@shared/constants';
 const router = Router();
 
 // GET /api/plans/:planId - Get a specific game plan
-router.get('/:planId', async (req: Request, res: Response) => {
+router.get('/:planId', authMiddleware, async (req: AuthRequest, res: Response) => {
   const { planId } = req.params;
+  const teamId = req.user?.teamId;
 
   try {
     const plan = await prisma.gamePlan.findUnique({
@@ -28,6 +29,12 @@ router.get('/:planId', async (req: Request, res: Response) => {
 
     if (!plan) {
       res.status(404).json({ error: 'Plan not found' });
+      return;
+    }
+
+    // Verify plan belongs to user's team
+    if (teamId && plan.teamId && plan.teamId !== teamId) {
+      res.status(403).json({ error: 'Access denied' });
       return;
     }
 
@@ -91,11 +98,23 @@ function migrateAssignmentsToPhases(assignments: Assignment[]): Assignment[] {
 router.put('/:planId', authMiddleware, requirePermission('planner', 'canEdit'), async (req: AuthRequest, res: Response) => {
   const { planId } = req.params;
   const { name, assignments, players, notes } = req.body;
+  const teamId = req.user?.teamId;
 
   console.log(`[API] PUT /api/plans/${planId}`);
   console.log('[API] User:', req.user?.email);
 
   try {
+    // Verify plan exists and belongs to user's team
+    const existingPlan = await prisma.gamePlan.findUnique({ where: { id: planId } });
+    if (!existingPlan) {
+      res.status(404).json({ error: 'Plan not found' });
+      return;
+    }
+    if (teamId && existingPlan.teamId && existingPlan.teamId !== teamId) {
+      res.status(403).json({ error: 'Access denied' });
+      return;
+    }
+
     const updateData: Record<string, unknown> = {};
     if (name !== undefined) updateData.name = name;
 
@@ -149,11 +168,18 @@ router.put('/:planId', authMiddleware, requirePermission('planner', 'canEdit'), 
 // DELETE /api/plans/:planId - Delete a game plan
 router.delete('/:planId', authMiddleware, requirePermission('planner', 'canDelete'), async (req: AuthRequest, res: Response) => {
   const { planId } = req.params;
+  const teamId = req.user?.teamId;
 
   try {
     const plan = await prisma.gamePlan.findUnique({ where: { id: planId } });
     if (!plan) {
       res.status(404).json({ error: 'Plan not found' });
+      return;
+    }
+
+    // Verify plan belongs to user's team
+    if (teamId && plan.teamId && plan.teamId !== teamId) {
+      res.status(403).json({ error: 'Access denied' });
       return;
     }
 

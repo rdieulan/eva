@@ -1,19 +1,23 @@
 // Players API client
 
 import type { Player } from '@shared/types';
+import { getAuthHeaders } from '@/api/utils';
 
-// Cache for players (loaded once)
+// Cache for players (loaded once per session)
 let cachedPlayers: Player[] | null = null;
 
 /**
  * Load all players from API (with caching)
+ * Requires authentication - returns team members only
  */
 export async function fetchPlayers(): Promise<Player[]> {
   if (cachedPlayers) {
     return cachedPlayers;
   }
 
-  const response = await fetch('/api/players');
+  const response = await fetch('/api/players', {
+    headers: getAuthHeaders(),
+  });
   if (!response.ok) {
     throw new Error('Failed to load players from API');
   }
