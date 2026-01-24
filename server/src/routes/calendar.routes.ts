@@ -31,9 +31,30 @@ function formatDateStr(date: Date): string {
 router.get('/availability', authMiddleware, async (req: AuthRequest, res: Response) => {
   const { month } = req.query;
   const teamId = req.user?.teamId;
+  const userId = req.user?.userId;
 
   if (!month || typeof month !== 'string' || !/^\d{4}-\d{2}$/.test(month)) {
     res.status(400).json({ error: 'Paramètre month requis (format YYYY-MM)' });
+    return;
+  }
+
+  // User must belong to a team to see availabilities
+  if (!teamId) {
+    console.log('[CALENDAR] User without team, returning empty data');
+    const [year, monthNum] = month.split('-').map(Number);
+    const endDate = new Date(year, monthNum, 0);
+    const days: Record<string, DayData> = {};
+    for (let day = 1; day <= endDate.getDate(); day++) {
+      const date = new Date(year, monthNum - 1, day);
+      const dateStr = formatDateStr(date);
+      days[dateStr] = {
+        date: dateStr,
+        currentUserStatus: null,
+        playerAvailabilities: [],
+        events: [],
+      };
+    }
+    res.json({ month, days, noTeam: true });
     return;
   }
 
@@ -50,7 +71,7 @@ router.get('/availability', authMiddleware, async (req: AuthRequest, res: Respon
           gte: startDate,
           lte: endDate,
         },
-        ...(teamId ? { user: { teamId } } : {}),
+        user: { teamId },
       },
       include: {
         user: {
@@ -61,7 +82,7 @@ router.get('/availability', authMiddleware, async (req: AuthRequest, res: Respon
 
     // Fetch all users of the same team for the player list
     const users = await prisma.user.findMany({
-      where: teamId ? { teamId } : {},
+      where: { teamId },
       select: { id: true, name: true },
       orderBy: { name: 'asc' },
     });
@@ -73,7 +94,7 @@ router.get('/availability', authMiddleware, async (req: AuthRequest, res: Respon
           gte: startDate,
           lte: endDate,
         },
-        ...(teamId ? { teamId } : {}),
+        teamId,
       },
       orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
     });
@@ -215,6 +236,12 @@ router.get('/events', authMiddleware, async (req: AuthRequest, res: Response) =>
     return;
   }
 
+  // User must belong to a team to see events
+  if (!teamId) {
+    res.json([]);
+    return;
+  }
+
   try {
     const [year, monthNum] = month.split('-').map(Number);
     const startDate = new Date(year, monthNum - 1, 1);
@@ -226,7 +253,7 @@ router.get('/events', authMiddleware, async (req: AuthRequest, res: Response) =>
           gte: startDate,
           lte: endDate,
         },
-        ...(teamId ? { teamId } : {}),
+        teamId,
       },
       orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
     });

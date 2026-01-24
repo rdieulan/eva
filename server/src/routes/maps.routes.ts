@@ -19,7 +19,8 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
       orderBy: { name: 'asc' },
       include: {
         gamePlans: {
-          where: teamId ? { teamId } : undefined,
+          // If no teamId, use impossible filter to return empty array
+          where: teamId ? { teamId } : { teamId: 'no-team-impossible-id' },
           include: { players: true },
           orderBy: { name: 'asc' },
         },
@@ -79,7 +80,8 @@ router.get('/:mapId', authMiddleware, async (req: AuthRequest, res: Response) =>
       where: { id: mapId },
       include: {
         gamePlans: {
-          where: teamId ? { teamId } : undefined,
+          // If no teamId, use impossible filter to return empty array
+          where: teamId ? { teamId } : { teamId: 'no-team-impossible-id' },
           include: { players: true },
           orderBy: { name: 'asc' },
         },
@@ -152,11 +154,17 @@ router.get('/:mapId/plans', authMiddleware, async (req: AuthRequest, res: Respon
   const { mapId } = req.params;
   const teamId = req.user?.teamId;
 
+  // User must belong to a team to see game plans
+  if (!teamId) {
+    res.json([]);
+    return;
+  }
+
   try {
     const plans = await prisma.gamePlan.findMany({
       where: {
         mapId,
-        ...(teamId ? { teamId } : {}),
+        teamId,
       },
       orderBy: { name: 'asc' },
       include: {

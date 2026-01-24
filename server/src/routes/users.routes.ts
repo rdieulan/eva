@@ -12,9 +12,15 @@ const router = Router();
 router.get('/', authMiddleware, requirePermission('team', 'canManagePermissions'), async (req: AuthRequest, res: Response) => {
   const teamId = req.user?.teamId;
 
+  // User must belong to a team to see team members
+  if (!teamId) {
+    res.json([]);
+    return;
+  }
+
   try {
     const users = await prisma.user.findMany({
-      where: teamId ? { teamId } : {},
+      where: { teamId },
       select: {
         id: true,
         email: true,
@@ -35,9 +41,15 @@ router.get('/', authMiddleware, requirePermission('team', 'canManagePermissions'
 router.get('/players', authMiddleware, async (req: AuthRequest, res: Response) => {
   const teamId = req.user?.teamId;
 
+  // User must belong to a team to see team players
+  if (!teamId) {
+    res.json([]);
+    return;
+  }
+
   try {
     const users = await prisma.user.findMany({
-      where: teamId ? { teamId } : {},
+      where: { teamId },
       select: {
         id: true,
         name: true,
