@@ -47,15 +47,15 @@
     align-items: center;
     gap: $spacing-sm;
     padding: $spacing-sm $spacing-lg;
-    background-color: $color-primary;
+    background-color: $color-accent;
     color: $color-text-primary;
-    border-radius: $border-radius;
+    border-radius: $radius-md;
     text-decoration: none;
     font-weight: 500;
     transition: background-color 0.2s;
 
     &:hover {
-      background-color: $color-primary-hover;
+      background-color: rgba($color-accent, 0.8);
     }
   }
 }

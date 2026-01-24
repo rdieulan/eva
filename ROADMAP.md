@@ -97,11 +97,13 @@
 
 ---
 
-#### Phase 6 - Tests
+#### Phase 6 - Tests ✅
 
-- [ ] Tests unitaires : filtrage par équipe
-- [ ] Tests d'intégration : isolation des données entre équipes
-- [ ] Tests de sécurité : impossible d'accéder aux données d'une autre équipe
+- [x] Tests unitaires : filtrage par équipe
+- [x] Tests d'intégration : isolation des données entre équipes
+- [x] Tests de sécurité : impossible d'accéder aux données d'une autre équipe
+
+**Fichier**: `tests/server/team-isolation.test.ts` (26 tests)
 
 ---
 
