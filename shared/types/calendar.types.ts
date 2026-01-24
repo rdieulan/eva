@@ -75,6 +75,7 @@ export interface DayData {
 export interface MonthData {
   month: string; // Format "YYYY-MM"
   days: Record<string, DayData>; // Key = date string (YYYY-MM-DD)
+  noTeam?: boolean; // True if user has no team
 }
 
 // Request to set availability

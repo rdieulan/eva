@@ -90,10 +90,10 @@
 - [x] GET /api/calendar/events - retourne []
 
 **Autres cas :**
-- [ ] Afficher message "Rejoignez une équipe" côté client
-- [ ] Création d'équipe : Le créateur devient leader avec toutes les permissions
-- [ ] Changement d'équipe : Que faire des données (plans, events) créées ?
-- [ ] Suppression d'équipe : Cascade delete sur toutes les données liées
+- [x] Afficher message "Rejoignez une équipe" côté client (NoTeamMessage composant)
+- [x] Création d'équipe : Le créateur devient leader avec toutes les permissions
+- [ ] Changement d'équipe : Que faire des données (plans, events) créées ? (en attente de spécification)
+- [x] Suppression d'équipe : Cascade delete sur toutes les données liées + UI pour leader
 
 ---
 

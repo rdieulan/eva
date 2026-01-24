@@ -8,6 +8,7 @@ import PlannerRightDrawer from '@/components/planner/layout/PlannerRightDrawer.v
 import PlannerBody from '@/components/planner/layout/PlannerBody.vue';
 import Modal from '@/components/common/Modal.vue';
 import BalanceRulesModal from '@/components/planner/BalanceRulesModal.vue';
+import NoTeamMessage from '@/components/common/NoTeamMessage.vue';
 import { fetchAllMaps, fetchPlayers, saveGamePlan } from '@/api';
 import { getPlayerAssignments } from '@/utils/balance';
 import { getAssignmentColor } from '@/utils/colors';
@@ -16,8 +17,9 @@ import { usePlannerPlans } from '@/composables/usePlannerPlans';
 import { usePlannerNotes } from '@/composables/usePlannerNotes';
 import type { MapConfig, Player, GamePhase } from '@shared/types';
 
-const { permissions } = useAuth();
+const { permissions, user } = useAuth();
 const router = useRouter();
+const noTeam = computed(() => !user.value?.teamId);
 const canCreate = computed(() => permissions.value.planner.canCreate);
 const canEdit = computed(() => permissions.value.planner.canEdit);
 const canDelete = computed(() => permissions.value.planner.canDelete);
@@ -473,6 +475,9 @@ function handleCancelLeave() {
     <div v-if="isLoading" class="loading">
       Chargement des maps...
     </div>
+
+    <!-- No team state -->
+    <NoTeamMessage v-else-if="noTeam" />
 
     <template v-else>
       <div class="main-content">

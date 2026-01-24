@@ -8,6 +8,8 @@ import {
   fetchTeamMembers,
   updateMemberPermissions,
   removeMember,
+  createTeam,
+  deleteTeam,
 } from '@/api';
 import type { TeamWithMembers, TeamMember } from '@/api';
 import type { UserPermissions } from '@shared/types';
@@ -40,10 +42,20 @@ const editingPermissions = ref<UserPermissions>(DEFAULT_PLAYER_PERMISSIONS);
 const showRemoveModal = ref(false);
 const memberToRemove = ref<TeamMember | null>(null);
 
+// Create team form
+const isCreatingTeam = ref(false);
+const createTeamName = ref('');
+const createTeamLocation = ref<string | null>(null);
+const isSubmittingCreate = ref(false);
+
 // Can manage team
 const canManageTeam = computed(() => permissions.value.team.canManageTeam);
 const canManagePermissions = computed(() => permissions.value.team.canManagePermissions);
 const canRemoveMembers = computed(() => permissions.value.team.canRemoveMembers);
+const isLeader = computed(() => team.value?.leader.id === user.value?.id);
+
+// Delete team modal
+const showDeleteTeamModal = ref(false);
 
 // Load data
 async function loadData() {
@@ -53,19 +65,59 @@ async function loadData() {
   error.value = null;
 
   try {
-    const [teamData, locationsData, membersData] = await Promise.all([
-      fetchCurrentTeam(),
-      fetchTeamLocations(),
-      fetchTeamMembers(),
-    ]);
+    // Always load locations (for create form too)
+    locations.value = await fetchTeamLocations();
 
+    const teamData = await fetchCurrentTeam();
     team.value = teamData;
-    locations.value = locationsData;
-    members.value = membersData;
+
+    if (teamData) {
+      members.value = await fetchTeamMembers();
+    }
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Erreur inconnue';
   } finally {
     isLoading.value = false;
+  }
+}
+
+// Create a new team
+async function submitCreateTeam() {
+  if (!createTeamName.value.trim() || createTeamName.value.trim().length < 2) {
+    error.value = 'Le nom de l\'équipe doit contenir au moins 2 caractères';
+    return;
+  }
+
+  isSubmittingCreate.value = true;
+  error.value = null;
+
+  try {
+    const newTeam = await createTeam({
+      name: createTeamName.value.trim(),
+      location: createTeamLocation.value,
+    });
+
+    team.value = newTeam;
+    members.value = [{
+      id: user.value!.id,
+      name: user.value!.name,
+      email: user.value!.email,
+      permissions: null, // Leader has all permissions
+      isLeader: true,
+    }];
+
+    isCreatingTeam.value = false;
+    createTeamName.value = '';
+    createTeamLocation.value = null;
+
+    showSuccess('Équipe créée avec succès !');
+
+    // Refresh auth to get updated permissions
+    window.location.reload();
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Erreur lors de la création';
+  } finally {
+    isSubmittingCreate.value = false;
   }
 }
 
@@ -154,6 +206,21 @@ async function confirmRemoveMember() {
   }
 }
 
+// Delete the team (leader only)
+async function confirmDeleteTeam() {
+  if (!token.value || !isLeader.value) return;
+
+  try {
+    await deleteTeam();
+    showDeleteTeamModal.value = false;
+    team.value = null;
+    members.value = [];
+    showSuccess('Équipe supprimée');
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Erreur';
+  }
+}
+
 // Show success message
 function showSuccess(message: string) {
   successMessage.value = message;
@@ -181,7 +248,49 @@ onMounted(loadData);
 
     <!-- No team -->
     <div v-else-if="!team" class="no-team">
-      <p>Vous n'appartenez à aucune équipe.</p>
+      <div v-if="error" class="message error">{{ error }}</div>
+
+      <div v-if="!isCreatingTeam" class="no-team-message">
+        <p>Vous n'appartenez à aucune équipe.</p>
+        <div class="no-team-actions">
+          <button class="btn-create" @click="isCreatingTeam = true">
+            ➕ Créer une équipe
+          </button>
+        </div>
+      </div>
+
+      <div v-else class="create-team-form">
+        <h2>Créer une équipe</h2>
+        <p class="form-description">Vous deviendrez le leader de l'équipe avec toutes les permissions.</p>
+
+        <div class="form-group">
+          <label for="team-name">Nom de l'équipe *</label>
+          <input
+            id="team-name"
+            v-model="createTeamName"
+            type="text"
+            placeholder="Nom de votre équipe"
+            :disabled="isSubmittingCreate"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="team-location">Localisation</label>
+          <select id="team-location" v-model="createTeamLocation" :disabled="isSubmittingCreate">
+            <option :value="null">Non spécifiée</option>
+            <option v-for="loc in locations" :key="loc" :value="loc">{{ loc }}</option>
+          </select>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn-cancel" @click="isCreatingTeam = false" :disabled="isSubmittingCreate">
+            Annuler
+          </button>
+          <button class="btn-save" @click="submitCreateTeam" :disabled="isSubmittingCreate">
+            {{ isSubmittingCreate ? 'Création...' : 'Créer l\'équipe' }}
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Team content -->
@@ -269,6 +378,25 @@ onMounted(loadData);
                 <SvgIcon name="trash" />
               </button>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Danger zone (Leader only) -->
+      <section v-if="isLeader" class="danger-zone">
+        <div class="section-header">
+          <h2>Zone dangereuse</h2>
+        </div>
+        <div class="danger-content">
+          <div class="danger-item">
+            <div class="danger-info">
+              <strong>Supprimer l'équipe</strong>
+              <p>Cette action supprimera définitivement l'équipe, tous les plans de jeu et tous les événements du calendrier.</p>
+            </div>
+            <button class="btn-danger" @click="showDeleteTeamModal = true">
+              <SvgIcon name="trash" />
+              Supprimer l'équipe
+            </button>
           </div>
         </div>
       </section>
@@ -410,6 +538,18 @@ onMounted(loadData);
       @confirm="confirmRemoveMember"
       @cancel="showRemoveModal = false; memberToRemove = null"
     />
+
+    <!-- Delete Team Confirmation Modal -->
+    <ConfirmModal
+      :open="showDeleteTeamModal"
+      title="Supprimer l'équipe"
+      :message="`Êtes-vous sûr de vouloir supprimer l'équipe '${team?.name}' ? Cette action supprimera définitivement tous les plans de jeu, événements et données de l'équipe. Cette action est irréversible.`"
+      confirm-text="Supprimer"
+      require-input="supprimer"
+      :danger="true"
+      @confirm="confirmDeleteTeam"
+      @cancel="showDeleteTeamModal = false"
+    />
   </div>
 </template>
 
@@ -452,6 +592,55 @@ h1 {
   text-align: center;
   padding: $spacing-xl;
   color: $color-text-secondary;
+
+  .no-team-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-lg;
+  }
+
+  .no-team-actions {
+    display: flex;
+    gap: $spacing-md;
+  }
+
+  .btn-create {
+    padding: $spacing-sm $spacing-lg;
+    background: $color-accent;
+    border: none;
+    border-radius: $radius-md;
+    color: white;
+    font-size: $font-size-base;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+
+    &:hover {
+      background: lighten($color-accent, 10%);
+    }
+  }
+
+  .create-team-form {
+    max-width: 400px;
+    margin: 0 auto;
+    text-align: left;
+    background: $color-bg-tertiary;
+    padding: $spacing-lg;
+    border-radius: $radius-md;
+    border: 1px solid $color-border;
+
+    h2 {
+      margin: 0 0 $spacing-xs;
+      color: $color-text-primary;
+    }
+
+    .form-description {
+      margin: 0 0 $spacing-lg;
+      font-size: $font-size-sm;
+      color: $color-text-muted;
+    }
+  }
 }
 
 .message {
@@ -730,6 +919,77 @@ section {
   color: $color-text-secondary;
   font-size: $font-size-sm;
   margin: 0;
+}
+
+// Danger zone section
+.danger-zone {
+  margin-top: $spacing-xl;
+  padding: $spacing-lg;
+  background: rgba($color-danger, 0.05);
+  border: 1px solid rgba($color-danger, 0.3);
+  border-radius: $radius-lg;
+
+  .section-header {
+    h2 {
+      color: $color-danger;
+    }
+  }
+}
+
+.danger-content {
+  margin-top: $spacing-md;
+}
+
+.danger-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: $spacing-lg;
+
+  @media (max-width: $breakpoint-mobile) {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.danger-info {
+  flex: 1;
+
+  strong {
+    display: block;
+    color: $color-text-primary;
+    margin-bottom: $spacing-xs;
+  }
+
+  p {
+    margin: 0;
+    color: $color-text-secondary;
+    font-size: $font-size-sm;
+  }
+}
+
+.btn-danger {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  background: $color-danger;
+  border: none;
+  border-radius: $radius-md;
+  color: white;
+  cursor: pointer;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: all 0.2s;
+
+  &:hover {
+    background: darken($color-danger, 10%);
+  }
+
+  :deep(svg) {
+    width: 16px;
+    height: 16px;
+  }
 }
 
 @media (max-width: $breakpoint-tablet) {

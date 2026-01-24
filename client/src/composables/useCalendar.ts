@@ -41,6 +41,7 @@ export interface UseCalendarReturn {
   days: Ref<Record<string, DayData>>;
   isLoading: Ref<boolean>;
   error: Ref<string>;
+  noTeam: Ref<boolean>;
 
   // Edit mode
   editMode: Ref<boolean>;
@@ -87,6 +88,7 @@ export function useCalendar(options: UseCalendarOptions): UseCalendarReturn {
   const days = ref<Record<string, DayData>>({});
   const isLoading = ref(true);
   const error = ref('');
+  const noTeam = ref(false);
 
   // Month string for API (YYYY-MM)
   const monthString = computed(() => {
@@ -132,6 +134,7 @@ export function useCalendar(options: UseCalendarOptions): UseCalendarReturn {
     try {
       const data = await fetchMonthData(monthString.value);
       days.value = data.days;
+      noTeam.value = data.noTeam === true;
     } catch (err) {
       console.error('Error loading calendar:', err);
       error.value = err instanceof Error ? err.message : 'Erreur de chargement';
@@ -287,6 +290,7 @@ export function useCalendar(options: UseCalendarOptions): UseCalendarReturn {
     days,
     isLoading,
     error,
+    noTeam,
 
     // Edit mode
     editMode,

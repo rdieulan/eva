@@ -34,10 +34,12 @@ export {
 // Teams API
 export {
   fetchCurrentTeam,
+  createTeam,
   fetchTeamLocations,
   updateTeam,
   fetchTeamMembers,
   updateMemberPermissions,
   removeMember,
+  deleteTeam,
 } from '@/api/teams.api';
 export type { TeamMember, TeamWithMembers } from '@/api/teams.api';

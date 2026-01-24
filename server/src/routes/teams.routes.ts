@@ -6,9 +6,57 @@ import { prisma } from '@db/prisma';
 import { authMiddleware, requirePermission } from '@middleware/auth.middleware';
 import type { AuthRequest } from '@middleware/auth.middleware';
 import type { UserPermissions } from '@shared/types';
-import { TEAM_LOCATIONS } from '@shared/types';
+import { TEAM_LOCATIONS, LEADER_PERMISSIONS } from '@shared/types';
 
 const router = Router();
+
+// POST /api/teams - Create a new team
+router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const { name, logo, location } = req.body;
+
+  if (!name || typeof name !== 'string' || name.trim().length < 2) {
+    return res.status(400).json({ error: 'Le nom de l\'équipe doit contenir au moins 2 caractères' });
+  }
+
+  try {
+    // Check if user already has a team
+    const user = await prisma.user.findUnique({
+      where: { id: req.user!.userId },
+    });
+
+    if (user?.teamId) {
+      return res.status(400).json({ error: 'Vous êtes déjà membre d\'une équipe' });
+    }
+
+    // Create team with current user as leader
+    const team = await prisma.team.create({
+      data: {
+        name: name.trim(),
+        logo: logo || null,
+        location: location || null,
+        leader: { connect: { id: req.user!.userId } },
+        members: { connect: { id: req.user!.userId } },
+      },
+    });
+
+    // Update user with leader permissions
+    await prisma.user.update({
+      where: { id: req.user!.userId },
+      data: {
+        teamId: team.id,
+        permissions: LEADER_PERMISSIONS as unknown as object,
+      },
+    });
+
+    res.status(201).json({
+      ...team,
+      isLeader: true,
+    });
+  } catch (error) {
+    console.error('Error creating team:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
 
 // GET /api/teams/current - Get current user's team
 router.get('/current', authMiddleware, async (req: AuthRequest, res: Response) => {
@@ -217,5 +265,45 @@ router.delete(
     }
   }
 );
+
+// DELETE /api/teams/current - Delete the team (leader only)
+router.delete('/current', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const currentUser = await prisma.user.findUnique({
+      where: { id: req.user!.userId },
+      include: {
+        team: true,
+        ledTeam: true,
+      },
+    });
+
+    if (!currentUser?.team) {
+      return res.status(404).json({ error: 'Aucune équipe trouvée' });
+    }
+
+    // Only the leader can delete the team
+    if (!currentUser.ledTeam) {
+      return res.status(403).json({ error: 'Seul le leader peut supprimer l\'équipe' });
+    }
+
+    const teamId = currentUser.team.id;
+
+    // Remove teamId from all members first
+    await prisma.user.updateMany({
+      where: { teamId },
+      data: { teamId: null },
+    });
+
+    // Delete the team (cascades to GamePlans, CalendarEvents, BalanceRules)
+    await prisma.team.delete({
+      where: { id: teamId },
+    });
+
+    res.json({ message: 'Équipe supprimée avec succès' });
+  } catch (error) {
+    console.error('Error deleting team:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
 
 export default router;

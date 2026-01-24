@@ -39,6 +39,26 @@ export async function fetchCurrentTeam(): Promise<TeamWithMembers | null> {
 }
 
 /**
+ * Create a new team (current user becomes leader)
+ */
+export async function createTeam(
+  data: { name: string; logo?: string | null; location?: string | null }
+): Promise<TeamWithMembers> {
+  const response = await fetch(API_BASE, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors de la création de l\'équipe');
+  }
+
+  return response.json();
+}
+
+/**
  * Get available team locations
  */
 export async function fetchTeamLocations(): Promise<string[]> {
@@ -118,3 +138,19 @@ export async function removeMember(memberId: string): Promise<void> {
     throw new Error(error.error || 'Erreur lors du retrait du membre');
   }
 }
+
+/**
+ * Delete the team (leader only)
+ */
+export async function deleteTeam(): Promise<void> {
+  const response = await fetch(`${API_BASE}/current`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors de la suppression de l\'équipe');
+  }
+}
+

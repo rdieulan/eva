@@ -5,6 +5,7 @@ import CalendarHeader from '@/components/calendar/layout/CalendarHeader.vue';
 import CalendarBody from '@/components/calendar/layout/CalendarBody.vue';
 import EventFormModal from '@/components/calendar/EventFormModal.vue';
 import EventViewerModal from '@/components/calendar/EventViewerModal.vue';
+import NoTeamMessage from '@/components/common/NoTeamMessage.vue';
 import { useAuth } from '@/composables/useAuth';
 import { useCalendar } from '@/composables/useCalendar';
 import { useCalendarEvents } from '@/composables/useCalendarEvents';
@@ -29,6 +30,7 @@ const {
   days,
   isLoading,
   error,
+  noTeam,
   editMode,
   toggleEditMode,
   goToPrev,
@@ -116,6 +118,9 @@ onMounted(async () => {
       <p>{{ error }}</p>
       <button class="btn-retry" @click="loadCalendarData">Réessayer</button>
     </div>
+
+    <!-- No team state -->
+    <NoTeamMessage v-else-if="noTeam" />
 
     <!-- Calendar -->
     <template v-else>
