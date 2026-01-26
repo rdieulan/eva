@@ -1,7 +1,7 @@
 // Maps routes
 
 import { Router } from 'express';
-import type { Request, Response } from 'express';
+import type { Response } from 'express';
 import { prisma } from '@db/prisma';
 import { authMiddleware, requirePermission } from '@middleware/auth.middleware';
 import type { AuthRequest } from '@middleware/auth.middleware';
@@ -9,9 +9,26 @@ import { DEFAULT_GAME_PLAN_NOTES } from '@shared/constants';
 
 const router = Router();
 
+/**
+ * Transform GamePlanPlayer array for frontend consumption
+ */
+function mapPlayersForFrontend(players: { userId: string; assignmentIds: number[]; mainAssignmentId: number | null }[]) {
+  return players.map(p => ({
+    userId: p.userId,
+    assignmentIds: p.assignmentIds,
+    mainAssignmentId: p.mainAssignmentId,
+  }));
+}
+
 // GET /api/maps - Get all maps
 router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   const teamId = req.user?.teamId;
+
+  if (!teamId) {
+    res.status(403).json({ errors: ['Vous devez appartenir à une équipe pour accéder aux cartes'] });
+    return;
+  }
+
   console.log('[API] GET /api/maps for team:', teamId);
 
   try {
@@ -19,8 +36,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
       orderBy: { name: 'asc' },
       include: {
         gamePlans: {
-          // If no teamId, use impossible filter to return empty array
-          where: teamId ? { teamId } : { teamId: 'no-team-impossible-id' },
+          where: { teamId },
           include: { players: true },
           orderBy: { name: 'asc' },
         },
@@ -31,22 +47,14 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     const mapsForFrontend = maps.map(map => {
       const firstPlan = map.gamePlans[0];
       const assignments = firstPlan?.assignments as unknown[] || [];
-      const players = firstPlan?.players.map(gpp => ({
-        userId: gpp.userId,
-        assignmentIds: gpp.assignmentIds,
-        mainAssignmentId: gpp.mainAssignmentId,
-      })) || [];
+      const players = firstPlan ? mapPlayersForFrontend(firstPlan.players) : [];
 
       // Include full data for each game plan
       const gamePlansWithData = map.gamePlans.map(gp => ({
         id: gp.id,
         name: gp.name,
         assignments: gp.assignments,
-        players: gp.players.map(p => ({
-          userId: p.userId,
-          assignmentIds: p.assignmentIds,
-          mainAssignmentId: p.mainAssignmentId,
-        })),
+        players: mapPlayersForFrontend(gp.players),
         notes: gp.notes || DEFAULT_GAME_PLAN_NOTES,
       }));
 
@@ -65,7 +73,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     res.json(mapsForFrontend);
   } catch (error) {
     console.error('[API] Error fetching maps:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ errors: ['Erreur serveur'] });
   }
 });
 
@@ -73,6 +81,12 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
 router.get('/:mapId', authMiddleware, async (req: AuthRequest, res: Response) => {
   const { mapId } = req.params;
   const teamId = req.user?.teamId;
+
+  if (!teamId) {
+    res.status(403).json({ errors: ['Vous devez appartenir à une équipe pour accéder aux cartes'] });
+    return;
+  }
+
   console.log('[API] GET /api/maps/' + mapId + ' for team:', teamId);
 
   try {
@@ -80,8 +94,7 @@ router.get('/:mapId', authMiddleware, async (req: AuthRequest, res: Response) =>
       where: { id: mapId },
       include: {
         gamePlans: {
-          // If no teamId, use impossible filter to return empty array
-          where: teamId ? { teamId } : { teamId: 'no-team-impossible-id' },
+          where: { teamId },
           include: { players: true },
           orderBy: { name: 'asc' },
         },
@@ -90,17 +103,13 @@ router.get('/:mapId', authMiddleware, async (req: AuthRequest, res: Response) =>
 
     if (!map) {
       console.log('[API] Map not found:', mapId);
-      res.status(404).json({ error: 'Map not found' });
+      res.status(404).json({ errors: ['Carte non trouvée'] });
       return;
     }
 
     const firstPlan = map.gamePlans[0];
     const assignments = firstPlan?.assignments as unknown[] || [];
-    const players = firstPlan?.players.map(gpp => ({
-      userId: gpp.userId,
-      assignmentIds: gpp.assignmentIds,
-      mainAssignmentId: gpp.mainAssignmentId,
-    })) || [];
+    const players = firstPlan ? mapPlayersForFrontend(firstPlan.players) : [];
 
     const mapForFrontend = {
       id: map.id,
@@ -116,7 +125,7 @@ router.get('/:mapId', authMiddleware, async (req: AuthRequest, res: Response) =>
     res.json(mapForFrontend);
   } catch (error) {
     console.error('[API] Error fetching map:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ errors: ['Erreur serveur'] });
   }
 });
 
@@ -142,10 +151,10 @@ router.post('/:mapId', authMiddleware, requirePermission('planner', 'canEdit'), 
     });
 
     console.log(`Map updated by ${req.user?.email}: ${mapId}`);
-    res.json({ success: true, message: `Map ${mapId} saved` });
+    res.json({ success: true, message: `Carte ${mapId} sauvegardée` });
   } catch (error) {
     console.error('Error saving map:', error);
-    res.status(500).json({ success: false, message: 'Error saving map' });
+    res.status(500).json({ errors: ['Erreur serveur'] });
   }
 });
 
@@ -154,9 +163,8 @@ router.get('/:mapId/plans', authMiddleware, async (req: AuthRequest, res: Respon
   const { mapId } = req.params;
   const teamId = req.user?.teamId;
 
-  // User must belong to a team to see game plans
   if (!teamId) {
-    res.json([]);
+    res.status(403).json({ errors: ['Vous devez appartenir à une équipe pour accéder aux plans'] });
     return;
   }
 
@@ -181,18 +189,14 @@ router.get('/:mapId/plans', authMiddleware, async (req: AuthRequest, res: Respon
       name: plan.name,
       mapId: plan.mapId,
       assignments: plan.assignments,
-      players: plan.players.map(gpp => ({
-        userId: gpp.userId,
-        assignmentIds: gpp.assignmentIds,
-        mainAssignmentId: gpp.mainAssignmentId,
-      })),
+      players: mapPlayersForFrontend(plan.players),
       notes: plan.notes || DEFAULT_GAME_PLAN_NOTES,
     }));
 
     res.json(plansForFrontend);
   } catch (error) {
     console.error('Error fetching game plans:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ errors: ['Erreur serveur'] });
   }
 });
 
@@ -203,14 +207,14 @@ router.post('/:mapId/plans', authMiddleware, requirePermission('planner', 'canCr
   const teamId = req.user?.teamId;
 
   if (!teamId) {
-    res.status(400).json({ error: 'User must belong to a team to create game plans' });
+    res.status(400).json({ errors: ['L\'utilisateur doit appartenir à une équipe pour créer un plan'] });
     return;
   }
 
   try {
     const map = await prisma.map.findUnique({ where: { id: mapId } });
     if (!map) {
-      res.status(404).json({ error: 'Map not found' });
+      res.status(404).json({ errors: ['Carte non trouvée'] });
       return;
     }
 
@@ -229,7 +233,7 @@ router.post('/:mapId/plans', authMiddleware, requirePermission('planner', 'canCr
     res.json(plan);
   } catch (error) {
     console.error('Error creating game plan:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ errors: ['Erreur serveur'] });
   }
 });
 

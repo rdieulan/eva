@@ -31,6 +31,9 @@ export {
   updateEventGamePlan,
 } from '@/api/calendar.api';
 
+// Balance Rules
+export { clearBalanceRulesCache } from '@/composables/useBalanceRules';
+
 // Teams API
 export {
   fetchCurrentTeam,
@@ -41,5 +44,11 @@ export {
   updateMemberPermissions,
   removeMember,
   deleteTeam,
+  leaveTeam,
+  createInvite,
+  fetchInvites,
+  revokeInvite,
+  verifyInviteCode,
+  joinTeamWithCode,
 } from '@/api/teams.api';
-export type { TeamMember, TeamWithMembers } from '@/api/teams.api';
+export type { TeamMember, TeamWithMembers, TeamInvite, InviteValidation, JoinResult } from '@/api/teams.api';

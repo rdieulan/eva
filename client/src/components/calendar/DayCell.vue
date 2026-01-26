@@ -240,14 +240,64 @@ function cycleAvailability() {
   }
 
   &.status-past {
-    background: $color-bg-primary;
-    border-color: $color-border;
-    cursor: not-allowed;
-    opacity: 0.5;
+    background: rgba($color-black, 0.3);
+    border-color: rgba($color-border, 0.3);
+    cursor: default;
+
+    .day-number {
+      color: rgba($color-text-muted, 0.4);
+    }
+
+    .event-badge {
+      opacity: 0.4;
+    }
+
+    .players-summary {
+      opacity: 0.5;
+    }
   }
 
   &.other-month {
-    opacity: 0.4;
+    background: rgba($color-bg-primary, 0.6);
+    border-color: rgba($color-border, 0.2);
+    cursor: default;
+    pointer-events: none;
+
+    .day-number {
+      color: rgba($color-text-muted, 0.35);
+    }
+
+    .event-badge {
+      opacity: 0.5;
+    }
+
+    .players-summary {
+      opacity: 0.4;
+    }
+
+    // Disable hover effects for other month days
+    &:hover {
+      background: rgba($color-bg-primary, 0.6);
+      border-color: rgba($color-border, 0.2);
+    }
+  }
+
+  // Past days of other month - even more faded
+  &.status-past.other-month {
+    background: rgba($color-black, 0.4);
+    border-color: rgba($color-border, 0.15);
+
+    .day-number {
+      color: rgba($color-text-muted, 0.25);
+    }
+
+    .event-badge {
+      opacity: 0.3;
+    }
+
+    .players-summary {
+      opacity: 0.3;
+    }
   }
 
   &.is-today {
@@ -504,18 +554,18 @@ function cycleAvailability() {
 }
 
 .player-available {
-  background: $color-success;
+  background: darken($color-success, 25%);
   border: 1px solid $color-success;
 }
 
 .player-conditional {
-  background: $color-warning;
+  background: darken($color-conditional, 15%);
   border: 1px solid $color-conditional;
 }
 
 .player-unavailable {
-  background: $color-danger;
-  border: 1px solid $color-danger;
+  background: darken($color-danger, 15%);
+  border: 1px solid lighten($color-danger, 20%);
 }
 </style>
 

@@ -1,15 +1,13 @@
 // Balance rules API
 
 import type { BalanceRule, BalanceRuleUpdate } from '@shared/types';
-import { getAuthHeaders } from '@/api/utils';
+import { authFetch } from '@/api/utils';
 
 /**
  * Get team's balance rules
  */
 export async function getBalanceRules(): Promise<BalanceRule[]> {
-  const response = await fetch('/api/balance-rules', {
-    headers: getAuthHeaders(),
-  });
+  const response = await authFetch('/api/balance-rules');
   if (!response.ok) {
     throw new Error('Failed to load balance rules');
   }
@@ -23,9 +21,8 @@ export async function updateBalanceRule(
   ruleId: string,
   data: BalanceRuleUpdate
 ): Promise<BalanceRule> {
-  const response = await fetch(`/api/balance-rules/${ruleId}`, {
+  const response = await authFetch(`/api/balance-rules/${ruleId}`, {
     method: 'PUT',
-    headers: getAuthHeaders(),
     body: JSON.stringify(data),
   });
   if (!response.ok) {
@@ -38,9 +35,8 @@ export async function updateBalanceRule(
  * Reset all rules to defaults
  */
 export async function resetBalanceRules(): Promise<BalanceRule[]> {
-  const response = await fetch('/api/balance-rules/reset', {
+  const response = await authFetch('/api/balance-rules/reset', {
     method: 'POST',
-    headers: getAuthHeaders(),
   });
   if (!response.ok) {
     throw new Error('Failed to reset balance rules');

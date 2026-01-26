@@ -4,14 +4,78 @@
     <h2>Aucune équipe</h2>
     <p>Vous n'êtes pas encore membre d'une équipe.</p>
     <p>Rejoignez une équipe existante ou créez la vôtre pour accéder à cette fonctionnalité.</p>
-    <router-link to="/team" class="btn-team">
-      <span>Gérer mon équipe</span>
-    </router-link>
+
+    <!-- Invite code section -->
+    <div class="invite-section">
+      <p class="invite-label">Vous avez reçu un lien d'invitation ?</p>
+      <div class="invite-input-group">
+        <input
+          v-model="inviteCode"
+          type="text"
+          placeholder="Collez le code ou le lien ici..."
+          @keyup.enter="handleJoin"
+        />
+        <button
+          class="btn-join"
+          @click="handleJoin"
+          :disabled="!inviteCode.trim()"
+        >
+          Rejoindre
+        </button>
+      </div>
+      <p v-if="error" class="error-message">{{ error }}</p>
+    </div>
+
+    <div class="separator">ou</div>
+
+    <button class="btn-team" @click="handleCreateTeam">
+      <span>Créer une équipe</span>
+    </button>
   </div>
 </template>
 
 <script setup lang="ts">
-// No props needed - simple informational component
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
+
+const inviteCode = ref('');
+const error = ref<string | null>(null);
+
+// Handle create team - navigate to create page
+function handleCreateTeam() {
+  router.push('/team/create');
+}
+
+// Extract code from URL or raw code
+function extractCode(input: string): string {
+  const trimmed = input.trim();
+
+  // Check if it's a full URL with /join/
+  const joinMatch = trimmed.match(/\/join\/([a-zA-Z0-9]+)/);
+  if (joinMatch && joinMatch[1]) {
+    return joinMatch[1];
+  }
+
+  // Otherwise use as-is
+  return trimmed;
+}
+
+// Handle join - redirect to join page
+function handleJoin() {
+  if (!inviteCode.value.trim()) return;
+
+  const code = extractCode(inviteCode.value);
+
+  if (!code) {
+    error.value = 'Code invalide';
+    return;
+  }
+
+  // Redirect to join page - all join logic is handled there
+  router.push(`/join/${code}`);
+}
 </script>
 
 <style scoped lang="scss">
@@ -42,6 +106,97 @@
     max-width: 400px;
   }
 
+  .invite-section {
+    width: 100%;
+    max-width: 400px;
+    margin-top: $spacing-md;
+
+    .invite-label {
+      font-weight: 500;
+      color: $color-text-primary;
+      margin-bottom: $spacing-sm;
+    }
+  }
+
+  .invite-input-group {
+    display: flex;
+    gap: $spacing-sm;
+
+    input {
+      flex: 1;
+      padding: $spacing-sm $spacing-md;
+      border: 1px solid $color-border;
+      border-radius: $radius-md;
+      background: $color-bg-tertiary;
+      color: $color-text-primary;
+      font-size: $font-size-sm;
+
+      &:focus {
+        outline: none;
+        border-color: $color-accent;
+      }
+
+      &::placeholder {
+        color: $color-text-secondary;
+      }
+    }
+
+    .btn-join {
+      padding: $spacing-sm $spacing-md;
+      background: $color-success;
+      border: none;
+      border-radius: $radius-md;
+      color: white;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+
+      &:hover:not(:disabled) {
+        background: darken($color-success, 10%);
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
+  }
+
+  .error-message {
+    color: $color-danger;
+    font-size: $font-size-sm;
+    margin-top: $spacing-xs;
+  }
+
+
+  .separator {
+    color: $color-text-secondary;
+    font-size: $font-size-sm;
+    position: relative;
+    width: 100%;
+    max-width: 200px;
+    text-align: center;
+
+    &::before,
+    &::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      width: 40%;
+      height: 1px;
+      background: $color-border;
+    }
+
+    &::before {
+      left: 0;
+    }
+
+    &::after {
+      right: 0;
+    }
+  }
+
   .btn-team {
     display: inline-flex;
     align-items: center;
@@ -49,9 +204,11 @@
     padding: $spacing-sm $spacing-lg;
     background-color: $color-accent;
     color: $color-text-primary;
+    border: none;
     border-radius: $radius-md;
     text-decoration: none;
     font-weight: 500;
+    cursor: pointer;
     transition: background-color 0.2s;
 
     &:hover {

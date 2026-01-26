@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
 import {
   fetchCurrentTeam,
@@ -8,16 +9,20 @@ import {
   fetchTeamMembers,
   updateMemberPermissions,
   removeMember,
-  createTeam,
   deleteTeam,
+  leaveTeam,
+  createInvite,
+  fetchInvites,
+  revokeInvite,
 } from '@/api';
-import type { TeamWithMembers, TeamMember } from '@/api';
+import type { TeamWithMembers, TeamMember, TeamInvite } from '@/api';
 import type { UserPermissions } from '@shared/types';
 import { DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
 import SvgIcon from '@/components/common/SvgIcon.vue';
 import Modal from '@/components/common/Modal.vue';
 import ConfirmModal from '@/components/common/ConfirmModal.vue';
 
+const router = useRouter();
 const { token, permissions, user } = useAuth();
 
 // State
@@ -42,20 +47,36 @@ const editingPermissions = ref<UserPermissions>(DEFAULT_PLAYER_PERMISSIONS);
 const showRemoveModal = ref(false);
 const memberToRemove = ref<TeamMember | null>(null);
 
-// Create team form
-const isCreatingTeam = ref(false);
-const createTeamName = ref('');
-const createTeamLocation = ref<string | null>(null);
-const isSubmittingCreate = ref(false);
-
 // Can manage team
 const canManageTeam = computed(() => permissions.value.team.canManageTeam);
 const canManagePermissions = computed(() => permissions.value.team.canManagePermissions);
 const canRemoveMembers = computed(() => permissions.value.team.canRemoveMembers);
+const canInviteMembers = computed(() => permissions.value.team.canInviteMembers);
 const isLeader = computed(() => team.value?.leader.id === user.value?.id);
 
 // Delete team modal
 const showDeleteTeamModal = ref(false);
+
+// Leave team modal
+const showLeaveTeamModal = ref(false);
+
+// Invitations
+const invites = ref<TeamInvite[]>([]);
+const showInviteModal = ref(false);
+const inviteExpiresHours = ref(24);
+const inviteMaxUses = ref(1);
+const isCreatingInvite = ref(false);
+const generatedInvite = ref<TeamInvite | null>(null);
+
+// Expiration options
+const expirationOptions = [
+  { value: 1, label: '1 heure' },
+  { value: 6, label: '6 heures' },
+  { value: 12, label: '12 heures' },
+  { value: 24, label: '24 heures' },
+  { value: 48, label: '48 heures' },
+  { value: 168, label: '7 jours' },
+];
 
 // Load data
 async function loadData() {
@@ -65,14 +86,26 @@ async function loadData() {
   error.value = null;
 
   try {
-    // Always load locations (for create form too)
+    const teamData = await fetchCurrentTeam();
+
+    // Redirect to homepage if no team
+    if (!teamData) {
+      router.replace('/');
+      return;
+    }
+
+    team.value = teamData;
+    members.value = await fetchTeamMembers();
     locations.value = await fetchTeamLocations();
 
-    const teamData = await fetchCurrentTeam();
-    team.value = teamData;
-
-    if (teamData) {
-      members.value = await fetchTeamMembers();
+    // Load invitations if user has permission
+    if (permissions.value.team.canInviteMembers) {
+      try {
+        invites.value = await fetchInvites(teamData.id);
+      } catch (e) {
+        // Silently fail for invites
+        console.error('Error loading invites:', e);
+      }
     }
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Erreur inconnue';
@@ -81,45 +114,6 @@ async function loadData() {
   }
 }
 
-// Create a new team
-async function submitCreateTeam() {
-  if (!createTeamName.value.trim() || createTeamName.value.trim().length < 2) {
-    error.value = 'Le nom de l\'équipe doit contenir au moins 2 caractères';
-    return;
-  }
-
-  isSubmittingCreate.value = true;
-  error.value = null;
-
-  try {
-    const newTeam = await createTeam({
-      name: createTeamName.value.trim(),
-      location: createTeamLocation.value,
-    });
-
-    team.value = newTeam;
-    members.value = [{
-      id: user.value!.id,
-      name: user.value!.name,
-      email: user.value!.email,
-      permissions: null, // Leader has all permissions
-      isLeader: true,
-    }];
-
-    isCreatingTeam.value = false;
-    createTeamName.value = '';
-    createTeamLocation.value = null;
-
-    showSuccess('Équipe créée avec succès !');
-
-    // Refresh auth to get updated permissions
-    window.location.reload();
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Erreur lors de la création';
-  } finally {
-    isSubmittingCreate.value = false;
-  }
-}
 
 // Start editing team
 function startEditTeam() {
@@ -221,6 +215,23 @@ async function confirmDeleteTeam() {
   }
 }
 
+// Leave the team (for non-leader members)
+async function confirmLeaveTeam() {
+  if (!token.value || isLeader.value) return;
+
+  try {
+    await leaveTeam();
+    showLeaveTeamModal.value = false;
+    team.value = null;
+    members.value = [];
+    showSuccess('Vous avez quitté l\'équipe');
+    // Reload to refresh user data
+    window.location.reload();
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Erreur';
+  }
+}
+
 // Show success message
 function showSuccess(message: string) {
   successMessage.value = message;
@@ -231,6 +242,82 @@ function showSuccess(message: string) {
 function togglePermission(category: keyof UserPermissions, perm: string) {
   const cat = editingPermissions.value[category] as Record<string, boolean>;
   cat[perm] = !cat[perm];
+}
+
+// ========== Invitations ==========
+
+// Open invite modal
+function openInviteModal() {
+  inviteExpiresHours.value = 24;
+  inviteMaxUses.value = 1;
+  generatedInvite.value = null;
+  showInviteModal.value = true;
+}
+
+// Generate invite link
+async function generateInvite() {
+  if (!team.value) return;
+
+  isCreatingInvite.value = true;
+  error.value = null;
+
+  try {
+    const invite = await createInvite(team.value.id, {
+      expiresInHours: inviteExpiresHours.value,
+      maxUses: inviteMaxUses.value,
+    });
+
+    generatedInvite.value = invite;
+    invites.value = [invite, ...invites.value];
+    showSuccess('Lien d\'invitation généré !');
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Erreur lors de la création';
+  } finally {
+    isCreatingInvite.value = false;
+  }
+}
+
+// Copy invite URL to clipboard
+async function copyInviteUrl(url: string) {
+  try {
+    await navigator.clipboard.writeText(url);
+    showSuccess('Lien copié dans le presse-papiers !');
+  } catch (e) {
+    error.value = 'Impossible de copier le lien';
+  }
+}
+
+// Revoke an invite
+async function handleRevokeInvite(inviteId: string) {
+  if (!team.value) return;
+
+  try {
+    await revokeInvite(team.value.id, inviteId);
+    invites.value = invites.value.filter((i: TeamInvite) => i.id !== inviteId);
+    showSuccess('Invitation révoquée');
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Erreur';
+  }
+}
+
+// Format expiration date
+function formatExpiration(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diff = date.getTime() - now.getTime();
+
+  if (diff < 0) return 'Expiré';
+
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+  if (hours > 24) {
+    const days = Math.floor(hours / 24);
+    return `${days}j ${hours % 24}h`;
+  }
+
+  if (hours > 0) return `${hours}h ${minutes}min`;
+  return `${minutes} min`;
 }
 
 onMounted(loadData);
@@ -246,55 +333,8 @@ onMounted(loadData);
       <p>Chargement...</p>
     </div>
 
-    <!-- No team -->
-    <div v-else-if="!team" class="no-team">
-      <div v-if="error" class="message error">{{ error }}</div>
-
-      <div v-if="!isCreatingTeam" class="no-team-message">
-        <p>Vous n'appartenez à aucune équipe.</p>
-        <div class="no-team-actions">
-          <button class="btn-create" @click="isCreatingTeam = true">
-            ➕ Créer une équipe
-          </button>
-        </div>
-      </div>
-
-      <div v-else class="create-team-form">
-        <h2>Créer une équipe</h2>
-        <p class="form-description">Vous deviendrez le leader de l'équipe avec toutes les permissions.</p>
-
-        <div class="form-group">
-          <label for="team-name">Nom de l'équipe *</label>
-          <input
-            id="team-name"
-            v-model="createTeamName"
-            type="text"
-            placeholder="Nom de votre équipe"
-            :disabled="isSubmittingCreate"
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="team-location">Localisation</label>
-          <select id="team-location" v-model="createTeamLocation" :disabled="isSubmittingCreate">
-            <option :value="null">Non spécifiée</option>
-            <option v-for="loc in locations" :key="loc" :value="loc">{{ loc }}</option>
-          </select>
-        </div>
-
-        <div class="form-actions">
-          <button class="btn-cancel" @click="isCreatingTeam = false" :disabled="isSubmittingCreate">
-            Annuler
-          </button>
-          <button class="btn-save" @click="submitCreateTeam" :disabled="isSubmittingCreate">
-            {{ isSubmittingCreate ? 'Création...' : 'Créer l\'équipe' }}
-          </button>
-        </div>
-      </div>
-    </div>
-
     <!-- Team content -->
-    <template v-else>
+    <template v-else-if="team">
       <!-- Messages -->
       <div v-if="error" class="message error">{{ error }}</div>
       <div v-if="successMessage" class="message success">{{ successMessage }}</div>
@@ -340,6 +380,26 @@ onMounted(loadData);
             <label>Leader</label>
             <span>{{ team.leader.name }}</span>
           </div>
+
+          <!-- Delete team button (Leader only) -->
+          <button
+            v-if="isLeader"
+            class="btn-delete-team"
+            @click="showDeleteTeamModal = true"
+          >
+            <SvgIcon name="trash" />
+            Supprimer l'équipe
+          </button>
+
+          <!-- Leave team button (Non-leader members only) -->
+          <button
+            v-if="!isLeader"
+            class="btn-leave-team"
+            @click="showLeaveTeamModal = true"
+          >
+            <SvgIcon name="close" />
+            Quitter l'équipe
+          </button>
         </div>
       </section>
 
@@ -347,6 +407,9 @@ onMounted(loadData);
       <section class="team-members">
         <div class="section-header">
           <h2>Membres ({{ members.length }})</h2>
+          <button v-if="canInviteMembers" class="btn-invite" @click="openInviteModal">
+            ➕ Inviter
+          </button>
         </div>
 
         <div class="members-list">
@@ -380,26 +443,32 @@ onMounted(loadData);
             </div>
           </div>
         </div>
-      </section>
 
-      <!-- Danger zone (Leader only) -->
-      <section v-if="isLeader" class="danger-zone">
-        <div class="section-header">
-          <h2>Zone dangereuse</h2>
-        </div>
-        <div class="danger-content">
-          <div class="danger-item">
-            <div class="danger-info">
-              <strong>Supprimer l'équipe</strong>
-              <p>Cette action supprimera définitivement l'équipe, tous les plans de jeu et tous les événements du calendrier.</p>
+        <!-- Active invitations list -->
+        <div v-if="canInviteMembers && invites.length > 0" class="invites-section">
+          <h3>Invitations actives ({{ invites.length }})</h3>
+          <div class="invites-list">
+            <div v-for="invite in invites" :key="invite.id" class="invite-item">
+              <div class="invite-info">
+                <code class="invite-code">{{ invite.code }}</code>
+                <span class="invite-details">
+                  Expire dans {{ formatExpiration(invite.expiresAt) }} •
+                  {{ invite.uses }}/{{ invite.maxUses }} utilisation(s)
+                </span>
+              </div>
+              <div class="invite-actions">
+                <button class="btn-copy" @click="copyInviteUrl(invite.url)" title="Copier le lien">
+                  📋
+                </button>
+                <button class="btn-revoke" @click="handleRevokeInvite(invite.id)" title="Révoquer">
+                  ❌
+                </button>
+              </div>
             </div>
-            <button class="btn-danger" @click="showDeleteTeamModal = true">
-              <SvgIcon name="trash" />
-              Supprimer l'équipe
-            </button>
           </div>
         </div>
       </section>
+
     </template>
 
     <!-- Permissions Modal -->
@@ -550,6 +619,82 @@ onMounted(loadData);
       @confirm="confirmDeleteTeam"
       @cancel="showDeleteTeamModal = false"
     />
+
+    <!-- Leave Team Confirmation Modal -->
+    <ConfirmModal
+      :open="showLeaveTeamModal"
+      title="Quitter l'équipe"
+      :message="`Êtes-vous sûr de vouloir quitter l'équipe '${team?.name}' ? Vous devrez être réinvité pour la rejoindre.`"
+      confirm-text="Quitter"
+      :danger="true"
+      @confirm="confirmLeaveTeam"
+      @cancel="showLeaveTeamModal = false"
+    />
+
+    <!-- Invite Modal -->
+    <Modal :open="showInviteModal" @close="showInviteModal = false">
+      <template #header>
+        <h3>Inviter un membre</h3>
+      </template>
+
+      <div class="invite-form">
+        <template v-if="!generatedInvite">
+          <p class="invite-description">
+            Générez un lien d'invitation unique pour inviter un nouveau membre dans l'équipe.
+          </p>
+
+          <div class="form-group">
+            <label>Expiration</label>
+            <select v-model="inviteExpiresHours" :disabled="isCreatingInvite">
+              <option v-for="opt in expirationOptions" :key="opt.value" :value="opt.value">
+                {{ opt.label }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Nombre d'utilisations maximum</label>
+            <input
+              type="number"
+              v-model.number="inviteMaxUses"
+              min="1"
+              max="100"
+              :disabled="isCreatingInvite"
+            />
+          </div>
+        </template>
+
+        <template v-else>
+          <div class="invite-success">
+            <p>✅ Lien d'invitation créé !</p>
+            <div class="invite-url-box">
+              <input type="text" :value="generatedInvite.url" readonly />
+              <button class="btn-copy-big" @click="copyInviteUrl(generatedInvite.url)">
+                📋 Copier
+              </button>
+            </div>
+            <p class="invite-details-success">
+              Expire dans {{ formatExpiration(generatedInvite.expiresAt) }} •
+              {{ generatedInvite.maxUses }} utilisation(s) maximum
+            </p>
+          </div>
+        </template>
+      </div>
+
+      <template #footer>
+        <button class="btn-cancel" @click="showInviteModal = false">
+          {{ generatedInvite ? 'Fermer' : 'Annuler' }}
+        </button>
+        <button
+          v-if="!generatedInvite"
+          class="btn-save"
+          @click="generateInvite"
+          :disabled="isCreatingInvite"
+        >
+          {{ isCreatingInvite ? 'Génération...' : 'Générer le lien' }}
+        </button>
+      </template>
+    </Modal>
   </div>
 </template>
 
@@ -921,75 +1066,200 @@ section {
   margin: 0;
 }
 
-// Danger zone section
-.danger-zone {
-  margin-top: $spacing-xl;
-  padding: $spacing-lg;
-  background: rgba($color-danger, 0.05);
-  border: 1px solid rgba($color-danger, 0.3);
-  border-radius: $radius-lg;
-
-  .section-header {
-    h2 {
-      color: $color-danger;
-    }
-  }
-}
-
-.danger-content {
-  margin-top: $spacing-md;
-}
-
-.danger-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: $spacing-lg;
-
-  @media (max-width: $breakpoint-mobile) {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-}
-
-.danger-info {
-  flex: 1;
-
-  strong {
-    display: block;
-    color: $color-text-primary;
-    margin-bottom: $spacing-xs;
-  }
-
-  p {
-    margin: 0;
-    color: $color-text-secondary;
-    font-size: $font-size-sm;
-  }
-}
-
-.btn-danger {
+// Delete team button
+.btn-delete-team {
   display: flex;
   align-items: center;
   gap: $spacing-sm;
   padding: $spacing-sm $spacing-md;
-  background: $color-danger;
-  border: none;
+  margin-top: $spacing-lg;
+  background: transparent;
+  border: 1px solid $color-danger;
   border-radius: $radius-md;
-  color: white;
+  color: $color-danger;
   cursor: pointer;
   font-weight: 500;
-  white-space: nowrap;
   transition: all 0.2s;
 
   &:hover {
-    background: darken($color-danger, 10%);
+    background: $color-danger;
+    color: white;
   }
 
   :deep(svg) {
     width: 16px;
     height: 16px;
   }
+}
+
+// Leave team button
+.btn-leave-team {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  margin-top: $spacing-lg;
+  background: transparent;
+  border: 1px solid $color-danger;
+  border-radius: $radius-md;
+  color: $color-danger;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+
+  &:hover {
+    background: $color-danger;
+    color: white;
+  }
+
+  :deep(svg) {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+// Invite button
+.btn-invite {
+  padding: $spacing-sm $spacing-md;
+  background: $color-success;
+  border: none;
+  border-radius: $radius-md;
+  color: white;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+
+  &:hover {
+    background: darken($color-success, 10%);
+  }
+}
+
+// Invitations section
+.invites-section {
+  margin-top: $spacing-lg;
+  padding-top: $spacing-lg;
+  border-top: 1px solid $color-border;
+
+  h3 {
+    font-size: $font-size-base;
+    margin-bottom: $spacing-md;
+    color: $color-text-secondary;
+  }
+}
+
+.invites-list {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.invite-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: $spacing-sm $spacing-md;
+  background: $color-bg-secondary;
+  border-radius: $radius-md;
+  border: 1px solid $color-border;
+}
+
+.invite-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.invite-code {
+  font-family: monospace;
+  background: $color-bg-tertiary;
+  padding: 2px 6px;
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+}
+
+.invite-details {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.invite-actions {
+  display: flex;
+  gap: $spacing-sm;
+}
+
+.btn-copy,
+.btn-revoke {
+  padding: $spacing-xs $spacing-sm;
+  background: transparent;
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: $color-bg-tertiary;
+  }
+}
+
+.btn-revoke:hover {
+  border-color: $color-danger;
+  color: $color-danger;
+}
+
+// Invite modal form
+.invite-form {
+  min-width: 350px;
+}
+
+.invite-description {
+  margin-bottom: $spacing-md;
+  color: $color-text-secondary;
+}
+
+.invite-success {
+  text-align: center;
+
+  p:first-child {
+    font-size: $font-size-lg;
+    margin-bottom: $spacing-md;
+  }
+}
+
+.invite-url-box {
+  display: flex;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+
+  input {
+    flex: 1;
+    padding: $spacing-sm;
+    background: $color-bg-tertiary;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+    color: $color-text-primary;
+    font-family: monospace;
+    font-size: $font-size-sm;
+  }
+}
+
+.btn-copy-big {
+  padding: $spacing-sm $spacing-md;
+  background: $color-accent;
+  border: none;
+  border-radius: $radius-md;
+  color: white;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+
+  &:hover {
+    background: darken($color-accent, 10%);
+  }
+}
+
+.invite-details-success {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
 }
 
 @media (max-width: $breakpoint-tablet) {

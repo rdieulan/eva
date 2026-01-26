@@ -21,6 +21,7 @@ model User {
   createdEvents   CalendarEvent[]
   gamePlanPlayers GamePlanPlayer[]
   sessions        Session[]
+  createdInvites  TeamInvite[]
 }
 
 model Team {
@@ -36,6 +37,7 @@ model Team {
   balanceRules   BalanceRule[]
   gamePlans      GamePlan[]
   calendarEvents CalendarEvent[]
+  invites        TeamInvite[]
 }
 
 model BalanceRule {
@@ -136,6 +138,22 @@ model CalendarEvent {
 
   @@index([date])
   @@index([teamId])
+}
+
+model TeamInvite {
+  id          String   @id @default(cuid())
+  teamId      String
+  team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  code        String   @unique
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  expiresAt   DateTime
+  maxUses     Int      @default(1)
+  uses        Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([teamId])
+  @@index([code])
 }
 
 

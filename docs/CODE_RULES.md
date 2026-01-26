@@ -91,6 +91,15 @@ server/src/
 - **Types** : suffixe `.types.ts` (`map.types.ts`, `calendar.types.ts`)
 - **Tests** : suffixe `.test.ts` (`balance.test.ts`)
 
+### Organisation des tests
+```
+tests/
+├── client/        # Tests spécifiques au client (composants, composables)
+├── server/        # Tests spécifiques au serveur (routes, services)
+├── shared/        # Tests des utilitaires partagés (@shared/utils)
+└── quality/       # Tests transverses (encodage, lint, etc.)
+```
+
 ### Nomenclature des composants : Layout vs Fonctionnel
 
 Chaque feature (calendar, planner, etc.) sépare ses composants en deux catégories :
@@ -348,6 +357,13 @@ export function useExemple(options?: ExempleOptions) {
 4. **Pas de code dupliqué** - factoriser
 5. **Pas de valeurs magiques** - utiliser des constantes nommées
 6. **Composants > 500 lignes** = refactorisation nécessaire
+7. **Syntaxe compacte** - utiliser les formes courtes quand c'est possible :
+   - `if (!value)` au lieu de `if (value === false)` ou `if (value !== true)`
+   - `if (value)` au lieu de `if (value === true)`
+   - `const x = a || b` au lieu de `const x = a ? a : b`
+   - `const x = a ?? b` pour les nullish
+   - `arr.length` au lieu de `arr.length > 0` pour les booléens (si contexte clair)
+   - **Exception** : `value !== true` est requis pour les union types `true | T` (ex: `ValidationResult`)
 
 ---
 

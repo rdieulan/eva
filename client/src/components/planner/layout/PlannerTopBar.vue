@@ -162,8 +162,8 @@ function isMainRoleForSelectedPlayer(assignmentId: number): boolean {
   <div class="planner-toolbar">
     <!-- Section 1: Phase -->
     <div class="section section-phase">
+      <!-- Plan Selector always visible -->
       <PlanSelector
-        v-if="plans.length > 0"
         :plans="plans"
         :selectedPlanId="selectedPlanId"
         :canCreate="canCreate"
@@ -175,7 +175,7 @@ function isMainRoleForSelectedPlayer(assignmentId: number): boolean {
         @delete="$emit('delete-plan', $event)"
         @rename="(id, name) => $emit('rename-plan', id, name)"
       />
-      <span v-if="plans.length > 0" class="connector-line"></span>
+      <span class="connector-line"></span>
       <PhaseSelector
         :modelValue="currentPhase"
         @update:modelValue="$emit('update:currentPhase', $event)"
@@ -341,6 +341,7 @@ function isMainRoleForSelectedPlayer(assignmentId: number): boolean {
 .section-phase {
   gap: 0;
 }
+
 
 // Unified wrapper style (parentheses style - side borders only, 100% height)
 .section-wrapper {

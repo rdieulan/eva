@@ -8,16 +8,14 @@ import type {
   CreateEventRequest,
   AvailabilityStatus,
 } from '@shared/types';
-import { getAuthHeaders } from '@/api/utils';
+import { authFetch } from '@/api/utils';
 
 /**
  * Fetch calendar data for a month
  * @param month Format YYYY-MM
  */
 export async function fetchMonthData(month: string): Promise<MonthData> {
-  const response = await fetch(`/api/calendar/availability?month=${month}`, {
-    headers: getAuthHeaders(),
-  });
+  const response = await authFetch(`/api/calendar/availability?month=${month}`);
 
   if (!response.ok) {
     const error = await response.json();
@@ -38,9 +36,8 @@ export async function setAvailability(
 ): Promise<Availability | { success: true; deleted: true }> {
   const body: SetAvailabilityRequest = { date, status };
 
-  const response = await fetch('/api/calendar/availability', {
+  const response = await authFetch('/api/calendar/availability', {
     method: 'POST',
-    headers: getAuthHeaders(),
     body: JSON.stringify(body),
   });
 
@@ -57,9 +54,7 @@ export async function setAvailability(
  * @param month Format YYYY-MM
  */
 export async function fetchEvents(month: string): Promise<CalendarEvent[]> {
-  const response = await fetch(`/api/calendar/events?month=${month}`, {
-    headers: getAuthHeaders(),
-  });
+  const response = await authFetch(`/api/calendar/events?month=${month}`);
 
   if (!response.ok) {
     const error = await response.json();
@@ -73,9 +68,8 @@ export async function fetchEvents(month: string): Promise<CalendarEvent[]> {
  * Create a new event (Admin only)
  */
 export async function createEvent(event: CreateEventRequest): Promise<CalendarEvent> {
-  const response = await fetch('/api/calendar/events', {
+  const response = await authFetch('/api/calendar/events', {
     method: 'POST',
-    headers: getAuthHeaders(),
     body: JSON.stringify(event),
   });
 
@@ -94,9 +88,8 @@ export async function updateEvent(
   id: string,
   event: Partial<CreateEventRequest>
 ): Promise<CalendarEvent> {
-  const response = await fetch(`/api/calendar/events/${id}`, {
+  const response = await authFetch(`/api/calendar/events/${id}`, {
     method: 'PUT',
-    headers: getAuthHeaders(),
     body: JSON.stringify(event),
   });
 
@@ -112,9 +105,8 @@ export async function updateEvent(
  * Delete an event (Admin only)
  */
 export async function deleteEvent(id: string): Promise<void> {
-  const response = await fetch(`/api/calendar/events/${id}`, {
+  const response = await authFetch(`/api/calendar/events/${id}`, {
     method: 'DELETE',
-    headers: getAuthHeaders(),
   });
 
   if (!response.ok) {
@@ -130,9 +122,8 @@ export async function updateEventGamePlan(
   eventId: string,
   gamePlan: import('@shared/types').MatchGamePlan | null
 ): Promise<CalendarEvent> {
-  const response = await fetch(`/api/calendar/events/${eventId}/gameplan`, {
+  const response = await authFetch(`/api/calendar/events/${eventId}/gameplan`, {
     method: 'PUT',
-    headers: getAuthHeaders(),
     body: JSON.stringify({ gamePlan }),
   });
 

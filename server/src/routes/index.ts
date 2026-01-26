@@ -9,7 +9,10 @@ import usersRoutes from '@routes/users.routes';
 import calendarRoutes from '@routes/calendar.routes';
 import teamsRoutes from '@routes/teams.routes';
 import balanceRulesRoutes from '@routes/balance-rules.routes';
+import invitesRoutes from '@routes/invites.routes';
 import { prisma, pool } from '@db/prisma';
+import { authMiddleware } from '@middleware/auth.middleware';
+import type { AuthRequest } from '@middleware/auth.middleware';
 
 const router = Router();
 
@@ -64,11 +67,21 @@ router.use('/users', usersRoutes);
 router.use('/calendar', calendarRoutes);
 router.use('/teams', teamsRoutes);
 router.use('/balance-rules', balanceRulesRoutes);
+router.use('/', invitesRoutes); // Handles /teams/:teamId/invites and /invites/:code
 
-// GET /api/players - Public endpoint for player list
-router.get('/players', async (_req: Request, res: Response) => {
+// GET /api/players - Get players list filtered by team
+router.get('/players', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const teamId = req.user?.teamId;
+
+  // User must belong to a team to see team players
+  if (!teamId) {
+    res.json([]);
+    return;
+  }
+
   try {
     const users = await prisma.user.findMany({
+      where: { teamId },
       select: {
         id: true,
         name: true,

@@ -6,7 +6,9 @@ import { prisma } from '@db/prisma';
 import { authMiddleware, requirePermission } from '@middleware/auth.middleware';
 import type { AuthRequest } from '@middleware/auth.middleware';
 import type { UserPermissions } from '@shared/types';
-import { TEAM_LOCATIONS, LEADER_PERMISSIONS } from '@shared/types';
+import { TEAM_LOCATIONS, LEADER_PERMISSIONS, DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
+import { DEFAULT_ASSIGNMENTS, DEFAULT_GAME_PLAN_NOTES } from '@shared/constants';
+import { validateTeamName } from '@shared/utils';
 
 const router = Router();
 
@@ -14,8 +16,9 @@ const router = Router();
 router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   const { name, logo, location } = req.body;
 
-  if (!name || typeof name !== 'string' || name.trim().length < 2) {
-    return res.status(400).json({ error: 'Le nom de l\'équipe doit contenir au moins 2 caractères' });
+  const nameValid = validateTeamName(name);
+  if (nameValid !== true) {
+    return res.status(400).json({ errors: nameValid });
   }
 
   try {
@@ -25,7 +28,7 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     });
 
     if (user?.teamId) {
-      return res.status(400).json({ error: 'Vous êtes déjà membre d\'une équipe' });
+      return res.status(400).json({ errors: ['Vous êtes déjà membre d\'une équipe'] });
     }
 
     // Create team with current user as leader
@@ -48,13 +51,25 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
       },
     });
 
+    // Create default game plans for each map (batch insert)
+    const allMaps = await prisma.map.findMany();
+    await prisma.gamePlan.createMany({
+      data: allMaps.map(map => ({
+        name: 'Default',
+        mapId: map.id,
+        teamId: team.id,
+        assignments: DEFAULT_ASSIGNMENTS as unknown as object[],
+        notes: DEFAULT_GAME_PLAN_NOTES as unknown as object,
+      })),
+    });
+
     res.status(201).json({
       ...team,
       isLeader: true,
     });
   } catch (error) {
     console.error('Error creating team:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    res.status(500).json({ errors: ['Erreur serveur'] });
   }
 });
 
@@ -75,7 +90,7 @@ router.get('/current', authMiddleware, async (req: AuthRequest, res: Response) =
     });
 
     if (!user?.team) {
-      return res.status(404).json({ error: 'Aucune équipe trouvée' });
+      return res.status(404).json({ errors: ['Aucune équipe trouvée'] });
     }
 
     res.json({
@@ -84,7 +99,7 @@ router.get('/current', authMiddleware, async (req: AuthRequest, res: Response) =
     });
   } catch (error) {
     console.error('Error fetching team:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    res.status(500).json({ errors: ['Erreur serveur'] });
   }
 });
 
@@ -102,15 +117,23 @@ router.put('/current', authMiddleware, requirePermission('team', 'canManageTeam'
     });
 
     if (!user?.team) {
-      return res.status(404).json({ error: 'Aucune équipe trouvée' });
+      return res.status(404).json({ errors: ['Aucune équipe trouvée'] });
     }
 
     const { name, logo, location } = req.body;
 
+    // Validate name if provided
+    if (name !== undefined) {
+      const nameValid = validateTeamName(name);
+      if (nameValid !== true) {
+        return res.status(400).json({ errors: nameValid });
+      }
+    }
+
     const updatedTeam = await prisma.team.update({
       where: { id: user.team.id },
       data: {
-        ...(name && { name }),
+        ...(name && { name: name.trim() }),
         ...(logo !== undefined && { logo }),
         ...(location !== undefined && { location }),
       },
@@ -119,7 +142,7 @@ router.put('/current', authMiddleware, requirePermission('team', 'canManageTeam'
     res.json(updatedTeam);
   } catch (error) {
     console.error('Error updating team:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    res.status(500).json({ errors: ['Erreur serveur'] });
   }
 });
 
@@ -132,7 +155,7 @@ router.get('/current/members', authMiddleware, async (req: AuthRequest, res: Res
     });
 
     if (!user?.team) {
-      return res.status(404).json({ error: 'Aucune équipe trouvée' });
+      return res.status(404).json({ errors: ['Aucune équipe trouvée'] });
     }
 
     const members = await prisma.user.findMany({
@@ -158,7 +181,7 @@ router.get('/current/members', authMiddleware, async (req: AuthRequest, res: Res
     res.json(membersWithRole);
   } catch (error) {
     console.error('Error fetching members:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    res.status(500).json({ errors: ['Erreur serveur'] });
   }
 });
 
@@ -179,7 +202,7 @@ router.put(
       });
 
       if (!currentUser?.team) {
-        return res.status(404).json({ error: 'Aucune équipe trouvée' });
+        return res.status(404).json({ errors: ['Aucune équipe trouvée'] });
       }
 
       // Verify target member is in the same team
@@ -189,17 +212,17 @@ router.put(
       });
 
       if (!targetMember || targetMember.teamId !== currentUser.team.id) {
-        return res.status(404).json({ error: 'Membre non trouvé dans cette équipe' });
+        return res.status(404).json({ errors: ['Membre non trouvé dans cette équipe'] });
       }
 
       // Cannot modify leader's permissions
       if (targetMember.ledTeam) {
-        return res.status(403).json({ error: 'Impossible de modifier les permissions du leader' });
+        return res.status(403).json({ errors: ['Impossible de modifier les permissions du leader'] });
       }
 
       // Cannot modify own permissions (prevent privilege escalation)
       if (memberId === req.user!.userId) {
-        return res.status(403).json({ error: 'Impossible de modifier vos propres permissions' });
+        return res.status(403).json({ errors: ['Impossible de modifier vos propres permissions'] });
       }
 
       // Update permissions
@@ -211,7 +234,7 @@ router.put(
       res.json({ message: 'Permissions mises à jour' });
     } catch (error) {
       console.error('Error updating permissions:', error);
-      res.status(500).json({ error: 'Erreur serveur' });
+      res.status(500).json({ errors: ['Erreur serveur'] });
     }
   }
 );
@@ -231,7 +254,7 @@ router.delete(
       });
 
       if (!currentUser?.team) {
-        return res.status(404).json({ error: 'Aucune équipe trouvée' });
+        return res.status(404).json({ errors: ['Aucune équipe trouvée'] });
       }
 
       const targetMember = await prisma.user.findUnique({
@@ -240,28 +263,31 @@ router.delete(
       });
 
       if (!targetMember || targetMember.teamId !== currentUser.team.id) {
-        return res.status(404).json({ error: 'Membre non trouvé dans cette équipe' });
+        return res.status(404).json({ errors: ['Membre non trouvé dans cette équipe'] });
       }
 
       // Cannot remove the leader
       if (targetMember.ledTeam) {
-        return res.status(403).json({ error: 'Impossible de retirer le leader de l\'équipe' });
+        return res.status(403).json({ errors: ['Impossible de retirer le leader de l\'équipe'] });
       }
 
       // Cannot remove yourself
       if (memberId === req.user!.userId) {
-        return res.status(403).json({ error: 'Impossible de vous retirer vous-même' });
+        return res.status(403).json({ errors: ['Impossible de vous retirer vous-même'] });
       }
 
       await prisma.user.update({
         where: { id: memberId },
-        data: { teamId: null },
+        data: {
+          teamId: null,
+          permissions: DEFAULT_PLAYER_PERMISSIONS as unknown as object,
+        },
       });
 
       res.json({ message: 'Membre retiré de l\'équipe' });
     } catch (error) {
       console.error('Error removing member:', error);
-      res.status(500).json({ error: 'Erreur serveur' });
+      res.status(500).json({ errors: ['Erreur serveur'] });
     }
   }
 );
@@ -278,20 +304,23 @@ router.delete('/current', authMiddleware, async (req: AuthRequest, res: Response
     });
 
     if (!currentUser?.team) {
-      return res.status(404).json({ error: 'Aucune équipe trouvée' });
+      return res.status(404).json({ errors: ['Aucune équipe trouvée'] });
     }
 
     // Only the leader can delete the team
     if (!currentUser.ledTeam) {
-      return res.status(403).json({ error: 'Seul le leader peut supprimer l\'équipe' });
+      return res.status(403).json({ errors: ['Seul le leader peut supprimer l\'équipe'] });
     }
 
     const teamId = currentUser.team.id;
 
-    // Remove teamId from all members first
+    // Reset permissions and remove teamId from all members
     await prisma.user.updateMany({
       where: { teamId },
-      data: { teamId: null },
+      data: {
+        teamId: null,
+        permissions: DEFAULT_PLAYER_PERMISSIONS as unknown as object,
+      },
     });
 
     // Delete the team (cascades to GamePlans, CalendarEvents, BalanceRules)
@@ -302,7 +331,43 @@ router.delete('/current', authMiddleware, async (req: AuthRequest, res: Response
     res.json({ message: 'Équipe supprimée avec succès' });
   } catch (error) {
     console.error('Error deleting team:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    res.status(500).json({ errors: ['Erreur serveur'] });
+  }
+});
+
+// POST /api/teams/current/leave - Leave the team (for non-leader members)
+router.post('/current/leave', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const currentUser = await prisma.user.findUnique({
+      where: { id: req.user!.userId },
+      include: {
+        team: true,
+        ledTeam: true,
+      },
+    });
+
+    if (!currentUser?.team) {
+      return res.status(404).json({ errors: ['Aucune équipe trouvée'] });
+    }
+
+    // Leader cannot leave, must delete or transfer ownership
+    if (currentUser.ledTeam) {
+      return res.status(403).json({ errors: ['Le leader ne peut pas quitter l\'équipe. Supprimez l\'équipe ou transférez la direction.'] });
+    }
+
+    // Remove user from team and reset permissions
+    await prisma.user.update({
+      where: { id: req.user!.userId },
+      data: {
+        teamId: null,
+        permissions: DEFAULT_PLAYER_PERMISSIONS as unknown as object,
+      },
+    });
+
+    res.json({ message: 'Vous avez quitté l\'équipe' });
+  } catch (error) {
+    console.error('Error leaving team:', error);
+    res.status(500).json({ errors: ['Erreur serveur'] });
   }
 });
 

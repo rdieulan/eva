@@ -7,12 +7,26 @@ import type { JwtPayload } from '@middleware/auth.middleware';
 import { getUserPermissions } from '@middleware/auth.middleware';
 import type { UserPermissions } from '@shared/types';
 
+// Re-export validation functions from shared (single source of truth)
+export {
+  validateEmail,
+  validatePassword,
+  validateName,
+  validatePasswordsMatch,
+  validateRegistration,
+  isValidEmail,
+  isValidPassword,
+  isValidName,
+  type ValidationResult,
+} from '@shared/utils';
+
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
-/**
- * User data returned to client
- */
+
+// ============================================
+// User data returned to client
+// ============================================
 export interface AuthUserData {
   id: string;
   email: string;
@@ -142,3 +156,17 @@ export async function updateUserPassword(userId: string, hashedPassword: string)
     data: { password: hashedPassword },
   });
 }
+
+/**
+ * Create a new user
+ */
+export async function createUser(email: string, hashedPassword: string, name: string) {
+  return prisma.user.create({
+    data: {
+      email: email.toLowerCase(),
+      password: hashedPassword,
+      name,
+    },
+  });
+}
+

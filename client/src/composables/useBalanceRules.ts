@@ -16,6 +16,15 @@ const initialized = ref(false);
 // Version counter to trigger reactive recalculations in components
 const rulesVersion = ref(0);
 
+/**
+ * Clear balance rules cache (call on logout or team change)
+ */
+export function clearBalanceRulesCache(): void {
+  rules.value = [];
+  initialized.value = false;
+  rulesVersion.value = 0;
+}
+
 // Sync rules to balance.ts cache whenever they change
 watch(rules, (newRules) => {
   setBalanceRules(newRules);

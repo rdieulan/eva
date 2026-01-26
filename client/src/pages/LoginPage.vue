@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
+import { clearPlayersCache, clearBalanceRulesCache } from '@/api';
 
 const router = useRouter();
 const route = useRoute();
@@ -9,17 +10,17 @@ const { setAuth } = useAuth();
 
 const email = ref('');
 const password = ref('');
-const error = ref('');
+const errors = ref<string[]>([]);
 const isLoading = ref(false);
 
 async function handleLogin() {
   if (!email.value || !password.value) {
-    error.value = 'Veuillez remplir tous les champs';
+    errors.value = ['Veuillez remplir tous les champs'];
     return;
   }
 
   isLoading.value = true;
-  error.value = '';
+  errors.value = [];
 
   try {
     const response = await fetch('/api/auth/login', {
@@ -34,8 +35,14 @@ async function handleLogin() {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.error || 'Erreur de connexion');
+      // Backend returns { errors: [...] }
+      errors.value = data.errors || [data.error || 'Erreur de connexion'];
+      return;
     }
+
+    // Clear cached data from previous user session
+    clearPlayersCache();
+    clearBalanceRulesCache();
 
     // Utiliser le composable pour définir l'auth
     setAuth(data.token, data.user);
@@ -43,8 +50,8 @@ async function handleLogin() {
     // Rediriger vers la page d'origine ou la homepage
     const redirectPath = route.query.redirect as string || '/';
     router.push(redirectPath);
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Erreur de connexion';
+  } catch {
+    errors.value = ['Erreur de connexion'];
   } finally {
     isLoading.value = false;
   }
@@ -79,14 +86,19 @@ async function handleLogin() {
           />
         </div>
 
-        <div v-if="error" class="error-message">
-          {{ error }}
+        <div v-if="errors.length" class="error-message">
+          <p v-for="(err, i) in errors" :key="i">{{ err }}</p>
         </div>
 
         <button type="submit" class="btn-submit" :disabled="isLoading">
           {{ isLoading ? 'Connexion...' : 'Se connecter' }}
         </button>
       </form>
+
+      <div class="register-link">
+        <span>Pas encore de compte ?</span>
+        <router-link to="/register">Créer un compte</router-link>
+      </div>
     </div>
   </div>
 </template>
@@ -243,6 +255,22 @@ input {
   @include mobile {
     padding: 0.75rem;
     font-size: 0.95rem;
+  }
+}
+
+.register-link {
+  text-align: center;
+  margin-top: $spacing-md;
+  color: $color-text-muted;
+  font-size: $font-size-sm;
+
+  a {
+    color: $color-accent;
+    text-decoration: underline;
+
+    &:hover {
+      color: lighten($color-accent, 10%);
+    }
   }
 }
 </style>

@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
+import { useAuth } from '@/composables/useAuth';
+import NoTeamMessage from '@/components/common/NoTeamMessage.vue';
 
 const router = useRouter();
+const { hasTeam } = useAuth();
 
 function goToPlanner() {
   router.push('/planner');
@@ -9,6 +12,10 @@ function goToPlanner() {
 
 function goToCalendar() {
   router.push('/calendar');
+}
+
+function goToTeam() {
+  router.push('/team');
 }
 </script>
 
@@ -19,7 +26,8 @@ function goToCalendar() {
       <p class="subtitle">Outil de gestion d'équipe FPS 4v4</p>
     </div>
 
-    <nav class="nav-cards">
+    <!-- Show navigation only if user has a team -->
+    <nav v-if="hasTeam" class="nav-cards">
       <button class="nav-card" @click="goToPlanner">
         <div class="card-icon">📋</div>
         <h2>Planificateur</h2>
@@ -31,7 +39,16 @@ function goToCalendar() {
         <h2>Calendrier</h2>
         <p>Planifiez vos sessions d'entraînement</p>
       </button>
+
+      <button class="nav-card" @click="goToTeam">
+        <div class="card-icon">👥</div>
+        <h2>Mon équipe</h2>
+        <p>Gérez les membres et paramètres de votre équipe</p>
+      </button>
     </nav>
+
+    <!-- Show no team message if user has no team -->
+    <NoTeamMessage v-else />
   </div>
 </template>
 

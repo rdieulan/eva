@@ -1,6 +1,8 @@
 import { ref, computed } from 'vue';
 import type { UserPermissions } from '@shared/types';
 import { DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
+import { clearPlayersCache } from '@/api/players.api';
+import { clearBalanceRulesCache } from '@/composables/useBalanceRules';
 
 // Types
 export interface User {
@@ -18,11 +20,49 @@ const token = ref<string | null>(null);
 const isLoading = ref(true);
 const isInitialized = ref(false);
 let initPromise: Promise<void> | null = null;
+let storageListenerInitialized = false;
+
+/**
+ * Setup listener for localStorage changes from other tabs
+ * Detects when another tab logs in/out or changes user
+ */
+function setupStorageListener(): void {
+  if (storageListenerInitialized) return;
+  storageListenerInitialized = true;
+
+  window.addEventListener('storage', (event) => {
+    // Only react to token changes
+    if (event.key !== 'token') return;
+
+    const currentToken = token.value;
+    const newToken = event.newValue;
+
+    // Another tab logged out
+    if (!newToken && currentToken) {
+      clearAuthState();
+      window.location.href = '/login';
+      return;
+    }
+
+    // Another tab logged in with a different account
+    if (newToken && newToken !== currentToken) {
+      // Reload the page to sync with the new session
+      window.location.reload();
+    }
+  });
+}
+
+// Clear authentication state (internal, without localStorage removal)
+function clearAuthState() {
+  token.value = null;
+  user.value = null;
+  clearPlayersCache();
+  clearBalanceRulesCache();
+}
 
 // Clear authentication
 function clearAuth() {
-  token.value = null;
-  user.value = null;
+  clearAuthState();
   localStorage.removeItem('token');
   localStorage.removeItem('user');
 }
@@ -35,6 +75,29 @@ function setAuth(newToken: string, newUser: User) {
   isLoading.value = false;
   localStorage.setItem('token', newToken);
   localStorage.setItem('user', JSON.stringify(newUser));
+}
+
+// Refresh user data from server (after team join, permission changes, etc.)
+async function refreshUser(): Promise<void> {
+  const currentToken = token.value || localStorage.getItem('token');
+  if (!currentToken) return;
+
+  try {
+    const response = await fetch('/api/auth/me', {
+      headers: { 'Authorization': `Bearer ${currentToken}` }
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      user.value = data.user;
+      localStorage.setItem('user', JSON.stringify(data.user));
+      // Clear caches as team data may have changed
+      clearPlayersCache();
+      clearBalanceRulesCache();
+    }
+  } catch {
+    // Ignore errors, keep current state
+  }
 }
 
 // Initialize and validate auth
@@ -53,6 +116,9 @@ function initAuth(): Promise<void> {
 
 async function doInitAuth(): Promise<void> {
   isLoading.value = true;
+
+  // Setup cross-tab session sync
+  setupStorageListener();
 
   const storedToken = localStorage.getItem('token');
 
@@ -95,6 +161,7 @@ const permissions = computed<UserPermissions>(() => {
 export function useAuth() {
   const isAuthenticated = computed(() => !!(token.value && user.value));
   const isLeader = computed(() => user.value?.isLeader ?? false);
+  const hasTeam = computed(() => !!user.value?.teamId);
 
   return {
     // State
@@ -102,6 +169,7 @@ export function useAuth() {
     token: computed(() => token.value),
     isAuthenticated,
     isLeader,
+    hasTeam,
     isLoading: computed(() => isLoading.value),
     permissions,
 
@@ -109,5 +177,6 @@ export function useAuth() {
     setAuth,
     clearAuth,
     initAuth,
+    refreshUser,
   };
 }

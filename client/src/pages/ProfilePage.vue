@@ -2,6 +2,8 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
+import { clearPlayersCache } from '@/api';
+import { validatePassword, validatePasswordsMatch } from '@shared/utils';
 import SvgIcon from '@/components/common/SvgIcon.vue';
 
 const router = useRouter();
@@ -11,27 +13,30 @@ const { user, token, clearAuth } = useAuth();
 const currentPassword = ref('');
 const newPassword = ref('');
 const confirmPassword = ref('');
-const passwordError = ref('');
+const passwordErrors = ref<string[]>([]);
 const passwordSuccess = ref('');
 const isChangingPassword = ref(false);
 
 // Change password
 async function handleChangePassword() {
-  passwordError.value = '';
+  passwordErrors.value = [];
   passwordSuccess.value = '';
 
   if (!currentPassword.value || !newPassword.value || !confirmPassword.value) {
-    passwordError.value = 'Veuillez remplir tous les champs';
+    passwordErrors.value = ['Veuillez remplir tous les champs'];
     return;
   }
 
-  if (newPassword.value !== confirmPassword.value) {
-    passwordError.value = 'Les nouveaux mots de passe ne correspondent pas';
+  // Use shared validators
+  const passwordValid = validatePassword(newPassword.value);
+  if (passwordValid !== true) {
+    passwordErrors.value = passwordValid;
     return;
   }
 
-  if (newPassword.value.length < 6) {
-    passwordError.value = 'Le nouveau mot de passe doit faire au moins 6 caractères';
+  const matchValid = validatePasswordsMatch(newPassword.value, confirmPassword.value);
+  if (matchValid !== true) {
+    passwordErrors.value = matchValid;
     return;
   }
 
@@ -53,15 +58,16 @@ async function handleChangePassword() {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.error || 'Erreur lors du changement de mot de passe');
+      passwordErrors.value = data.errors || [data.error || 'Erreur lors du changement de mot de passe'];
+      return;
     }
 
     passwordSuccess.value = 'Mot de passe modifié avec succès';
     currentPassword.value = '';
     newPassword.value = '';
     confirmPassword.value = '';
-  } catch (err) {
-    passwordError.value = err instanceof Error ? err.message : 'Erreur lors du changement de mot de passe';
+  } catch {
+    passwordErrors.value = ['Erreur lors du changement de mot de passe'];
   } finally {
     isChangingPassword.value = false;
   }
@@ -79,6 +85,7 @@ async function handleLogout() {
   } catch {
     // Ignore server-side logout errors
   } finally {
+    clearPlayersCache();
     clearAuth();
     router.push('/login');
   }
@@ -148,8 +155,8 @@ async function handleLogout() {
             />
           </div>
 
-          <div v-if="passwordError" class="message error">
-            {{ passwordError }}
+          <div v-if="passwordErrors.length" class="message error">
+            <p v-for="(err, i) in passwordErrors" :key="i">{{ err }}</p>
           </div>
 
           <div v-if="passwordSuccess" class="message success">

@@ -1,7 +1,7 @@
 // Teams API client
 
 import type { UserPermissions, Team } from '@shared/types';
-import { getAuthHeaders } from '@/api/utils';
+import { authFetch } from '@/api/utils';
 
 const API_BASE = '/api/teams';
 
@@ -23,9 +23,7 @@ export interface TeamWithMembers extends Team {
  * Get current user's team
  */
 export async function fetchCurrentTeam(): Promise<TeamWithMembers | null> {
-  const response = await fetch(`${API_BASE}/current`, {
-    headers: getAuthHeaders(),
-  });
+  const response = await authFetch(`${API_BASE}/current`);
 
   if (response.status === 404) {
     return null;
@@ -44,9 +42,8 @@ export async function fetchCurrentTeam(): Promise<TeamWithMembers | null> {
 export async function createTeam(
   data: { name: string; logo?: string | null; location?: string | null }
 ): Promise<TeamWithMembers> {
-  const response = await fetch(API_BASE, {
+  const response = await authFetch(API_BASE, {
     method: 'POST',
-    headers: getAuthHeaders(),
     body: JSON.stringify(data),
   });
 
@@ -77,9 +74,8 @@ export async function fetchTeamLocations(): Promise<string[]> {
 export async function updateTeam(
   data: { name?: string; logo?: string | null; location?: string | null }
 ): Promise<Team> {
-  const response = await fetch(`${API_BASE}/current`, {
+  const response = await authFetch(`${API_BASE}/current`, {
     method: 'PUT',
-    headers: getAuthHeaders(),
     body: JSON.stringify(data),
   });
 
@@ -94,9 +90,7 @@ export async function updateTeam(
  * Get team members
  */
 export async function fetchTeamMembers(): Promise<TeamMember[]> {
-  const response = await fetch(`${API_BASE}/current/members`, {
-    headers: getAuthHeaders(),
-  });
+  const response = await authFetch(`${API_BASE}/current/members`);
 
   if (!response.ok) {
     throw new Error('Erreur lors de la récupération des membres');
@@ -112,9 +106,8 @@ export async function updateMemberPermissions(
   memberId: string,
   permissions: UserPermissions
 ): Promise<void> {
-  const response = await fetch(`${API_BASE}/current/members/${memberId}/permissions`, {
+  const response = await authFetch(`${API_BASE}/current/members/${memberId}/permissions`, {
     method: 'PUT',
-    headers: getAuthHeaders(),
     body: JSON.stringify({ permissions }),
   });
 
@@ -128,9 +121,8 @@ export async function updateMemberPermissions(
  * Remove member from team
  */
 export async function removeMember(memberId: string): Promise<void> {
-  const response = await fetch(`${API_BASE}/current/members/${memberId}`, {
+  const response = await authFetch(`${API_BASE}/current/members/${memberId}`, {
     method: 'DELETE',
-    headers: getAuthHeaders(),
   });
 
   if (!response.ok) {
@@ -143,14 +135,130 @@ export async function removeMember(memberId: string): Promise<void> {
  * Delete the team (leader only)
  */
 export async function deleteTeam(): Promise<void> {
-  const response = await fetch(`${API_BASE}/current`, {
+  const response = await authFetch(`${API_BASE}/current`, {
     method: 'DELETE',
-    headers: getAuthHeaders(),
   });
 
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Erreur lors de la suppression de l\'équipe');
   }
+}
+
+/**
+ * Leave the team (for non-leader members)
+ */
+export async function leaveTeam(): Promise<void> {
+  const response = await authFetch(`${API_BASE}/current/leave`, {
+    method: 'POST',
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors du départ de l\'équipe');
+  }
+}
+
+// ========== Team Invitations ==========
+
+export interface TeamInvite {
+  id: string;
+  code: string;
+  url: string;
+  expiresAt: string;
+  maxUses: number;
+  uses: number;
+  createdBy?: string;
+  createdAt?: string;
+}
+
+export interface InviteValidation {
+  valid: boolean;
+  reason?: string;
+  teamName?: string;
+  teamLogo?: string | null;
+  expiresAt?: string;
+}
+
+export interface JoinResult {
+  message: string;
+  teamId: string;
+  teamName: string;
+}
+
+/**
+ * Create an invitation link for the team
+ */
+export async function createInvite(
+  teamId: string,
+  options: { expiresInHours?: number; maxUses?: number } = {}
+): Promise<TeamInvite> {
+  const response = await authFetch(`${API_BASE}/${teamId}/invites`, {
+    method: 'POST',
+    body: JSON.stringify(options),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors de la création de l\'invitation');
+  }
+
+  return response.json();
+}
+
+/**
+ * List active invitations for the team
+ */
+export async function fetchInvites(teamId: string): Promise<TeamInvite[]> {
+  const response = await authFetch(`${API_BASE}/${teamId}/invites`);
+
+  if (!response.ok) {
+    throw new Error('Erreur lors de la récupération des invitations');
+  }
+
+  return response.json();
+}
+
+/**
+ * Revoke an invitation
+ */
+export async function revokeInvite(teamId: string, inviteId: string): Promise<void> {
+  const response = await authFetch(`${API_BASE}/${teamId}/invites/${inviteId}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors de la révocation de l\'invitation');
+  }
+}
+
+/**
+ * Verify an invite code validity (public, no auth required for basic check)
+ */
+export async function verifyInviteCode(code: string): Promise<InviteValidation> {
+  const response = await fetch(`/api/invites/${code}`);
+
+  if (!response.ok) {
+    throw new Error('Erreur lors de la vérification du code');
+  }
+
+  return response.json();
+}
+
+/**
+ * Join a team using an invite code
+ */
+export async function joinTeamWithCode(code: string): Promise<JoinResult> {
+  const response = await authFetch(`/api/invites/${code}/join`, {
+    method: 'POST',
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors de la jonction à l\'équipe');
+  }
+
+  return response.json();
 }
 
