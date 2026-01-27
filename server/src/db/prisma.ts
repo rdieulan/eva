@@ -4,7 +4,13 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
 
-const connectionString = process.env.DATABASE_URL!;
+const connectionString = process.env.DATABASE_URL;
+const isProduction = process.env.NODE_ENV === 'production';
+
+if (!connectionString) {
+  console.error('[DB] FATAL: DATABASE_URL environment variable is not set!');
+  process.exit(1);
+}
 
 // Log database connection info (without password)
 const sanitizedUrl = connectionString.replace(/:([^:@]+)@/, ':***@');
@@ -23,21 +29,20 @@ const pool = new pg.Pool({
 });
 
 // Pool event listeners for debugging
-pool.on('connect', (client) => {
-  console.log('[DB] New client connected to pool');
+pool.on('connect', () => {
+  if (!isProduction) console.log('[DB] New client connected to pool');
 });
 
 pool.on('acquire', () => {
-  console.log('[DB] Client acquired from pool');
+  if (!isProduction) console.log('[DB] Client acquired from pool');
 });
 
 pool.on('remove', () => {
-  console.log('[DB] Client removed from pool');
+  if (!isProduction) console.log('[DB] Client removed from pool');
 });
 
 pool.on('error', (err) => {
   console.error('[DB] Pool error:', err.message);
-  console.error('[DB] Pool error stack:', err.stack);
 });
 
 // Test connection on startup

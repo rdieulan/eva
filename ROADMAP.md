@@ -260,9 +260,10 @@ model TeamInvite {
 | `server/src/routes/invites.routes.ts` | ✅ | Refactorisé avec services, format errors[], getInviteError() centralisé |
 | `server/src/routes/maps.routes.ts` | ✅ | Refactorisé avec services, isolation par teamId |
 | `server/src/routes/plans.routes.ts` | ✅ | Refactorisé avec services, isolation par teamId, permissions |
-| `server/src/routes/calendar.routes.ts` | ⬜ | Isolation par teamId, permissions |
-| `server/src/routes/users.routes.ts` | ⬜ | Filtrage par teamId |
-| `server/src/routes/balance-rules.routes.ts` | ⬜ | Isolation par teamId |
+| `server/src/routes/calendar.routes.ts` | ✅ | Refactorisé avec calendarService, helpers extraits, format errors[], isolation teamId |
+| `server/src/routes/users.routes.ts` | ✅ | Nettoyé (suppression route dupliquée, import inutilisé), format errors[], filtrage par teamId |
+| `server/src/routes/players.routes.ts` | ✅ | Nouveau fichier extrait de index.ts, format errors[], filtrage par teamId |
+| `server/src/routes/balance-rules.routes.ts` | ✅ | Refactorisé avec service, format errors[], utilise req.user.teamId |
 
 ---
 
@@ -270,8 +271,8 @@ model TeamInvite {
 
 | Fichier | Statut | Notes |
 |---------|--------|-------|
-| `server/src/middleware/auth.middleware.ts` | ⬜ | Validation token, permissions |
-| `server/src/db/prisma.ts` | ⬜ | Configuration Prisma |
+| `server/src/middleware/auth.middleware.ts` | ✅ | Format errors[], warning JWT_SECRET en prod |
+| `server/src/db/prisma.ts` | ✅ | Check DATABASE_URL, logs réduits en prod |
 
 ---
 

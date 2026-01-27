@@ -1,51 +1,23 @@
-// Balance rules routes
+// Balance rules routes - HTTP protocol only, business logic in services
 
 import { Router } from 'express';
 import type { Response } from 'express';
-import { prisma } from '@db/prisma';
 import { authMiddleware, requirePermission } from '@middleware/auth.middleware';
 import type { AuthRequest } from '@middleware/auth.middleware';
-import { DEFAULT_BALANCE_RULES } from '@shared/types';
+import * as balanceRulesService from '@services/balance-rules.service';
 
 const router = Router();
 
 // GET /api/balance-rules - Get team's balance rules
 router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const teamId = req.user?.teamId;
+
+  if (!teamId) {
+    return res.status(404).json({ errors: ['Aucune équipe trouvée'] });
+  }
+
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.user!.userId },
-      include: { team: true },
-    });
-
-    if (!user?.team) {
-      return res.status(404).json({ errors: ['Aucune équipe trouvée'] });
-    }
-
-    let rules = await prisma.balanceRule.findMany({
-      where: { teamId: user.team.id },
-      orderBy: { ruleKey: 'asc' },
-    });
-
-    // If no rules exist, create defaults
-    if (rules.length === 0) {
-      const createdRules = await prisma.$transaction(
-        DEFAULT_BALANCE_RULES.map(rule =>
-          prisma.balanceRule.create({
-            data: {
-              teamId: user.team!.id,
-              ruleKey: rule.ruleKey,
-              name: rule.name,
-              description: rule.description,
-              severity: rule.severity,
-              enabled: rule.enabled,
-              params: rule.params as object | undefined,
-            },
-          })
-        )
-      );
-      rules = createdRules;
-    }
-
+    const rules = await balanceRulesService.getTeamRules(teamId);
     res.json(rules);
   } catch (error) {
     console.error('Error fetching balance rules:', error);
@@ -61,34 +33,22 @@ router.put(
   async (req: AuthRequest, res: Response) => {
     const { ruleId } = req.params;
     const { severity, enabled, params } = req.body;
+    const teamId = req.user?.teamId;
+
+    if (!teamId) {
+      return res.status(404).json({ errors: ['Aucune équipe trouvée'] });
+    }
 
     try {
-      const user = await prisma.user.findUnique({
-        where: { id: req.user!.userId },
-        include: { team: true },
+      const updatedRule = await balanceRulesService.updateRule(ruleId, teamId, {
+        severity,
+        enabled,
+        params,
       });
 
-      if (!user?.team) {
-        return res.status(404).json({ errors: ['Aucune équipe trouvée'] });
-      }
-
-      // Verify rule belongs to user's team
-      const rule = await prisma.balanceRule.findUnique({
-        where: { id: ruleId },
-      });
-
-      if (!rule || rule.teamId !== user.team.id) {
+      if (!updatedRule) {
         return res.status(404).json({ errors: ['Règle non trouvée'] });
       }
-
-      const updatedRule = await prisma.balanceRule.update({
-        where: { id: ruleId },
-        data: {
-          ...(severity !== undefined && { severity }),
-          ...(enabled !== undefined && { enabled }),
-          ...(params !== undefined && { params }),
-        },
-      });
 
       res.json(updatedRule);
     } catch (error) {
@@ -104,38 +64,14 @@ router.post(
   authMiddleware,
   requirePermission('planner', 'canManageBalanceRules'),
   async (req: AuthRequest, res: Response) => {
+    const teamId = req.user?.teamId;
+
+    if (!teamId) {
+      return res.status(404).json({ errors: ['Aucune équipe trouvée'] });
+    }
+
     try {
-      const user = await prisma.user.findUnique({
-        where: { id: req.user!.userId },
-        include: { team: true },
-      });
-
-      if (!user?.team) {
-        return res.status(404).json({ errors: ['Aucune équipe trouvée'] });
-      }
-
-      // Delete all existing rules
-      await prisma.balanceRule.deleteMany({
-        where: { teamId: user.team.id },
-      });
-
-      // Create default rules
-      const rules = await prisma.$transaction(
-        DEFAULT_BALANCE_RULES.map(rule =>
-          prisma.balanceRule.create({
-            data: {
-              teamId: user.team!.id,
-              ruleKey: rule.ruleKey,
-              name: rule.name,
-              description: rule.description,
-              severity: rule.severity,
-              enabled: rule.enabled,
-              params: rule.params as object | undefined,
-            },
-          })
-        )
-      );
-
+      const rules = await balanceRulesService.resetRules(teamId);
       res.json(rules);
     } catch (error) {
       console.error('Error resetting balance rules:', error);

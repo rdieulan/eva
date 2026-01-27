@@ -10,9 +10,8 @@ import calendarRoutes from '@routes/calendar.routes';
 import teamsRoutes from '@routes/teams.routes';
 import balanceRulesRoutes from '@routes/balance-rules.routes';
 import invitesRoutes from '@routes/invites.routes';
+import playersRoutes from '@routes/players.routes';
 import { prisma, pool } from '@db/prisma';
-import { authMiddleware } from '@middleware/auth.middleware';
-import type { AuthRequest } from '@middleware/auth.middleware';
 
 const router = Router();
 
@@ -67,33 +66,7 @@ router.use('/users', usersRoutes);
 router.use('/calendar', calendarRoutes);
 router.use('/teams', teamsRoutes);
 router.use('/balance-rules', balanceRulesRoutes);
+router.use('/players', playersRoutes);
 router.use('/', invitesRoutes); // Handles /teams/:teamId/invites and /invites/:code
 
-// GET /api/players - Get players list filtered by team
-router.get('/players', authMiddleware, async (req: AuthRequest, res: Response) => {
-  const teamId = req.user?.teamId;
-
-  // User must belong to a team to see team players
-  if (!teamId) {
-    res.json([]);
-    return;
-  }
-
-  try {
-    const users = await prisma.user.findMany({
-      where: { teamId },
-      select: {
-        id: true,
-        name: true,
-      },
-      orderBy: { name: 'asc' },
-    });
-    res.json(users);
-  } catch (error) {
-    console.error('Error fetching players:', error);
-    res.status(500).json({ errors: ['Server error'] });
-  }
-});
-
 export default router;
-
