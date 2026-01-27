@@ -223,25 +223,4 @@ function goToTeam() {
     margin-bottom: $spacing-sm;
   }
 }
-
-.badge {
-  position: absolute;
-  top: $spacing-md;
-  right: $spacing-md;
-  padding: $spacing-xs $spacing-sm;
-  border-radius: $radius-sm;
-  font-size: 0.7rem;
-  font-weight: 600;
-
-  &.coming-soon {
-    background: $color-danger;
-    color: $color-white;
-  }
-
-  @include mobile {
-    top: 0.75rem;
-    right: 0.75rem;
-    font-size: 0.65rem;
-  }
-}
 </style>

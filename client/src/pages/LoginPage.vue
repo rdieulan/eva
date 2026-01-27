@@ -35,8 +35,7 @@ async function handleLogin() {
     const data = await response.json();
 
     if (!response.ok) {
-      // Backend returns { errors: [...] }
-      errors.value = data.errors || [data.error || 'Erreur de connexion'];
+      errors.value = data.errors || ['Erreur de connexion'];
       return;
     }
 
@@ -44,10 +43,10 @@ async function handleLogin() {
     clearPlayersCache();
     clearBalanceRulesCache();
 
-    // Utiliser le composable pour définir l'auth
+    // Set auth using composable
     setAuth(data.token, data.user);
 
-    // Rediriger vers la page d'origine ou la homepage
+    // Redirect to original page or homepage
     const redirectPath = route.query.redirect as string || '/';
     router.push(redirectPath);
   } catch {
@@ -86,7 +85,7 @@ async function handleLogin() {
           />
         </div>
 
-        <div v-if="errors.length" class="error-message">
+        <div v-if="errors.length" class="error-messages">
           <p v-for="(err, i) in errors" :key="i">{{ err }}</p>
         </div>
 
@@ -215,21 +214,6 @@ input {
   }
 }
 
-.error-message {
-  background: rgba($color-danger, 0.1);
-  border: 1px solid rgba($color-danger, 0.3);
-  color: $color-danger;
-  padding: 0.75rem;
-  border-radius: $radius-md;
-  margin-bottom: $spacing-lg;
-  font-size: 0.9rem;
-  text-align: center;
-
-  @include mobile {
-    font-size: 0.85rem;
-    padding: 0.625rem;
-  }
-}
 
 .btn-submit {
   width: 100%;

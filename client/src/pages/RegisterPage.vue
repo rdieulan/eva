@@ -68,7 +68,7 @@ async function handleRegister() {
     const data = await response.json();
 
     if (!response.ok) {
-      errors.value = data.errors || [data.error || 'Erreur lors de l\'inscription'];
+      errors.value = data.errors || ['Erreur lors de l\'inscription'];
       return;
     }
 
@@ -158,7 +158,7 @@ function goToLogin() {
           </span>
         </div>
 
-        <div v-if="errors.length" class="error-message">
+        <div v-if="errors.length" class="error-messages">
           <p v-for="(err, i) in errors" :key="i">{{ err }}</p>
         </div>
 
@@ -250,24 +250,6 @@ function goToLogin() {
   &.error {
     color: $color-danger;
   }
-}
-
-.error-message {
-  background-color: rgba($color-danger, 0.1);
-  color: $color-danger;
-  padding: $spacing-sm;
-  border-radius: $radius-sm;
-  margin-bottom: $spacing-md;
-  font-size: $font-size-sm;
-}
-
-.success-message {
-  background-color: rgba($color-success, 0.1);
-  color: $color-success;
-  padding: $spacing-md;
-  border-radius: $radius-sm;
-  text-align: center;
-  font-size: $font-size-base;
 }
 
 .btn-submit {

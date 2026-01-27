@@ -280,10 +280,10 @@ model TeamInvite {
 
 | Fichier | Statut | Notes |
 |---------|--------|-------|
-| `client/src/pages/HomePage.vue` | ⬜ | Affichage conditionnel hasTeam |
-| `client/src/pages/LoginPage.vue` | ⬜ | Formulaire login |
-| `client/src/pages/RegisterPage.vue` | ⬜ | Formulaire inscription |
-| `client/src/pages/TeamPage.vue` | ⬜ | Gestion équipe, membres, invitations |
+| `client/src/pages/HomePage.vue` | ✅ | Nettoyé CSS inutilisé (.badge) |
+| `client/src/pages/LoginPage.vue` | ✅ | Simplifié fallback errors, commentaires en anglais |
+| `client/src/pages/RegisterPage.vue` | ✅ | Simplifié fallback errors, utilise classe globale error-messages |
+| `client/src/pages/TeamPage.vue` | ✅ | Refactorisé en sous-composants (1280→320 lignes) : TeamInfo, TeamMembers, TeamInvites, TeamPermissionsModal, TeamInviteModal |
 | `client/src/pages/CreateTeamPage.vue` | ⬜ | Création équipe |
 | `client/src/pages/JoinTeamPage.vue` | ⬜ | Jonction via invitation |
 | `client/src/pages/ProfilePage.vue` | ⬜ | Profil utilisateur |
