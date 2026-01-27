@@ -18,7 +18,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     });
 
     if (!user?.team) {
-      return res.status(404).json({ error: 'Aucune équipe trouvée' });
+      return res.status(404).json({ errors: ['Aucune équipe trouvée'] });
     }
 
     let rules = await prisma.balanceRule.findMany({
@@ -49,7 +49,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     res.json(rules);
   } catch (error) {
     console.error('Error fetching balance rules:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    res.status(500).json({ errors: ['Erreur serveur'] });
   }
 });
 
@@ -69,7 +69,7 @@ router.put(
       });
 
       if (!user?.team) {
-        return res.status(404).json({ error: 'Aucune équipe trouvée' });
+        return res.status(404).json({ errors: ['Aucune équipe trouvée'] });
       }
 
       // Verify rule belongs to user's team
@@ -78,7 +78,7 @@ router.put(
       });
 
       if (!rule || rule.teamId !== user.team.id) {
-        return res.status(404).json({ error: 'Règle non trouvée' });
+        return res.status(404).json({ errors: ['Règle non trouvée'] });
       }
 
       const updatedRule = await prisma.balanceRule.update({
@@ -93,7 +93,7 @@ router.put(
       res.json(updatedRule);
     } catch (error) {
       console.error('Error updating balance rule:', error);
-      res.status(500).json({ error: 'Erreur serveur' });
+      res.status(500).json({ errors: ['Erreur serveur'] });
     }
   }
 );
@@ -111,7 +111,7 @@ router.post(
       });
 
       if (!user?.team) {
-        return res.status(404).json({ error: 'Aucune équipe trouvée' });
+        return res.status(404).json({ errors: ['Aucune équipe trouvée'] });
       }
 
       // Delete all existing rules
@@ -139,7 +139,7 @@ router.post(
       res.json(rules);
     } catch (error) {
       console.error('Error resetting balance rules:', error);
-      res.status(500).json({ error: 'Erreur serveur' });
+      res.status(500).json({ errors: ['Erreur serveur'] });
     }
   }
 );

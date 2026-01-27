@@ -1,14 +1,13 @@
-// Team routes
+// Team routes - HTTP protocol only, business logic in services
 
 import { Router } from 'express';
 import type { Response } from 'express';
-import { prisma } from '@db/prisma';
 import { authMiddleware, requirePermission } from '@middleware/auth.middleware';
 import type { AuthRequest } from '@middleware/auth.middleware';
 import type { UserPermissions } from '@shared/types';
-import { TEAM_LOCATIONS, LEADER_PERMISSIONS, DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
-import { DEFAULT_ASSIGNMENTS, DEFAULT_GAME_PLAN_NOTES } from '@shared/constants';
+import { TEAM_LOCATIONS } from '@shared/types';
 import { validateTeamName } from '@shared/utils';
+import * as teamsService from '@services/teams.service';
 
 const router = Router();
 
@@ -22,50 +21,20 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   }
 
   try {
-    // Check if user already has a team
-    const user = await prisma.user.findUnique({
-      where: { id: req.user!.userId },
+    const result = await teamsService.createTeam({
+      name,
+      logo,
+      location,
+      leaderId: req.user!.userId,
     });
 
-    if (user?.teamId) {
-      return res.status(400).json({ errors: ['Vous êtes déjà membre d\'une équipe'] });
+    if ('error' in result) {
+      return res.status(400).json({ errors: [result.error] });
     }
 
-    // Create team with current user as leader
-    const team = await prisma.team.create({
-      data: {
-        name: name.trim(),
-        logo: logo || null,
-        location: location || null,
-        leader: { connect: { id: req.user!.userId } },
-        members: { connect: { id: req.user!.userId } },
-      },
-    });
-
-    // Update user with leader permissions
-    await prisma.user.update({
-      where: { id: req.user!.userId },
-      data: {
-        teamId: team.id,
-        permissions: LEADER_PERMISSIONS as unknown as object,
-      },
-    });
-
-    // Create default game plans for each map (batch insert)
-    const allMaps = await prisma.map.findMany();
-    await prisma.gamePlan.createMany({
-      data: allMaps.map(map => ({
-        name: 'Default',
-        mapId: map.id,
-        teamId: team.id,
-        assignments: DEFAULT_ASSIGNMENTS as unknown as object[],
-        notes: DEFAULT_GAME_PLAN_NOTES as unknown as object,
-      })),
-    });
-
     res.status(201).json({
-      ...team,
-      isLeader: true,
+      ...result.team,
+      isLeader: result.isLeader,
     });
   } catch (error) {
     console.error('Error creating team:', error);
@@ -76,18 +45,7 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
 // GET /api/teams/current - Get current user's team
 router.get('/current', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.user!.userId },
-      include: {
-        team: {
-          include: {
-            leader: { select: { id: true, name: true, email: true } },
-            members: { select: { id: true, name: true, email: true, permissions: true } },
-          },
-        },
-        ledTeam: true,
-      },
-    });
+    const user = await teamsService.getUserWithTeam(req.user!.userId);
 
     if (!user?.team) {
       return res.status(404).json({ errors: ['Aucune équipe trouvée'] });
@@ -111,18 +69,14 @@ router.get('/locations', (_req, res: Response) => {
 // PUT /api/teams/current - Update team info
 router.put('/current', authMiddleware, requirePermission('team', 'canManageTeam'), async (req: AuthRequest, res: Response) => {
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.user!.userId },
-      include: { team: true },
-    });
+    const team = await teamsService.getUserTeam(req.user!.userId);
 
-    if (!user?.team) {
+    if (!team) {
       return res.status(404).json({ errors: ['Aucune équipe trouvée'] });
     }
 
     const { name, logo, location } = req.body;
 
-    // Validate name if provided
     if (name !== undefined) {
       const nameValid = validateTeamName(name);
       if (nameValid !== true) {
@@ -130,15 +84,7 @@ router.put('/current', authMiddleware, requirePermission('team', 'canManageTeam'
       }
     }
 
-    const updatedTeam = await prisma.team.update({
-      where: { id: user.team.id },
-      data: {
-        ...(name && { name: name.trim() }),
-        ...(logo !== undefined && { logo }),
-        ...(location !== undefined && { location }),
-      },
-    });
-
+    const updatedTeam = await teamsService.updateTeam(team.id, { name, logo, location });
     res.json(updatedTeam);
   } catch (error) {
     console.error('Error updating team:', error);
@@ -149,36 +95,14 @@ router.put('/current', authMiddleware, requirePermission('team', 'canManageTeam'
 // GET /api/teams/current/members - Get team members with permissions
 router.get('/current/members', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.user!.userId },
-      include: { team: true },
-    });
+    const team = await teamsService.getUserTeam(req.user!.userId);
 
-    if (!user?.team) {
+    if (!team) {
       return res.status(404).json({ errors: ['Aucune équipe trouvée'] });
     }
 
-    const members = await prisma.user.findMany({
-      where: { teamId: user.team.id },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        permissions: true,
-        ledTeam: { select: { id: true } },
-      },
-      orderBy: { name: 'asc' },
-    });
-
-    const membersWithRole = members.map(member => ({
-      id: member.id,
-      name: member.name,
-      email: member.email,
-      permissions: member.permissions,
-      isLeader: !!member.ledTeam,
-    }));
-
-    res.json(membersWithRole);
+    const members = await teamsService.getTeamMembers(team.id);
+    res.json(members);
   } catch (error) {
     console.error('Error fetching members:', error);
     res.status(500).json({ errors: ['Erreur serveur'] });
@@ -195,41 +119,16 @@ router.put(
     const { permissions } = req.body as { permissions: UserPermissions };
 
     try {
-      // Get current user's team
-      const currentUser = await prisma.user.findUnique({
-        where: { id: req.user!.userId },
-        include: { team: true },
-      });
+      const result = await teamsService.updateMemberPermissions(
+        req.user!.userId,
+        memberId,
+        permissions
+      );
 
-      if (!currentUser?.team) {
-        return res.status(404).json({ errors: ['Aucune équipe trouvée'] });
+      if (!result.success) {
+        const status = result.error?.includes('trouvé') ? 404 : 403;
+        return res.status(status).json({ errors: [result.error] });
       }
-
-      // Verify target member is in the same team
-      const targetMember = await prisma.user.findUnique({
-        where: { id: memberId },
-        include: { ledTeam: true },
-      });
-
-      if (!targetMember || targetMember.teamId !== currentUser.team.id) {
-        return res.status(404).json({ errors: ['Membre non trouvé dans cette équipe'] });
-      }
-
-      // Cannot modify leader's permissions
-      if (targetMember.ledTeam) {
-        return res.status(403).json({ errors: ['Impossible de modifier les permissions du leader'] });
-      }
-
-      // Cannot modify own permissions (prevent privilege escalation)
-      if (memberId === req.user!.userId) {
-        return res.status(403).json({ errors: ['Impossible de modifier vos propres permissions'] });
-      }
-
-      // Update permissions
-      await prisma.user.update({
-        where: { id: memberId },
-        data: { permissions: permissions as unknown as object },
-      });
 
       res.json({ message: 'Permissions mises à jour' });
     } catch (error) {
@@ -248,41 +147,12 @@ router.delete(
     const { memberId } = req.params;
 
     try {
-      const currentUser = await prisma.user.findUnique({
-        where: { id: req.user!.userId },
-        include: { team: true },
-      });
+      const result = await teamsService.removeMember(req.user!.userId, memberId);
 
-      if (!currentUser?.team) {
-        return res.status(404).json({ errors: ['Aucune équipe trouvée'] });
+      if (!result.success) {
+        const status = result.error?.includes('trouvé') ? 404 : 403;
+        return res.status(status).json({ errors: [result.error] });
       }
-
-      const targetMember = await prisma.user.findUnique({
-        where: { id: memberId },
-        include: { ledTeam: true },
-      });
-
-      if (!targetMember || targetMember.teamId !== currentUser.team.id) {
-        return res.status(404).json({ errors: ['Membre non trouvé dans cette équipe'] });
-      }
-
-      // Cannot remove the leader
-      if (targetMember.ledTeam) {
-        return res.status(403).json({ errors: ['Impossible de retirer le leader de l\'équipe'] });
-      }
-
-      // Cannot remove yourself
-      if (memberId === req.user!.userId) {
-        return res.status(403).json({ errors: ['Impossible de vous retirer vous-même'] });
-      }
-
-      await prisma.user.update({
-        where: { id: memberId },
-        data: {
-          teamId: null,
-          permissions: DEFAULT_PLAYER_PERMISSIONS as unknown as object,
-        },
-      });
 
       res.json({ message: 'Membre retiré de l\'équipe' });
     } catch (error) {
@@ -295,38 +165,12 @@ router.delete(
 // DELETE /api/teams/current - Delete the team (leader only)
 router.delete('/current', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const currentUser = await prisma.user.findUnique({
-      where: { id: req.user!.userId },
-      include: {
-        team: true,
-        ledTeam: true,
-      },
-    });
+    const result = await teamsService.deleteTeam(req.user!.userId);
 
-    if (!currentUser?.team) {
-      return res.status(404).json({ errors: ['Aucune équipe trouvée'] });
+    if (!result.success) {
+      const status = result.error?.includes('leader') ? 403 : 404;
+      return res.status(status).json({ errors: [result.error] });
     }
-
-    // Only the leader can delete the team
-    if (!currentUser.ledTeam) {
-      return res.status(403).json({ errors: ['Seul le leader peut supprimer l\'équipe'] });
-    }
-
-    const teamId = currentUser.team.id;
-
-    // Reset permissions and remove teamId from all members
-    await prisma.user.updateMany({
-      where: { teamId },
-      data: {
-        teamId: null,
-        permissions: DEFAULT_PLAYER_PERMISSIONS as unknown as object,
-      },
-    });
-
-    // Delete the team (cascades to GamePlans, CalendarEvents, BalanceRules)
-    await prisma.team.delete({
-      where: { id: teamId },
-    });
 
     res.json({ message: 'Équipe supprimée avec succès' });
   } catch (error) {
@@ -338,31 +182,12 @@ router.delete('/current', authMiddleware, async (req: AuthRequest, res: Response
 // POST /api/teams/current/leave - Leave the team (for non-leader members)
 router.post('/current/leave', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const currentUser = await prisma.user.findUnique({
-      where: { id: req.user!.userId },
-      include: {
-        team: true,
-        ledTeam: true,
-      },
-    });
+    const result = await teamsService.leaveTeam(req.user!.userId);
 
-    if (!currentUser?.team) {
-      return res.status(404).json({ errors: ['Aucune équipe trouvée'] });
+    if (!result.success) {
+      const status = result.error?.includes('leader') ? 403 : 404;
+      return res.status(status).json({ errors: [result.error] });
     }
-
-    // Leader cannot leave, must delete or transfer ownership
-    if (currentUser.ledTeam) {
-      return res.status(403).json({ errors: ['Le leader ne peut pas quitter l\'équipe. Supprimez l\'équipe ou transférez la direction.'] });
-    }
-
-    // Remove user from team and reset permissions
-    await prisma.user.update({
-      where: { id: req.user!.userId },
-      data: {
-        teamId: null,
-        permissions: DEFAULT_PLAYER_PERMISSIONS as unknown as object,
-      },
-    });
 
     res.json({ message: 'Vous avez quitté l\'équipe' });
   } catch (error) {

@@ -1,6 +1,6 @@
 import { defineConfig } from 'vitest/config'
 import vue from "@vitejs/plugin-vue";
-import path from 'path';
+import * as path from 'path';
 
 export default defineConfig({
   plugins: [vue()],
@@ -8,6 +8,7 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, 'client/src'),
       '@shared': path.resolve(__dirname, 'shared'),
+      '@services': path.resolve(__dirname, 'server/src/services'),
     },
   },
   test: {

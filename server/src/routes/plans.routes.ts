@@ -1,11 +1,10 @@
-// Game Plans routes
+// Game Plans routes - HTTP protocol only, business logic in services
 
 import { Router } from 'express';
 import type { Response } from 'express';
-import { prisma } from '@db/prisma';
 import { authMiddleware, requirePermission } from '@middleware/auth.middleware';
 import type { AuthRequest } from '@middleware/auth.middleware';
-import { DEFAULT_GAME_PLAN_NOTES } from '@shared/constants';
+import * as plansService from '@services/plans.service';
 
 const router = Router();
 
@@ -15,84 +14,24 @@ router.get('/:planId', authMiddleware, async (req: AuthRequest, res: Response) =
   const teamId = req.user?.teamId;
 
   try {
-    const plan = await prisma.gamePlan.findUnique({
-      where: { id: planId },
-      include: {
-        map: true,
-        players: {
-          include: {
-            user: { select: { id: true, name: true } },
-          },
-        },
-      },
-    });
+    const result = await plansService.getPlanById(planId, teamId || undefined);
 
-    if (!plan) {
-      res.status(404).json({ error: 'Plan not found' });
+    if (!result) {
+      res.status(404).json({ errors: ['Plan not found'] });
       return;
     }
 
-    // Verify plan belongs to user's team
-    if (teamId && plan.teamId && plan.teamId !== teamId) {
-      res.status(403).json({ error: 'Access denied' });
+    if ('accessDenied' in result) {
+      res.status(403).json({ errors: ['Access denied'] });
       return;
     }
 
-    const playerAssignments = plan.players.map(gpp => ({
-      userId: gpp.userId,
-      assignmentIds: gpp.assignmentIds,
-      mainAssignmentId: gpp.mainAssignmentId,
-    }));
-
-    res.json({
-      id: plan.map.id,
-      name: plan.map.name,
-      images: plan.map.images,
-      assignments: plan.assignments,
-      players: playerAssignments,
-      planId: plan.id,
-      planName: plan.name,
-      notes: plan.notes || DEFAULT_GAME_PLAN_NOTES,
-    });
+    res.json(result);
   } catch (error) {
     console.error('Error fetching game plan:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ errors: ['Server error'] });
   }
 });
-
-// Helper: Migrate legacy zone to zonesByPhase
-interface Assignment {
-  id: number;
-  name: string;
-  x: number;
-  y: number;
-  zone?: object;
-  zonesByPhase?: Record<string, object>;
-  floor?: number;
-}
-
-function migrateAssignmentsToPhases(assignments: Assignment[]): Assignment[] {
-  return assignments.map(assignment => {
-    // Already migrated
-    if (assignment.zonesByPhase) {
-      return assignment;
-    }
-    // Has legacy zone - migrate it
-    if (assignment.zone) {
-      return {
-        ...assignment,
-        zonesByPhase: {
-          START: JSON.parse(JSON.stringify(assignment.zone)),
-          ATTACK: JSON.parse(JSON.stringify(assignment.zone)),
-          DEFENSE: JSON.parse(JSON.stringify(assignment.zone)),
-        },
-        zone: undefined,
-      };
-    }
-    // No zone at all
-    return assignment;
-  });
-}
 
 // PUT /api/plans/:planId - Update a game plan
 router.put('/:planId', authMiddleware, requirePermission('planner', 'canEdit'), async (req: AuthRequest, res: Response) => {
@@ -104,64 +43,23 @@ router.put('/:planId', authMiddleware, requirePermission('planner', 'canEdit'), 
   console.log('[API] User:', req.user?.email);
 
   try {
-    // Verify plan exists and belongs to user's team
-    const existingPlan = await prisma.gamePlan.findUnique({ where: { id: planId } });
-    if (!existingPlan) {
-      res.status(404).json({ error: 'Plan not found' });
+    const result = await plansService.updatePlan(
+      planId,
+      { name, assignments, players, notes },
+      teamId || undefined
+    );
+
+    if (!result.success) {
+      const status = result.error === 'Access denied' ? 403 : 404;
+      res.status(status).json({ errors: [result.error] });
       return;
-    }
-    if (teamId && existingPlan.teamId && existingPlan.teamId !== teamId) {
-      res.status(403).json({ error: 'Access denied' });
-      return;
-    }
-
-    const updateData: Record<string, unknown> = {};
-    if (name !== undefined) updateData.name = name;
-
-    // Migrate legacy zones if assignments provided
-    if (assignments !== undefined) {
-      const migratedAssignments = migrateAssignmentsToPhases(assignments as Assignment[]);
-      updateData.assignments = JSON.parse(JSON.stringify(migratedAssignments));
-      console.log('[API] Assignments migrated to phase-based zones');
-    }
-
-    if (notes !== undefined) {
-      updateData.notes = JSON.parse(JSON.stringify(notes));
-    }
-
-    const plan = await prisma.gamePlan.update({
-      where: { id: planId },
-      data: updateData,
-    });
-
-    // Update player assignments if provided
-    if (players !== undefined && Array.isArray(players)) {
-      console.log('[API] Updating player assignments...');
-
-      await prisma.gamePlanPlayer.deleteMany({
-        where: { gamePlanId: planId },
-      });
-
-      for (const playerAssignment of players as { userId: string; assignmentIds: number[]; mainAssignmentId?: number }[]) {
-        if (playerAssignment.userId && playerAssignment.assignmentIds?.length > 0) {
-          await prisma.gamePlanPlayer.create({
-            data: {
-              gamePlanId: planId,
-              userId: playerAssignment.userId,
-              assignmentIds: playerAssignment.assignmentIds,
-              mainAssignmentId: playerAssignment.mainAssignmentId ?? null,
-            },
-          });
-        }
-      }
-      console.log('[API] Player assignments updated');
     }
 
     console.log(`[API] Game plan updated by ${req.user?.email}: ${planId}`);
-    res.json(plan);
+    res.json(result.plan);
   } catch (error) {
     console.error('[API] Error updating game plan:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ errors: ['Server error'] });
   }
 });
 
@@ -171,25 +69,19 @@ router.delete('/:planId', authMiddleware, requirePermission('planner', 'canDelet
   const teamId = req.user?.teamId;
 
   try {
-    const plan = await prisma.gamePlan.findUnique({ where: { id: planId } });
-    if (!plan) {
-      res.status(404).json({ error: 'Plan not found' });
+    const result = await plansService.deletePlan(planId, teamId || undefined);
+
+    if (!result.success) {
+      const status = result.error === 'Access denied' ? 403 : 404;
+      res.status(status).json({ errors: [result.error] });
       return;
     }
-
-    // Verify plan belongs to user's team
-    if (teamId && plan.teamId && plan.teamId !== teamId) {
-      res.status(403).json({ error: 'Access denied' });
-      return;
-    }
-
-    await prisma.gamePlan.delete({ where: { id: planId } });
 
     console.log(`Game plan deleted by ${req.user?.email}: ${planId}`);
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting game plan:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ errors: ['Server error'] });
   }
 });
 

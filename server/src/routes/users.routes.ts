@@ -33,7 +33,7 @@ router.get('/', authMiddleware, requirePermission('team', 'canManagePermissions'
     res.json(users);
   } catch (error) {
     console.error('Error fetching users:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ errors: ['Server error'] });
   }
 });
 
@@ -59,7 +59,7 @@ router.get('/players', authMiddleware, async (req: AuthRequest, res: Response) =
     res.json(users);
   } catch (error) {
     console.error('Error fetching players:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ errors: ['Server error'] });
   }
 });
 

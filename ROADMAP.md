@@ -256,10 +256,10 @@ model TeamInvite {
 | Fichier | Statut | Notes |
 |---------|--------|-------|
 | `server/src/routes/auth.routes.ts` | ✅ | Validation centralisée dans shared, format errors[], tests dynamiques |
-| `server/src/routes/teams.routes.ts` | ✅ | Format errors[], validateTeamName centralisé, createMany optimisé |
-| `server/src/routes/invites.routes.ts` | ✅ | Format errors[], getInviteError() centralisé |
-| `server/src/routes/maps.routes.ts` | ✅ | Isolation par teamId |
-| `server/src/routes/plans.routes.ts` | ⬜ | Isolation par teamId, permissions |
+| `server/src/routes/teams.routes.ts` | ✅ | Refactorisé avec services, format errors[], validateTeamName centralisé |
+| `server/src/routes/invites.routes.ts` | ✅ | Refactorisé avec services, format errors[], getInviteError() centralisé |
+| `server/src/routes/maps.routes.ts` | ✅ | Refactorisé avec services, isolation par teamId |
+| `server/src/routes/plans.routes.ts` | ✅ | Refactorisé avec services, isolation par teamId, permissions |
 | `server/src/routes/calendar.routes.ts` | ⬜ | Isolation par teamId, permissions |
 | `server/src/routes/users.routes.ts` | ⬜ | Filtrage par teamId |
 | `server/src/routes/balance-rules.routes.ts` | ⬜ | Isolation par teamId |

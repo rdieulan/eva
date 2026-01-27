@@ -54,7 +54,7 @@ router.get('/health', async (_req: Request, res: Response) => {
 
     res.status(503).json({
       ...healthcheck,
-      error: err.message,
+      errors: [err.message],
     });
   }
 });
@@ -91,7 +91,7 @@ router.get('/players', authMiddleware, async (req: AuthRequest, res: Response) =
     res.json(users);
   } catch (error) {
     console.error('Error fetching players:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ errors: ['Server error'] });
   }
 });
 

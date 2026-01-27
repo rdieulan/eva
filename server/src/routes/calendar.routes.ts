@@ -1,493 +1,262 @@
-// Calendar routes - Availability and Events
+// Calendar routes - HTTP protocol only, business logic in services
 
 import { Router } from 'express';
 import type { Response } from 'express';
-import { prisma } from '@db/prisma';
 import { authMiddleware, requirePermission } from '@middleware/auth.middleware';
 import type { AuthRequest } from '@middleware/auth.middleware';
-import type {
-  SetAvailabilityRequest,
-  CreateEventRequest,
-  DayData,
-  PlayerAvailability,
-} from '@shared/types';
+import type { SetAvailabilityRequest, CreateEventRequest } from '@shared/types';
+import * as calendarService from '@services/calendar.service';
 
 const router = Router();
 
-// Helper function to format date as YYYY-MM-DD without UTC conversion
-function formatDateStr(date: Date): string {
-  const year = date.getFullYear();
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const day = date.getDate().toString().padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-// ===========================================
+// ============================================
 // Availability Routes
-// ===========================================
+// ============================================
 
 // GET /api/calendar/availability?month=YYYY-MM
-// Get all availabilities for a month (all users of the same team)
 router.get('/availability', authMiddleware, async (req: AuthRequest, res: Response) => {
   const { month } = req.query;
   const teamId = req.user?.teamId;
   const userId = req.user?.userId;
 
-  if (!month || typeof month !== 'string' || !/^\d{4}-\d{2}$/.test(month)) {
-    res.status(400).json({ error: 'Paramètre month requis (format YYYY-MM)' });
+  if (!calendarService.isValidMonth(month)) {
+    res.status(400).json({ errors: ['Paramètre month requis (format YYYY-MM)'] });
     return;
   }
 
   // User must belong to a team to see availabilities
   if (!teamId) {
     console.log('[CALENDAR] User without team, returning empty data');
-    const [year, monthNum] = month.split('-').map(Number);
-    const endDate = new Date(year, monthNum, 0);
-    const days: Record<string, DayData> = {};
-    for (let day = 1; day <= endDate.getDate(); day++) {
-      const date = new Date(year, monthNum - 1, day);
-      const dateStr = formatDateStr(date);
-      days[dateStr] = {
-        date: dateStr,
-        currentUserStatus: null,
-        playerAvailabilities: [],
-        events: [],
-      };
-    }
-    res.json({ month, days, noTeam: true });
+    res.json(calendarService.buildEmptyCalendar(month));
     return;
   }
 
   try {
-    // Parse month to get date range
-    const [year, monthNum] = month.split('-').map(Number);
-    const startDate = new Date(year, monthNum - 1, 1);
-    const endDate = new Date(year, monthNum, 0); // Last day of month
-
-    // Fetch all availabilities for the month (filtered by team via user)
-    const availabilities = await prisma.availability.findMany({
-      where: {
-        date: {
-          gte: startDate,
-          lte: endDate,
-        },
-        user: { teamId },
-      },
-      include: {
-        user: {
-          select: { id: true, name: true },
-        },
-      },
-    });
-
-    // Fetch all users of the same team for the player list
-    const users = await prisma.user.findMany({
-      where: { teamId },
-      select: { id: true, name: true },
-      orderBy: { name: 'asc' },
-    });
-
-    // Fetch all events for the month (filtered by team)
-    const events = await prisma.calendarEvent.findMany({
-      where: {
-        date: {
-          gte: startDate,
-          lte: endDate,
-        },
-        teamId,
-      },
-      orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
-    });
-
-    // Build response: group by date
-    const days: Record<string, DayData> = {};
-
-    // Initialize all days of the month
-    for (let day = 1; day <= endDate.getDate(); day++) {
-      const date = new Date(year, monthNum - 1, day);
-      const dateStr = formatDateStr(date);
-
-      const playerAvailabilities: PlayerAvailability[] = users.map(user => ({
-        userId: user.id,
-        userName: user.name,
-        status: null,
-      }));
-
-      days[dateStr] = {
-        date: dateStr,
-        currentUserStatus: null,
-        playerAvailabilities,
-        events: [],
-      };
-    }
-
-    // Fill in availabilities
-    for (const availability of availabilities) {
-      const dateStr = formatDateStr(availability.date);
-      const dayData = days[dateStr];
-
-      if (dayData) {
-        // Update player availability
-        const playerAvail = dayData.playerAvailabilities.find(
-          p => p.userId === availability.userId
-        );
-        if (playerAvail) {
-          playerAvail.status = availability.status;
-        }
-
-        // Update current user status
-        if (availability.userId === req.user!.userId) {
-          dayData.currentUserStatus = availability.status;
-        }
-      }
-    }
-
-    // Fill in events
-    for (const event of events) {
-      const dateStr = formatDateStr(event.date);
-      const dayData = days[dateStr];
-
-      if (dayData) {
-        dayData.events.push({
-          id: event.id,
-          date: dateStr,
-          startTime: event.startTime,
-          endTime: event.endTime,
-          type: event.type,
-          title: event.title,
-          description: event.description || undefined,
-          gamePlan: event.gamePlan as any || undefined,
-          createdById: event.createdById,
-          createdAt: event.createdAt.toISOString(),
-        });
-      }
-    }
-
-    res.json({ month, days });
+    const result = await calendarService.getMonthAvailability(month, teamId, userId!);
+    res.json(result);
   } catch (error) {
     console.error('[CALENDAR] Error fetching availability:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    res.status(500).json({ errors: ['Erreur serveur'] });
   }
 });
 
 // POST /api/calendar/availability
-// Set or remove availability for current user
 router.post('/availability', authMiddleware, async (req: AuthRequest, res: Response) => {
   const { date, status } = req.body as SetAvailabilityRequest;
   const userId = req.user!.userId;
 
-  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    res.status(400).json({ error: 'Date invalide (format YYYY-MM-DD requis)' });
+  if (!calendarService.isValidDate(date)) {
+    res.status(400).json({ errors: ['Date invalide (format YYYY-MM-DD requis)'] });
+    return;
+  }
+
+  if (!calendarService.isValidAvailabilityStatus(status)) {
+    res.status(400).json({ errors: ['Status invalide'] });
     return;
   }
 
   try {
-    const dateObj = new Date(date);
+    const result = await calendarService.setAvailability(userId, date, status);
 
-    if (status === null) {
-      // Remove availability
-      await prisma.availability.deleteMany({
-        where: { userId, date: dateObj },
-      });
+    if (result.deleted) {
       res.json({ success: true, deleted: true });
-    } else if (status === 'AVAILABLE' || status === 'CONDITIONAL' || status === 'UNAVAILABLE') {
-      // Upsert availability
-      const availability = await prisma.availability.upsert({
-        where: {
-          userId_date: { userId, date: dateObj },
-        },
-        create: {
-          userId,
-          date: dateObj,
-          status,
-        },
-        update: {
-          status,
-        },
-      });
-
-      res.json({
-        id: availability.id,
-        userId: availability.userId,
-        date: formatDateStr(availability.date),
-        status: availability.status,
-      });
     } else {
-      res.status(400).json({ error: 'Status invalide' });
+      res.json(result.availability);
     }
   } catch (error) {
     console.error('[CALENDAR] Error setting availability:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    res.status(500).json({ errors: ['Erreur serveur'] });
   }
 });
 
-// ===========================================
-// Event Routes (Admin only)
-// ===========================================
+// ============================================
+// Event Routes
+// ============================================
 
 // GET /api/calendar/events?month=YYYY-MM
-// Get all events for a month
 router.get('/events', authMiddleware, async (req: AuthRequest, res: Response) => {
   const { month } = req.query;
   const teamId = req.user?.teamId;
 
-  if (!month || typeof month !== 'string' || !/^\d{4}-\d{2}$/.test(month)) {
-    res.status(400).json({ error: 'Paramètre month requis (format YYYY-MM)' });
+  if (!calendarService.isValidMonth(month)) {
+    res.status(400).json({ errors: ['Paramètre month requis (format YYYY-MM)'] });
     return;
   }
 
-  // User must belong to a team to see events
   if (!teamId) {
     res.json([]);
     return;
   }
 
   try {
-    const [year, monthNum] = month.split('-').map(Number);
-    const startDate = new Date(year, monthNum - 1, 1);
-    const endDate = new Date(year, monthNum, 0);
-
-    const events = await prisma.calendarEvent.findMany({
-      where: {
-        date: {
-          gte: startDate,
-          lte: endDate,
-        },
-        teamId,
-      },
-      orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
-    });
-
-    res.json(
-      events.map(event => ({
-        id: event.id,
-        date: formatDateStr(event.date),
-        startTime: event.startTime,
-        endTime: event.endTime,
-        type: event.type,
-        title: event.title,
-        description: event.description || undefined,
-        gamePlan: event.gamePlan || undefined,
-        createdById: event.createdById,
-        createdAt: event.createdAt.toISOString(),
-      }))
-    );
+    const events = await calendarService.getMonthEvents(month, teamId);
+    res.json(events);
   } catch (error) {
     console.error('[CALENDAR] Error fetching events:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    res.status(500).json({ errors: ['Erreur serveur'] });
   }
 });
 
 // POST /api/calendar/events
-// Create a new event
 router.post('/events', authMiddleware, requirePermission('calendar', 'canCreateEvents'), async (req: AuthRequest, res: Response) => {
   const { date, startTime, endTime, type, title, description } = req.body as CreateEventRequest;
   const createdById = req.user!.userId;
   const teamId = req.user?.teamId;
 
   if (!teamId) {
-    res.status(400).json({ error: 'User must belong to a team to create events' });
+    res.status(400).json({ errors: ['User must belong to a team to create events'] });
     return;
   }
 
   // Validation
-  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    res.status(400).json({ error: 'Date invalide (format YYYY-MM-DD requis)' });
+  if (!calendarService.isValidDate(date)) {
+    res.status(400).json({ errors: ['Date invalide (format YYYY-MM-DD requis)'] });
     return;
   }
-  if (!startTime || !/^\d{2}:\d{2}$/.test(startTime)) {
-    res.status(400).json({ error: 'Heure de début invalide (format HH:mm requis)' });
+  if (!calendarService.isValidTime(startTime)) {
+    res.status(400).json({ errors: ['Heure de début invalide (format HH:mm requis)'] });
     return;
   }
-  if (!endTime || !/^\d{2}:\d{2}$/.test(endTime)) {
-    res.status(400).json({ error: 'Heure de fin invalide (format HH:mm requis)' });
+  if (!calendarService.isValidTime(endTime)) {
+    res.status(400).json({ errors: ['Heure de fin invalide (format HH:mm requis)'] });
     return;
   }
-  if (!type || !['MATCH', 'EVENT'].includes(type)) {
-    res.status(400).json({ error: 'Type invalide (MATCH ou EVENT requis)' });
+  if (!calendarService.isValidEventType(type)) {
+    res.status(400).json({ errors: ['Type invalide (MATCH ou EVENT requis)'] });
     return;
   }
-  if (!title || title.trim().length === 0) {
-    res.status(400).json({ error: 'Titre requis' });
+  if (!title || !title.trim()) {
+    res.status(400).json({ errors: ['Titre requis'] });
     return;
   }
 
   try {
-    const event = await prisma.calendarEvent.create({
-      data: {
-        date: new Date(date),
-        startTime,
-        endTime,
-        type,
-        title: title.trim(),
-        description: description?.trim() || null,
-        createdById,
-        teamId,
-      },
+    const event = await calendarService.createEvent({
+      date,
+      startTime,
+      endTime,
+      type,
+      title,
+      description,
+      teamId,
+      createdById,
     });
 
-    res.status(201).json({
-      id: event.id,
-      date: formatDateStr(event.date),
-      startTime: event.startTime,
-      endTime: event.endTime,
-      type: event.type,
-      title: event.title,
-      description: event.description || undefined,
-      gamePlan: event.gamePlan || undefined,
-      createdById: event.createdById,
-      createdAt: event.createdAt.toISOString(),
-    });
+    res.status(201).json(event);
   } catch (error) {
     console.error('[CALENDAR] Error creating event:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    res.status(500).json({ errors: ['Erreur serveur'] });
   }
 });
 
 // DELETE /api/calendar/events/:id
-// Delete an event
 router.delete('/events/:id', authMiddleware, requirePermission('calendar', 'canDeleteEvents'), async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
   const teamId = req.user?.teamId;
 
   try {
-    const event = await prisma.calendarEvent.findUnique({ where: { id } });
+    const result = await calendarService.getEventWithTeamCheck(id, teamId || undefined);
 
-    if (!event) {
-      res.status(404).json({ error: 'Événement non trouvé' });
+    if ('notFound' in result) {
+      res.status(404).json({ errors: ['Événement non trouvé'] });
       return;
     }
 
-    // Verify event belongs to user's team
-    if (teamId && event.teamId && event.teamId !== teamId) {
-      res.status(403).json({ error: 'Accès refusé' });
+    if ('accessDenied' in result) {
+      res.status(403).json({ errors: ['Accès refusé'] });
       return;
     }
 
-    await prisma.calendarEvent.delete({ where: { id } });
-
+    await calendarService.deleteEvent(id);
     res.json({ success: true });
   } catch (error) {
     console.error('[CALENDAR] Error deleting event:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    res.status(500).json({ errors: ['Erreur serveur'] });
   }
 });
 
 // PUT /api/calendar/events/:id
-// Update an event
 router.put('/events/:id', authMiddleware, requirePermission('calendar', 'canEditEvents'), async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
   const { date, startTime, endTime, type, title, description } = req.body as CreateEventRequest;
   const teamId = req.user?.teamId;
 
   // Validation
-  if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    res.status(400).json({ error: 'Date invalide (format YYYY-MM-DD requis)' });
+  if (date && !calendarService.isValidDate(date)) {
+    res.status(400).json({ errors: ['Date invalide (format YYYY-MM-DD requis)'] });
     return;
   }
-  if (startTime && !/^\d{2}:\d{2}$/.test(startTime)) {
-    res.status(400).json({ error: 'Heure de début invalide (format HH:mm requis)' });
+  if (startTime && !calendarService.isValidTime(startTime)) {
+    res.status(400).json({ errors: ['Heure de début invalide (format HH:mm requis)'] });
     return;
   }
-  if (endTime && !/^\d{2}:\d{2}$/.test(endTime)) {
-    res.status(400).json({ error: 'Heure de fin invalide (format HH:mm requis)' });
+  if (endTime && !calendarService.isValidTime(endTime)) {
+    res.status(400).json({ errors: ['Heure de fin invalide (format HH:mm requis)'] });
     return;
   }
-  if (type && !['MATCH', 'EVENT'].includes(type)) {
-    res.status(400).json({ error: 'Type invalide (MATCH ou EVENT requis)' });
+  if (type && !calendarService.isValidEventType(type)) {
+    res.status(400).json({ errors: ['Type invalide (MATCH ou EVENT requis)'] });
     return;
   }
 
   try {
-    const existingEvent = await prisma.calendarEvent.findUnique({ where: { id } });
+    const result = await calendarService.getEventWithTeamCheck(id, teamId || undefined);
 
-    if (!existingEvent) {
-      res.status(404).json({ error: 'Événement non trouvé' });
+    if ('notFound' in result) {
+      res.status(404).json({ errors: ['Événement non trouvé'] });
       return;
     }
 
-    // Verify event belongs to user's team
-    if (teamId && existingEvent.teamId && existingEvent.teamId !== teamId) {
-      res.status(403).json({ error: 'Accès refusé' });
+    if ('accessDenied' in result) {
+      res.status(403).json({ errors: ['Accès refusé'] });
       return;
     }
 
-    const event = await prisma.calendarEvent.update({
-      where: { id },
-      data: {
-        ...(date && { date: new Date(date) }),
-        ...(startTime && { startTime }),
-        ...(endTime && { endTime }),
-        ...(type && { type }),
-        ...(title && { title: title.trim() }),
-        ...(description !== undefined && { description: description?.trim() || null }),
-      },
+    const event = await calendarService.updateEvent(id, {
+      date,
+      startTime,
+      endTime,
+      type,
+      title,
+      description,
     });
 
-    res.json({
-      id: event.id,
-      date: formatDateStr(event.date),
-      startTime: event.startTime,
-      endTime: event.endTime,
-      type: event.type,
-      title: event.title,
-      description: event.description || undefined,
-      gamePlan: event.gamePlan || undefined,
-      createdById: event.createdById,
-      createdAt: event.createdAt.toISOString(),
-    });
+    res.json(event);
   } catch (error) {
     console.error('[CALENDAR] Error updating event:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    res.status(500).json({ errors: ['Erreur serveur'] });
   }
 });
 
 // PUT /api/calendar/events/:id/gameplan
-// Update the game plan for an event
 router.put('/events/:id/gameplan', authMiddleware, requirePermission('calendar', 'canAttachGamePlan'), async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
   const { gamePlan } = req.body;
   const teamId = req.user?.teamId;
 
   try {
-    const existingEvent = await prisma.calendarEvent.findUnique({ where: { id } });
+    const result = await calendarService.getEventWithTeamCheck(id, teamId || undefined);
 
-    if (!existingEvent) {
-      res.status(404).json({ error: 'Événement non trouvé' });
+    if ('notFound' in result) {
+      res.status(404).json({ errors: ['Événement non trouvé'] });
       return;
     }
 
-    // Verify event belongs to user's team
-    if (teamId && existingEvent.teamId && existingEvent.teamId !== teamId) {
-      res.status(403).json({ error: 'Accès refusé' });
+    if ('accessDenied' in result) {
+      res.status(403).json({ errors: ['Accès refusé'] });
       return;
     }
 
-    if (existingEvent.type !== 'MATCH') {
-      res.status(400).json({ error: 'Seuls les MATCH peuvent avoir un plan de jeu' });
+    if (result.event.type !== 'MATCH') {
+      res.status(400).json({ errors: ['Seuls les MATCH peuvent avoir un plan de jeu'] });
       return;
     }
 
-    const event = await prisma.calendarEvent.update({
-      where: { id },
-      data: { gamePlan: gamePlan || null },
-    });
-
-    res.json({
-      id: event.id,
-      date: formatDateStr(event.date),
-      startTime: event.startTime,
-      endTime: event.endTime,
-      type: event.type,
-      title: event.title,
-      description: event.description || undefined,
-      gamePlan: event.gamePlan || undefined,
-      createdById: event.createdById,
-      createdAt: event.createdAt.toISOString(),
-    });
+    const event = await calendarService.updateEventGamePlan(id, gamePlan);
+    res.json(event);
   } catch (error) {
     console.error('[CALENDAR] Error updating game plan:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    res.status(500).json({ errors: ['Erreur serveur'] });
   }
 });
 

@@ -83,7 +83,7 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     console.log('[AUTH] Middleware: Missing or invalid Authorization header');
-    return res.status(401).json({ error: 'Token manquant' });
+    return res.status(401).json({ errors: ['Token manquant'] });
   }
 
   const token = authHeader.substring(7);
@@ -91,7 +91,7 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
 
   if (!payload) {
     console.log('[AUTH] Middleware: Invalid token');
-    return res.status(401).json({ error: 'Token invalide' });
+    return res.status(401).json({ errors: ['Token invalide'] });
   }
 
   // Enrich payload with teamId from database
@@ -113,14 +113,14 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
 export function requirePermission(category: keyof UserPermissions, permission: string) {
   return async (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
-      return res.status(401).json({ error: 'Non authentifié' });
+      return res.status(401).json({ errors: ['Non authentifié'] });
     }
 
     const allowed = await hasPermission(req.user.userId, category, permission);
 
     if (!allowed) {
       console.log(`[AUTH] Permission denied: ${category}.${permission} for user ${req.user.email}`);
-      return res.status(403).json({ error: 'Permission refusée' });
+      return res.status(403).json({ errors: ['Permission refusée'] });
     }
 
     console.log(`[AUTH] Permission granted: ${category}.${permission} for user ${req.user.email}`);
