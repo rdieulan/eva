@@ -80,6 +80,7 @@ function handleJoin() {
 
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
+@use 'sass:color';
 
 .no-team-message {
   display: flex;
@@ -153,7 +154,7 @@ function handleJoin() {
       white-space: nowrap;
 
       &:hover:not(:disabled) {
-        background: darken($color-success, 10%);
+        background: color.scale($color-success, $lightness: -17%);
       }
 
       &:disabled {

@@ -242,12 +242,7 @@ model TeamInvite {
 
 **Objectif**: Passer en revue tous les composants touchés par les features précédentes pour optimiser, sécuriser et nettoyer le code.
 
-**Critères de review pour chaque fichier :**
-- 🔁 Code redondant / duplication
-- 🗑️ Reliquats / code mort
-- ⚡ Optimisation données / exécution
-- 🔒 Sécurité (validation, permissions, injections)
-- 🧪 Tests unitaires existants ? pertinents ?
+**Critères de review** : voir [docs/REVIEW_CRITERIA.md](docs/REVIEW_CRITERIA.md)
 
 ---
 
@@ -288,7 +283,7 @@ model TeamInvite {
 | `client/src/pages/JoinTeamPage.vue` | ✅ | Utilise ERROR_MESSAGES (inviteCodeMissing, inviteValidationFailed, joinTeamFailed, inviteInvalid) + ErrorDisplay |
 | `client/src/pages/ProfilePage.vue` | ✅ | Utilise validatePassword/validatePasswordsMatch depuis @shared/utils, ERROR_MESSAGES + ErrorDisplay, corrigé classe CSS .admin→.leader |
 | `client/src/pages/PlannerPage.vue` | ✅ | Factorisé performSave(), ajouté ErrorModal pour affichage erreurs, utilise ERROR_MESSAGES |
-| `client/src/pages/CalendarPage.vue` | ⬜ | Intégration données équipe |
+| `client/src/pages/CalendarPage.vue` | ✅ | Utilise composables useCalendar/useCalendarEvents, ErrorModal, isolation équipe via API |
 
 ---
 
@@ -373,6 +368,8 @@ model TeamInvite {
 
 ## 📦 Documentation
 
+- `docs/CODE_AGENT.md` - Guide de fonctionnement de l'agent de code
 - `docs/CODE_RULES.md` - Règles et conventions de code
-- `docs/CODING_AGENT.md` - Scripts d'automatisation pour l'agent
+- `docs/REVIEW_CRITERIA.md` - Critères de review des fichiers
+- `docs/SCRIPTS.md` - Scripts d'automatisation
 

@@ -266,7 +266,7 @@ function goToLogin() {
   transition: background-color 0.2s;
 
   &:hover:not(:disabled) {
-    background-color: darken($color-accent, 10%);
+    background-color: color.scale($color-accent, $lightness: -17%);
   }
 
   &:disabled {
@@ -290,7 +290,7 @@ function goToLogin() {
     text-decoration: underline;
 
     &:hover {
-      color: lighten($color-accent, 10%);
+      color: color.scale($color-accent, $lightness: 25%);
     }
   }
 }

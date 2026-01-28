@@ -104,6 +104,7 @@ async function handleLogin() {
 
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
+@use 'sass:color';
 
 .login-page {
   min-height: 100%;
@@ -253,7 +254,7 @@ input {
     text-decoration: underline;
 
     &:hover {
-      color: lighten($color-accent, 10%);
+      color: color.scale($color-accent, $lightness: 25%);
     }
   }
 }

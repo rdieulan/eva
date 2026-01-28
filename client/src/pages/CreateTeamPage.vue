@@ -123,6 +123,7 @@ function goBack() {
 
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
+@use 'sass:color';
 
 .create-team-page {
   display: flex;
@@ -252,7 +253,7 @@ function goBack() {
   color: white;
 
   &:hover:not(:disabled) {
-    background: darken($color-accent, 10%);
+    background: color.scale($color-accent, $lightness: -17%);
   }
 }
 </style>

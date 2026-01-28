@@ -168,6 +168,7 @@ function formatExpiration(dateStr: string): string {
 
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
+@use 'sass:color';
 
 .join-team-page {
   display: flex;
@@ -261,7 +262,7 @@ h1 {
   color: white;
 
   &:hover:not(:disabled) {
-    background: darken($color-accent, 10%);
+    background: color.scale($color-accent, $lightness: -17%);
   }
 }
 
@@ -271,7 +272,7 @@ h1 {
   width: 100%;
 
   &:hover:not(:disabled) {
-    background: darken($color-success, 10%);
+    background: color.scale($color-success, $lightness: -17%);
   }
 }
 
