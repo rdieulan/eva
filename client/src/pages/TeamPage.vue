@@ -20,7 +20,7 @@ import type { UserPermissions } from '@shared/types';
 import { DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
 import { ERROR_MESSAGES } from '@shared/constants';
 import ConfirmModal from '@/components/common/ConfirmModal.vue';
-import ErrorDisplay from '@/components/common/ErrorDisplay.vue';
+import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import TeamInfo from '@/components/team/TeamInfo.vue';
 import TeamMembers from '@/components/team/TeamMembers.vue';
 import TeamInvites from '@/components/team/TeamInvites.vue';

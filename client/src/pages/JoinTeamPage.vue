@@ -5,7 +5,7 @@ import { verifyInviteCode, joinTeamWithCode } from '@/api';
 import type { InviteValidation } from '@/api';
 import { useAuth } from '@/composables/useAuth';
 import { ERROR_MESSAGES } from '@shared/constants';
-import ErrorDisplay from '@/components/common/ErrorDisplay.vue';
+import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 
 const route = useRoute();
 const router = useRouter();

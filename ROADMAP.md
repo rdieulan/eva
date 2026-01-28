@@ -281,13 +281,13 @@ model TeamInvite {
 | Fichier | Statut | Notes |
 |---------|--------|-------|
 | `client/src/pages/HomePage.vue` | ✅ | Nettoyé CSS inutilisé (.badge) |
-| `client/src/pages/LoginPage.vue` | ✅ | Simplifié fallback errors, commentaires en anglais |
-| `client/src/pages/RegisterPage.vue` | ✅ | Simplifié fallback errors, utilise classe globale error-messages |
-| `client/src/pages/TeamPage.vue` | ✅ | Refactorisé en sous-composants (1280→320 lignes) : TeamInfo, TeamMembers, TeamInvites, TeamPermissionsModal, TeamInviteModal |
-| `client/src/pages/CreateTeamPage.vue` | ✅ | Utilise validateTeamName + ERROR_MESSAGES.teamCreationFailed |
-| `client/src/pages/JoinTeamPage.vue` | ✅ | Utilise ERROR_MESSAGES (inviteCodeMissing, inviteValidationFailed, joinTeamFailed, inviteInvalid) |
-| `client/src/pages/ProfilePage.vue` | ⬜ | Profil utilisateur |
-| `client/src/pages/PlannerPage.vue` | ⬜ | Intégration données équipe |
+| `client/src/pages/LoginPage.vue` | ✅ | Simplifié fallback errors, commentaires anglais, utilise ERROR_MESSAGES + ErrorDisplay |
+| `client/src/pages/RegisterPage.vue` | ✅ | Simplifié fallback errors, utilise ERROR_MESSAGES + ErrorDisplay |
+| `client/src/pages/TeamPage.vue` | ✅ | Refactorisé en sous-composants (TeamInfo, TeamMembers, TeamInvites, TeamPermissionsModal, TeamInviteModal), converti error→errors[], utilise ErrorDisplay |
+| `client/src/pages/CreateTeamPage.vue` | ✅ | Utilise validateTeamName depuis @shared/utils, ERROR_MESSAGES + ErrorDisplay |
+| `client/src/pages/JoinTeamPage.vue` | ✅ | Utilise ERROR_MESSAGES (inviteCodeMissing, inviteValidationFailed, joinTeamFailed, inviteInvalid) + ErrorDisplay |
+| `client/src/pages/ProfilePage.vue` | ✅ | Utilise validatePassword/validatePasswordsMatch depuis @shared/utils, ERROR_MESSAGES + ErrorDisplay, corrigé classe CSS .admin→.leader |
+| `client/src/pages/PlannerPage.vue` | ✅ | Factorisé performSave(), ajouté ErrorModal pour affichage erreurs, utilise ERROR_MESSAGES |
 | `client/src/pages/CalendarPage.vue` | ⬜ | Intégration données équipe |
 
 ---
@@ -296,6 +296,8 @@ model TeamInvite {
 
 | Fichier | Statut | Notes |
 |---------|--------|-------|
+| `client/src/components/common/error/ErrorDisplay.vue` | ✅ | Affichage liste d'erreurs (props: errors[], fallback?) |
+| `client/src/components/common/error/ErrorModal.vue` | ✅ | **NOUVEAU** - Modal réutilisable pour affichage erreurs |
 | `client/src/components/common/NoTeamMessage.vue` | ⬜ | Redirection jointure |
 | `client/src/components/common/Modal.vue` | ⬜ | Composant générique |
 | `client/src/components/common/ConfirmModal.vue` | ⬜ | Confirmation avec input |

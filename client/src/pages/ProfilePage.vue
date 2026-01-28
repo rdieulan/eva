@@ -5,7 +5,7 @@ import { useAuth } from '@/composables/useAuth';
 import { clearPlayersCache } from '@/api';
 import { validatePassword, validatePasswordsMatch } from '@shared/utils';
 import { ERROR_MESSAGES } from '@shared/constants';
-import ErrorDisplay from '@/components/common/ErrorDisplay.vue';
+import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import SvgIcon from '@/components/common/SvgIcon.vue';
 
 const router = useRouter();
@@ -307,7 +307,7 @@ h1 {
   font-weight: 600;
   text-transform: uppercase;
 
-  &.admin {
+  &.leader {
     background: rgba($color-success, 0.2);
     color: $color-success;
   }

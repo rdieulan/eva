@@ -3,13 +3,14 @@
  * Handles event modals, CRUD operations
  */
 
-import { ref, type Ref, type ComputedRef, computed } from 'vue';
+import { ref, type Ref, type ComputedRef } from 'vue';
 import {
   createEvent,
   updateEvent,
   deleteEvent,
   updateEventGamePlan,
 } from '@/api/calendar.api';
+import { ERROR_MESSAGES } from '@shared/constants';
 import type { CalendarEvent, CreateEventRequest, MatchGamePlan, DayData } from '@shared/types';
 
 export interface UseCalendarEventsOptions {
@@ -18,6 +19,7 @@ export interface UseCalendarEventsOptions {
   canEdit: ComputedRef<boolean>;
   canDelete: ComputedRef<boolean>;
   reloadData: () => Promise<void>;
+  onError?: (errors: string[]) => void;
 }
 
 export interface UseCalendarEventsReturn {
@@ -52,7 +54,7 @@ export interface UseCalendarEventsReturn {
 }
 
 export function useCalendarEvents(options: UseCalendarEventsOptions): UseCalendarEventsReturn {
-  const { canCreate, canEdit, canDelete, reloadData } = options;
+  const { canCreate, canEdit, canDelete, reloadData, onError } = options;
 
   // Event form modal state
   const showEventModal = ref(false);
@@ -65,9 +67,9 @@ export function useCalendarEvents(options: UseCalendarEventsOptions): UseCalenda
   const viewerInitialIndex = ref(0);
 
   // Permissions - directly use the passed permissions
-  const canCreateEvents = computed(() => canCreate.value);
-  const canEditEvents = computed(() => canEdit.value);
-  const canDeleteEvents = computed(() => canDelete.value);
+  const canCreateEvents = canCreate;
+  const canEditEvents = canEdit;
+  const canDeleteEvents = canDelete;
 
   // Open event viewer modal (read-only with navigation)
   function openEventViewer(events: CalendarEvent[], initialIndex: number) {
@@ -120,7 +122,8 @@ export function useCalendarEvents(options: UseCalendarEventsOptions): UseCalenda
       await reloadData();
     } catch (err) {
       console.error('Error saving event:', err);
-      alert(err instanceof Error ? err.message : 'Erreur');
+      const errorMsg = err instanceof Error ? err.message : ERROR_MESSAGES.serverError;
+      onError?.([errorMsg]);
     }
   }
 
@@ -132,7 +135,8 @@ export function useCalendarEvents(options: UseCalendarEventsOptions): UseCalenda
       await reloadData();
     } catch (err) {
       console.error('Error deleting event:', err);
-      alert(err instanceof Error ? err.message : 'Erreur');
+      const errorMsg = err instanceof Error ? err.message : ERROR_MESSAGES.serverError;
+      onError?.([errorMsg]);
     }
   }
 
@@ -144,7 +148,8 @@ export function useCalendarEvents(options: UseCalendarEventsOptions): UseCalenda
       await reloadData();
     } catch (err) {
       console.error('Error updating game plan:', err);
-      alert(err instanceof Error ? err.message : 'Erreur');
+      const errorMsg = err instanceof Error ? err.message : ERROR_MESSAGES.serverError;
+      onError?.([errorMsg]);
     }
   }
 

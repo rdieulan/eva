@@ -4,7 +4,7 @@ import { useRouter, useRoute } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
 import { clearPlayersCache, clearBalanceRulesCache } from '@/api';
 import { ERROR_MESSAGES } from '@shared/constants';
-import ErrorDisplay from '@/components/common/ErrorDisplay.vue';
+import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 
 const router = useRouter();
 const route = useRoute();

@@ -6,6 +6,8 @@ import CalendarBody from '@/components/calendar/layout/CalendarBody.vue';
 import EventFormModal from '@/components/calendar/EventFormModal.vue';
 import EventViewerModal from '@/components/calendar/EventViewerModal.vue';
 import NoTeamMessage from '@/components/common/NoTeamMessage.vue';
+import ErrorModal from '@/components/common/error/ErrorModal.vue';
+import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import { useAuth } from '@/composables/useAuth';
 import { useCalendar } from '@/composables/useCalendar';
 import { useCalendarEvents } from '@/composables/useCalendarEvents';
@@ -13,6 +15,15 @@ import { fetchAllMaps, fetchPlayers } from '@/api';
 import type { MapConfig, Player } from '@shared/types';
 
 const { permissions, user } = useAuth();
+
+// Error handling state
+const errors = ref<string[]>([]);
+const showErrorModal = ref(false);
+
+function handleError(errorMessages: string[]) {
+  errors.value = errorMessages;
+  showErrorModal.value = true;
+}
 
 // Check if teleport target exists (for SSR/test compatibility)
 const teleportDisabled = ref(true);
@@ -43,6 +54,7 @@ const {
   setAvailability,
 } = useCalendar({
   userId: computed(() => user.value?.id),
+  onError: handleError,
 });
 
 // Use calendar events composable
@@ -69,6 +81,7 @@ const {
   canEdit: computed(() => permissions.value.calendar.canEditEvents),
   canDelete: computed(() => permissions.value.calendar.canDeleteEvents),
   reloadData: loadCalendarData,
+  onError: handleError,
 });
 
 // Provide editMode and toggle function for TopBar
@@ -91,6 +104,7 @@ onMounted(async () => {
     players.value = loadedPlayers;
   } catch (err) {
     console.error('Error loading maps/players:', err);
+    handleError([err instanceof Error ? err.message : 'Erreur de chargement des données']);
   }
 
   loadCalendarData();
@@ -114,8 +128,8 @@ onMounted(async () => {
     </div>
 
     <!-- Error state -->
-    <div v-else-if="error" class="error-state">
-      <p>{{ error }}</p>
+    <div v-else-if="error.length > 0" class="error-state">
+      <ErrorDisplay :errors="error" />
       <button class="btn-retry" @click="loadCalendarData">Réessayer</button>
     </div>
 
@@ -181,6 +195,13 @@ onMounted(async () => {
       @submit="submitEvent"
       @delete="removeEvent"
       @update-gameplan="updateGamePlan"
+    />
+
+    <!-- Error Modal -->
+    <ErrorModal
+      :open="showErrorModal"
+      :errors="errors"
+      @close="showErrorModal = false"
     />
   </div>
 </template>

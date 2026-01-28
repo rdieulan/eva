@@ -182,6 +182,7 @@ function cycleAvailability() {
 
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
+@use 'sass:color';
 
 .day-cell {
   position: relative;
@@ -554,18 +555,18 @@ function cycleAvailability() {
 }
 
 .player-available {
-  background: darken($color-success, 25%);
+  background: color.scale($color-success, $lightness: -43%);
   border: 1px solid $color-success;
 }
 
 .player-conditional {
-  background: darken($color-conditional, 15%);
+  background: color.scale($color-conditional, $lightness: -28%);
   border: 1px solid $color-conditional;
 }
 
 .player-unavailable {
-  background: darken($color-danger, 15%);
-  border: 1px solid lighten($color-danger, 20%);
+  background: color.scale($color-danger, $lightness: -36%);
+  border: 1px solid color.scale($color-danger, $lightness: 34%);
 }
 </style>
 

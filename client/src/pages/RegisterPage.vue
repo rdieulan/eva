@@ -8,7 +8,7 @@ import {
   isValidName,
 } from '@shared/utils';
 import { ERROR_MESSAGES } from '@shared/constants';
-import ErrorDisplay from '@/components/common/ErrorDisplay.vue';
+import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 
 const router = useRouter();
 
@@ -183,6 +183,7 @@ function goToLogin() {
 
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
+@use 'sass:color';
 
 .register-page {
   min-height: 100%;

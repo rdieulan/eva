@@ -5,7 +5,7 @@ import { useAuth } from '@/composables/useAuth';
 import { createTeam, fetchTeamLocations } from '@/api';
 import { validateTeamName } from '@shared/utils';
 import { ERROR_MESSAGES } from '@shared/constants';
-import ErrorDisplay from '@/components/common/ErrorDisplay.vue';
+import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 
 const router = useRouter();
 const { hasTeam, refreshUser } = useAuth();

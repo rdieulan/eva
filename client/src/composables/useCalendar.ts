@@ -6,6 +6,7 @@
 import { ref, computed, watch, type Ref, type ComputedRef } from 'vue';
 import { fetchMonthData, setAvailability as setAvailabilityApi } from '@/api/calendar.api';
 import { getMonday } from '@/utils/calendar';
+import { ERROR_MESSAGES } from '@shared/constants';
 import type { DayData, AvailabilityStatus } from '@shared/types';
 
 // Month names for display (French)
@@ -18,6 +19,7 @@ export type ViewMode = 'month' | 'week';
 
 export interface UseCalendarOptions {
   userId: Ref<string | undefined>;
+  onError?: (errors: string[]) => void;
 }
 
 export interface UseCalendarReturn {
@@ -40,7 +42,7 @@ export interface UseCalendarReturn {
   // Data
   days: Ref<Record<string, DayData>>;
   isLoading: Ref<boolean>;
-  error: Ref<string>;
+  error: Ref<string[]>;
   noTeam: Ref<boolean>;
 
   // Edit mode
@@ -61,7 +63,7 @@ export interface UseCalendarReturn {
 }
 
 export function useCalendar(options: UseCalendarOptions): UseCalendarReturn {
-  const { userId } = options;
+  const { userId, onError } = options;
 
   // View mode state
   const viewMode = ref<ViewMode>('month');
@@ -87,7 +89,7 @@ export function useCalendar(options: UseCalendarOptions): UseCalendarReturn {
   // Calendar data
   const days = ref<Record<string, DayData>>({});
   const isLoading = ref(true);
-  const error = ref('');
+  const error = ref<string[]>([]);
   const noTeam = ref(false);
 
   // Month string for API (YYYY-MM)
@@ -129,7 +131,7 @@ export function useCalendar(options: UseCalendarOptions): UseCalendarReturn {
   // Load calendar data
   async function loadCalendarData() {
     isLoading.value = true;
-    error.value = '';
+    error.value = [];
 
     try {
       const data = await fetchMonthData(monthString.value);
@@ -137,7 +139,8 @@ export function useCalendar(options: UseCalendarOptions): UseCalendarReturn {
       noTeam.value = data.noTeam === true;
     } catch (err) {
       console.error('Error loading calendar:', err);
-      error.value = err instanceof Error ? err.message : 'Erreur de chargement';
+      const errorMsg = err instanceof Error ? err.message : ERROR_MESSAGES.serverError;
+      error.value = [errorMsg];
     } finally {
       isLoading.value = false;
     }
@@ -265,7 +268,8 @@ export function useCalendar(options: UseCalendarOptions): UseCalendarReturn {
           }
         }
       }
-      alert(err instanceof Error ? err.message : 'Erreur');
+      const errorMsg = err instanceof Error ? err.message : ERROR_MESSAGES.serverError;
+      onError?.([errorMsg]);
     }
   }
 

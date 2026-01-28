@@ -9,12 +9,14 @@ import PlannerBody from '@/components/planner/layout/PlannerBody.vue';
 import Modal from '@/components/common/Modal.vue';
 import BalanceRulesModal from '@/components/planner/BalanceRulesModal.vue';
 import NoTeamMessage from '@/components/common/NoTeamMessage.vue';
+import ErrorModal from '@/components/common/error/ErrorModal.vue';
 import { fetchAllMaps, fetchPlayers, saveGamePlan } from '@/api';
 import { getPlayerAssignments } from '@/utils/balance';
 import { getAssignmentColor } from '@/utils/colors';
 import { useAuth } from '@/composables/useAuth';
 import { usePlannerPlans } from '@/composables/usePlannerPlans';
 import { usePlannerNotes } from '@/composables/usePlannerNotes';
+import { ERROR_MESSAGES } from '@shared/constants';
 import type { MapConfig, Player, GamePhase } from '@shared/types';
 
 const { permissions, user } = useAuth();
@@ -35,6 +37,8 @@ const currentPhase = ref<GamePhase>('START');
 const showNotesDrawer = ref(false);
 const showBalanceRulesModal = ref(false);
 const saveState = ref<'idle' | 'saving' | 'success' | 'error'>('idle');
+const errors = ref<string[]>([]);
+const showErrorModal = ref(false);
 
 const maps = ref<MapConfig[]>([]);
 const editableMaps = ref<MapConfig[]>([]);
@@ -221,25 +225,22 @@ function handleMainAssignmentChanged(playerId: string, assignmentId: number | nu
   }
 }
 
-async function saveChanges() {
+// Factorized save logic
+async function performSave(): Promise<{ success: boolean; error?: string }> {
   const mapToSave = editableMaps.value.find(m => m.id === selectedMapId.value);
-  if (!mapToSave) return;
+  if (!mapToSave) {
+    return { success: false, error: ERROR_MESSAGES.mapNotFound };
+  }
 
   const token = localStorage.getItem('token');
   if (!token) {
-    saveState.value = 'error';
-    setTimeout(() => { saveState.value = 'idle'; }, 2000);
-    return;
+    return { success: false, error: ERROR_MESSAGES.tokenMissing };
   }
 
   const gamePlanId = selectedPlanId.value;
   if (!gamePlanId) {
-    saveState.value = 'error';
-    setTimeout(() => { saveState.value = 'idle'; }, 2000);
-    return;
+    return { success: false, error: ERROR_MESSAGES.planNotFound };
   }
-
-  saveState.value = 'saving';
 
   try {
     await saveGamePlan(gamePlanId, {
@@ -253,10 +254,24 @@ async function saveChanges() {
       maps.value[index] = JSON.parse(JSON.stringify(mapToSave));
     }
 
-    saveState.value = 'success';
-    setTimeout(() => { saveState.value = 'idle'; }, 1500);
+    return { success: true };
   } catch (error) {
     console.error('Save error:', error);
+    return { success: false, error: error instanceof Error ? error.message : ERROR_MESSAGES.serverError };
+  }
+}
+
+async function saveChanges() {
+  saveState.value = 'saving';
+
+  const result = await performSave();
+
+  if (result.success) {
+    saveState.value = 'success';
+    setTimeout(() => { saveState.value = 'idle'; }, 1500);
+  } else {
+    errors.value = [result.error || ERROR_MESSAGES.serverError];
+    showErrorModal.value = true;
     saveState.value = 'error';
     setTimeout(() => { saveState.value = 'idle'; }, 2000);
   }
@@ -349,37 +364,11 @@ onBeforeRouteLeave((to, _from, next) => {
 });
 
 async function handleSaveAndLeave() {
-  const mapToSave = editableMaps.value.find(m => m.id === selectedMapId.value);
-  if (!mapToSave) return;
-
-  const token = localStorage.getItem('token');
-  if (!token) {
-    modalSaveState.value = 'error';
-    setTimeout(() => { modalSaveState.value = 'idle'; }, 2000);
-    return;
-  }
-
-  const gamePlanId = selectedPlanId.value;
-  if (!gamePlanId) {
-    modalSaveState.value = 'error';
-    setTimeout(() => { modalSaveState.value = 'idle'; }, 2000);
-    return;
-  }
-
   modalSaveState.value = 'saving';
 
-  try {
-    await saveGamePlan(gamePlanId, {
-      assignments: mapToSave.assignments,
-      players: mapToSave.players,
-      notes: mapToSave.notes,
-    });
+  const result = await performSave();
 
-    const index = maps.value.findIndex(m => m.id === mapToSave.id);
-    if (index !== -1) {
-      maps.value[index] = JSON.parse(JSON.stringify(mapToSave));
-    }
-
+  if (result.success) {
     // Sync editable maps to prevent hasChanges from being true
     editableMaps.value = JSON.parse(JSON.stringify(maps.value));
 
@@ -397,7 +386,6 @@ async function handleSaveAndLeave() {
       } else if (pendingAction.value === 'switch-mode') {
         editMode.value = false;
       } else if (pendingAction.value === 'switch-plan' && pendingPlanId.value) {
-        // Reset editable maps before switching plan
         editableMaps.value = JSON.parse(JSON.stringify(maps.value));
         selectPlan(pendingPlanId.value);
         pendingPlanId.value = null;
@@ -405,8 +393,9 @@ async function handleSaveAndLeave() {
 
       pendingAction.value = null;
     }, 800);
-  } catch (error) {
-    console.error('Save error:', error);
+  } else {
+    errors.value = [result.error || ERROR_MESSAGES.serverError];
+    showErrorModal.value = true;
     modalSaveState.value = 'error';
     setTimeout(() => { modalSaveState.value = 'idle'; }, 2000);
   }
@@ -579,6 +568,13 @@ function handleCancelLeave() {
     <BalanceRulesModal
       v-if="showBalanceRulesModal"
       @close="showBalanceRulesModal = false"
+    />
+
+    <!-- Error Modal -->
+    <ErrorModal
+      :open="showErrorModal"
+      :errors="errors"
+      @close="showErrorModal = false"
     />
   </div>
 </template>
