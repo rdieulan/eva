@@ -7,7 +7,7 @@ import type { AuthRequest } from '@middleware/auth.middleware';
 import type { UserPermissions } from '@shared/types';
 import { TEAM_LOCATIONS } from '@shared/types';
 import { validateTeamName } from '@shared/utils';
-import { ERROR_MESSAGES } from '@shared/constants';
+import { ERROR } from '@shared/constants';
 import * as teamsService from '@services/teams.service';
 
 const router = Router();
@@ -39,7 +39,7 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     });
   } catch (error) {
     console.error('Error creating team:', error);
-    res.status(500).json({ errors: [ERROR_MESSAGES.serverError] });
+    res.status(500).json({ errors: [ERROR.serverError] });
   }
 });
 
@@ -49,7 +49,7 @@ router.get('/current', authMiddleware, async (req: AuthRequest, res: Response) =
     const user = await teamsService.getUserWithTeam(req.user!.userId);
 
     if (!user?.team) {
-      return res.status(404).json({ errors: [ERROR_MESSAGES.teamNotFound] });
+      return res.status(404).json({ errors: [ERROR.teamNotFound] });
     }
 
     res.json({
@@ -58,7 +58,7 @@ router.get('/current', authMiddleware, async (req: AuthRequest, res: Response) =
     });
   } catch (error) {
     console.error('Error fetching team:', error);
-    res.status(500).json({ errors: [ERROR_MESSAGES.serverError] });
+    res.status(500).json({ errors: [ERROR.serverError] });
   }
 });
 
@@ -73,7 +73,7 @@ router.put('/current', authMiddleware, requirePermission('team', 'canManageTeam'
     const team = await teamsService.getUserTeam(req.user!.userId);
 
     if (!team) {
-      return res.status(404).json({ errors: [ERROR_MESSAGES.teamNotFound] });
+      return res.status(404).json({ errors: [ERROR.teamNotFound] });
     }
 
     const { name, logo, location } = req.body;
@@ -89,7 +89,7 @@ router.put('/current', authMiddleware, requirePermission('team', 'canManageTeam'
     res.json(updatedTeam);
   } catch (error) {
     console.error('Error updating team:', error);
-    res.status(500).json({ errors: [ERROR_MESSAGES.serverError] });
+    res.status(500).json({ errors: [ERROR.serverError] });
   }
 });
 
@@ -99,14 +99,14 @@ router.get('/current/members', authMiddleware, async (req: AuthRequest, res: Res
     const team = await teamsService.getUserTeam(req.user!.userId);
 
     if (!team) {
-      return res.status(404).json({ errors: [ERROR_MESSAGES.teamNotFound] });
+      return res.status(404).json({ errors: [ERROR.teamNotFound] });
     }
 
     const members = await teamsService.getTeamMembers(team.id);
     res.json(members);
   } catch (error) {
     console.error('Error fetching members:', error);
-    res.status(500).json({ errors: [ERROR_MESSAGES.serverError] });
+    res.status(500).json({ errors: [ERROR.serverError] });
   }
 });
 
@@ -134,7 +134,7 @@ router.put(
       res.json({ message: 'Permissions mises à jour' });
     } catch (error) {
       console.error('Error updating permissions:', error);
-      res.status(500).json({ errors: [ERROR_MESSAGES.serverError] });
+      res.status(500).json({ errors: [ERROR.serverError] });
     }
   }
 );
@@ -158,7 +158,7 @@ router.delete(
       res.json({ message: 'Membre retiré de l\'équipe' });
     } catch (error) {
       console.error('Error removing member:', error);
-      res.status(500).json({ errors: [ERROR_MESSAGES.serverError] });
+      res.status(500).json({ errors: [ERROR.serverError] });
     }
   }
 );
@@ -176,7 +176,7 @@ router.delete('/current', authMiddleware, async (req: AuthRequest, res: Response
     res.json({ message: 'Équipe supprimée avec succès' });
   } catch (error) {
     console.error('Error deleting team:', error);
-    res.status(500).json({ errors: [ERROR_MESSAGES.serverError] });
+    res.status(500).json({ errors: [ERROR.serverError] });
   }
 });
 
@@ -193,7 +193,7 @@ router.post('/current/leave', authMiddleware, async (req: AuthRequest, res: Resp
     res.json({ message: 'Vous avez quitté l\'équipe' });
   } catch (error) {
     console.error('Error leaving team:', error);
-    res.status(500).json({ errors: [ERROR_MESSAGES.serverError] });
+    res.status(500).json({ errors: [ERROR.serverError] });
   }
 });
 

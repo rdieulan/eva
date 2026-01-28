@@ -6,7 +6,7 @@
 import { ref, computed, watch, type Ref, type ComputedRef } from 'vue';
 import { fetchGamePlan, createGamePlan, deleteGamePlan, saveGamePlan } from '@/api';
 import { useErrors } from '@/composables/useErrors';
-import { ERROR_MESSAGES } from '@shared/constants';
+import { ERROR } from '@shared/constants';
 import type { MapConfig, GamePlanSummary } from '@shared/types';
 
 export interface UsePlannerPlansOptions {
@@ -78,7 +78,7 @@ export function usePlannerPlans(options: UsePlannerPlansOptions): UsePlannerPlan
       }
     } catch (error) {
       console.error('Error loading plan:', error);
-      setErrorFromException(error, ERROR_MESSAGES.planLoadFailed);
+      setErrorFromException(error, ERROR.planLoadFailed);
       onError?.(errors.value);
     }
   }
@@ -107,7 +107,7 @@ export function usePlannerPlans(options: UsePlannerPlansOptions): UsePlannerPlan
       }
     } catch (error) {
       console.error('Error creating plan:', error);
-      setErrorFromException(error, ERROR_MESSAGES.planCreationFailed);
+      setErrorFromException(error, ERROR.planCreationFailed);
       onError?.(errors.value);
     }
   }
@@ -145,7 +145,7 @@ export function usePlannerPlans(options: UsePlannerPlansOptions): UsePlannerPlan
       }
     } catch (error) {
       console.error('Error duplicating plan:', error);
-      setErrorFromException(error, ERROR_MESSAGES.planDuplicationFailed);
+      setErrorFromException(error, ERROR.planDuplicationFailed);
       onError?.(errors.value);
     }
   }
@@ -170,7 +170,7 @@ export function usePlannerPlans(options: UsePlannerPlansOptions): UsePlannerPlan
       }
     } catch (error) {
       console.error('Error deleting plan:', error);
-      setErrorFromException(error, ERROR_MESSAGES.planDeletionFailed);
+      setErrorFromException(error, ERROR.planDeletionFailed);
       onError?.(errors.value);
     }
   }
@@ -189,7 +189,7 @@ export function usePlannerPlans(options: UsePlannerPlansOptions): UsePlannerPlan
       }
     } catch (error) {
       console.error('Error renaming plan:', error);
-      setErrorFromException(error, ERROR_MESSAGES.planRenameFailed);
+      setErrorFromException(error, ERROR.planRenameFailed);
       onError?.(errors.value);
     }
   }

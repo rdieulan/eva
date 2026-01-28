@@ -4,13 +4,26 @@
 
 import { Project } from 'ts-morph';
 import * as path from 'path';
+import * as fs from 'fs';
 import { fileURLToPath } from 'url';
+import { glob } from 'glob';
+import * as readline from 'readline';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const isDryRun = process.argv.includes('--dry-run');
 const args = process.argv.filter(arg => arg !== '--dry-run');
+
+// ANSI colors for terminal output
+const colors = {
+  red: '\x1b[31m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  cyan: '\x1b[36m',
+  reset: '\x1b[0m',
+  dim: '\x1b[2m',
+};
 
 // Initialize ts-morph project
 function createProject(): Project {
@@ -30,7 +43,7 @@ function createProject(): Project {
 // ============================================
 // Rename Symbol (variable, function, class, etc.)
 // ============================================
-function renameSymbol(project: Project, filePath: string, oldName: string, newName: string): void {
+async function renameSymbol(project: Project, filePath: string, oldName: string, newName: string): Promise<void> {
   const sourceFile = project.getSourceFile(filePath);
 
   if (!sourceFile) {
@@ -67,8 +80,11 @@ function renameSymbol(project: Project, filePath: string, oldName: string, newNa
   console.log(`📊 Total references: ${totalRefs}`);
 
   if (isDryRun) {
-    console.log('\n🔸 DRY RUN - No changes made');
-    console.log(`   Would rename "${oldName}" → "${newName}"`);
+    console.log('\n🔸 DRY RUN - No .ts files modified');
+    console.log(`   Would rename "${oldName}" → "${newName}" in ${affectedFiles.size} .ts file(s)`);
+
+    // Also check .vue files in dry-run
+    await updateVueFiles(oldName, newName);
     return;
   }
 
@@ -102,7 +118,126 @@ function renameSymbol(project: Project, filePath: string, oldName: string, newNa
 
   // Save all modified files
   project.saveSync();
-  console.log(`\n✅ Renamed "${oldName}" → "${newName}" in ${affectedFiles.size} file(s)`);
+  console.log(`\n✅ Renamed "${oldName}" → "${newName}" in ${affectedFiles.size} .ts file(s)`);
+
+  // Also update .vue files using regex
+  await updateVueFiles(oldName, newName);
+}
+
+// ============================================
+// Update .vue files using regex (interactive)
+// ============================================
+async function updateVueFiles(oldName: string, newName: string): Promise<void> {
+  const vueFiles = glob.sync('client/src/**/*.vue', { cwd: process.cwd() });
+
+  // Simple word boundary regex
+  const regex = new RegExp(`\\b${escapeRegex(oldName)}\\b`, 'g');
+
+  const filesToUpdate: { file: string; original: string; updated: string; matches: number }[] = [];
+
+  for (const file of vueFiles) {
+    const filePath = path.resolve(process.cwd(), file);
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const matches = content.match(regex);
+
+    if (matches && matches.length > 0) {
+      const updatedContent = content.replace(regex, newName);
+      filesToUpdate.push({
+        file,
+        original: content,
+        updated: updatedContent,
+        matches: matches.length,
+      });
+    }
+  }
+
+  if (filesToUpdate.length === 0) {
+    console.log('\n📁 No .vue files affected');
+    return;
+  }
+
+  console.log(`\n📁 Vue files affected (${filesToUpdate.length}):`);
+  filesToUpdate.forEach(({ file, matches }) => console.log(`   - ${file} (${matches} occurrence(s))`));
+
+  if (isDryRun) {
+    // Show diff for each file
+    console.log('\n--- DIFF PREVIEW ---\n');
+    for (const { file, original, updated } of filesToUpdate) {
+      console.log(`${colors.cyan}File: ${file}${colors.reset}`);
+      showDiff(original, updated);
+      console.log('');
+    }
+    console.log(`🔸 DRY RUN - Would update ${filesToUpdate.length} .vue file(s)`);
+    return;
+  }
+
+  // Interactive mode: ask for confirmation for each file
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  const ask = (question: string): Promise<string> => {
+    return new Promise(resolve => rl.question(question, resolve));
+  };
+
+  let updatedCount = 0;
+  let skippedCount = 0;
+
+  for (const { file, original, updated } of filesToUpdate) {
+    console.log(`\n${colors.cyan}━━━ ${file} ━━━${colors.reset}`);
+    showDiff(original, updated);
+
+    const answer = await ask(`\n${colors.yellow}Apply changes? [y/n/a/q] ${colors.reset}`);
+
+    if (answer.toLowerCase() === 'q') {
+      console.log('Aborted.');
+      break;
+    } else if (answer.toLowerCase() === 'a') {
+      // Apply all remaining including current
+      const filePath = path.resolve(process.cwd(), file);
+      fs.writeFileSync(filePath, updated, 'utf-8');
+      updatedCount++;
+
+      // Find current index and apply remaining
+      const currentIndex = filesToUpdate.findIndex(f => f.file === file);
+      for (let i = currentIndex + 1; i < filesToUpdate.length; i++) {
+        const remaining = filesToUpdate[i];
+        const remainingPath = path.resolve(process.cwd(), remaining.file);
+        fs.writeFileSync(remainingPath, remaining.updated, 'utf-8');
+        updatedCount++;
+      }
+      break;
+    } else if (answer.toLowerCase() === 'y') {
+      const filePath = path.resolve(process.cwd(), file);
+      fs.writeFileSync(filePath, updated, 'utf-8');
+      updatedCount++;
+    } else {
+      skippedCount++;
+    }
+  }
+
+  rl.close();
+  console.log(`\n✅ Updated ${updatedCount} .vue file(s), skipped ${skippedCount}`);
+}
+
+// Show a simple diff between original and updated content
+function showDiff(original: string, updated: string): void {
+  const originalLines = original.split('\n');
+  const updatedLines = updated.split('\n');
+
+  for (let i = 0; i < originalLines.length; i++) {
+    if (originalLines[i] !== updatedLines[i]) {
+      const lineNum = `${i + 1}`.padStart(4);
+      console.log(`${colors.dim}${lineNum}${colors.reset} ${colors.red}- ${originalLines[i]}${colors.reset}`);
+      console.log(`${colors.dim}${lineNum}${colors.reset} ${colors.green}+ ${updatedLines[i]}${colors.reset}`);
+    }
+  }
+}
+
+// Escape special regex characters
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 // ============================================
@@ -198,7 +333,7 @@ function findUnusedExports(project: Project): void {
 // ============================================
 // Main CLI
 // ============================================
-function main(): void {
+async function main(): Promise<void> {
   const action = args[2];
 
   if (isDryRun) {
@@ -220,7 +355,7 @@ function main(): void {
       }
 
       const absolutePath = path.resolve(process.cwd(), filePath);
-      renameSymbol(project, absolutePath, oldName, newName);
+      await renameSymbol(project, absolutePath, oldName, newName);
       break;
     }
 

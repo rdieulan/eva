@@ -5,7 +5,7 @@ import { verifyInviteCode, joinTeamWithCode } from '@/api';
 import type { InviteValidation } from '@/api';
 import { useAuth } from '@/composables/useAuth';
 import { useErrors } from '@/composables/useErrors';
-import { ERROR_MESSAGES } from '@shared/constants';
+import { ERROR } from '@shared/constants';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 
 const route = useRoute();
@@ -27,7 +27,7 @@ const isLoggedIn = computed(() => !!token.value);
 // Load invitation validation
 onMounted(async () => {
   if (!inviteCode.value) {
-    setError(ERROR_MESSAGES.inviteCodeMissing);
+    setError(ERROR.inviteCodeMissing);
     isLoading.value = false;
     return;
   }
@@ -35,7 +35,7 @@ onMounted(async () => {
   try {
     validation.value = await verifyInviteCode(inviteCode.value);
   } catch (e) {
-    setErrorFromException(e, ERROR_MESSAGES.inviteValidationFailed);
+    setErrorFromException(e, ERROR.inviteValidationFailed);
   } finally {
     isLoading.value = false;
   }
@@ -61,7 +61,7 @@ async function handleJoin() {
       router.push('/team');
     }, 2000);
   } catch (e) {
-    setErrorFromException(e, ERROR_MESSAGES.joinTeamFailed);
+    setErrorFromException(e, ERROR.joinTeamFailed);
   } finally {
     isJoining.value = false;
   }
@@ -99,7 +99,7 @@ function goToLogin() {
         <h1>Invitation invalide</h1>
         <ErrorDisplay
           :errors="validation?.reason ? [validation.reason] : errors"
-          :fallback="ERROR_MESSAGES.inviteInvalid"
+          :fallback="ERROR.inviteInvalid"
         />
         <button class="btn-home" @click="router.push('/')">
           Retour à l'accueil

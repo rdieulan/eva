@@ -7,7 +7,7 @@ import { ref, computed, watch, type Ref, type ComputedRef } from 'vue';
 import { fetchMonthData, setAvailability as setAvailabilityApi } from '@/api/calendar.api';
 import { getMonday } from '@/utils/calendar';
 import { useErrors } from '@/composables/useErrors';
-import { ERROR_MESSAGES } from '@shared/constants';
+import { ERROR } from '@shared/constants';
 import type { DayData, AvailabilityStatus } from '@shared/types';
 
 // Month names for display (French)
@@ -140,7 +140,7 @@ export function useCalendar(options: UseCalendarOptions): UseCalendarReturn {
       noTeam.value = data.noTeam === true;
     } catch (err) {
       console.error('Error loading calendar:', err);
-      setErrorFromException(err, ERROR_MESSAGES.serverError);
+      setErrorFromException(err, ERROR.serverError);
     } finally {
       isLoading.value = false;
     }
@@ -268,7 +268,7 @@ export function useCalendar(options: UseCalendarOptions): UseCalendarReturn {
           }
         }
       }
-      setErrorFromException(err, ERROR_MESSAGES.serverError);
+      setErrorFromException(err, ERROR.serverError);
       onError?.(errors.value);
     }
   }

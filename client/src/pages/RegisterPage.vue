@@ -8,7 +8,7 @@ import {
   isValidPassword,
   isValidName,
 } from '@shared/utils';
-import { ERROR_MESSAGES } from '@shared/constants';
+import { ERROR } from '@shared/constants';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 
 const router = useRouter();
@@ -71,7 +71,7 @@ async function handleRegister() {
     const data = await response.json();
 
     if (!response.ok) {
-      setErrors(data.errors || [ERROR_MESSAGES.registrationFailed]);
+      setErrors(data.errors || [ERROR.registrationFailed]);
       return;
     }
 
@@ -80,7 +80,7 @@ async function handleRegister() {
       router.push({ name: 'login' });
     }, 2000);
   } catch {
-    setError(ERROR_MESSAGES.registrationFailed);
+    setError(ERROR.registrationFailed);
   } finally {
     isLoading.value = false;
   }

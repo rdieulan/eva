@@ -4,7 +4,7 @@ import { useRouter, useRoute } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
 import { useErrors } from '@/composables/useErrors';
 import { clearPlayersCache, clearBalanceRulesCache } from '@/api';
-import { ERROR_MESSAGES } from '@shared/constants';
+import { ERROR } from '@shared/constants';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 
 const router = useRouter();
@@ -18,7 +18,7 @@ const isLoading = ref(false);
 
 async function handleLogin() {
   if (!email.value || !password.value) {
-    setError(ERROR_MESSAGES.requiredFieldsMissing);
+    setError(ERROR.requiredFieldsMissing);
     return;
   }
 
@@ -38,7 +38,7 @@ async function handleLogin() {
     const data = await response.json();
 
     if (!response.ok) {
-      setErrors(data.errors || [ERROR_MESSAGES.connectionError]);
+      setErrors(data.errors || [ERROR.connectionError]);
       return;
     }
 
@@ -53,7 +53,7 @@ async function handleLogin() {
     const redirectPath = route.query.redirect as string || '/';
     router.push(redirectPath);
   } catch {
-    setError(ERROR_MESSAGES.connectionError);
+    setError(ERROR.connectionError);
   } finally {
     isLoading.value = false;
   }

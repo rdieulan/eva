@@ -1,7 +1,7 @@
 // API utilities
 
 import { ApiError } from '@/api/error';
-import { ERROR_MESSAGES } from '@shared/constants';
+import { ERROR } from '@shared/constants';
 
 // Flag to prevent multiple simultaneous logout redirects
 let isLoggingOut = false;
@@ -63,7 +63,7 @@ export async function authFetch<T>(
   // Handle 401 Unauthorized globally
   if (response.status === 401) {
     handleUnauthorized();
-    throw new Error(ERROR_MESSAGES.sessionExpired);
+    throw new Error(ERROR.sessionExpired);
   }
 
   // If errorMessage provided, handle errors and return JSON

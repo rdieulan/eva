@@ -105,13 +105,15 @@ In dry-run mode, the script shows a diff for each file that would be modified:
 
 AST-based refactoring using ts-morph for precise code transformations.
 
+> ⚠️ **Important**: This script is primarily designed to assist the coding agent in systematic refactoring tasks, ensuring no files or occurrences are missed.
+
 #### Usage
 
 ```bash
-# Dry-run (preview changes)
+# Dry-run (preview changes with diff)
 npm run script:dry -- refactor <action> [options]
 
-# Execute
+# Execute (interactive mode for .vue files)
 npm run script -- refactor <action> [options]
 ```
 
@@ -121,17 +123,29 @@ npm run script -- refactor <action> [options]
 
 Renames a variable, function, class, or any other symbol and updates all references across the project.
 
+**How it works:**
+1. Uses ts-morph AST to rename in all `.ts` files (precise, semantic)
+2. Uses regex with interactive diff for `.vue` files (requires human validation)
+
 ```bash
-# Preview
+# Preview all changes (shows diff for .vue files)
 npm run script:dry -- refactor symbol <file> <oldName> <newName>
 
-# Execute
+# Execute with interactive confirmation for .vue files
 npm run script -- refactor symbol client/src/api/utils.ts authFetch authenticatedFetch
 ```
 
+**Interactive mode options for .vue files:**
+- `y` - Apply changes to this file
+- `n` - Skip this file
+- `a` - Apply all remaining changes
+- `q` - Quit without applying remaining changes
+
+> ⚠️ **Note**: The regex-based replacement for `.vue` files cannot distinguish between symbols with the same name but different contexts (e.g., a constant `ERROR` vs a string literal `'ERROR'`). Always review the diff carefully.
+
 ##### `move` - Move/rename a file
 
-Moves or renames a file and automatically updates all imports (alternative to `rename-file` using AST).
+Moves or renames a file and automatically updates all imports.
 
 ```bash
 npm run script -- refactor move <source> <target>
@@ -144,6 +158,8 @@ Scans the project for exports that are not imported anywhere.
 ```bash
 npm run script -- refactor unused
 ```
+
+> ⚠️ **Note**: May report false positives for exports used dynamically or in `.vue` files.
 
 #### Features
 

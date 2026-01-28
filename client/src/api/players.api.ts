@@ -1,7 +1,7 @@
 // Players API client
 
 import type { Player } from '@shared/types';
-import { ERROR_MESSAGES } from '@shared/constants';
+import { ERROR } from '@shared/constants';
 import { authFetch } from '@/api/utils';
 
 // Cache for players - keyed by token to invalidate on user change
@@ -34,7 +34,7 @@ export async function fetchPlayers(): Promise<Player[]> {
     return cachedPlayers;
   }
 
-  cachedPlayers = await authFetch<Player[]>('/api/players', undefined, ERROR_MESSAGES.playersLoadFailed);
+  cachedPlayers = await authFetch<Player[]>('/api/players', undefined, ERROR.playersLoadFailed);
   return cachedPlayers;
 }
 
@@ -43,7 +43,7 @@ export async function fetchPlayers(): Promise<Player[]> {
  */
 export function getPlayers(): Player[] {
   if (!cachedPlayers) {
-    throw new Error(ERROR_MESSAGES.playersNotLoaded);
+    throw new Error(ERROR.playersNotLoaded);
   }
   return cachedPlayers;
 }

@@ -11,7 +11,7 @@ import {
   updateEventGamePlan,
 } from '@/api/calendar.api';
 import { useErrors } from '@/composables/useErrors';
-import { ERROR_MESSAGES } from '@shared/constants';
+import { ERROR } from '@shared/constants';
 import type { CalendarEvent, CreateEventRequest, MatchGamePlan, DayData } from '@shared/types';
 
 export interface UseCalendarEventsOptions {
@@ -126,7 +126,7 @@ export function useCalendarEvents(options: UseCalendarEventsOptions): UseCalenda
       await reloadData();
     } catch (err) {
       console.error('Error saving event:', err);
-      setErrorFromException(err, ERROR_MESSAGES.serverError);
+      setErrorFromException(err, ERROR.serverError);
       onError?.(errors.value);
     }
   }
@@ -139,7 +139,7 @@ export function useCalendarEvents(options: UseCalendarEventsOptions): UseCalenda
       await reloadData();
     } catch (err) {
       console.error('Error deleting event:', err);
-      setErrorFromException(err, ERROR_MESSAGES.serverError);
+      setErrorFromException(err, ERROR.serverError);
       onError?.(errors.value);
     }
   }
@@ -152,7 +152,7 @@ export function useCalendarEvents(options: UseCalendarEventsOptions): UseCalenda
       await reloadData();
     } catch (err) {
       console.error('Error updating game plan:', err);
-      setErrorFromException(err, ERROR_MESSAGES.serverError);
+      setErrorFromException(err, ERROR.serverError);
       onError?.(errors.value);
     }
   }

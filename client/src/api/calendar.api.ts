@@ -9,7 +9,7 @@ import type {
   AvailabilityStatus,
   MatchGamePlan,
 } from '@shared/types';
-import { ERROR_MESSAGES } from '@shared/constants';
+import { ERROR } from '@shared/constants';
 import { authFetch } from '@/api/utils';
 
 /**
@@ -20,7 +20,7 @@ export async function fetchMonthData(month: string): Promise<MonthData> {
   return authFetch<MonthData>(
     `/api/calendar/availability?month=${month}`,
     undefined,
-    ERROR_MESSAGES.calendarLoadFailed
+    ERROR.calendarLoadFailed
   );
 }
 
@@ -37,7 +37,7 @@ export async function setAvailability(
   return authFetch<Availability | { success: true; deleted: true }>(
     '/api/calendar/availability',
     { method: 'POST', body: JSON.stringify(body) },
-    ERROR_MESSAGES.availabilityUpdateFailed
+    ERROR.availabilityUpdateFailed
   );
 }
 
@@ -49,7 +49,7 @@ export async function fetchEvents(month: string): Promise<CalendarEvent[]> {
   return authFetch<CalendarEvent[]>(
     `/api/calendar/events?month=${month}`,
     undefined,
-    ERROR_MESSAGES.eventsLoadFailed
+    ERROR.eventsLoadFailed
   );
 }
 
@@ -60,7 +60,7 @@ export async function createEvent(eventData: CreateEventRequest): Promise<Calend
   return authFetch<CalendarEvent>(
     '/api/calendar/events',
     { method: 'POST', body: JSON.stringify(eventData) },
-    ERROR_MESSAGES.eventCreationFailed
+    ERROR.eventCreationFailed
   );
 }
 
@@ -74,7 +74,7 @@ export async function updateEvent(
   return authFetch<CalendarEvent>(
     `/api/calendar/events/${id}`,
     { method: 'PUT', body: JSON.stringify(eventData) },
-    ERROR_MESSAGES.eventUpdateFailed
+    ERROR.eventUpdateFailed
   );
 }
 
@@ -85,7 +85,7 @@ export async function deleteEvent(id: string): Promise<void> {
   return authFetch<void>(
     `/api/calendar/events/${id}`,
     { method: 'DELETE' },
-    ERROR_MESSAGES.eventDeleteFailed
+    ERROR.eventDeleteFailed
   );
 }
 
@@ -99,6 +99,6 @@ export async function updateEventGamePlan(
   return authFetch<CalendarEvent>(
     `/api/calendar/events/${eventId}/gameplan`,
     { method: 'PUT', body: JSON.stringify({ gamePlan }) },
-    ERROR_MESSAGES.eventGamePlanUpdateFailed
+    ERROR.eventGamePlanUpdateFailed
   );
 }

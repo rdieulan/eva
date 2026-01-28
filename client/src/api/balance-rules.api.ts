@@ -1,7 +1,7 @@
 // Balance rules API
 
 import type { BalanceRule, BalanceRuleUpdate } from '@shared/types';
-import { ERROR_MESSAGES } from '@shared/constants';
+import { ERROR } from '@shared/constants';
 import { authFetch } from '@/api/utils';
 
 /**
@@ -11,7 +11,7 @@ export async function getBalanceRules(): Promise<BalanceRule[]> {
   return authFetch<BalanceRule[]>(
     '/api/balance-rules',
     undefined,
-    ERROR_MESSAGES.balanceRulesLoadFailed
+    ERROR.balanceRulesLoadFailed
   );
 }
 
@@ -25,7 +25,7 @@ export async function updateBalanceRule(
   return authFetch<BalanceRule>(
     `/api/balance-rules/${ruleId}`,
     { method: 'PUT', body: JSON.stringify(ruleData) },
-    ERROR_MESSAGES.balanceRuleUpdateFailed
+    ERROR.balanceRuleUpdateFailed
   );
 }
 
@@ -36,6 +36,6 @@ export async function resetBalanceRules(): Promise<BalanceRule[]> {
   return authFetch<BalanceRule[]>(
     '/api/balance-rules/reset',
     { method: 'POST' },
-    ERROR_MESSAGES.balanceRulesResetFailed
+    ERROR.balanceRulesResetFailed
   );
 }

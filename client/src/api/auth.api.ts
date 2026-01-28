@@ -1,7 +1,7 @@
 // Authentication API client
 
 import type { UserPermissions } from '@shared/types';
-import { ERROR_MESSAGES } from '@shared/constants';
+import { ERROR } from '@shared/constants';
 import { authFetch } from '@/api/utils';
 import { ApiError } from '@/api/error';
 
@@ -37,7 +37,7 @@ export async function login(credentials: LoginCredentials): Promise<LoginRespons
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw ApiError.fromResponse(errorData, ERROR_MESSAGES.loginFailed);
+    throw ApiError.fromResponse(errorData, ERROR.loginFailed);
   }
 
   return response.json();
@@ -54,7 +54,7 @@ export async function logout(): Promise<void> {
  * Get current user info
  */
 export async function getCurrentUser(): Promise<AuthUser> {
-  const response = await authFetch<{ user: AuthUser }>('/api/auth/me', undefined, ERROR_MESSAGES.unauthorized);
+  const response = await authFetch<{ user: AuthUser }>('/api/auth/me', undefined, ERROR.unauthorized);
   return response.user;
 }
 
@@ -68,7 +68,7 @@ export async function changePassword(
   await authFetch<void>(
     '/api/auth/change-password',
     { method: 'POST', body: JSON.stringify({ currentPassword, newPassword }) },
-    ERROR_MESSAGES.passwordChangeFailed
+    ERROR.passwordChangeFailed
   );
 }
 

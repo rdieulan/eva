@@ -1,21 +1,21 @@
 // Maps API client
 
 import type { MapConfig } from '@shared/types';
-import { ERROR_MESSAGES } from '@shared/constants';
+import { ERROR } from '@shared/constants';
 import { authFetch } from '@/api/utils';
 
 /**
  * Fetch all maps (requires authentication - returns team maps only)
  */
 export async function fetchAllMaps(): Promise<MapConfig[]> {
-  return authFetch<MapConfig[]>('/api/maps', undefined, ERROR_MESSAGES.mapsLoadFailed);
+  return authFetch<MapConfig[]>('/api/maps', undefined, ERROR.mapsLoadFailed);
 }
 
 /**
  * Fetch a single map by ID (requires authentication)
  */
 export async function fetchMap(mapId: string): Promise<MapConfig> {
-  return authFetch<MapConfig>(`/api/maps/${mapId}`, undefined, ERROR_MESSAGES.mapLoadFailed);
+  return authFetch<MapConfig>(`/api/maps/${mapId}`, undefined, ERROR.mapLoadFailed);
 }
 
 /**
@@ -28,7 +28,7 @@ export async function saveMap(
   return authFetch<{ success: boolean; message: string }>(
     `/api/maps/${mapId}`,
     { method: 'POST', body: JSON.stringify(mapData) },
-    ERROR_MESSAGES.mapSaveFailed
+    ERROR.mapSaveFailed
   );
 }
 
@@ -39,7 +39,7 @@ export async function fetchGamePlans(mapId: string): Promise<{ id: string; name:
   return authFetch<{ id: string; name: string }[]>(
     `/api/maps/${mapId}/plans`,
     undefined,
-    ERROR_MESSAGES.plansLoadFailed
+    ERROR.plansLoadFailed
   );
 }
 
@@ -50,7 +50,7 @@ export async function fetchGamePlan(planId: string): Promise<MapConfig & { planI
   return authFetch<MapConfig & { planId: string; planName: string }>(
     `/api/plans/${planId}`,
     undefined,
-    ERROR_MESSAGES.planLoadFailed
+    ERROR.planLoadFailed
   );
 }
 
@@ -64,7 +64,7 @@ export async function saveGamePlan(
   return authFetch<{ success: boolean }>(
     `/api/plans/${planId}`,
     { method: 'PUT', body: JSON.stringify(planData) },
-    ERROR_MESSAGES.planSaveFailed
+    ERROR.planSaveFailed
   );
 }
 
@@ -78,7 +78,7 @@ export async function createGamePlan(
   return authFetch<{ id: string; name: string }>(
     `/api/maps/${mapId}/plans`,
     { method: 'POST', body: JSON.stringify({ name }) },
-    ERROR_MESSAGES.planCreationFailed
+    ERROR.planCreationFailed
   );
 }
 
@@ -89,6 +89,6 @@ export async function deleteGamePlan(planId: string): Promise<void> {
   return authFetch<void>(
     `/api/plans/${planId}`,
     { method: 'DELETE' },
-    ERROR_MESSAGES.planDeletionFailed
+    ERROR.planDeletionFailed
   );
 }

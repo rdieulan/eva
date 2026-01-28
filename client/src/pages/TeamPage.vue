@@ -18,7 +18,7 @@ import {
 import type { TeamWithMembers, TeamMember, TeamInvite } from '@/api';
 import type { UserPermissions } from '@shared/types';
 import { DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
-import { ERROR_MESSAGES } from '@shared/constants';
+import { ERROR } from '@shared/constants';
 import { useErrors } from '@/composables/useErrors';
 import ConfirmModal from '@/components/common/ConfirmModal.vue';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
@@ -92,7 +92,7 @@ async function loadData() {
       }
     }
   } catch (e) {
-    setErrorFromException(e, ERROR_MESSAGES.serverError);
+    setErrorFromException(e, ERROR.serverError);
   } finally {
     isLoading.value = false;
   }
@@ -114,7 +114,7 @@ async function handleSaveTeam(data: { name: string; location: string | null }) {
     team.value.location = data.location ?? undefined;
     showSuccess('Équipe mise à jour');
   } catch (e) {
-    setErrorFromException(e, ERROR_MESSAGES.serverError);
+    setErrorFromException(e, ERROR.serverError);
   }
 }
 
@@ -127,7 +127,7 @@ async function handleDeleteTeam() {
     showSuccess('Équipe supprimée');
     window.location.reload();
   } catch (e) {
-    setErrorFromException(e, ERROR_MESSAGES.serverError);
+    setErrorFromException(e, ERROR.serverError);
   }
 }
 
@@ -140,7 +140,7 @@ async function handleLeaveTeam() {
     showSuccess('Vous avez quitté l\'équipe');
     window.location.reload();
   } catch (e) {
-    setErrorFromException(e, ERROR_MESSAGES.serverError);
+    setErrorFromException(e, ERROR.serverError);
   }
 }
 
@@ -168,7 +168,7 @@ async function savePermissions(perms: UserPermissions) {
     showPermissionsModal.value = false;
     showSuccess('Permissions mises à jour');
   } catch (e) {
-    setErrorFromException(e, ERROR_MESSAGES.serverError);
+    setErrorFromException(e, ERROR.serverError);
   }
 }
 
@@ -189,7 +189,7 @@ async function confirmRemoveMember() {
     memberToRemove.value = null;
     showSuccess('Membre retiré');
   } catch (e) {
-    setErrorFromException(e, ERROR_MESSAGES.serverError);
+    setErrorFromException(e, ERROR.serverError);
   }
 }
 
@@ -211,7 +211,7 @@ async function generateInvite(options: { expiresInHours: number; maxUses: number
     invites.value = [invite, ...invites.value];
     showSuccess('Lien d\'invitation généré !');
   } catch (e) {
-    setErrorFromException(e, ERROR_MESSAGES.inviteCreationFailed);
+    setErrorFromException(e, ERROR.inviteCreationFailed);
   } finally {
     isCreatingInvite.value = false;
   }
@@ -222,7 +222,7 @@ async function copyInviteUrl(url: string) {
     await navigator.clipboard.writeText(url);
     showSuccess('Lien copié !');
   } catch {
-    setError(ERROR_MESSAGES.copyFailed);
+    setError(ERROR.copyFailed);
   }
 }
 
@@ -234,7 +234,7 @@ async function handleRevokeInvite(inviteId: string) {
     invites.value = invites.value.filter(i => i.id !== inviteId);
     showSuccess('Invitation révoquée');
   } catch (e) {
-    setErrorFromException(e, ERROR_MESSAGES.serverError);
+    setErrorFromException(e, ERROR.serverError);
   }
 }
 

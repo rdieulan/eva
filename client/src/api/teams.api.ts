@@ -1,7 +1,7 @@
 // Teams API client
 
 import type { UserPermissions, Team } from '@shared/types';
-import { ERROR_MESSAGES } from '@shared/constants';
+import { ERROR } from '@shared/constants';
 import { authFetch } from '@/api/utils';
 import { ApiError } from '@/api/error';
 
@@ -34,7 +34,7 @@ export async function fetchCurrentTeam(): Promise<TeamWithMembers | null> {
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw ApiError.fromResponse(errorData, ERROR_MESSAGES.teamFetchFailed);
+    throw ApiError.fromResponse(errorData, ERROR.teamFetchFailed);
   }
 
   return response.json();
@@ -49,7 +49,7 @@ export async function createTeam(
   return authFetch<TeamWithMembers>(
     API_BASE,
     { method: 'POST', body: JSON.stringify(teamData) },
-    ERROR_MESSAGES.teamCreationFailed
+    ERROR.teamCreationFailed
   );
 }
 
@@ -60,7 +60,7 @@ export async function fetchTeamLocations(): Promise<string[]> {
   return authFetch<string[]>(
     `${API_BASE}/locations`,
     undefined,
-    ERROR_MESSAGES.teamLocationsFetchFailed
+    ERROR.teamLocationsFetchFailed
   );
 }
 
@@ -73,7 +73,7 @@ export async function updateTeam(
   return authFetch<Team>(
     `${API_BASE}/current`,
     { method: 'PUT', body: JSON.stringify(teamData) },
-    ERROR_MESSAGES.teamUpdateFailed
+    ERROR.teamUpdateFailed
   );
 }
 
@@ -84,7 +84,7 @@ export async function fetchTeamMembers(): Promise<TeamMember[]> {
   return authFetch<TeamMember[]>(
     `${API_BASE}/current/members`,
     undefined,
-    ERROR_MESSAGES.teamMembersFetchFailed
+    ERROR.teamMembersFetchFailed
   );
 }
 
@@ -98,7 +98,7 @@ export async function updateMemberPermissions(
   return authFetch<void>(
     `${API_BASE}/current/members/${memberId}/permissions`,
     { method: 'PUT', body: JSON.stringify({ permissions }) },
-    ERROR_MESSAGES.teamPermissionsUpdateFailed
+    ERROR.teamPermissionsUpdateFailed
   );
 }
 
@@ -109,7 +109,7 @@ export async function removeMember(memberId: string): Promise<void> {
   return authFetch<void>(
     `${API_BASE}/current/members/${memberId}`,
     { method: 'DELETE' },
-    ERROR_MESSAGES.teamMemberRemoveFailed
+    ERROR.teamMemberRemoveFailed
   );
 }
 
@@ -120,7 +120,7 @@ export async function deleteTeam(): Promise<void> {
   return authFetch<void>(
     `${API_BASE}/current`,
     { method: 'DELETE' },
-    ERROR_MESSAGES.teamDeleteFailed
+    ERROR.teamDeleteFailed
   );
 }
 
@@ -131,7 +131,7 @@ export async function leaveTeam(): Promise<void> {
   return authFetch<void>(
     `${API_BASE}/current/leave`,
     { method: 'POST' },
-    ERROR_MESSAGES.teamLeaveFailed
+    ERROR.teamLeaveFailed
   );
 }
 
@@ -172,7 +172,7 @@ export async function createInvite(
   return authFetch<TeamInvite>(
     `${API_BASE}/${teamId}/invites`,
     { method: 'POST', body: JSON.stringify(options) },
-    ERROR_MESSAGES.inviteCreationFailed
+    ERROR.inviteCreationFailed
   );
 }
 
@@ -183,7 +183,7 @@ export async function fetchInvites(teamId: string): Promise<TeamInvite[]> {
   return authFetch<TeamInvite[]>(
     `${API_BASE}/${teamId}/invites`,
     undefined,
-    ERROR_MESSAGES.inviteFetchFailed
+    ERROR.inviteFetchFailed
   );
 }
 
@@ -194,7 +194,7 @@ export async function revokeInvite(teamId: string, inviteId: string): Promise<vo
   return authFetch<void>(
     `${API_BASE}/${teamId}/invites/${inviteId}`,
     { method: 'DELETE' },
-    ERROR_MESSAGES.inviteRevokeFailed
+    ERROR.inviteRevokeFailed
   );
 }
 
@@ -205,7 +205,7 @@ export async function verifyInviteCode(code: string): Promise<InviteValidation> 
   return authFetch<InviteValidation>(
     `/api/invites/${code}`,
     undefined,
-    ERROR_MESSAGES.inviteValidationFailed
+    ERROR.inviteValidationFailed
   );
 }
 
@@ -216,6 +216,6 @@ export async function joinTeamWithCode(code: string): Promise<JoinResult> {
   return authFetch<JoinResult>(
     `/api/invites/${code}/join`,
     { method: 'POST' },
-    ERROR_MESSAGES.joinTeamFailed
+    ERROR.joinTeamFailed
   );
 }

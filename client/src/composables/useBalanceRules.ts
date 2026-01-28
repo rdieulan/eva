@@ -2,7 +2,7 @@
 
 import { ref, computed, watch } from 'vue';
 import type { BalanceRule, BalanceRuleUpdate } from '@shared/types';
-import { ERROR_MESSAGES } from '@shared/constants';
+import { ERROR } from '@shared/constants';
 import {
   getBalanceRules as fetchBalanceRulesApi,
   updateBalanceRule,
@@ -49,7 +49,7 @@ export function useBalanceRules() {
       rules.value = await fetchBalanceRulesApi();
       initialized.value = true;
     } catch (err) {
-      setError(ERROR_MESSAGES.balanceRulesLoadFailed);
+      setError(ERROR.balanceRulesLoadFailed);
       console.error('Error fetching balance rules:', err);
     } finally {
       loading.value = false;

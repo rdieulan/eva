@@ -5,7 +5,7 @@
 // Error Messages
 // ============================================
 
-export const ERROR_MESSAGES = {
+export const ERROR = {
   // Generic
   serverError: 'Erreur serveur',
   connectionError: 'Erreur de connexion au serveur',
@@ -105,4 +105,4 @@ export const ERROR_MESSAGES = {
   balanceRulesResetFailed: 'Erreur lors de la réinitialisation des règles',
 } as const;
 
-export type ErrorMessageKey = keyof typeof ERROR_MESSAGES;
+export type ErrorMessageKey = keyof typeof ERROR;

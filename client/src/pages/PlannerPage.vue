@@ -17,7 +17,7 @@ import { useAuth } from '@/composables/useAuth';
 import { usePlannerPlans } from '@/composables/usePlannerPlans';
 import { usePlannerNotes } from '@/composables/usePlannerNotes';
 import { useErrors } from '@/composables/useErrors';
-import { ERROR_MESSAGES } from '@shared/constants';
+import { ERROR } from '@shared/constants';
 import type { MapConfig, Player, GamePhase } from '@shared/types';
 
 const { permissions, user } = useAuth();
@@ -230,17 +230,17 @@ function handleMainAssignmentChanged(playerId: string, assignmentId: number | nu
 async function performSave(): Promise<{ success: boolean; error?: string }> {
   const mapToSave = editableMaps.value.find(m => m.id === selectedMapId.value);
   if (!mapToSave) {
-    return { success: false, error: ERROR_MESSAGES.mapNotFound };
+    return { success: false, error: ERROR.mapNotFound };
   }
 
   const token = localStorage.getItem('token');
   if (!token) {
-    return { success: false, error: ERROR_MESSAGES.tokenMissing };
+    return { success: false, error: ERROR.tokenMissing };
   }
 
   const gamePlanId = selectedPlanId.value;
   if (!gamePlanId) {
-    return { success: false, error: ERROR_MESSAGES.planNotFound };
+    return { success: false, error: ERROR.planNotFound };
   }
 
   try {
@@ -258,7 +258,7 @@ async function performSave(): Promise<{ success: boolean; error?: string }> {
 return { success: true };
   } catch (error) {
     console.error('Save error:', error);
-    const errorMessage = error instanceof Error ? error.message : ERROR_MESSAGES.serverError;
+    const errorMessage = error instanceof Error ? error.message : ERROR.serverError;
     return { success: false, error: errorMessage };
   }
 }
@@ -272,7 +272,7 @@ async function saveChanges() {
     saveState.value = 'success';
     setTimeout(() => { saveState.value = 'idle'; }, 1500);
   } else {
-    setError(result.error || ERROR_MESSAGES.serverError);
+    setError(result.error || ERROR.serverError);
     showErrorModal.value = true;
     saveState.value = 'error';
     setTimeout(() => { saveState.value = 'idle'; }, 2000);
@@ -396,7 +396,7 @@ async function handleSaveAndLeave() {
       pendingAction.value = null;
     }, 800);
   } else {
-    setError(result.error || ERROR_MESSAGES.serverError);
+    setError(result.error || ERROR.serverError);
     showErrorModal.value = true;
     modalSaveState.value = 'error';
     setTimeout(() => { modalSaveState.value = 'idle'; }, 2000);

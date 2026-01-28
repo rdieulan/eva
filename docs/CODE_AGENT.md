@@ -73,14 +73,37 @@ Ce document définit les règles de fonctionnement de l'agent de code pour le pr
 
 Voir [SCRIPTS.md](SCRIPTS.md) pour la liste complète.
 
+### Utilisation obligatoire pour le refactoring
+
+> ⚠️ **Important**: Lors de tout renommage de symbole (variable, fonction, constante, etc.), l'agent DOIT utiliser le script `refactor symbol` au lieu de modifier les fichiers manuellement. Cela garantit qu'aucun fichier ou occurrence n'est oublié.
+
+**Workflow de refactoring:**
+
+1. **Dry-run d'abord** : Toujours exécuter en mode dry-run pour prévisualiser les changements
+   ```bash
+   npm run script:dry -- refactor symbol <file> <oldName> <newName>
+   ```
+
+2. **Vérifier le diff** : Examiner le diff des fichiers `.vue` pour détecter les faux positifs (ex: même nom mais contexte différent)
+
+3. **Exécuter** : Lancer le script en mode interactif
+   ```bash
+   npm run script -- refactor symbol <file> <oldName> <newName>
+   ```
+
+4. **Valider manuellement** : Pour chaque fichier `.vue`, répondre `y/n/a/q` selon le contexte
+
 ### Commandes principales
 
 ```bash
-# Renommer un fichier avec mise à jour des imports
+# Renommer un symbole (variable, fonction, constante)
+npm run script -- refactor symbol <file> <oldName> <newName>
+
+# Renommer/déplacer un fichier avec mise à jour des imports
 npm run script -- rename-file <source> <target>
 
 # Mode dry-run (prévisualisation sans modification)
-npm run script:dry -- rename-file <source> <target>
+npm run script:dry -- <script-name> [args]
 ```
 
 ---

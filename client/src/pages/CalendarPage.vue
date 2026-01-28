@@ -13,7 +13,7 @@ import { useCalendar } from '@/composables/useCalendar';
 import { useCalendarEvents } from '@/composables/useCalendarEvents';
 import { useErrors } from '@/composables/useErrors';
 import { fetchAllMaps, fetchPlayers } from '@/api';
-import { ERROR_MESSAGES } from '@shared/constants';
+import { ERROR } from '@shared/constants';
 import type { MapConfig, Player } from '@shared/types';
 
 const { permissions, user } = useAuth();
@@ -106,7 +106,7 @@ onMounted(async () => {
     players.value = loadedPlayers;
   } catch (err) {
     console.error('Error loading maps/players:', err);
-    setErrorFromException(err, ERROR_MESSAGES.serverError);
+    setErrorFromException(err, ERROR.serverError);
     showErrorModal.value = true;
   }
 

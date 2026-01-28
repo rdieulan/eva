@@ -5,7 +5,7 @@ import { useAuth } from '@/composables/useAuth';
 import { useErrors } from '@/composables/useErrors';
 import { clearPlayersCache } from '@/api';
 import { validatePassword, validatePasswordsMatch } from '@shared/utils';
-import { ERROR_MESSAGES } from '@shared/constants';
+import { ERROR } from '@shared/constants';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import SvgIcon from '@/components/common/SvgIcon.vue';
 
@@ -26,7 +26,7 @@ async function handleChangePassword() {
   passwordSuccess.value = '';
 
   if (!currentPassword.value || !newPassword.value || !confirmPassword.value) {
-    setPasswordError(ERROR_MESSAGES.requiredFieldsMissing);
+    setPasswordError(ERROR.requiredFieldsMissing);
     return;
   }
 
@@ -61,7 +61,7 @@ async function handleChangePassword() {
     const data = await response.json();
 
     if (!response.ok) {
-      setPasswordErrors(data.errors || [ERROR_MESSAGES.passwordChangeFailed]);
+      setPasswordErrors(data.errors || [ERROR.passwordChangeFailed]);
       return;
     }
 
@@ -70,7 +70,7 @@ async function handleChangePassword() {
     newPassword.value = '';
     confirmPassword.value = '';
   } catch {
-    setPasswordError(ERROR_MESSAGES.passwordChangeFailed);
+    setPasswordError(ERROR.passwordChangeFailed);
   } finally {
     isChangingPassword.value = false;
   }

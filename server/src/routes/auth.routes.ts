@@ -4,7 +4,7 @@ import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { authMiddleware } from '@middleware/auth.middleware';
 import type { AuthRequest } from '@middleware/auth.middleware';
-import { ERROR_MESSAGES } from '@shared/constants';
+import { ERROR } from '@shared/constants';
 import {
   generateToken,
   comparePassword,
@@ -31,7 +31,7 @@ router.post('/register', async (req: Request, res: Response) => {
   // Validation
   if (!email || !password || !name) {
     console.log('[AUTH] Register failed: missing fields');
-    return res.status(400).json({ errors: [ERROR_MESSAGES.emailPasswordNameRequired] });
+    return res.status(400).json({ errors: [ERROR.emailPasswordNameRequired] });
   }
 
   const emailValid = validateEmail(email);
@@ -57,7 +57,7 @@ router.post('/register', async (req: Request, res: Response) => {
     const existingUser = await findUserByEmail(email);
     if (existingUser) {
       console.log('[AUTH] Register failed: email already exists');
-      return res.status(409).json({ errors: [ERROR_MESSAGES.emailAlreadyUsed] });
+      return res.status(409).json({ errors: [ERROR.emailAlreadyUsed] });
     }
 
     // Create user
@@ -71,7 +71,7 @@ router.post('/register', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('[AUTH] Register error:', error);
-    res.status(500).json({ errors: [ERROR_MESSAGES.serverError] });
+    res.status(500).json({ errors: [ERROR.serverError] });
   }
 });
 
@@ -82,7 +82,7 @@ router.post('/login', async (req: Request, res: Response) => {
 
   if (!email || !password) {
     console.log('[AUTH] Login failed: missing email or password');
-    return res.status(400).json({ errors: [ERROR_MESSAGES.emailAndPasswordRequired] });
+    return res.status(400).json({ errors: [ERROR.emailAndPasswordRequired] });
   }
 
   console.log('[AUTH] Login attempt for:', email);
@@ -92,14 +92,14 @@ router.post('/login', async (req: Request, res: Response) => {
 
     if (!user) {
       console.log('[AUTH] Login failed: user not found');
-      return res.status(401).json({ errors: [ERROR_MESSAGES.loginFailed] });
+      return res.status(401).json({ errors: [ERROR.loginFailed] });
     }
 
     const validPassword = await comparePassword(password, user.password);
 
     if (!validPassword) {
       console.log('[AUTH] Login failed: invalid password');
-      return res.status(401).json({ errors: [ERROR_MESSAGES.loginFailed] });
+      return res.status(401).json({ errors: [ERROR.loginFailed] });
     }
 
     const token = generateToken({
@@ -118,7 +118,7 @@ router.post('/login', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('[AUTH] Login error:', error);
-    res.status(500).json({ errors: [ERROR_MESSAGES.serverError] });
+    res.status(500).json({ errors: [ERROR.serverError] });
   }
 });
 
@@ -144,14 +144,14 @@ router.get('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
 
     if (!user) {
       console.log('[AUTH] /me: User not found in DB');
-      return res.status(404).json({ errors: [ERROR_MESSAGES.userNotFound] });
+      return res.status(404).json({ errors: [ERROR.userNotFound] });
     }
 
     console.log('[AUTH] /me: Returning user data');
     res.json({ user });
   } catch (error) {
     console.error('[AUTH] /me error:', error);
-    res.status(500).json({ errors: [ERROR_MESSAGES.serverError] });
+    res.status(500).json({ errors: [ERROR.serverError] });
   }
 });
 
@@ -161,7 +161,7 @@ router.post('/change-password', authMiddleware, async (req: AuthRequest, res: Re
   const { currentPassword, newPassword } = req.body;
 
   if (!currentPassword || !newPassword) {
-    return res.status(400).json({ errors: [ERROR_MESSAGES.currentAndNewPasswordRequired] });
+    return res.status(400).json({ errors: [ERROR.currentAndNewPasswordRequired] });
   }
 
   const passwordValid = validatePassword(newPassword);
@@ -173,14 +173,14 @@ router.post('/change-password', authMiddleware, async (req: AuthRequest, res: Re
     const user = await findUserByEmail(req.user!.email);
 
     if (!user) {
-      return res.status(404).json({ errors: [ERROR_MESSAGES.userNotFound] });
+      return res.status(404).json({ errors: [ERROR.userNotFound] });
     }
 
     const validPassword = await comparePassword(currentPassword, user.password);
 
     if (!validPassword) {
       console.log('[AUTH] Change password failed: invalid current password');
-      return res.status(401).json({ errors: [ERROR_MESSAGES.currentPasswordIncorrect] });
+      return res.status(401).json({ errors: [ERROR.currentPasswordIncorrect] });
     }
 
     const hashedPassword = await hashPassword(newPassword);
@@ -190,7 +190,7 @@ router.post('/change-password', authMiddleware, async (req: AuthRequest, res: Re
     res.json({ message: 'Mot de passe modifié avec succès' });
   } catch (error) {
     console.error('[AUTH] Change password error:', error);
-    res.status(500).json({ errors: [ERROR_MESSAGES.serverError] });
+    res.status(500).json({ errors: [ERROR.serverError] });
   }
 });
 

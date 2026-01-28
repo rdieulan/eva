@@ -5,7 +5,7 @@ import { useAuth } from '@/composables/useAuth';
 import { useErrors } from '@/composables/useErrors';
 import { createTeam, fetchTeamLocations } from '@/api';
 import { validateTeamName } from '@shared/utils';
-import { ERROR_MESSAGES } from '@shared/constants';
+import { ERROR } from '@shared/constants';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 
 const router = useRouter();
@@ -61,7 +61,7 @@ async function handleSubmit() {
     // Redirect to team page
     router.push('/team');
   } catch (e) {
-    setErrorFromException(e, ERROR_MESSAGES.teamCreationFailed);
+    setErrorFromException(e, ERROR.teamCreationFailed);
   } finally {
     isSubmitting.value = false;
   }
