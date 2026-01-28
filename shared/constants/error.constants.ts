@@ -17,6 +17,7 @@ export const ERROR_MESSAGES = {
   registrationFailed: 'Erreur lors de l\'inscription',
   passwordChangeFailed: 'Erreur lors du changement de mot de passe',
   unauthorized: 'Non authentifié',
+  sessionExpired: 'Session expirée. Veuillez vous reconnecter.',
   forbidden: 'Permission refusée',
   tokenMissing: 'Token manquant',
   tokenInvalid: 'Token invalide',
@@ -28,6 +29,8 @@ export const ERROR_MESSAGES = {
 
   // User
   userNotFound: 'Utilisateur non trouvé',
+  playersLoadFailed: 'Erreur lors du chargement des joueurs',
+  playersNotLoaded: 'Joueurs non chargés',
 
   // Team
   teamNotFound: 'Aucune équipe trouvée',
@@ -60,8 +63,14 @@ export const ERROR_MESSAGES = {
   joinTeamFailed: 'Erreur lors de la tentative de rejoindre l\'équipe',
 
   // Calendar
+  calendarLoadFailed: 'Erreur lors du chargement du calendrier',
+  availabilityUpdateFailed: 'Erreur lors de la mise à jour de la disponibilité',
+  eventsLoadFailed: 'Erreur lors du chargement des événements',
   eventNotFound: 'Événement non trouvé',
   eventCreationFailed: 'Erreur lors de la création de l\'événement',
+  eventUpdateFailed: 'Erreur lors de la modification de l\'événement',
+  eventDeleteFailed: 'Erreur lors de la suppression de l\'événement',
+  eventGamePlanUpdateFailed: 'Erreur lors de la mise à jour du plan de jeu',
   eventDateRequired: 'Veuillez sélectionner une date',
   eventTitleRequired: 'Veuillez entrer un titre',
   eventTimeRequired: 'Veuillez renseigner les heures de début et fin',
@@ -77,9 +86,14 @@ export const ERROR_MESSAGES = {
   matchOnlyGamePlan: 'Seuls les MATCH peuvent avoir un plan de jeu',
 
   // Planner / Maps
+  mapsLoadFailed: 'Erreur lors du chargement des cartes',
+  mapLoadFailed: 'Erreur lors du chargement de la carte',
+  mapSaveFailed: 'Erreur lors de la sauvegarde de la carte',
   planNotFound: 'Plan de jeu non trouvé',
   planLoadFailed: 'Erreur lors du chargement du plan',
+  plansLoadFailed: 'Erreur lors du chargement des plans',
   planCreationFailed: 'Erreur lors de la création du plan',
+  planSaveFailed: 'Erreur lors de la sauvegarde du plan',
   planDuplicationFailed: 'Erreur lors de la duplication du plan',
   planDeletionFailed: 'Erreur lors de la suppression du plan',
   planRenameFailed: 'Erreur lors du renommage du plan',
@@ -87,6 +101,8 @@ export const ERROR_MESSAGES = {
   accessDenied: 'Accès refusé',
   ruleNotFound: 'Règle non trouvée',
   balanceRulesLoadFailed: 'Erreur lors du chargement des règles d\'équilibrage',
+  balanceRuleUpdateFailed: 'Erreur lors de la mise à jour de la règle',
+  balanceRulesResetFailed: 'Erreur lors de la réinitialisation des règles',
 } as const;
 
 export type ErrorMessageKey = keyof typeof ERROR_MESSAGES;

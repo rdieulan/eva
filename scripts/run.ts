@@ -28,6 +28,10 @@ const AVAILABLE_SCRIPTS: Record<string, { description: string; minArgs: number }
     description: 'Rename/move a file and update all imports',
     minArgs: 2,
   },
+  'refactor': {
+    description: 'AST-based refactoring (rename symbols, move files, find unused exports)',
+    minArgs: 1,
+  },
 };
 
 interface ScriptResult {

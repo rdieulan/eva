@@ -306,11 +306,11 @@ model TeamInvite {
 | Fichier | Statut | Notes |
 |---------|--------|-------|
 | `client/src/api/auth.api.ts` | ✅ | Utilise authFetch, ERROR_MESSAGES, format errors[] |
-| `client/src/api/teams.api.ts` | ⬜ | CRUD équipe, invitations |
-| `client/src/api/maps.api.ts` | ⬜ | Utilisation authFetch |
-| `client/src/api/calendar.api.ts` | ⬜ | Utilisation authFetch |
-| `client/src/api/players.api.ts` | ⬜ | Cache, utilisation authFetch |
-| `client/src/api/balance-rules.api.ts` | ⬜ | Utilisation authFetch |
+| `client/src/api/teams.api.ts` | ✅ | Uniformisé ApiError.fromResponse, shadowing corrigé (errorData), format errors[] |
+| `client/src/api/maps.api.ts` | ✅ | ApiError.fromResponse, ERROR_MESSAGES centralisés, pas de tests nécessaires (plomberie API) |
+| `client/src/api/calendar.api.ts` | ✅ | authFetch amélioré, ERROR_MESSAGES centralisés |
+| `client/src/api/players.api.ts` | ✅ | authFetch amélioré, cache géré, ERROR_MESSAGES centralisés |
+| `client/src/api/balance-rules.api.ts` | ✅ | authFetch amélioré, ERROR_MESSAGES centralisés |
 | `client/src/api/utils.ts` | ⬜ | authFetch, gestion 401 |
 
 ---

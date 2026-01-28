@@ -36,8 +36,8 @@ export async function login(credentials: LoginCredentials): Promise<LoginRespons
   });
 
   if (!response.ok) {
-    const data = await response.json();
-    throw new Error(data.errors?.join('. ') || ERROR_MESSAGES.loginFailed);
+    const errorData = await response.json();
+    throw ApiError.fromResponse(errorData, ERROR_MESSAGES.loginFailed);
   }
 
   return response.json();
@@ -54,14 +54,8 @@ export async function logout(): Promise<void> {
  * Get current user info
  */
 export async function getCurrentUser(): Promise<AuthUser> {
-  const response = await authFetch('/api/auth/me');
-
-  if (!response.ok) {
-    throw new Error(ERROR_MESSAGES.unauthorized);
-  }
-
-  const data = await response.json();
-  return data.user;
+  const response = await authFetch<{ user: AuthUser }>('/api/auth/me', undefined, ERROR_MESSAGES.unauthorized);
+  return response.user;
 }
 
 /**
@@ -71,14 +65,10 @@ export async function changePassword(
   currentPassword: string,
   newPassword: string
 ): Promise<void> {
-  const response = await authFetch('/api/auth/change-password', {
-    method: 'POST',
-    body: JSON.stringify({ currentPassword, newPassword }),
-  });
-
-  if (!response.ok) {
-    const data = await response.json();
-    throw ApiError.fromResponse(data, ERROR_MESSAGES.passwordChangeFailed);
-  }
+  await authFetch<void>(
+    '/api/auth/change-password',
+    { method: 'POST', body: JSON.stringify({ currentPassword, newPassword }) },
+    ERROR_MESSAGES.passwordChangeFailed
+  );
 }
 

@@ -1,5 +1,8 @@
 // API utilities
 
+import { ApiError } from '@/api/error';
+import { ERROR_MESSAGES } from '@shared/constants';
+
 // Flag to prevent multiple simultaneous logout redirects
 let isLoggingOut = false;
 
@@ -32,12 +35,23 @@ export function getAuthHeaders(): HeadersInit {
 
 /**
  * Authenticated fetch wrapper
- * Automatically handles 401 errors by forcing logout
+ * - Without errorMessage: returns raw Response (caller handles errors)
+ * - With errorMessage: returns parsed JSON and throws ApiError on failure
  */
 export async function authFetch(
   url: string,
-  options: RequestInit = {}
-): Promise<Response> {
+  options?: RequestInit
+): Promise<Response>;
+export async function authFetch<T>(
+  url: string,
+  options: RequestInit | undefined,
+  errorMessage: string
+): Promise<T>;
+export async function authFetch<T>(
+  url: string,
+  options: RequestInit = {},
+  errorMessage?: string
+): Promise<Response | T> {
   const response = await fetch(url, {
     ...options,
     headers: {
@@ -49,9 +63,17 @@ export async function authFetch(
   // Handle 401 Unauthorized globally
   if (response.status === 401) {
     handleUnauthorized();
-    throw new Error('Session expirée. Veuillez vous reconnecter.');
+    throw new Error(ERROR_MESSAGES.sessionExpired);
+  }
+
+  // If errorMessage provided, handle errors and return JSON
+  if (errorMessage !== undefined) {
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw ApiError.fromResponse(errorData, errorMessage);
+    }
+    return (await response.json()) as T;
   }
 
   return response;
 }
-

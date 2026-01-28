@@ -102,8 +102,8 @@ router.delete(
   }
 );
 
-// GET /api/invites/:code - Verify invite code validity (public)
-router.get('/invites/:code', async (req, res: Response) => {
+// GET /api/invites/:code - Verify invite code validity
+router.get('/invites/:code', authMiddleware, async (req, res: Response) => {
   const { code } = req.params;
 
   try {

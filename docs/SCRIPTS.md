@@ -101,6 +101,60 @@ In dry-run mode, the script shows a diff for each file that would be modified:
 
 ---
 
+### `refactor`
+
+AST-based refactoring using ts-morph for precise code transformations.
+
+#### Usage
+
+```bash
+# Dry-run (preview changes)
+npm run script:dry -- refactor <action> [options]
+
+# Execute
+npm run script -- refactor <action> [options]
+```
+
+#### Actions
+
+##### `symbol` - Rename a symbol
+
+Renames a variable, function, class, or any other symbol and updates all references across the project.
+
+```bash
+# Preview
+npm run script:dry -- refactor symbol <file> <oldName> <newName>
+
+# Execute
+npm run script -- refactor symbol client/src/api/utils.ts authFetch authenticatedFetch
+```
+
+##### `move` - Move/rename a file
+
+Moves or renames a file and automatically updates all imports (alternative to `rename-file` using AST).
+
+```bash
+npm run script -- refactor move <source> <target>
+```
+
+##### `unused` - Find unused exports
+
+Scans the project for exports that are not imported anywhere.
+
+```bash
+npm run script -- refactor unused
+```
+
+#### Features
+
+- ✅ Uses TypeScript AST for precise transformations
+- ✅ Finds all references across the entire project
+- ✅ Updates imports, exports, and usages
+- ✅ Shows affected files before making changes
+- ✅ Dry-run mode for safe previewing
+
+---
+
 ## 🧪 Quality Control Tests
 
 Located in `/tests/quality/`, these tests ensure code quality standards.

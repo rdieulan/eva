@@ -63,7 +63,7 @@ router.get('/current', authMiddleware, async (req: AuthRequest, res: Response) =
 });
 
 // GET /api/teams/locations - Get available locations
-router.get('/locations', (_req, res: Response) => {
+router.get('/locations', authMiddleware, (_req, res: Response) => {
   res.json(TEAM_LOCATIONS);
 });
 
