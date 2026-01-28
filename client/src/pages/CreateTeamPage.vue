@@ -3,6 +3,9 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
 import { createTeam, fetchTeamLocations } from '@/api';
+import { validateTeamName } from '@shared/utils';
+import { ERROR_MESSAGES } from '@shared/constants';
+import ErrorDisplay from '@/components/common/ErrorDisplay.vue';
 
 const router = useRouter();
 const { hasTeam, refreshUser } = useAuth();
@@ -11,7 +14,7 @@ const { hasTeam, refreshUser } = useAuth();
 const locations = ref<string[]>([]);
 const isLoading = ref(true);
 const isSubmitting = ref(false);
-const error = ref<string | null>(null);
+const errors = ref<string[]>([]);
 
 // Form
 const teamName = ref('');
@@ -36,13 +39,14 @@ onMounted(async () => {
 
 // Submit form
 async function handleSubmit() {
-  if (!teamName.value.trim() || teamName.value.trim().length < 2) {
-    error.value = 'Le nom de l\'équipe doit contenir au moins 2 caractères';
+  const validation = validateTeamName(teamName.value);
+  if (validation !== true) {
+    errors.value = validation;
     return;
   }
 
   isSubmitting.value = true;
-  error.value = null;
+  errors.value = [];
 
   try {
     await createTeam({
@@ -56,7 +60,7 @@ async function handleSubmit() {
     // Redirect to team page
     router.push('/team');
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Erreur lors de la création';
+    errors.value = [e instanceof Error ? e.message : ERROR_MESSAGES.teamCreationFailed];
   } finally {
     isSubmitting.value = false;
   }
@@ -82,7 +86,7 @@ function goBack() {
       </div>
 
       <form v-else @submit.prevent="handleSubmit" class="create-form">
-        <div v-if="error" class="error-message">{{ error }}</div>
+        <ErrorDisplay :errors="errors" />
 
         <div class="form-group">
           <label for="team-name">Nom de l'équipe *</label>
@@ -180,14 +184,6 @@ function goBack() {
   gap: $spacing-md;
 }
 
-.error-message {
-  padding: $spacing-sm $spacing-md;
-  background: rgba($color-danger, 0.1);
-  border: 1px solid $color-danger;
-  border-radius: $radius-sm;
-  color: $color-danger;
-  font-size: $font-size-sm;
-}
 
 .form-group {
   display: flex;

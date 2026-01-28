@@ -4,6 +4,7 @@ import { Router } from 'express';
 import type { Response } from 'express';
 import { authMiddleware, requirePermission } from '@middleware/auth.middleware';
 import type { AuthRequest } from '@middleware/auth.middleware';
+import { ERROR_MESSAGES } from '@shared/constants';
 import * as invitesService from '@services/invites.service';
 
 const router = Router();
@@ -19,18 +20,18 @@ router.post(
 
     // Validate inputs
     if (typeof expiresInHours !== 'number' || expiresInHours < 1 || expiresInHours > 168) {
-      return res.status(400).json({ errors: ['La durée d\'expiration doit être entre 1 et 168 heures'] });
+      return res.status(400).json({ errors: [ERROR_MESSAGES.inviteExpirationInvalid] });
     }
 
     if (typeof maxUses !== 'number' || maxUses < 1 || maxUses > 50) {
-      return res.status(400).json({ errors: ['Le nombre d\'utilisations doit être entre 1 et 50'] });
+      return res.status(400).json({ errors: [ERROR_MESSAGES.inviteMaxUsesInvalid] });
     }
 
     try {
       // Verify user belongs to this team
       const user = await invitesService.verifyUserBelongsToTeam(req.user!.userId, teamId);
       if (!user) {
-        return res.status(403).json({ errors: ['Vous ne pouvez créer des invitations que pour votre équipe'] });
+        return res.status(403).json({ errors: [ERROR_MESSAGES.forbidden] });
       }
 
       const invite = await invitesService.createInvite({
@@ -43,7 +44,7 @@ router.post(
       res.status(201).json(invite);
     } catch (error) {
       console.error('Error creating invite:', error);
-      res.status(500).json({ errors: ['Erreur serveur'] });
+      res.status(500).json({ errors: [ERROR_MESSAGES.serverError] });
     }
   }
 );
@@ -60,14 +61,14 @@ router.get(
       // Verify user belongs to this team
       const user = await invitesService.verifyUserBelongsToTeam(req.user!.userId, teamId);
       if (!user) {
-        return res.status(403).json({ errors: ['Accès non autorisé'] });
+        return res.status(403).json({ errors: [ERROR_MESSAGES.forbidden] });
       }
 
       const invites = await invitesService.getActiveInvites(teamId);
       res.json(invites);
     } catch (error) {
       console.error('Error listing invites:', error);
-      res.status(500).json({ errors: ['Erreur serveur'] });
+      res.status(500).json({ errors: [ERROR_MESSAGES.serverError] });
     }
   }
 );
@@ -84,7 +85,7 @@ router.delete(
       // Verify user belongs to this team
       const user = await invitesService.verifyUserBelongsToTeam(req.user!.userId, teamId);
       if (!user) {
-        return res.status(403).json({ errors: ['Accès non autorisé'] });
+        return res.status(403).json({ errors: [ERROR_MESSAGES.forbidden] });
       }
 
       const result = await invitesService.deleteInvite(inviteId, teamId);
@@ -96,7 +97,7 @@ router.delete(
       res.json({ message: 'Invitation révoquée' });
     } catch (error) {
       console.error('Error deleting invite:', error);
-      res.status(500).json({ errors: ['Erreur serveur'] });
+      res.status(500).json({ errors: [ERROR_MESSAGES.serverError] });
     }
   }
 );
@@ -110,7 +111,7 @@ router.get('/invites/:code', async (req, res: Response) => {
     res.json(result);
   } catch (error) {
     console.error('Error verifying invite:', error);
-    res.status(500).json({ errors: ['Erreur serveur'] });
+    res.status(500).json({ errors: [ERROR_MESSAGES.serverError] });
   }
 });
 
@@ -133,7 +134,7 @@ router.post('/invites/:code/join', authMiddleware, async (req: AuthRequest, res:
     });
   } catch (error) {
     console.error('Error joining team:', error);
-    res.status(500).json({ errors: ['Erreur serveur'] });
+    res.status(500).json({ errors: [ERROR_MESSAGES.serverError] });
   }
 });
 

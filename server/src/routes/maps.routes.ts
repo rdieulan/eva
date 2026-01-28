@@ -4,6 +4,7 @@ import { Router } from 'express';
 import type { Response } from 'express';
 import { authMiddleware, requirePermission } from '@middleware/auth.middleware';
 import type { AuthRequest } from '@middleware/auth.middleware';
+import { ERROR_MESSAGES } from '@shared/constants';
 import * as mapsService from '@services/maps.service';
 
 const router = Router();
@@ -13,7 +14,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   const teamId = req.user?.teamId;
 
   if (!teamId) {
-    res.status(403).json({ errors: ['Vous devez appartenir à une équipe pour accéder aux cartes'] });
+    res.status(403).json({ errors: [ERROR_MESSAGES.teamRequiredForMaps] });
     return;
   }
 
@@ -25,7 +26,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     res.json(maps);
   } catch (error) {
     console.error('[API] Error fetching maps:', error);
-    res.status(500).json({ errors: ['Erreur serveur'] });
+    res.status(500).json({ errors: [ERROR_MESSAGES.serverError] });
   }
 });
 
@@ -35,7 +36,7 @@ router.get('/:mapId', authMiddleware, async (req: AuthRequest, res: Response) =>
   const teamId = req.user?.teamId;
 
   if (!teamId) {
-    res.status(403).json({ errors: ['Vous devez appartenir à une équipe pour accéder aux cartes'] });
+    res.status(403).json({ errors: [ERROR_MESSAGES.teamRequiredForMaps] });
     return;
   }
 
@@ -46,7 +47,7 @@ router.get('/:mapId', authMiddleware, async (req: AuthRequest, res: Response) =>
 
     if (!map) {
       console.log('[API] Map not found:', mapId);
-      res.status(404).json({ errors: ['Carte non trouvée'] });
+      res.status(404).json({ errors: [ERROR_MESSAGES.mapNotFound] });
       return;
     }
 
@@ -54,7 +55,7 @@ router.get('/:mapId', authMiddleware, async (req: AuthRequest, res: Response) =>
     res.json(map);
   } catch (error) {
     console.error('[API] Error fetching map:', error);
-    res.status(500).json({ errors: ['Erreur serveur'] });
+    res.status(500).json({ errors: [ERROR_MESSAGES.serverError] });
   }
 });
 
@@ -69,7 +70,7 @@ router.post('/:mapId', authMiddleware, requirePermission('planner', 'canEdit'), 
     res.json({ success: true, message: `Carte ${mapId} sauvegardée` });
   } catch (error) {
     console.error('Error saving map:', error);
-    res.status(500).json({ errors: ['Erreur serveur'] });
+    res.status(500).json({ errors: [ERROR_MESSAGES.serverError] });
   }
 });
 
@@ -79,7 +80,7 @@ router.get('/:mapId/plans', authMiddleware, async (req: AuthRequest, res: Respon
   const teamId = req.user?.teamId;
 
   if (!teamId) {
-    res.status(403).json({ errors: ['Vous devez appartenir à une équipe pour accéder aux plans'] });
+    res.status(403).json({ errors: [ERROR_MESSAGES.teamRequiredForPlans] });
     return;
   }
 
@@ -88,7 +89,7 @@ router.get('/:mapId/plans', authMiddleware, async (req: AuthRequest, res: Respon
     res.json(plans);
   } catch (error) {
     console.error('Error fetching game plans:', error);
-    res.status(500).json({ errors: ['Erreur serveur'] });
+    res.status(500).json({ errors: [ERROR_MESSAGES.serverError] });
   }
 });
 
@@ -99,7 +100,7 @@ router.post('/:mapId/plans', authMiddleware, requirePermission('planner', 'canCr
   const teamId = req.user?.teamId;
 
   if (!teamId) {
-    res.status(400).json({ errors: ['L\'utilisateur doit appartenir à une équipe pour créer un plan'] });
+    res.status(400).json({ errors: [ERROR_MESSAGES.teamRequiredForPlans] });
     return;
   }
 
@@ -107,7 +108,7 @@ router.post('/:mapId/plans', authMiddleware, requirePermission('planner', 'canCr
     const plan = await mapsService.createGamePlan(mapId, teamId, name);
 
     if (!plan) {
-      res.status(404).json({ errors: ['Carte non trouvée'] });
+      res.status(404).json({ errors: [ERROR_MESSAGES.mapNotFound] });
       return;
     }
 
@@ -116,7 +117,7 @@ router.post('/:mapId/plans', authMiddleware, requirePermission('planner', 'canCr
     res.json(plan);
   } catch (error) {
     console.error('Error creating game plan:', error);
-    res.status(500).json({ errors: ['Erreur serveur'] });
+    res.status(500).json({ errors: [ERROR_MESSAGES.serverError] });
   }
 });
 

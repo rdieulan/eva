@@ -18,7 +18,9 @@ import {
 import type { TeamWithMembers, TeamMember, TeamInvite } from '@/api';
 import type { UserPermissions } from '@shared/types';
 import { DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
+import { ERROR_MESSAGES } from '@shared/constants';
 import ConfirmModal from '@/components/common/ConfirmModal.vue';
+import ErrorDisplay from '@/components/common/ErrorDisplay.vue';
 import TeamInfo from '@/components/team/TeamInfo.vue';
 import TeamMembers from '@/components/team/TeamMembers.vue';
 import TeamInvites from '@/components/team/TeamInvites.vue';
@@ -33,7 +35,7 @@ const team = ref<TeamWithMembers | null>(null);
 const members = ref<TeamMember[]>([]);
 const locations = ref<string[]>([]);
 const isLoading = ref(true);
-const error = ref<string | null>(null);
+const errors = ref<string[]>([]);
 const successMessage = ref<string | null>(null);
 
 // Permissions modal
@@ -67,7 +69,7 @@ async function loadData() {
   if (!token.value) return;
 
   isLoading.value = true;
-  error.value = null;
+  errors.value = [];
 
   try {
     const teamData = await fetchCurrentTeam();
@@ -89,7 +91,7 @@ async function loadData() {
       }
     }
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Erreur inconnue';
+    errors.value = [e instanceof Error ? e.message : ERROR_MESSAGES.serverError];
   } finally {
     isLoading.value = false;
   }
@@ -111,7 +113,7 @@ async function handleSaveTeam(data: { name: string; location: string | null }) {
     team.value.location = data.location ?? undefined;
     showSuccess('Équipe mise à jour');
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Erreur';
+    errors.value = [e instanceof Error ? e.message : ERROR_MESSAGES.serverError];
   }
 }
 
@@ -124,7 +126,7 @@ async function handleDeleteTeam() {
     showSuccess('Équipe supprimée');
     window.location.reload();
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Erreur';
+    errors.value = [e instanceof Error ? e.message : ERROR_MESSAGES.serverError];
   }
 }
 
@@ -137,7 +139,7 @@ async function handleLeaveTeam() {
     showSuccess('Vous avez quitté l\'équipe');
     window.location.reload();
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Erreur';
+    errors.value = [e instanceof Error ? e.message : ERROR_MESSAGES.serverError];
   }
 }
 
@@ -165,7 +167,7 @@ async function savePermissions(perms: UserPermissions) {
     showPermissionsModal.value = false;
     showSuccess('Permissions mises à jour');
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Erreur';
+    errors.value = [e instanceof Error ? e.message : ERROR_MESSAGES.serverError];
   }
 }
 
@@ -186,7 +188,7 @@ async function confirmRemoveMember() {
     memberToRemove.value = null;
     showSuccess('Membre retiré');
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Erreur';
+    errors.value = [e instanceof Error ? e.message : ERROR_MESSAGES.serverError];
   }
 }
 
@@ -200,7 +202,7 @@ async function generateInvite(options: { expiresInHours: number; maxUses: number
   if (!team.value) return;
 
   isCreatingInvite.value = true;
-  error.value = null;
+  errors.value = [];
 
   try {
     const invite = await createInvite(team.value.id, options);
@@ -208,7 +210,7 @@ async function generateInvite(options: { expiresInHours: number; maxUses: number
     invites.value = [invite, ...invites.value];
     showSuccess('Lien d\'invitation généré !');
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Erreur lors de la création';
+    errors.value = [e instanceof Error ? e.message : ERROR_MESSAGES.inviteCreationFailed];
   } finally {
     isCreatingInvite.value = false;
   }
@@ -218,8 +220,8 @@ async function copyInviteUrl(url: string) {
   try {
     await navigator.clipboard.writeText(url);
     showSuccess('Lien copié !');
-  } catch (e) {
-    error.value = 'Impossible de copier le lien';
+  } catch {
+    errors.value = [ERROR_MESSAGES.copyFailed];
   }
 }
 
@@ -231,7 +233,7 @@ async function handleRevokeInvite(inviteId: string) {
     invites.value = invites.value.filter(i => i.id !== inviteId);
     showSuccess('Invitation révoquée');
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Erreur';
+    errors.value = [e instanceof Error ? e.message : ERROR_MESSAGES.serverError];
   }
 }
 
@@ -251,7 +253,7 @@ onMounted(loadData);
     <!-- Team content -->
     <template v-else-if="team">
       <!-- Messages -->
-      <div v-if="error" class="message error">{{ error }}</div>
+      <ErrorDisplay :errors="errors" />
       <div v-if="successMessage" class="message success">{{ successMessage }}</div>
 
       <!-- Team info section -->
@@ -383,11 +385,6 @@ h1 {
   margin-bottom: $spacing-md;
   text-align: center;
 
-  &.error {
-    background: rgba($color-danger, 0.1);
-    border: 1px solid rgba($color-danger, 0.3);
-    color: $color-danger;
-  }
 
   &.success {
     background: rgba($color-success, 0.1);

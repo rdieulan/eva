@@ -4,6 +4,7 @@ import { Router } from 'express';
 import type { Response } from 'express';
 import { authMiddleware, requirePermission } from '@middleware/auth.middleware';
 import type { AuthRequest } from '@middleware/auth.middleware';
+import { ERROR_MESSAGES } from '@shared/constants';
 import * as plansService from '@services/plans.service';
 
 const router = Router();
@@ -17,19 +18,19 @@ router.get('/:planId', authMiddleware, async (req: AuthRequest, res: Response) =
     const result = await plansService.getPlanById(planId, teamId || undefined);
 
     if (!result) {
-      res.status(404).json({ errors: ['Plan not found'] });
+      res.status(404).json({ errors: [ERROR_MESSAGES.planNotFound] });
       return;
     }
 
     if ('accessDenied' in result) {
-      res.status(403).json({ errors: ['Access denied'] });
+      res.status(403).json({ errors: [ERROR_MESSAGES.accessDenied] });
       return;
     }
 
     res.json(result);
   } catch (error) {
     console.error('Error fetching game plan:', error);
-    res.status(500).json({ errors: ['Server error'] });
+    res.status(500).json({ errors: [ERROR_MESSAGES.serverError] });
   }
 });
 
@@ -59,7 +60,7 @@ router.put('/:planId', authMiddleware, requirePermission('planner', 'canEdit'), 
     res.json(result.plan);
   } catch (error) {
     console.error('[API] Error updating game plan:', error);
-    res.status(500).json({ errors: ['Server error'] });
+    res.status(500).json({ errors: [ERROR_MESSAGES.serverError] });
   }
 });
 
@@ -81,7 +82,7 @@ router.delete('/:planId', authMiddleware, requirePermission('planner', 'canDelet
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting game plan:', error);
-    res.status(500).json({ errors: ['Server error'] });
+    res.status(500).json({ errors: [ERROR_MESSAGES.serverError] });
   }
 });
 

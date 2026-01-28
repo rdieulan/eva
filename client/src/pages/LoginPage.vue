@@ -3,6 +3,8 @@ import { ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
 import { clearPlayersCache, clearBalanceRulesCache } from '@/api';
+import { ERROR_MESSAGES } from '@shared/constants';
+import ErrorDisplay from '@/components/common/ErrorDisplay.vue';
 
 const router = useRouter();
 const route = useRoute();
@@ -15,7 +17,7 @@ const isLoading = ref(false);
 
 async function handleLogin() {
   if (!email.value || !password.value) {
-    errors.value = ['Veuillez remplir tous les champs'];
+    errors.value = [ERROR_MESSAGES.requiredFieldsMissing];
     return;
   }
 
@@ -35,7 +37,7 @@ async function handleLogin() {
     const data = await response.json();
 
     if (!response.ok) {
-      errors.value = data.errors || ['Erreur de connexion'];
+      errors.value = data.errors || [ERROR_MESSAGES.connectionError];
       return;
     }
 
@@ -50,7 +52,7 @@ async function handleLogin() {
     const redirectPath = route.query.redirect as string || '/';
     router.push(redirectPath);
   } catch {
-    errors.value = ['Erreur de connexion'];
+    errors.value = [ERROR_MESSAGES.connectionError];
   } finally {
     isLoading.value = false;
   }
@@ -85,9 +87,7 @@ async function handleLogin() {
           />
         </div>
 
-        <div v-if="errors.length" class="error-messages">
-          <p v-for="(err, i) in errors" :key="i">{{ err }}</p>
-        </div>
+        <ErrorDisplay :errors="errors" />
 
         <button type="submit" class="btn-submit" :disabled="isLoading">
           {{ isLoading ? 'Connexion...' : 'Se connecter' }}

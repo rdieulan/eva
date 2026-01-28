@@ -4,6 +4,8 @@ import { useRouter } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
 import { clearPlayersCache } from '@/api';
 import { validatePassword, validatePasswordsMatch } from '@shared/utils';
+import { ERROR_MESSAGES } from '@shared/constants';
+import ErrorDisplay from '@/components/common/ErrorDisplay.vue';
 import SvgIcon from '@/components/common/SvgIcon.vue';
 
 const router = useRouter();
@@ -23,7 +25,7 @@ async function handleChangePassword() {
   passwordSuccess.value = '';
 
   if (!currentPassword.value || !newPassword.value || !confirmPassword.value) {
-    passwordErrors.value = ['Veuillez remplir tous les champs'];
+    passwordErrors.value = [ERROR_MESSAGES.requiredFieldsMissing];
     return;
   }
 
@@ -58,7 +60,7 @@ async function handleChangePassword() {
     const data = await response.json();
 
     if (!response.ok) {
-      passwordErrors.value = data.errors || [data.error || 'Erreur lors du changement de mot de passe'];
+      passwordErrors.value = data.errors || [ERROR_MESSAGES.passwordChangeFailed];
       return;
     }
 
@@ -67,7 +69,7 @@ async function handleChangePassword() {
     newPassword.value = '';
     confirmPassword.value = '';
   } catch {
-    passwordErrors.value = ['Erreur lors du changement de mot de passe'];
+    passwordErrors.value = [ERROR_MESSAGES.passwordChangeFailed];
   } finally {
     isChangingPassword.value = false;
   }
@@ -155,9 +157,7 @@ async function handleLogout() {
             />
           </div>
 
-          <div v-if="passwordErrors.length" class="message error">
-            <p v-for="(err, i) in passwordErrors" :key="i">{{ err }}</p>
-          </div>
+          <ErrorDisplay :errors="passwordErrors" />
 
           <div v-if="passwordSuccess" class="message success">
             {{ passwordSuccess }}
@@ -368,11 +368,6 @@ h1 {
   font-size: 0.9rem;
   text-align: center;
 
-  &.error {
-    background: rgba($color-danger, 0.1);
-    border: 1px solid rgba($color-danger, 0.3);
-    color: $color-danger;
-  }
 
   &.success {
     background: rgba($color-success, 0.1);

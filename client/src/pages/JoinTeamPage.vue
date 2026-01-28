@@ -4,6 +4,8 @@ import { useRoute, useRouter } from 'vue-router';
 import { verifyInviteCode, joinTeamWithCode } from '@/api';
 import type { InviteValidation } from '@/api';
 import { useAuth } from '@/composables/useAuth';
+import { ERROR_MESSAGES } from '@shared/constants';
+import ErrorDisplay from '@/components/common/ErrorDisplay.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -13,7 +15,7 @@ const { user, token, refreshUser } = useAuth();
 const isLoading = ref(true);
 const isJoining = ref(false);
 const validation = ref<InviteValidation | null>(null);
-const error = ref<string | null>(null);
+const errors = ref<string[]>([]);
 const success = ref(false);
 
 // Computed
@@ -24,7 +26,7 @@ const isLoggedIn = computed(() => !!token.value);
 // Load invitation validation
 onMounted(async () => {
   if (!inviteCode.value) {
-    error.value = 'Code d\'invitation manquant';
+    errors.value = [ERROR_MESSAGES.inviteCodeMissing];
     isLoading.value = false;
     return;
   }
@@ -32,7 +34,7 @@ onMounted(async () => {
   try {
     validation.value = await verifyInviteCode(inviteCode.value);
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Erreur lors de la validation';
+    errors.value = [e instanceof Error ? e.message : ERROR_MESSAGES.inviteValidationFailed];
   } finally {
     isLoading.value = false;
   }
@@ -43,7 +45,7 @@ async function handleJoin() {
   if (!inviteCode.value || !isLoggedIn.value) return;
 
   isJoining.value = true;
-  error.value = null;
+  errors.value = [];
 
   try {
     await joinTeamWithCode(inviteCode.value);
@@ -58,7 +60,7 @@ async function handleJoin() {
       router.push('/team');
     }, 2000);
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Erreur lors de la tentative de rejoindre l\'équipe';
+    errors.value = [e instanceof Error ? e.message : ERROR_MESSAGES.joinTeamFailed];
   } finally {
     isJoining.value = false;
   }
@@ -94,7 +96,10 @@ function goToLogin() {
       <div v-else-if="!isValid" class="invalid-state">
         <div class="error-icon">❌</div>
         <h1>Invitation invalide</h1>
-        <p>{{ validation?.reason || error || 'Cette invitation n\'est plus valide.' }}</p>
+        <ErrorDisplay
+          :errors="validation?.reason ? [validation.reason] : errors"
+          :fallback="ERROR_MESSAGES.inviteInvalid"
+        />
         <button class="btn-home" @click="router.push('/')">
           Retour à l'accueil
         </button>
@@ -118,7 +123,7 @@ function goToLogin() {
         <div v-else class="join-section">
           <p>Vous êtes connecté en tant que <strong>{{ user?.name }}</strong></p>
 
-          <div v-if="error" class="error-message">{{ error }}</div>
+          <ErrorDisplay :errors="errors" />
 
           <button
             class="btn-join"
@@ -233,14 +238,6 @@ h1 {
   p {
     margin-bottom: $spacing-md;
   }
-}
-
-.error-message {
-  color: $color-danger;
-  padding: $spacing-sm;
-  background: rgba($color-danger, 0.1);
-  border-radius: $radius-sm;
-  margin-bottom: $spacing-md;
 }
 
 .btn-login,

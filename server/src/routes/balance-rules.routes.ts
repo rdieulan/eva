@@ -4,6 +4,7 @@ import { Router } from 'express';
 import type { Response } from 'express';
 import { authMiddleware, requirePermission } from '@middleware/auth.middleware';
 import type { AuthRequest } from '@middleware/auth.middleware';
+import { ERROR_MESSAGES } from '@shared/constants';
 import * as balanceRulesService from '@services/balance-rules.service';
 
 const router = Router();
@@ -13,7 +14,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   const teamId = req.user?.teamId;
 
   if (!teamId) {
-    return res.status(404).json({ errors: ['Aucune équipe trouvée'] });
+    return res.status(404).json({ errors: [ERROR_MESSAGES.teamNotFound] });
   }
 
   try {
@@ -21,7 +22,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     res.json(rules);
   } catch (error) {
     console.error('Error fetching balance rules:', error);
-    res.status(500).json({ errors: ['Erreur serveur'] });
+    res.status(500).json({ errors: [ERROR_MESSAGES.serverError] });
   }
 });
 
@@ -36,7 +37,7 @@ router.put(
     const teamId = req.user?.teamId;
 
     if (!teamId) {
-      return res.status(404).json({ errors: ['Aucune équipe trouvée'] });
+      return res.status(404).json({ errors: [ERROR_MESSAGES.teamNotFound] });
     }
 
     try {
@@ -47,13 +48,13 @@ router.put(
       });
 
       if (!updatedRule) {
-        return res.status(404).json({ errors: ['Règle non trouvée'] });
+        return res.status(404).json({ errors: [ERROR_MESSAGES.ruleNotFound] });
       }
 
       res.json(updatedRule);
     } catch (error) {
       console.error('Error updating balance rule:', error);
-      res.status(500).json({ errors: ['Erreur serveur'] });
+      res.status(500).json({ errors: [ERROR_MESSAGES.serverError] });
     }
   }
 );
@@ -67,7 +68,7 @@ router.post(
     const teamId = req.user?.teamId;
 
     if (!teamId) {
-      return res.status(404).json({ errors: ['Aucune équipe trouvée'] });
+      return res.status(404).json({ errors: [ERROR_MESSAGES.teamNotFound] });
     }
 
     try {
@@ -75,7 +76,7 @@ router.post(
       res.json(rules);
     } catch (error) {
       console.error('Error resetting balance rules:', error);
-      res.status(500).json({ errors: ['Erreur serveur'] });
+      res.status(500).json({ errors: [ERROR_MESSAGES.serverError] });
     }
   }
 );

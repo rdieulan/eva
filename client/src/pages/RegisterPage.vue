@@ -7,6 +7,8 @@ import {
   isValidPassword,
   isValidName,
 } from '@shared/utils';
+import { ERROR_MESSAGES } from '@shared/constants';
+import ErrorDisplay from '@/components/common/ErrorDisplay.vue';
 
 const router = useRouter();
 
@@ -68,7 +70,7 @@ async function handleRegister() {
     const data = await response.json();
 
     if (!response.ok) {
-      errors.value = data.errors || ['Erreur lors de l\'inscription'];
+      errors.value = data.errors || [ERROR_MESSAGES.registrationFailed];
       return;
     }
 
@@ -77,7 +79,7 @@ async function handleRegister() {
       router.push({ name: 'login' });
     }, 2000);
   } catch {
-    errors.value = ['Erreur lors de l\'inscription'];
+    errors.value = [ERROR_MESSAGES.registrationFailed];
   } finally {
     isLoading.value = false;
   }
@@ -158,9 +160,7 @@ function goToLogin() {
           </span>
         </div>
 
-        <div v-if="errors.length" class="error-messages">
-          <p v-for="(err, i) in errors" :key="i">{{ err }}</p>
-        </div>
+        <ErrorDisplay :errors="errors" />
 
         <button
           type="submit"

@@ -5,6 +5,7 @@ import type { Response } from 'express';
 import { authMiddleware, requirePermission } from '@middleware/auth.middleware';
 import type { AuthRequest } from '@middleware/auth.middleware';
 import type { SetAvailabilityRequest, CreateEventRequest } from '@shared/types';
+import { ERROR_MESSAGES } from '@shared/constants';
 import * as calendarService from '@services/calendar.service';
 
 const router = Router();
@@ -20,7 +21,7 @@ router.get('/availability', authMiddleware, async (req: AuthRequest, res: Respon
   const userId = req.user?.userId;
 
   if (!calendarService.isValidMonth(month)) {
-    res.status(400).json({ errors: ['Paramètre month requis (format YYYY-MM)'] });
+    res.status(400).json({ errors: [ERROR_MESSAGES.monthParamRequired] });
     return;
   }
 
@@ -36,7 +37,7 @@ router.get('/availability', authMiddleware, async (req: AuthRequest, res: Respon
     res.json(result);
   } catch (error) {
     console.error('[CALENDAR] Error fetching availability:', error);
-    res.status(500).json({ errors: ['Erreur serveur'] });
+    res.status(500).json({ errors: [ERROR_MESSAGES.serverError] });
   }
 });
 
@@ -46,12 +47,12 @@ router.post('/availability', authMiddleware, async (req: AuthRequest, res: Respo
   const userId = req.user!.userId;
 
   if (!calendarService.isValidDate(date)) {
-    res.status(400).json({ errors: ['Date invalide (format YYYY-MM-DD requis)'] });
+    res.status(400).json({ errors: [ERROR_MESSAGES.dateInvalid] });
     return;
   }
 
   if (!calendarService.isValidAvailabilityStatus(status)) {
-    res.status(400).json({ errors: ['Status invalide'] });
+    res.status(400).json({ errors: [ERROR_MESSAGES.statusInvalid] });
     return;
   }
 
@@ -65,7 +66,7 @@ router.post('/availability', authMiddleware, async (req: AuthRequest, res: Respo
     }
   } catch (error) {
     console.error('[CALENDAR] Error setting availability:', error);
-    res.status(500).json({ errors: ['Erreur serveur'] });
+    res.status(500).json({ errors: [ERROR_MESSAGES.serverError] });
   }
 });
 
@@ -79,7 +80,7 @@ router.get('/events', authMiddleware, async (req: AuthRequest, res: Response) =>
   const teamId = req.user?.teamId;
 
   if (!calendarService.isValidMonth(month)) {
-    res.status(400).json({ errors: ['Paramètre month requis (format YYYY-MM)'] });
+    res.status(400).json({ errors: [ERROR_MESSAGES.monthParamRequired] });
     return;
   }
 
@@ -93,7 +94,7 @@ router.get('/events', authMiddleware, async (req: AuthRequest, res: Response) =>
     res.json(events);
   } catch (error) {
     console.error('[CALENDAR] Error fetching events:', error);
-    res.status(500).json({ errors: ['Erreur serveur'] });
+    res.status(500).json({ errors: [ERROR_MESSAGES.serverError] });
   }
 });
 
@@ -104,29 +105,29 @@ router.post('/events', authMiddleware, requirePermission('calendar', 'canCreateE
   const teamId = req.user?.teamId;
 
   if (!teamId) {
-    res.status(400).json({ errors: ['User must belong to a team to create events'] });
+    res.status(400).json({ errors: [ERROR_MESSAGES.teamRequiredForEvents] });
     return;
   }
 
   // Validation
   if (!calendarService.isValidDate(date)) {
-    res.status(400).json({ errors: ['Date invalide (format YYYY-MM-DD requis)'] });
+    res.status(400).json({ errors: [ERROR_MESSAGES.dateInvalid] });
     return;
   }
   if (!calendarService.isValidTime(startTime)) {
-    res.status(400).json({ errors: ['Heure de début invalide (format HH:mm requis)'] });
+    res.status(400).json({ errors: [ERROR_MESSAGES.startTimeInvalid] });
     return;
   }
   if (!calendarService.isValidTime(endTime)) {
-    res.status(400).json({ errors: ['Heure de fin invalide (format HH:mm requis)'] });
+    res.status(400).json({ errors: [ERROR_MESSAGES.endTimeInvalid] });
     return;
   }
   if (!calendarService.isValidEventType(type)) {
-    res.status(400).json({ errors: ['Type invalide (MATCH ou EVENT requis)'] });
+    res.status(400).json({ errors: [ERROR_MESSAGES.eventTypeInvalid] });
     return;
   }
   if (!title || !title.trim()) {
-    res.status(400).json({ errors: ['Titre requis'] });
+    res.status(400).json({ errors: [ERROR_MESSAGES.titleRequired] });
     return;
   }
 
@@ -145,7 +146,7 @@ router.post('/events', authMiddleware, requirePermission('calendar', 'canCreateE
     res.status(201).json(event);
   } catch (error) {
     console.error('[CALENDAR] Error creating event:', error);
-    res.status(500).json({ errors: ['Erreur serveur'] });
+    res.status(500).json({ errors: [ERROR_MESSAGES.serverError] });
   }
 });
 
@@ -158,12 +159,12 @@ router.delete('/events/:id', authMiddleware, requirePermission('calendar', 'canD
     const result = await calendarService.getEventWithTeamCheck(id, teamId || undefined);
 
     if ('notFound' in result) {
-      res.status(404).json({ errors: ['Événement non trouvé'] });
+      res.status(404).json({ errors: [ERROR_MESSAGES.eventNotFound] });
       return;
     }
 
     if ('accessDenied' in result) {
-      res.status(403).json({ errors: ['Accès refusé'] });
+      res.status(403).json({ errors: [ERROR_MESSAGES.accessDenied] });
       return;
     }
 
@@ -171,7 +172,7 @@ router.delete('/events/:id', authMiddleware, requirePermission('calendar', 'canD
     res.json({ success: true });
   } catch (error) {
     console.error('[CALENDAR] Error deleting event:', error);
-    res.status(500).json({ errors: ['Erreur serveur'] });
+    res.status(500).json({ errors: [ERROR_MESSAGES.serverError] });
   }
 });
 
@@ -183,19 +184,19 @@ router.put('/events/:id', authMiddleware, requirePermission('calendar', 'canEdit
 
   // Validation
   if (date && !calendarService.isValidDate(date)) {
-    res.status(400).json({ errors: ['Date invalide (format YYYY-MM-DD requis)'] });
+    res.status(400).json({ errors: [ERROR_MESSAGES.dateInvalid] });
     return;
   }
   if (startTime && !calendarService.isValidTime(startTime)) {
-    res.status(400).json({ errors: ['Heure de début invalide (format HH:mm requis)'] });
+    res.status(400).json({ errors: [ERROR_MESSAGES.startTimeInvalid] });
     return;
   }
   if (endTime && !calendarService.isValidTime(endTime)) {
-    res.status(400).json({ errors: ['Heure de fin invalide (format HH:mm requis)'] });
+    res.status(400).json({ errors: [ERROR_MESSAGES.endTimeInvalid] });
     return;
   }
   if (type && !calendarService.isValidEventType(type)) {
-    res.status(400).json({ errors: ['Type invalide (MATCH ou EVENT requis)'] });
+    res.status(400).json({ errors: [ERROR_MESSAGES.eventTypeInvalid] });
     return;
   }
 
@@ -203,12 +204,12 @@ router.put('/events/:id', authMiddleware, requirePermission('calendar', 'canEdit
     const result = await calendarService.getEventWithTeamCheck(id, teamId || undefined);
 
     if ('notFound' in result) {
-      res.status(404).json({ errors: ['Événement non trouvé'] });
+      res.status(404).json({ errors: [ERROR_MESSAGES.eventNotFound] });
       return;
     }
 
     if ('accessDenied' in result) {
-      res.status(403).json({ errors: ['Accès refusé'] });
+      res.status(403).json({ errors: [ERROR_MESSAGES.accessDenied] });
       return;
     }
 
@@ -224,7 +225,7 @@ router.put('/events/:id', authMiddleware, requirePermission('calendar', 'canEdit
     res.json(event);
   } catch (error) {
     console.error('[CALENDAR] Error updating event:', error);
-    res.status(500).json({ errors: ['Erreur serveur'] });
+    res.status(500).json({ errors: [ERROR_MESSAGES.serverError] });
   }
 });
 
@@ -238,17 +239,17 @@ router.put('/events/:id/gameplan', authMiddleware, requirePermission('calendar',
     const result = await calendarService.getEventWithTeamCheck(id, teamId || undefined);
 
     if ('notFound' in result) {
-      res.status(404).json({ errors: ['Événement non trouvé'] });
+      res.status(404).json({ errors: [ERROR_MESSAGES.eventNotFound] });
       return;
     }
 
     if ('accessDenied' in result) {
-      res.status(403).json({ errors: ['Accès refusé'] });
+      res.status(403).json({ errors: [ERROR_MESSAGES.accessDenied] });
       return;
     }
 
     if (result.event.type !== 'MATCH') {
-      res.status(400).json({ errors: ['Seuls les MATCH peuvent avoir un plan de jeu'] });
+      res.status(400).json({ errors: [ERROR_MESSAGES.matchOnlyGamePlan] });
       return;
     }
 
@@ -256,7 +257,7 @@ router.put('/events/:id/gameplan', authMiddleware, requirePermission('calendar',
     res.json(event);
   } catch (error) {
     console.error('[CALENDAR] Error updating game plan:', error);
-    res.status(500).json({ errors: ['Erreur serveur'] });
+    res.status(500).json({ errors: [ERROR_MESSAGES.serverError] });
   }
 });
 

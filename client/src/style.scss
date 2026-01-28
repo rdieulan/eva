@@ -187,23 +187,6 @@ button {
 // Form Messages
 // ===========================================
 
-.error-messages {
-  background-color: rgba($color-danger, 0.1);
-  border: 1px solid rgba($color-danger, 0.3);
-  color: $color-danger;
-  padding: $spacing-sm;
-  border-radius: $radius-sm;
-  margin-bottom: $spacing-md;
-  font-size: $font-size-sm;
-
-  p {
-    margin: 0;
-
-    & + p {
-      margin-top: $spacing-xs;
-    }
-  }
-}
 
 .success-message {
   background-color: rgba($color-success, 0.1);
