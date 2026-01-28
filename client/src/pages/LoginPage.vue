@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
+import { useErrors } from '@/composables/useErrors';
 import { clearPlayersCache, clearBalanceRulesCache } from '@/api';
 import { ERROR_MESSAGES } from '@shared/constants';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
@@ -9,20 +10,20 @@ import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 const router = useRouter();
 const route = useRoute();
 const { setAuth } = useAuth();
+const { errors, setError, setErrors, clearErrors } = useErrors();
 
 const email = ref('');
 const password = ref('');
-const errors = ref<string[]>([]);
 const isLoading = ref(false);
 
 async function handleLogin() {
   if (!email.value || !password.value) {
-    errors.value = [ERROR_MESSAGES.requiredFieldsMissing];
+    setError(ERROR_MESSAGES.requiredFieldsMissing);
     return;
   }
 
   isLoading.value = true;
-  errors.value = [];
+  clearErrors();
 
   try {
     const response = await fetch('/api/auth/login', {
@@ -37,7 +38,7 @@ async function handleLogin() {
     const data = await response.json();
 
     if (!response.ok) {
-      errors.value = data.errors || [ERROR_MESSAGES.connectionError];
+      setErrors(data.errors || [ERROR_MESSAGES.connectionError]);
       return;
     }
 
@@ -52,7 +53,7 @@ async function handleLogin() {
     const redirectPath = route.query.redirect as string || '/';
     router.push(redirectPath);
   } catch {
-    errors.value = [ERROR_MESSAGES.connectionError];
+    setError(ERROR_MESSAGES.connectionError);
   } finally {
     isLoading.value = false;
   }

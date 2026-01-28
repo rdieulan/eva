@@ -10,6 +10,7 @@ import {
   deleteEvent,
   updateEventGamePlan,
 } from '@/api/calendar.api';
+import { useErrors } from '@/composables/useErrors';
 import { ERROR_MESSAGES } from '@shared/constants';
 import type { CalendarEvent, CreateEventRequest, MatchGamePlan, DayData } from '@shared/types';
 
@@ -55,6 +56,9 @@ export interface UseCalendarEventsReturn {
 
 export function useCalendarEvents(options: UseCalendarEventsOptions): UseCalendarEventsReturn {
   const { canCreate, canEdit, canDelete, reloadData, onError } = options;
+
+  // Error handling
+  const { errors, setErrorFromException } = useErrors();
 
   // Event form modal state
   const showEventModal = ref(false);
@@ -122,8 +126,8 @@ export function useCalendarEvents(options: UseCalendarEventsOptions): UseCalenda
       await reloadData();
     } catch (err) {
       console.error('Error saving event:', err);
-      const errorMsg = err instanceof Error ? err.message : ERROR_MESSAGES.serverError;
-      onError?.([errorMsg]);
+      setErrorFromException(err, ERROR_MESSAGES.serverError);
+      onError?.(errors.value);
     }
   }
 
@@ -135,8 +139,8 @@ export function useCalendarEvents(options: UseCalendarEventsOptions): UseCalenda
       await reloadData();
     } catch (err) {
       console.error('Error deleting event:', err);
-      const errorMsg = err instanceof Error ? err.message : ERROR_MESSAGES.serverError;
-      onError?.([errorMsg]);
+      setErrorFromException(err, ERROR_MESSAGES.serverError);
+      onError?.(errors.value);
     }
   }
 
@@ -148,8 +152,8 @@ export function useCalendarEvents(options: UseCalendarEventsOptions): UseCalenda
       await reloadData();
     } catch (err) {
       console.error('Error updating game plan:', err);
-      const errorMsg = err instanceof Error ? err.message : ERROR_MESSAGES.serverError;
-      onError?.([errorMsg]);
+      setErrorFromException(err, ERROR_MESSAGES.serverError);
+      onError?.(errors.value);
     }
   }
 

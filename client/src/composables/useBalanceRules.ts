@@ -2,16 +2,18 @@
 
 import { ref, computed, watch } from 'vue';
 import type { BalanceRule, BalanceRuleUpdate } from '@shared/types';
+import { ERROR_MESSAGES } from '@shared/constants';
 import {
   getBalanceRules as fetchBalanceRulesApi,
   updateBalanceRule,
   resetBalanceRules,
 } from '@/api/balance-rules.api';
 import { setBalanceRules } from '@/utils/balance';
+import { useErrors } from '@/composables/useErrors';
 
 const rules = ref<BalanceRule[]>([]);
 const loading = ref(false);
-const error = ref<string | null>(null);
+const { errors, setError, clearErrors } = useErrors();
 const initialized = ref(false);
 // Version counter to trigger reactive recalculations in components
 const rulesVersion = ref(0);
@@ -42,12 +44,12 @@ export function useBalanceRules() {
    */
   async function fetchRules(): Promise<void> {
     loading.value = true;
-    error.value = null;
+    clearErrors();
     try {
       rules.value = await fetchBalanceRulesApi();
       initialized.value = true;
     } catch (err) {
-      error.value = 'Failed to load balance rules';
+      setError(ERROR_MESSAGES.balanceRulesLoadFailed);
       console.error('Error fetching balance rules:', err);
     } finally {
       loading.value = false;
@@ -95,7 +97,7 @@ export function useBalanceRules() {
     rulesVersion,
     enabledRules,
     loading,
-    error,
+    errors,
     initialized,
     fetchRules,
     updateRule,

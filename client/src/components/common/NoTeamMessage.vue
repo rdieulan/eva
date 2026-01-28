@@ -23,7 +23,7 @@
           Rejoindre
         </button>
       </div>
-      <p v-if="error" class="error-message">{{ error }}</p>
+      <ErrorDisplay :errors="errors" />
     </div>
 
     <div class="separator">ou</div>
@@ -37,11 +37,14 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { ERROR_MESSAGES } from '@shared/constants';
+import { useErrors } from '@/composables/useErrors';
+import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 
 const router = useRouter();
 
 const inviteCode = ref('');
-const error = ref<string | null>(null);
+const { errors, setError } = useErrors();
 
 // Handle create team - navigate to create page
 function handleCreateTeam() {
@@ -69,7 +72,7 @@ function handleJoin() {
   const code = extractCode(inviteCode.value);
 
   if (!code) {
-    error.value = 'Code invalide';
+    setError(ERROR_MESSAGES.inviteCodeInvalid);
     return;
   }
 
@@ -163,13 +166,6 @@ function handleJoin() {
       }
     }
   }
-
-  .error-message {
-    color: $color-danger;
-    font-size: $font-size-sm;
-    margin-top: $spacing-xs;
-  }
-
 
   .separator {
     color: $color-text-secondary;

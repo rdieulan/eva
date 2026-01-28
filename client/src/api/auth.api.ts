@@ -1,6 +1,9 @@
 // Authentication API client
 
 import type { UserPermissions } from '@shared/types';
+import { ERROR_MESSAGES } from '@shared/constants';
+import { authFetch } from '@/api/utils';
+import { ApiError } from '@/api/error';
 
 export interface LoginCredentials {
   email: string;
@@ -13,7 +16,7 @@ export interface AuthUser {
   name: string;
   permissions: UserPermissions;
   teamId: string | null;
-  isLeader: boolean;  // Computed from team.leaderId === user.id
+  isLeader: boolean;
 }
 
 export interface LoginResponse {
@@ -23,6 +26,7 @@ export interface LoginResponse {
 
 /**
  * Login with email and password
+ * Note: Does not use authFetch because no token exists yet
  */
 export async function login(credentials: LoginCredentials): Promise<LoginResponse> {
   const response = await fetch('/api/auth/login', {
@@ -32,8 +36,8 @@ export async function login(credentials: LoginCredentials): Promise<LoginRespons
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Échec de la connexion');
+    const data = await response.json();
+    throw new Error(data.errors?.join('. ') || ERROR_MESSAGES.loginFailed);
   }
 
   return response.json();
@@ -42,27 +46,18 @@ export async function login(credentials: LoginCredentials): Promise<LoginRespons
 /**
  * Logout current user
  */
-export async function logout(token: string): Promise<void> {
-  await fetch('/api/auth/logout', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
-  });
+export async function logout(): Promise<void> {
+  await authFetch('/api/auth/logout', { method: 'POST' });
 }
 
 /**
  * Get current user info
  */
-export async function getCurrentUser(token: string): Promise<AuthUser> {
-  const response = await fetch('/api/auth/me', {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
-  });
+export async function getCurrentUser(): Promise<AuthUser> {
+  const response = await authFetch('/api/auth/me');
 
   if (!response.ok) {
-    throw new Error('Non authentifié');
+    throw new Error(ERROR_MESSAGES.unauthorized);
   }
 
   const data = await response.json();
@@ -73,22 +68,17 @@ export async function getCurrentUser(token: string): Promise<AuthUser> {
  * Change password
  */
 export async function changePassword(
-  token: string,
   currentPassword: string,
   newPassword: string
 ): Promise<void> {
-  const response = await fetch('/api/auth/change-password', {
+  const response = await authFetch('/api/auth/change-password', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
     body: JSON.stringify({ currentPassword, newPassword }),
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Échec du changement de mot de passe');
+    const data = await response.json();
+    throw ApiError.fromResponse(data, ERROR_MESSAGES.passwordChangeFailed);
   }
 }
 

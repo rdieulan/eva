@@ -4,6 +4,9 @@ import Modal from '@/components/common/Modal.vue';
 import ConfirmModal from '@/components/common/ConfirmModal.vue';
 import RotationCalculatorModal from '@/components/common/rotation/RotationCalculatorModal.vue';
 import GamePlanViewer from '@/components/common/GamePlanViewer.vue';
+import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
+import { useErrors } from '@/composables/useErrors';
+import { ERROR_MESSAGES } from '@shared/constants';
 import type {
   EventType,
   CreateEventRequest,
@@ -45,8 +48,8 @@ const gamePlan = ref<MatchGamePlan | null>(null);
 const showRotationCalculator = ref(false);
 const showDeleteConfirm = ref(false);
 
-// Error message
-const error = ref('');
+// Error handling
+const { errors, setError, addError, clearErrors, hasErrors } = useErrors();
 
 // Computed permissions
 const isViewOnly = computed(() => {
@@ -64,7 +67,7 @@ watch(
   () => props.open,
   (isOpen) => {
     if (isOpen) {
-      error.value = '';
+      clearErrors();
       showRotationCalculator.value = false;
       if (props.editEvent) {
         // Edit/View mode: fill with existing event data
@@ -106,22 +109,21 @@ const formattedDate = computed(() => {
 
 // Validate and submit
 function handleSubmit() {
-  error.value = '';
+  clearErrors();
 
   if (!date.value) {
-    error.value = 'Veuillez sélectionner une date';
-    return;
+    addError(ERROR_MESSAGES.eventDateRequired);
   }
   if (!title.value.trim()) {
-    error.value = 'Veuillez entrer un titre';
-    return;
+    addError(ERROR_MESSAGES.eventTitleRequired);
   }
   if (!startTime.value || !endTime.value) {
-    error.value = 'Veuillez renseigner les heures de début et fin';
-    return;
+    addError(ERROR_MESSAGES.eventTimeRequired);
+  } else if (startTime.value >= endTime.value) {
+    addError(ERROR_MESSAGES.eventTimeInvalid);
   }
-  if (startTime.value >= endTime.value) {
-    error.value = 'L\'heure de fin doit être après l\'heure de début';
+
+  if (hasErrors()) {
     return;
   }
 
@@ -221,15 +223,14 @@ const modalSize = computed(() => {
       <GamePlanViewer
         v-if="hasGamePlan && gamePlan"
         :gamePlan="gamePlan"
+        @error="setError"
       />
     </div>
 
     <!-- Edit form for admin users -->
     <form v-else class="event-form" @submit.prevent="handleSubmit">
       <!-- Error message -->
-      <div v-if="error" class="error-message">
-        {{ error }}
-      </div>
+      <ErrorDisplay :errors="errors" />
 
       <!-- Event type -->
       <div class="form-group">
@@ -324,7 +325,7 @@ const modalSize = computed(() => {
           <button type="button" class="btn-change-plan" @click="openRotationCalculator">
             ✏️ Modifier le plan
           </button>
-          <GamePlanViewer :gamePlan="gamePlan" />
+          <GamePlanViewer :gamePlan="gamePlan" @error="setError" />
         </div>
 
         <!-- Button to open rotation calculator if no plan yet -->
@@ -397,14 +398,6 @@ const modalSize = computed(() => {
   }
 }
 
-.error-message {
-  background: rgba($color-danger, 0.2);
-  border: 1px solid $color-danger;
-  color: $color-danger;
-  padding: 0.75rem;
-  border-radius: 6px;
-  font-size: 0.9rem;
-}
 
 .form-group {
   display: flex;

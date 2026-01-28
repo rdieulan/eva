@@ -16,6 +16,7 @@ import { getAssignmentColor } from '@/utils/colors';
 import { useAuth } from '@/composables/useAuth';
 import { usePlannerPlans } from '@/composables/usePlannerPlans';
 import { usePlannerNotes } from '@/composables/usePlannerNotes';
+import { useErrors } from '@/composables/useErrors';
 import { ERROR_MESSAGES } from '@shared/constants';
 import type { MapConfig, Player, GamePhase } from '@shared/types';
 
@@ -37,7 +38,7 @@ const currentPhase = ref<GamePhase>('START');
 const showNotesDrawer = ref(false);
 const showBalanceRulesModal = ref(false);
 const saveState = ref<'idle' | 'saving' | 'success' | 'error'>('idle');
-const errors = ref<string[]>([]);
+const { errors, setError } = useErrors();
 const showErrorModal = ref(false);
 
 const maps = ref<MapConfig[]>([]);
@@ -254,10 +255,11 @@ async function performSave(): Promise<{ success: boolean; error?: string }> {
       maps.value[index] = JSON.parse(JSON.stringify(mapToSave));
     }
 
-    return { success: true };
+return { success: true };
   } catch (error) {
     console.error('Save error:', error);
-    return { success: false, error: error instanceof Error ? error.message : ERROR_MESSAGES.serverError };
+    const errorMessage = error instanceof Error ? error.message : ERROR_MESSAGES.serverError;
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -270,7 +272,7 @@ async function saveChanges() {
     saveState.value = 'success';
     setTimeout(() => { saveState.value = 'idle'; }, 1500);
   } else {
-    errors.value = [result.error || ERROR_MESSAGES.serverError];
+    setError(result.error || ERROR_MESSAGES.serverError);
     showErrorModal.value = true;
     saveState.value = 'error';
     setTimeout(() => { saveState.value = 'idle'; }, 2000);
@@ -394,7 +396,7 @@ async function handleSaveAndLeave() {
       pendingAction.value = null;
     }, 800);
   } else {
-    errors.value = [result.error || ERROR_MESSAGES.serverError];
+    setError(result.error || ERROR_MESSAGES.serverError);
     showErrorModal.value = true;
     modalSaveState.value = 'error';
     setTimeout(() => { modalSaveState.value = 'idle'; }, 2000);

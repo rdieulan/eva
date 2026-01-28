@@ -19,6 +19,7 @@ import type { TeamWithMembers, TeamMember, TeamInvite } from '@/api';
 import type { UserPermissions } from '@shared/types';
 import { DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
 import { ERROR_MESSAGES } from '@shared/constants';
+import { useErrors } from '@/composables/useErrors';
 import ConfirmModal from '@/components/common/ConfirmModal.vue';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import TeamInfo from '@/components/team/TeamInfo.vue';
@@ -35,7 +36,7 @@ const team = ref<TeamWithMembers | null>(null);
 const members = ref<TeamMember[]>([]);
 const locations = ref<string[]>([]);
 const isLoading = ref(true);
-const errors = ref<string[]>([]);
+const { errors, setError, setErrorFromException, clearErrors } = useErrors();
 const successMessage = ref<string | null>(null);
 
 // Permissions modal
@@ -69,7 +70,7 @@ async function loadData() {
   if (!token.value) return;
 
   isLoading.value = true;
-  errors.value = [];
+  clearErrors();
 
   try {
     const teamData = await fetchCurrentTeam();
@@ -91,7 +92,7 @@ async function loadData() {
       }
     }
   } catch (e) {
-    errors.value = [e instanceof Error ? e.message : ERROR_MESSAGES.serverError];
+    setErrorFromException(e, ERROR_MESSAGES.serverError);
   } finally {
     isLoading.value = false;
   }
@@ -113,7 +114,7 @@ async function handleSaveTeam(data: { name: string; location: string | null }) {
     team.value.location = data.location ?? undefined;
     showSuccess('Équipe mise à jour');
   } catch (e) {
-    errors.value = [e instanceof Error ? e.message : ERROR_MESSAGES.serverError];
+    setErrorFromException(e, ERROR_MESSAGES.serverError);
   }
 }
 
@@ -126,7 +127,7 @@ async function handleDeleteTeam() {
     showSuccess('Équipe supprimée');
     window.location.reload();
   } catch (e) {
-    errors.value = [e instanceof Error ? e.message : ERROR_MESSAGES.serverError];
+    setErrorFromException(e, ERROR_MESSAGES.serverError);
   }
 }
 
@@ -139,7 +140,7 @@ async function handleLeaveTeam() {
     showSuccess('Vous avez quitté l\'équipe');
     window.location.reload();
   } catch (e) {
-    errors.value = [e instanceof Error ? e.message : ERROR_MESSAGES.serverError];
+    setErrorFromException(e, ERROR_MESSAGES.serverError);
   }
 }
 
@@ -167,7 +168,7 @@ async function savePermissions(perms: UserPermissions) {
     showPermissionsModal.value = false;
     showSuccess('Permissions mises à jour');
   } catch (e) {
-    errors.value = [e instanceof Error ? e.message : ERROR_MESSAGES.serverError];
+    setErrorFromException(e, ERROR_MESSAGES.serverError);
   }
 }
 
@@ -188,7 +189,7 @@ async function confirmRemoveMember() {
     memberToRemove.value = null;
     showSuccess('Membre retiré');
   } catch (e) {
-    errors.value = [e instanceof Error ? e.message : ERROR_MESSAGES.serverError];
+    setErrorFromException(e, ERROR_MESSAGES.serverError);
   }
 }
 
@@ -202,7 +203,7 @@ async function generateInvite(options: { expiresInHours: number; maxUses: number
   if (!team.value) return;
 
   isCreatingInvite.value = true;
-  errors.value = [];
+  clearErrors();
 
   try {
     const invite = await createInvite(team.value.id, options);
@@ -210,7 +211,7 @@ async function generateInvite(options: { expiresInHours: number; maxUses: number
     invites.value = [invite, ...invites.value];
     showSuccess('Lien d\'invitation généré !');
   } catch (e) {
-    errors.value = [e instanceof Error ? e.message : ERROR_MESSAGES.inviteCreationFailed];
+    setErrorFromException(e, ERROR_MESSAGES.inviteCreationFailed);
   } finally {
     isCreatingInvite.value = false;
   }
@@ -221,7 +222,7 @@ async function copyInviteUrl(url: string) {
     await navigator.clipboard.writeText(url);
     showSuccess('Lien copié !');
   } catch {
-    errors.value = [ERROR_MESSAGES.copyFailed];
+    setError(ERROR_MESSAGES.copyFailed);
   }
 }
 
@@ -233,7 +234,7 @@ async function handleRevokeInvite(inviteId: string) {
     invites.value = invites.value.filter(i => i.id !== inviteId);
     showSuccess('Invitation révoquée');
   } catch (e) {
-    errors.value = [e instanceof Error ? e.message : ERROR_MESSAGES.serverError];
+    setErrorFromException(e, ERROR_MESSAGES.serverError);
   }
 }
 

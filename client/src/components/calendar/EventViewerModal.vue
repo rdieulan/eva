@@ -2,6 +2,8 @@
 import { ref, computed, watch } from 'vue';
 import Modal from '@/components/common/Modal.vue';
 import GamePlanViewer from '@/components/common/GamePlanViewer.vue';
+import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
+import { useErrors } from '@/composables/useErrors';
 import type { CalendarEvent } from '@shared/types';
 import { getEventTypeLabel as getEventTypeLabelUtil, isPastDateStr } from '@/utils/calendar';
 
@@ -20,6 +22,9 @@ const emit = defineEmits<{
   'create-event': [date: string];
   'delete-event': [eventId: string];
 }>();
+
+// Error handling
+const { errors, setError } = useErrors();
 
 // Current event index
 const currentIndex = ref(props.initialIndex ?? 0);
@@ -156,9 +161,11 @@ function handleCreateEvent() {
         </div>
 
         <!-- Game Plan (for MATCH events) -->
+        <ErrorDisplay :errors="errors" />
         <GamePlanViewer
           v-if="currentEvent.type === 'MATCH' && currentEvent.gamePlan"
           :gamePlan="currentEvent.gamePlan"
+          @error="setError"
         />
       </div>
     </template>

@@ -2,6 +2,7 @@ import { ref, computed } from 'vue';
 import type { UserPermissions } from '@shared/types';
 import { DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
 import { clearPlayersCache } from '@/api/players.api';
+import { getCurrentUser } from '@/api/auth.api';
 import { clearBalanceRulesCache } from '@/composables/useBalanceRules';
 
 // Types
@@ -83,18 +84,12 @@ async function refreshUser(): Promise<void> {
   if (!currentToken) return;
 
   try {
-    const response = await fetch('/api/auth/me', {
-      headers: { 'Authorization': `Bearer ${currentToken}` }
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      user.value = data.user;
-      localStorage.setItem('user', JSON.stringify(data.user));
-      // Clear caches as team data may have changed
-      clearPlayersCache();
-      clearBalanceRulesCache();
-    }
+    const refreshedUser = await getCurrentUser();
+    user.value = refreshedUser;
+    localStorage.setItem('user', JSON.stringify(refreshedUser));
+    // Clear caches as team data may have changed
+    clearPlayersCache();
+    clearBalanceRulesCache();
   } catch {
     // Ignore errors, keep current state
   }
@@ -130,21 +125,13 @@ async function doInitAuth(): Promise<void> {
 
   // Validate token with server
   try {
-    const response = await fetch('/api/auth/me', {
-      headers: { 'Authorization': `Bearer ${storedToken}` }
-    });
 
-    if (response.ok) {
-      const data = await response.json();
-      token.value = storedToken;
-      user.value = data.user;
-      localStorage.setItem('user', JSON.stringify(data.user));
-    } else {
-      // Token invalid
-      clearAuth();
-    }
+    const validatedUser = await getCurrentUser();
+    token.value = storedToken;
+    user.value = validatedUser;
+    localStorage.setItem('user', JSON.stringify(validatedUser));
   } catch {
-    // Server error
+    // Token invalid or server error
     clearAuth();
   }
 

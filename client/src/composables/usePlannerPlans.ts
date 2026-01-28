@@ -5,6 +5,8 @@
 
 import { ref, computed, watch, type Ref, type ComputedRef } from 'vue';
 import { fetchGamePlan, createGamePlan, deleteGamePlan, saveGamePlan } from '@/api';
+import { useErrors } from '@/composables/useErrors';
+import { ERROR_MESSAGES } from '@shared/constants';
 import type { MapConfig, GamePlanSummary } from '@shared/types';
 
 export interface UsePlannerPlansOptions {
@@ -12,6 +14,7 @@ export interface UsePlannerPlansOptions {
   editableMaps: Ref<MapConfig[]>;
   selectedMapId: Ref<string | null>;
   editMode: Ref<boolean>;
+  onError?: (errors: string[]) => void;
 }
 
 export interface UsePlannerPlansReturn {
@@ -30,7 +33,10 @@ export interface UsePlannerPlansReturn {
 }
 
 export function usePlannerPlans(options: UsePlannerPlansOptions): UsePlannerPlansReturn {
-  const { maps, editableMaps, selectedMapId, editMode } = options;
+  const { maps, editableMaps, selectedMapId, editMode, onError } = options;
+
+  // Error handling
+  const { errors, setErrorFromException } = useErrors();
 
   const selectedPlanId = ref<string | null>(null);
 
@@ -72,6 +78,8 @@ export function usePlannerPlans(options: UsePlannerPlansOptions): UsePlannerPlan
       }
     } catch (error) {
       console.error('Error loading plan:', error);
+      setErrorFromException(error, ERROR_MESSAGES.planLoadFailed);
+      onError?.(errors.value);
     }
   }
 
@@ -99,7 +107,8 @@ export function usePlannerPlans(options: UsePlannerPlansOptions): UsePlannerPlan
       }
     } catch (error) {
       console.error('Error creating plan:', error);
-      alert('Erreur lors de la création du plan');
+      setErrorFromException(error, ERROR_MESSAGES.planCreationFailed);
+      onError?.(errors.value);
     }
   }
 
@@ -136,7 +145,8 @@ export function usePlannerPlans(options: UsePlannerPlansOptions): UsePlannerPlan
       }
     } catch (error) {
       console.error('Error duplicating plan:', error);
-      alert('Erreur lors de la duplication du plan');
+      setErrorFromException(error, ERROR_MESSAGES.planDuplicationFailed);
+      onError?.(errors.value);
     }
   }
 
@@ -160,7 +170,8 @@ export function usePlannerPlans(options: UsePlannerPlansOptions): UsePlannerPlan
       }
     } catch (error) {
       console.error('Error deleting plan:', error);
-      alert('Erreur lors de la suppression du plan');
+      setErrorFromException(error, ERROR_MESSAGES.planDeletionFailed);
+      onError?.(errors.value);
     }
   }
 
@@ -178,6 +189,8 @@ export function usePlannerPlans(options: UsePlannerPlansOptions): UsePlannerPlan
       }
     } catch (error) {
       console.error('Error renaming plan:', error);
+      setErrorFromException(error, ERROR_MESSAGES.planRenameFailed);
+      onError?.(errors.value);
     }
   }
 

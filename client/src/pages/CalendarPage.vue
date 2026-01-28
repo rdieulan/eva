@@ -11,17 +11,19 @@ import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import { useAuth } from '@/composables/useAuth';
 import { useCalendar } from '@/composables/useCalendar';
 import { useCalendarEvents } from '@/composables/useCalendarEvents';
+import { useErrors } from '@/composables/useErrors';
 import { fetchAllMaps, fetchPlayers } from '@/api';
+import { ERROR_MESSAGES } from '@shared/constants';
 import type { MapConfig, Player } from '@shared/types';
 
 const { permissions, user } = useAuth();
 
-// Error handling state
-const errors = ref<string[]>([]);
+// Error handling
+const { errors, setErrors, setErrorFromException } = useErrors();
 const showErrorModal = ref(false);
 
 function handleError(errorMessages: string[]) {
-  errors.value = errorMessages;
+  setErrors(errorMessages);
   showErrorModal.value = true;
 }
 
@@ -40,7 +42,7 @@ const {
   navigationTitle,
   days,
   isLoading,
-  error,
+  errors: calendarErrors,
   noTeam,
   editMode,
   toggleEditMode,
@@ -104,7 +106,8 @@ onMounted(async () => {
     players.value = loadedPlayers;
   } catch (err) {
     console.error('Error loading maps/players:', err);
-    handleError([err instanceof Error ? err.message : 'Erreur de chargement des données']);
+    setErrorFromException(err, ERROR_MESSAGES.serverError);
+    showErrorModal.value = true;
   }
 
   loadCalendarData();
@@ -128,8 +131,8 @@ onMounted(async () => {
     </div>
 
     <!-- Error state -->
-    <div v-else-if="error.length > 0" class="error-state">
-      <ErrorDisplay :errors="error" />
+    <div v-else-if="calendarErrors.length > 0" class="error-state">
+      <ErrorDisplay :errors="calendarErrors" />
       <button class="btn-retry" @click="loadCalendarData">Réessayer</button>
     </div>
 

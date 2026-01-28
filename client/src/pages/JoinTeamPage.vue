@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { verifyInviteCode, joinTeamWithCode } from '@/api';
 import type { InviteValidation } from '@/api';
 import { useAuth } from '@/composables/useAuth';
+import { useErrors } from '@/composables/useErrors';
 import { ERROR_MESSAGES } from '@shared/constants';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 
@@ -15,7 +16,7 @@ const { user, token, refreshUser } = useAuth();
 const isLoading = ref(true);
 const isJoining = ref(false);
 const validation = ref<InviteValidation | null>(null);
-const errors = ref<string[]>([]);
+const { errors, setError, setErrorFromException, clearErrors } = useErrors();
 const success = ref(false);
 
 // Computed
@@ -26,7 +27,7 @@ const isLoggedIn = computed(() => !!token.value);
 // Load invitation validation
 onMounted(async () => {
   if (!inviteCode.value) {
-    errors.value = [ERROR_MESSAGES.inviteCodeMissing];
+    setError(ERROR_MESSAGES.inviteCodeMissing);
     isLoading.value = false;
     return;
   }
@@ -34,7 +35,7 @@ onMounted(async () => {
   try {
     validation.value = await verifyInviteCode(inviteCode.value);
   } catch (e) {
-    errors.value = [e instanceof Error ? e.message : ERROR_MESSAGES.inviteValidationFailed];
+    setErrorFromException(e, ERROR_MESSAGES.inviteValidationFailed);
   } finally {
     isLoading.value = false;
   }
@@ -45,7 +46,7 @@ async function handleJoin() {
   if (!inviteCode.value || !isLoggedIn.value) return;
 
   isJoining.value = true;
-  errors.value = [];
+  clearErrors();
 
   try {
     await joinTeamWithCode(inviteCode.value);
@@ -60,7 +61,7 @@ async function handleJoin() {
       router.push('/team');
     }, 2000);
   } catch (e) {
-    errors.value = [e instanceof Error ? e.message : ERROR_MESSAGES.joinTeamFailed];
+    setErrorFromException(e, ERROR_MESSAGES.joinTeamFailed);
   } finally {
     isJoining.value = false;
   }

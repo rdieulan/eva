@@ -1,7 +1,9 @@
 // Teams API client
 
 import type { UserPermissions, Team } from '@shared/types';
+import { ERROR_MESSAGES } from '@shared/constants';
 import { authFetch } from '@/api/utils';
+import { ApiError } from '@/api/error';
 
 const API_BASE = '/api/teams';
 
@@ -30,7 +32,7 @@ export async function fetchCurrentTeam(): Promise<TeamWithMembers | null> {
   }
 
   if (!response.ok) {
-    throw new Error('Erreur lors de la récupération de l\'équipe');
+    throw new ApiError([], ERROR_MESSAGES.teamFetchFailed);
   }
 
   return response.json();
@@ -48,8 +50,8 @@ export async function createTeam(
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Erreur lors de la création de l\'équipe');
+    const data = await response.json();
+    throw ApiError.fromResponse(data, ERROR_MESSAGES.teamCreationFailed);
   }
 
   return response.json();
@@ -62,7 +64,7 @@ export async function fetchTeamLocations(): Promise<string[]> {
   const response = await fetch(`${API_BASE}/locations`);
 
   if (!response.ok) {
-    throw new Error('Erreur lors de la récupération des localisations');
+    throw new ApiError([], ERROR_MESSAGES.teamLocationsFetchFailed);
   }
 
   return response.json();
@@ -80,7 +82,8 @@ export async function updateTeam(
   });
 
   if (!response.ok) {
-    throw new Error('Erreur lors de la mise à jour de l\'équipe');
+    const data = await response.json();
+    throw ApiError.fromResponse(data, ERROR_MESSAGES.teamUpdateFailed);
   }
 
   return response.json();
@@ -93,7 +96,7 @@ export async function fetchTeamMembers(): Promise<TeamMember[]> {
   const response = await authFetch(`${API_BASE}/current/members`);
 
   if (!response.ok) {
-    throw new Error('Erreur lors de la récupération des membres');
+    throw new ApiError([], ERROR_MESSAGES.teamMembersFetchFailed);
   }
 
   return response.json();
@@ -112,8 +115,8 @@ export async function updateMemberPermissions(
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Erreur lors de la mise à jour des permissions');
+    const data = await response.json();
+    throw ApiError.fromResponse(data, ERROR_MESSAGES.teamPermissionsUpdateFailed);
   }
 }
 
@@ -126,8 +129,8 @@ export async function removeMember(memberId: string): Promise<void> {
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Erreur lors du retrait du membre');
+    const data = await response.json();
+    throw ApiError.fromResponse(data, ERROR_MESSAGES.teamMemberRemoveFailed);
   }
 }
 
@@ -140,8 +143,8 @@ export async function deleteTeam(): Promise<void> {
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Erreur lors de la suppression de l\'équipe');
+    const data = await response.json();
+    throw ApiError.fromResponse(data, ERROR_MESSAGES.teamDeleteFailed);
   }
 }
 
@@ -154,8 +157,8 @@ export async function leaveTeam(): Promise<void> {
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Erreur lors du départ de l\'équipe');
+    const data = await response.json();
+    throw ApiError.fromResponse(data, ERROR_MESSAGES.teamLeaveFailed);
   }
 }
 
@@ -199,8 +202,8 @@ export async function createInvite(
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Erreur lors de la création de l\'invitation');
+    const data = await response.json();
+    throw ApiError.fromResponse(data, ERROR_MESSAGES.inviteCreationFailed);
   }
 
   return response.json();
@@ -213,7 +216,7 @@ export async function fetchInvites(teamId: string): Promise<TeamInvite[]> {
   const response = await authFetch(`${API_BASE}/${teamId}/invites`);
 
   if (!response.ok) {
-    throw new Error('Erreur lors de la récupération des invitations');
+    throw new ApiError([], ERROR_MESSAGES.inviteFetchFailed);
   }
 
   return response.json();
@@ -228,8 +231,8 @@ export async function revokeInvite(teamId: string, inviteId: string): Promise<vo
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Erreur lors de la révocation de l\'invitation');
+    const data = await response.json();
+    throw ApiError.fromResponse(data, ERROR_MESSAGES.inviteRevokeFailed);
   }
 }
 
@@ -240,7 +243,7 @@ export async function verifyInviteCode(code: string): Promise<InviteValidation> 
   const response = await fetch(`/api/invites/${code}`);
 
   if (!response.ok) {
-    throw new Error('Erreur lors de la vérification du code');
+    throw new ApiError([], ERROR_MESSAGES.inviteValidationFailed);
   }
 
   return response.json();
@@ -255,8 +258,8 @@ export async function joinTeamWithCode(code: string): Promise<JoinResult> {
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Erreur lors de la jonction à l\'équipe');
+    const data = await response.json();
+    throw ApiError.fromResponse(data, ERROR_MESSAGES.joinTeamFailed);
   }
 
   return response.json();

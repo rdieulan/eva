@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { useErrors } from '@/composables/useErrors';
 import {
   validateRegistration,
   isValidEmail,
@@ -11,12 +12,12 @@ import { ERROR_MESSAGES } from '@shared/constants';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 
 const router = useRouter();
+const { errors, setError, setErrors, clearErrors } = useErrors();
 
 const email = ref('');
 const password = ref('');
 const confirmPassword = ref('');
 const name = ref('');
-const errors = ref<string[]>([]);
 const success = ref(false);
 const isLoading = ref(false);
 
@@ -39,7 +40,7 @@ const isFormValid = computed(() => {
 });
 
 async function handleRegister() {
-  errors.value = [];
+  clearErrors();
 
   // Client-side validation using shared validators
   const validation = validateRegistration({
@@ -50,7 +51,7 @@ async function handleRegister() {
   });
 
   if (validation !== true) {
-    errors.value = validation;
+    setErrors(validation);
     return;
   }
 
@@ -70,7 +71,7 @@ async function handleRegister() {
     const data = await response.json();
 
     if (!response.ok) {
-      errors.value = data.errors || [ERROR_MESSAGES.registrationFailed];
+      setErrors(data.errors || [ERROR_MESSAGES.registrationFailed]);
       return;
     }
 
@@ -79,7 +80,7 @@ async function handleRegister() {
       router.push({ name: 'login' });
     }, 2000);
   } catch {
-    errors.value = [ERROR_MESSAGES.registrationFailed];
+    setError(ERROR_MESSAGES.registrationFailed);
   } finally {
     isLoading.value = false;
   }

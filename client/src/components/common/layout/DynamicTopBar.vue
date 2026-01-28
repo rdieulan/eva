@@ -167,8 +167,7 @@ function goToProfile() {
   }
 }
 
-.btn-login,
-.btn-profile {
+.btn-login {
   display: flex;
   align-items: center;
   gap: $spacing-sm;

@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
+import { useErrors } from '@/composables/useErrors';
 import { createTeam, fetchTeamLocations } from '@/api';
 import { validateTeamName } from '@shared/utils';
 import { ERROR_MESSAGES } from '@shared/constants';
@@ -14,7 +15,7 @@ const { hasTeam, refreshUser } = useAuth();
 const locations = ref<string[]>([]);
 const isLoading = ref(true);
 const isSubmitting = ref(false);
-const errors = ref<string[]>([]);
+const { errors, setErrors, setErrorFromException, clearErrors } = useErrors();
 
 // Form
 const teamName = ref('');
@@ -41,12 +42,12 @@ onMounted(async () => {
 async function handleSubmit() {
   const validation = validateTeamName(teamName.value);
   if (validation !== true) {
-    errors.value = validation;
+    setErrors(validation);
     return;
   }
 
   isSubmitting.value = true;
-  errors.value = [];
+  clearErrors();
 
   try {
     await createTeam({
@@ -60,7 +61,7 @@ async function handleSubmit() {
     // Redirect to team page
     router.push('/team');
   } catch (e) {
-    errors.value = [e instanceof Error ? e.message : ERROR_MESSAGES.teamCreationFailed];
+    setErrorFromException(e, ERROR_MESSAGES.teamCreationFailed);
   } finally {
     isSubmitting.value = false;
   }

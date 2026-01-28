@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
+import { useErrors } from '@/composables/useErrors';
 import { clearPlayersCache } from '@/api';
 import { validatePassword, validatePasswordsMatch } from '@shared/utils';
 import { ERROR_MESSAGES } from '@shared/constants';
@@ -15,30 +16,30 @@ const { user, token, clearAuth } = useAuth();
 const currentPassword = ref('');
 const newPassword = ref('');
 const confirmPassword = ref('');
-const passwordErrors = ref<string[]>([]);
+const { errors: passwordErrors, setError: setPasswordError, setErrors: setPasswordErrors, clearErrors: clearPasswordErrors } = useErrors();
 const passwordSuccess = ref('');
 const isChangingPassword = ref(false);
 
 // Change password
 async function handleChangePassword() {
-  passwordErrors.value = [];
+  clearPasswordErrors();
   passwordSuccess.value = '';
 
   if (!currentPassword.value || !newPassword.value || !confirmPassword.value) {
-    passwordErrors.value = [ERROR_MESSAGES.requiredFieldsMissing];
+    setPasswordError(ERROR_MESSAGES.requiredFieldsMissing);
     return;
   }
 
   // Use shared validators
   const passwordValid = validatePassword(newPassword.value);
   if (passwordValid !== true) {
-    passwordErrors.value = passwordValid;
+    setPasswordErrors(passwordValid);
     return;
   }
 
   const matchValid = validatePasswordsMatch(newPassword.value, confirmPassword.value);
   if (matchValid !== true) {
-    passwordErrors.value = matchValid;
+    setPasswordErrors(matchValid);
     return;
   }
 
@@ -60,7 +61,7 @@ async function handleChangePassword() {
     const data = await response.json();
 
     if (!response.ok) {
-      passwordErrors.value = data.errors || [ERROR_MESSAGES.passwordChangeFailed];
+      setPasswordErrors(data.errors || [ERROR_MESSAGES.passwordChangeFailed]);
       return;
     }
 
@@ -69,7 +70,7 @@ async function handleChangePassword() {
     newPassword.value = '';
     confirmPassword.value = '';
   } catch {
-    passwordErrors.value = [ERROR_MESSAGES.passwordChangeFailed];
+    setPasswordError(ERROR_MESSAGES.passwordChangeFailed);
   } finally {
     isChangingPassword.value = false;
   }

@@ -1,9 +1,14 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import type { MatchGamePlan } from '@shared/types';
+import { ERROR_MESSAGES } from '@shared/constants';
 
 const props = defineProps<{
   gamePlan: MatchGamePlan;
+}>();
+
+const emit = defineEmits<{
+  error: [message: string];
 }>();
 
 const exportContentRef = ref<HTMLDivElement | null>(null);
@@ -59,7 +64,7 @@ async function exportToPng() {
     link.click();
   } catch (err) {
     console.error('PNG export error:', err);
-    alert("Erreur lors de l'export PNG");
+    emit('error', ERROR_MESSAGES.exportPngFailed);
   }
 }
 </script>

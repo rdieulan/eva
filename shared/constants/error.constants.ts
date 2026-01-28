@@ -32,6 +32,14 @@ export const ERROR_MESSAGES = {
   // Team
   teamNotFound: 'Aucune équipe trouvée',
   teamCreationFailed: 'Erreur lors de la création de l\'équipe',
+  teamFetchFailed: 'Erreur lors de la récupération de l\'équipe',
+  teamUpdateFailed: 'Erreur lors de la mise à jour de l\'équipe',
+  teamDeleteFailed: 'Erreur lors de la suppression de l\'équipe',
+  teamLeaveFailed: 'Erreur lors du départ de l\'équipe',
+  teamLocationsFetchFailed: 'Erreur lors de la récupération des localisations',
+  teamMembersFetchFailed: 'Erreur lors de la récupération des membres',
+  teamMemberRemoveFailed: 'Erreur lors du retrait du membre',
+  teamPermissionsUpdateFailed: 'Erreur lors de la mise à jour des permissions',
   teamRequiredForMaps: 'Vous devez appartenir à une équipe pour accéder aux cartes',
   teamRequiredForPlans: 'Vous devez appartenir à une équipe pour accéder aux plans',
   teamRequiredForEvents: 'Vous devez appartenir à une équipe pour créer des événements',
@@ -41,16 +49,24 @@ export const ERROR_MESSAGES = {
   inviteExpired: 'Cette invitation a expiré',
   inviteMaxUsesReached: 'Cette invitation a atteint son nombre maximum d\'utilisations',
   inviteCreationFailed: 'Erreur lors de la création de l\'invitation',
+  inviteFetchFailed: 'Erreur lors de la récupération des invitations',
+  inviteRevokeFailed: 'Erreur lors de la révocation de l\'invitation',
   inviteExpirationInvalid: 'La durée d\'expiration doit être entre 1 et 168 heures',
   inviteMaxUsesInvalid: 'Le nombre d\'utilisations doit être entre 1 et 50',
   inviteCodeMissing: 'Code d\'invitation manquant',
-  inviteValidationFailed: 'Erreur lors de la validation',
+  inviteCodeInvalid: 'Code invalide',
+  inviteValidationFailed: 'Erreur lors de la vérification du code',
   inviteInvalid: 'Cette invitation n\'est plus valide',
   joinTeamFailed: 'Erreur lors de la tentative de rejoindre l\'équipe',
 
   // Calendar
   eventNotFound: 'Événement non trouvé',
   eventCreationFailed: 'Erreur lors de la création de l\'événement',
+  eventDateRequired: 'Veuillez sélectionner une date',
+  eventTitleRequired: 'Veuillez entrer un titre',
+  eventTimeRequired: 'Veuillez renseigner les heures de début et fin',
+  eventTimeInvalid: 'L\'heure de fin doit être après l\'heure de début',
+  exportPngFailed: 'Erreur lors de l\'export PNG',
   monthParamRequired: 'Paramètre month requis (format YYYY-MM)',
   dateInvalid: 'Date invalide (format YYYY-MM-DD requis)',
   startTimeInvalid: 'Heure de début invalide (format HH:mm requis)',
@@ -62,9 +78,15 @@ export const ERROR_MESSAGES = {
 
   // Planner / Maps
   planNotFound: 'Plan de jeu non trouvé',
+  planLoadFailed: 'Erreur lors du chargement du plan',
+  planCreationFailed: 'Erreur lors de la création du plan',
+  planDuplicationFailed: 'Erreur lors de la duplication du plan',
+  planDeletionFailed: 'Erreur lors de la suppression du plan',
+  planRenameFailed: 'Erreur lors du renommage du plan',
   mapNotFound: 'Carte non trouvée',
   accessDenied: 'Accès refusé',
   ruleNotFound: 'Règle non trouvée',
+  balanceRulesLoadFailed: 'Erreur lors du chargement des règles d\'équilibrage',
 } as const;
 
 export type ErrorMessageKey = keyof typeof ERROR_MESSAGES;

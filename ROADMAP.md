@@ -293,11 +293,11 @@ model TeamInvite {
 |---------|--------|-------|
 | `client/src/components/common/error/ErrorDisplay.vue` | ✅ | Affichage liste d'erreurs (props: errors[], fallback?) |
 | `client/src/components/common/error/ErrorModal.vue` | ✅ | **NOUVEAU** - Modal réutilisable pour affichage erreurs |
-| `client/src/components/common/NoTeamMessage.vue` | ⬜ | Redirection jointure |
-| `client/src/components/common/Modal.vue` | ⬜ | Composant générique |
-| `client/src/components/common/ConfirmModal.vue` | ⬜ | Confirmation avec input |
-| `client/src/components/common/Drawer.vue` | ⬜ | Panel latéral |
-| `client/src/components/common/layout/TopBar.vue` | ⬜ | Navigation, menu utilisateur |
+| `client/src/components/common/NoTeamMessage.vue` | ✅ | Utilise ERROR_MESSAGES.inviteCodeInvalid, redirection vers /join |
+| `client/src/components/common/Modal.vue` | ✅ | Composant générique, gestion scroll/keyboard, aucune modif requise |
+| `client/src/components/common/ConfirmModal.vue` | ✅ | Confirmation avec input, utilise color.adjust(), aucune modif requise |
+| `client/src/components/common/Drawer.vue` | ✅ | Panel latéral, transitions responsive, aucune modif requise |
+| `client/src/components/common/layout/DynamicTopBar.vue` | ✅ | Supprimé .btn-profile (code mort CSS) |
 
 ---
 
@@ -305,7 +305,7 @@ model TeamInvite {
 
 | Fichier | Statut | Notes |
 |---------|--------|-------|
-| `client/src/api/auth.api.ts` | ⬜ | Login, register, logout |
+| `client/src/api/auth.api.ts` | ✅ | Utilise authFetch, ERROR_MESSAGES, format errors[] |
 | `client/src/api/teams.api.ts` | ⬜ | CRUD équipe, invitations |
 | `client/src/api/maps.api.ts` | ⬜ | Utilisation authFetch |
 | `client/src/api/calendar.api.ts` | ⬜ | Utilisation authFetch |

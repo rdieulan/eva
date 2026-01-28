@@ -4,6 +4,8 @@ import { useRotationCalculator } from '@/composables/useRotationCalculator';
 import Modal from '@/components/common/Modal.vue';
 import RotationResults from './RotationResults.vue';
 import GamePlanViewer from '@/components/common/GamePlanViewer.vue';
+import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
+import { useErrors } from '@/composables/useErrors';
 import type { MapConfig, Player, MatchGamePlan } from '@shared/types';
 
 const props = withDefaults(
@@ -57,6 +59,9 @@ function handleAssociate() {
 }
 
 const showResults = computed(() => hasCalculated.value && results.value);
+
+// Error handling
+const { errors, setError } = useErrors();
 </script>
 
 <template>
@@ -126,7 +131,8 @@ const showResults = computed(() => hasCalculated.value && results.value);
 
       <!-- Game Plan Viewer with export -->
       <div v-if="previewGamePlan" class="export-section">
-        <GamePlanViewer :gamePlan="previewGamePlan" />
+        <ErrorDisplay :errors="errors" />
+        <GamePlanViewer :gamePlan="previewGamePlan" @error="setError" />
 
         <!-- Associate button (only in associate mode) -->
         <button
