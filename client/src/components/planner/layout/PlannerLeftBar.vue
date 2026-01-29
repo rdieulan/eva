@@ -17,7 +17,7 @@ const props = defineProps<{
   hasChanges?: boolean;
 }>();
 
-const emit = defineEmits<{
+defineEmits<{
   'select-map': [mapId: string];
   'toggle-edit': [];
   'add-marker': [];
@@ -172,6 +172,7 @@ function getBalanceClass(map: MapConfig): string {
 
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
+@use '@/styles/buttons' as *;
 @use 'sass:color';
 
 .planner-sidebar {
@@ -507,14 +508,11 @@ function getBalanceClass(map: MapConfig): string {
 
 .btn-save,
 .btn-cancel {
-  padding: $spacing-sm $spacing-md;
-  border: none;
-  border-radius: $radius-sm;
-  font-weight: 600;
-  font-size: $font-size-sm;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-align: center;
+  @include btn-base($color-accent);
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 
   @include mobile-lg {
     padding: $spacing-sm;
@@ -523,50 +521,38 @@ function getBalanceClass(map: MapConfig): string {
 }
 
 .btn-save {
-  background: $color-bg-tertiary;
+  // Default state (no changes)
+  background: rgba($color-accent, 0.1);
+  border-color: rgba($color-accent, 0.3);
   color: $color-text-secondary;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: $spacing-xs;
-  border: 1px solid $color-border;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-
-  &:disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
-  }
 
   &.has-changes {
-    background: $color-accent;
-    color: white;
-    border-color: $color-accent;
+    background: rgba($color-accent, 0.15);
+    border-color: rgba($color-accent, 0.4);
+    color: $color-text-primary;
 
     &:hover:not(:disabled):not(.is-success):not(.is-error) {
-      background: color.adjust($color-accent, $lightness: 5%);
+      background: rgba($color-accent, 0.25);
     }
   }
 
   &.is-saving {
-    background: $color-accent;
-    color: white;
-    border-color: $color-accent;
+    background: rgba($color-accent, 0.15);
+    border-color: rgba($color-accent, 0.4);
+    color: $color-text-primary;
   }
 
   &.is-success {
-    background: $color-success !important;
-    color: white;
-    border-color: $color-success !important;
+    background: rgba($color-success, 0.15) !important;
+    border-color: rgba($color-success, 0.4) !important;
+    color: $color-text-primary;
     animation: pulse-success 0.3s ease-out;
   }
 
   &.is-error {
-    background: $color-danger !important;
-    color: white;
-    border-color: $color-danger !important;
+    background: rgba($color-danger, 0.15) !important;
+    border-color: rgba($color-danger, 0.4) !important;
+    color: $color-text-primary;
     animation: shake 0.3s ease-out;
   }
 }
@@ -632,22 +618,18 @@ function getBalanceClass(map: MapConfig): string {
 }
 
 .btn-cancel {
-  background: $color-bg-tertiary;
+  // Default state (no changes)
+  background: rgba($color-danger, 0.1);
+  border-color: rgba($color-danger, 0.3);
   color: $color-text-secondary;
-  border: 1px solid $color-border;
-
-  &:disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
-  }
 
   &.has-changes {
-    background: $color-danger;
-    color: white;
-    border-color: $color-danger;
+    background: rgba($color-danger, 0.15);
+    border-color: rgba($color-danger, 0.4);
+    color: $color-text-primary;
 
     &:hover:not(:disabled) {
-      background: color.adjust($color-danger, $lightness: 5%);
+      background: rgba($color-danger, 0.25);
     }
   }
 }

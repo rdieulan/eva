@@ -115,6 +115,7 @@ defineExpose({ resetForm });
 
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
+@use '@/styles/buttons' as *;
 
 .invite-form {
   display: flex;
@@ -179,17 +180,8 @@ defineExpose({ resetForm });
 }
 
 .btn-copy {
-  padding: $spacing-sm $spacing-md;
-  background: $color-accent;
-  border: none;
-  border-radius: $radius-md;
-  color: $color-bg-primary;
-  cursor: pointer;
+  @include btn-base($color-accent);
   white-space: nowrap;
-
-  &:hover {
-    filter: brightness(1.1);
-  }
 }
 
 .invite-info {
@@ -198,33 +190,10 @@ defineExpose({ resetForm });
 }
 
 .btn-cancel {
-  padding: $spacing-sm $spacing-md;
-  background: transparent;
-  border: 1px solid $color-border-light;
-  border-radius: $radius-md;
-  color: $color-text-secondary;
-  cursor: pointer;
-
-  &:hover {
-    background: $color-bg-secondary;
-  }
+  @include btn-base($color-danger);
 }
 
 .btn-generate {
-  padding: $spacing-sm $spacing-md;
-  background: $color-success;
-  border: none;
-  border-radius: $radius-md;
-  color: $color-white;
-  cursor: pointer;
-
-  &:hover:not(:disabled) {
-    filter: brightness(1.1);
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
+  @include btn-base($color-success);
 }
 </style>

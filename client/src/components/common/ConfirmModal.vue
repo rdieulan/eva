@@ -85,6 +85,7 @@ function handleCancel() {
 
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
+@use '@/styles/buttons' as *;
 @use 'sass:color';
 
 h3 {
@@ -144,54 +145,18 @@ h3 {
 
 .btn-cancel,
 .btn-confirm {
-  padding: $spacing-sm $spacing-md;
-  border-radius: $radius-sm;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
+  @include btn-base($color-accent);
 }
 
 .btn-cancel {
-  background: transparent;
-  border: 1px solid $color-border;
-  color: $color-text-secondary;
-
-  &:hover {
-    background: $color-bg-tertiary;
-    color: $color-text-primary;
-  }
-
-  &.danger {
-    background: $color-danger;
-    border-color: $color-danger;
-    color: white;
-
-    &:hover {
-      background: color.adjust($color-danger, $lightness: -5%);
-    }
-  }
+  @include btn-base($color-danger);
 }
 
 .btn-confirm {
-  background: $color-accent;
-  border: none;
-  color: white;
-
-  &:hover:not(:disabled) {
-    background: $color-accent;
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
+  @include btn-base($color-success);
 
   &.danger {
-    background: $color-danger;
-
-    &:hover:not(:disabled) {
-      background: color.adjust($color-danger, $lightness: -5%);
-    }
+    @include btn-base($color-danger);
   }
 }
 </style>

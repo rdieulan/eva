@@ -124,6 +124,7 @@ function goBack() {
 
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
+@use '@/styles/buttons' as *;
 @use 'sass:color';
 
 .create-team-page {
@@ -226,35 +227,14 @@ function goBack() {
 
 .btn-cancel,
 .btn-create {
-  padding: $spacing-sm $spacing-lg;
-  border-radius: $radius-md;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
+  @include btn-base($color-accent);
 }
 
 .btn-cancel {
-  background: transparent;
-  border: 1px solid $color-border;
-  color: $color-text-secondary;
-
-  &:hover:not(:disabled) {
-    background: $color-bg-tertiary;
-  }
+  @include btn-base($color-danger);
 }
 
 .btn-create {
-  background: $color-accent;
-  border: none;
-  color: white;
-
-  &:hover:not(:disabled) {
-    background: color.scale($color-accent, $lightness: -17%);
-  }
+  @include btn-base($color-success);
 }
 </style>

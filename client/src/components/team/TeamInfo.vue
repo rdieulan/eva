@@ -181,29 +181,11 @@ function saveChanges() {
 }
 
 .btn-cancel {
-  padding: $spacing-sm $spacing-md;
-  background: transparent;
-  border: 1px solid $color-border-light;
-  border-radius: $radius-md;
-  color: $color-text-secondary;
-  cursor: pointer;
-
-  &:hover {
-    background: $color-bg-secondary;
-  }
+  @include btn-base($color-danger);
 }
 
 .btn-save {
-  padding: $spacing-sm $spacing-md;
-  background: $color-success;
-  border: none;
-  border-radius: $radius-md;
-  color: $color-white;
-  cursor: pointer;
-
-  &:hover {
-    filter: brightness(1.1);
-  }
+  @include btn-base($color-success);
 }
 
 .info-display {

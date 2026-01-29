@@ -583,6 +583,7 @@ function handleCancelLeave() {
 
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
+@use '@/styles/buttons' as *;
 @use 'sass:color';
 
 .planner-page {
@@ -624,20 +625,7 @@ function handleCancelLeave() {
 }
 
 .btn-stay {
-  padding: $spacing-sm $spacing-md;
-  background: $color-edit;
-  border: 1px solid $color-edit;
-  border-radius: $radius-sm;
-  color: $color-black;
-  font-weight: 500;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: $spacing-xs;
-
-  &:hover {
-    background: color.adjust($color-edit, $lightness: 5%);
-  }
+  @include btn-base($color-edit);
 }
 
 .modal-message {
@@ -655,60 +643,27 @@ function handleCancelLeave() {
 }
 
 .btn-leave {
-  padding: $spacing-sm $spacing-md;
-  background: $color-danger;
-  border: 1px solid $color-danger;
-  border-radius: $radius-sm;
-  color: white;
-  font-weight: 500;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: $spacing-xs;
-
-  &:hover {
-    background: color.adjust($color-danger, $lightness: -5%);
-  }
+  @include btn-base($color-danger);
 }
 
 .btn-save-leave {
-  padding: $spacing-sm $spacing-md;
-  background: $color-accent;
-  border: 1px solid $color-accent;
-  border-radius: $radius-sm;
-  color: white;
-  font-weight: 500;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: $spacing-xs;
+  @include btn-base($color-accent);
   min-width: 160px;
-  transition: all 0.2s;
-
-
-  &:hover:not(:disabled):not(.is-success):not(.is-error) {
-    background: color.adjust($color-accent, $lightness: 5%);
-  }
-
-  &:disabled {
-    cursor: not-allowed;
-  }
 
   &.is-saving {
-    background: $color-accent;
+    background: rgba($color-accent, 0.15);
+    border-color: rgba($color-accent, 0.4);
   }
 
   &.is-success {
-    background: $color-success !important;
-    border-color: $color-success !important;
-    color: white;
+    background: rgba($color-success, 0.15) !important;
+    border-color: rgba($color-success, 0.4) !important;
     animation: pulse-success 0.3s ease-out;
   }
 
   &.is-error {
-    background: $color-danger !important;
-    border-color: $color-danger !important;
+    background: rgba($color-danger, 0.15) !important;
+    border-color: rgba($color-danger, 0.4) !important;
     animation: shake 0.3s ease-out;
   }
 }

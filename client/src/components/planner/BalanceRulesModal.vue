@@ -4,7 +4,7 @@ import { useBalanceRules } from '@/composables/useBalanceRules';
 import type { BalanceSeverity, BalanceRule } from '@shared/types';
 import ConfirmModal from '@/components/common/ConfirmModal.vue';
 
-const emit = defineEmits<{
+defineEmits<{
   close: [];
 }>();
 
@@ -170,6 +170,7 @@ function hasParams(rule: BalanceRule): boolean {
 
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
+@use '@/styles/buttons' as *;
 @use 'sass:color';
 
 .modal-overlay {
@@ -417,31 +418,10 @@ function hasParams(rule: BalanceRule): boolean {
 }
 
 .btn-reset {
-  padding: 8px 16px;
-  background: transparent;
-  border: 1px solid $color-border;
-  border-radius: 4px;
-  color: $color-text-secondary;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover {
-    border-color: $color-text-primary;
-    color: $color-text-primary;
-  }
+  @include btn-base($color-danger);
 }
 
 .btn-close {
-  padding: 8px 20px;
-  background: $color-accent;
-  border: none;
-  border-radius: 4px;
-  color: white;
-  cursor: pointer;
-  transition: background 0.2s;
-
-  &:hover {
-    background: color.adjust($color-accent, $lightness: 10%);
-  }
+  @include btn-base($color-accent);
 }
 </style>
