@@ -268,25 +268,28 @@ onMounted(loadData);
         @leave-team="showLeaveTeamModal = true"
       />
 
-      <!-- Members section -->
-      <TeamMembers
-        :members="members"
-        :current-user-id="user?.id"
-        :can-manage-permissions="canManagePermissions"
-        :can-remove-members="canRemoveMembers"
-        :can-invite-members="canInviteMembers"
-        @invite="openInviteModal"
-        @edit-permissions="openPermissionsModal"
-        @remove-member="openRemoveModal"
-      />
+      <!-- Right column: Members + Invites -->
+      <div class="right-column">
+        <!-- Members section -->
+        <TeamMembers
+          :members="members"
+          :current-user-id="user?.id"
+          :can-manage-permissions="canManagePermissions"
+          :can-remove-members="canRemoveMembers"
+          :can-invite-members="canInviteMembers"
+          @invite="openInviteModal"
+          @edit-permissions="openPermissionsModal"
+          @remove-member="openRemoveModal"
+        />
 
-      <!-- Invites list (inside members section context) -->
-      <TeamInvites
-        v-if="canInviteMembers"
-        :invites="invites"
-        @copy="copyInviteUrl"
-        @revoke="handleRevokeInvite"
-      />
+        <!-- Invites list (inside members section context) -->
+        <TeamInvites
+          v-if="canInviteMembers"
+          :invites="invites"
+          @copy="copyInviteUrl"
+          @revoke="handleRevokeInvite"
+        />
+      </div>
     </template>
 
     <!-- Permissions Modal -->
@@ -349,14 +352,37 @@ onMounted(loadData);
 @use '@/styles/variables' as *;
 
 .team-page {
-  max-width: 800px;
+  width: 100%;
+  max-width: 1400px;
   margin: 0 auto;
   padding: $spacing-lg;
+  overflow-y: auto;
+  height: 100%;
 }
 
 h1 {
   margin-bottom: $spacing-lg;
   color: $color-text-primary;
+}
+
+// Desktop: 2 colonnes qui utilisent tout l'espace
+@media (min-width: 900px) {
+  .team-page {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto 1fr;
+    gap: $spacing-lg;
+    align-items: start;
+
+    > h1 {
+      grid-column: 1 / -1;
+    }
+
+    > .loading,
+    > .message {
+      grid-column: 1 / -1;
+    }
+  }
 }
 
 .loading {
@@ -392,5 +418,11 @@ h1 {
     border: 1px solid rgba($color-success, 0.3);
     color: $color-success;
   }
+}
+
+.right-column {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
 }
 </style>

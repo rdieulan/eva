@@ -184,8 +184,10 @@ async function handleLogout() {
 
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
+@use '@/styles/buttons' as *;
 
 .profile-page {
+  // ...existing code...
   min-height: 100%;
   width: 100%;
   display: flex;
@@ -383,24 +385,7 @@ h1 {
 }
 
 .btn-primary {
-  padding: 0.875rem;
-  background: $color-accent;
-  border: none;
-  border-radius: $radius-md;
-  color: $color-white;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover:not(:disabled) {
-    background: $color-accent;
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
+  @include btn-base($color-accent);
 
   @include mobile {
     padding: 0.75rem;
@@ -409,24 +394,8 @@ h1 {
 }
 
 .btn-logout {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: $spacing-sm;
+  @include btn-base($color-danger);
   width: 100%;
-  padding: 0.875rem;
-  background: transparent;
-  border: 2px solid $color-danger;
-  border-radius: $radius-md;
-  color: $color-danger;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover {
-    background: rgba($color-danger, 0.1);
-  }
 
   @include mobile {
     padding: 0.75rem;
@@ -435,8 +404,6 @@ h1 {
 }
 
 .logout-icon {
-  width: 20px;
-  height: 20px;
-  fill: currentColor;
+  font-size: 1.1em;
 }
 </style>

@@ -63,6 +63,8 @@ const sizeStyle = computed(() => {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  width: 1em;
+  height: 1em;
 
   :deep(svg) {
     width: 100%;

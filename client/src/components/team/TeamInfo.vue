@@ -116,13 +116,14 @@ function saveChanges() {
 
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
+@use '@/styles/buttons' as *;
 
 .team-info {
   background: $color-bg-tertiary;
   border: 1px solid $color-border-light;
   border-radius: $radius-lg;
   padding: $spacing-lg;
-  margin-bottom: $spacing-lg;
+  height: fit-content;
 }
 
 .section-header {
@@ -139,20 +140,7 @@ function saveChanges() {
 }
 
 .btn-edit {
-  display: flex;
-  align-items: center;
-  gap: $spacing-xs;
-  padding: $spacing-sm $spacing-md;
-  background: $color-edit;
-  color: $color-bg-primary;
-  border: none;
-  border-radius: $radius-md;
-  cursor: pointer;
-  font-weight: 500;
-
-  &:hover {
-    filter: brightness(1.1);
-  }
+  @include btn-base($color-edit);
 }
 
 .edit-form {
@@ -242,20 +230,8 @@ function saveChanges() {
 
 .btn-delete-team,
 .btn-leave-team {
-  display: flex;
-  align-items: center;
-  gap: $spacing-xs;
-  padding: $spacing-sm $spacing-md;
-  background: transparent;
-  border: 1px solid $color-danger;
-  border-radius: $radius-md;
-  color: $color-danger;
-  cursor: pointer;
-  margin-top: $spacing-md;
+  @include btn-base($color-danger);
+  margin-top: $spacing-lg;
   width: fit-content;
-
-  &:hover {
-    background: rgba($color-danger, 0.1);
-  }
 }
 </style>

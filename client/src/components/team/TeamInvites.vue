@@ -5,7 +5,7 @@ defineProps<{
   invites: TeamInvite[];
 }>();
 
-const emit = defineEmits<{
+defineEmits<{
   copy: [url: string];
   revoke: [inviteId: string];
 }>();
@@ -58,6 +58,7 @@ function formatExpiration(dateStr: string): string {
 
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
+@use '@/styles/buttons' as *;
 
 .invites-section {
   margin-top: $spacing-lg;
@@ -109,23 +110,14 @@ function formatExpiration(dateStr: string): string {
 
 .invite-actions {
   display: flex;
-  gap: $spacing-xs;
+  gap: $spacing-sm;
 }
 
-.btn-copy,
-.btn-revoke {
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-size: 14px;
+.btn-copy {
+  @include btn-icon($color-info);
+}
 
-  &:hover {
-    transform: scale(1.1);
-  }
+.btn-revoke {
+  @include btn-icon($color-danger);
 }
 </style>

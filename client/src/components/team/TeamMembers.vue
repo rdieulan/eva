@@ -10,7 +10,7 @@ defineProps<{
   canInviteMembers: boolean;
 }>();
 
-const emit = defineEmits<{
+defineEmits<{
   invite: [];
   editPermissions: [member: TeamMember];
   removeMember: [member: TeamMember];
@@ -62,13 +62,13 @@ const emit = defineEmits<{
 
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
+@use '@/styles/buttons' as *;
 
 .team-members {
   background: $color-bg-tertiary;
   border: 1px solid $color-border-light;
   border-radius: $radius-lg;
   padding: $spacing-lg;
-  margin-bottom: $spacing-lg;
 }
 
 .section-header {
@@ -85,17 +85,7 @@ const emit = defineEmits<{
 }
 
 .btn-invite {
-  padding: $spacing-sm $spacing-md;
-  background: $color-success;
-  border: none;
-  border-radius: $radius-md;
-  color: $color-white;
-  cursor: pointer;
-  font-weight: 500;
-
-  &:hover {
-    filter: brightness(1.1);
-  }
+  @include btn-base($color-success);
 }
 
 .members-list {
@@ -164,28 +154,10 @@ const emit = defineEmits<{
 }
 
 .btn-icon {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: $color-bg-tertiary;
-  border: 1px solid $color-border-light;
-  border-radius: $radius-md;
-  color: $color-edit;
-  cursor: pointer;
-
-  &:hover {
-    background: $color-bg-primary;
-    border-color: $color-edit;
-  }
+  @include btn-icon($color-edit);
 
   &.danger {
-    color: $color-danger;
-
-    &:hover {
-      border-color: $color-danger;
-    }
+    @include btn-icon($color-danger);
   }
 }
 </style>

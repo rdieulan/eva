@@ -1,0 +1,75 @@
+// Shared button styles
+// Usage: @include btn-base($color) or use the specific mixins
+
+@use 'variables' as *;
+
+// Base button mixin with color parameter
+@mixin btn-base($color) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-lg;
+  background: rgba($color, 0.15);
+  border: 2px solid rgba($color, 0.4);
+  border-radius: $radius-md;
+  color: $color-text-primary;
+  font-size: $font-size-sm;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: box-shadow 0.2s ease, background 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: rgba($color, 0.25);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+// Icon button mixin (square)
+@mixin btn-icon($color) {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: rgba($color, 0.15);
+  border: 2px solid rgba($color, 0.4);
+  border-radius: $radius-md;
+  color: $color;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: box-shadow 0.2s ease, background 0.2s ease;
+
+  &:hover {
+    background: rgba($color, 0.25);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+  }
+}
+
+// Predefined button classes
+.btn-edit {
+  @include btn-base($color-edit);
+}
+
+.btn-success {
+  @include btn-base($color-success);
+}
+
+.btn-danger {
+  @include btn-base($color-danger);
+}
+
+.btn-accent {
+  @include btn-base($color-accent);
+}
+
+.btn-info {
+  @include btn-base($color-info);
+}
