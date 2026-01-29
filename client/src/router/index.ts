@@ -2,6 +2,9 @@ import { createRouter, createWebHistory } from 'vue-router';
 import type { RouteRecordRaw } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
 
+// Pages allowed without team membership
+const ALLOWED_WITHOUT_TEAM = ['home', 'profile', 'team', 'create-team', 'join-team', 'login', 'register'] as const;
+
 // Lazy loading des pages
 const HomePage = () => import('@/pages/HomePage.vue');
 const PlannerPage = () => import('@/pages/PlannerPage.vue');
@@ -54,7 +57,7 @@ const routes: RouteRecordRaw[] = [
     path: '/join/:code',
     name: 'join-team',
     component: JoinTeamPage,
-    meta: { title: 'Rejoindre une équipe', requiresAuth: false }
+    meta: { title: 'Rejoindre une équipe', requiresAuth: true }
   },
   {
     path: '/login',
@@ -100,11 +103,8 @@ router.beforeEach(async (to, _from, next) => {
     return;
   }
 
-  // Pages allowed without team: home, profile, team (for creation), join-team
-  const allowedWithoutTeam = ['home', 'profile', 'team', 'create-team', 'join-team', 'login', 'register'];
-
   // If authenticated but no team, redirect to home (except allowed pages)
-  if (isAuthenticated.value && !hasTeam.value && !allowedWithoutTeam.includes(to.name as string)) {
+  if (isAuthenticated.value && !hasTeam.value && !ALLOWED_WITHOUT_TEAM.includes(to.name as typeof ALLOWED_WITHOUT_TEAM[number])) {
     next({ name: 'home' });
     return;
   }

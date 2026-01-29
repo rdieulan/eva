@@ -12,10 +12,9 @@ import {
 } from '@/api/calendar.api';
 import { useErrors } from '@/composables/useErrors';
 import { ERROR } from '@shared/constants';
-import type { CalendarEvent, CreateEventRequest, MatchGamePlan, DayData } from '@shared/types';
+import type { CalendarEvent, CreateEventRequest, MatchGamePlan } from '@shared/types';
 
 export interface UseCalendarEventsOptions {
-  days: Ref<Record<string, DayData>>;
   canCreate: ComputedRef<boolean>;
   canEdit: ComputedRef<boolean>;
   canDelete: ComputedRef<boolean>;

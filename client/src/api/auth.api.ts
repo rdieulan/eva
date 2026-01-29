@@ -1,28 +1,9 @@
 // Authentication API client
 
-import type { UserPermissions } from '@shared/types';
+import type { User, LoginResponse, LoginCredentials } from '@shared/types';
 import { ERROR } from '@shared/constants';
 import { authFetch } from '@/api/utils';
 import { ApiError } from '@/api/error';
-
-export interface LoginCredentials {
-  email: string;
-  password: string;
-}
-
-export interface AuthUser {
-  id: string;
-  email: string;
-  name: string;
-  permissions: UserPermissions;
-  teamId: string | null;
-  isLeader: boolean;
-}
-
-export interface LoginResponse {
-  token: string;
-  user: AuthUser;
-}
 
 /**
  * Login with email and password
@@ -53,8 +34,8 @@ export async function logout(): Promise<void> {
 /**
  * Get current user info
  */
-export async function getCurrentUser(): Promise<AuthUser> {
-  const response = await authFetch<{ user: AuthUser }>('/api/auth/me', undefined, ERROR.unauthorized);
+export async function getCurrentUser(): Promise<User> {
+  const response = await authFetch<{ user: User }>('/api/auth/me', undefined, ERROR.unauthorized);
   return response.user;
 }
 

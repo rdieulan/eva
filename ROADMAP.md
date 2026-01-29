@@ -311,7 +311,7 @@ model TeamInvite {
 | `client/src/api/calendar.api.ts` | ✅ | authFetch amélioré, ERROR_MESSAGES centralisés |
 | `client/src/api/players.api.ts` | ✅ | authFetch amélioré, cache géré, ERROR_MESSAGES centralisés |
 | `client/src/api/balance-rules.api.ts` | ✅ | authFetch amélioré, ERROR_MESSAGES centralisés |
-| `client/src/api/utils.ts` | ⬜ | authFetch, gestion 401 |
+| `client/src/api/utils.ts` | ✅ | authFetch amélioré avec surcharge (errorMessage), gestion 401, ERROR_MESSAGES.sessionExpired |
 
 ---
 
@@ -319,10 +319,10 @@ model TeamInvite {
 
 | Fichier | Statut | Notes |
 |---------|--------|-------|
-| `client/src/composables/useAuth.ts` | ⬜ | État auth, refreshUser, storage listener |
-| `client/src/composables/useBalanceRules.ts` | ⬜ | Cache rules |
-| `client/src/composables/useCalendar.ts` | ⬜ | État calendrier |
-| `client/src/composables/useCalendarEvents.ts` | ⬜ | Gestion événements |
+| `client/src/composables/useAuth.ts` | ✅ | Type User centralisé dans @shared/types/user.types.ts, imports nettoyés |
+| `client/src/composables/useBalanceRules.ts` | ✅ | Plomberie API, tests de logique métier dans balance-rules.test.ts |
+| `client/src/composables/useCalendar.ts` | ✅ | MONTH_NAMES centralisé, tests week navigation + setAvailability ajoutés |
+| `client/src/composables/useCalendarEvents.ts` | ✅ | Paramètre days inutile supprimé, 15 tests créés |
 
 ---
 
@@ -330,7 +330,7 @@ model TeamInvite {
 
 | Fichier | Statut | Notes |
 |---------|--------|-------|
-| `client/src/router/index.ts` | ⬜ | Guards auth, hasTeam, redirections |
+| `client/src/router/index.ts` | ✅ | Constante ALLOWED_WITHOUT_TEAM extraite, /join/:code en requiresAuth: true |
 
 ---
 
@@ -338,31 +338,59 @@ model TeamInvite {
 
 | Fichier | Statut | Notes |
 |---------|--------|-------|
-| `shared/types/permissions.types.ts` | ⬜ | Types permissions |
-| `shared/types/team.types.ts` | ⬜ | Types équipe |
-| `shared/types/calendar.types.ts` | ⬜ | Types calendrier |
-| `shared/constants/index.ts` | ⬜ | Constantes partagées |
+| `shared/types/permissions.types.ts` | ✅ | Bien structuré, interfaces par domaine, constantes DEFAULT_PLAYER/LEADER |
+| `shared/types/team.types.ts` | ✅ | Types équipe, TEAM_LOCATIONS as const, TeamLocation dérivé |
+| `shared/types/calendar.types.ts` | ✅ | Types complets, bien documentés |
+| `shared/constants/error.constants.ts` | ✅ | Messages centralisés, as const, ErrorMessageKey type |
+| `shared/constants/index.ts` | ✅ | Barrel export |
 
 ---
 
-### Phase 3.9 - Tests existants
+### Phase 3.9 - Tests existants ✅
 
-| Fichier | Statut | Notes |
+**212 tests passent sur 17 fichiers.**
+
+**Tests client :**
+| Fichier | Statut | Tests |
 |---------|--------|-------|
-| `tests/server/team-isolation.test.ts` | ⬜ | 26 tests - pertinence ? |
-| `tests/server/permissions.test.ts` | ⬜ | Tests permissions API |
-| `tests/client/team-invitations.test.ts` | ⬜ | 24 tests - pertinence ? |
-| `tests/client/permissions.test.ts` | ⬜ | Tests permissions client |
-| `tests/client/calendar-*.test.ts` | ⬜ | Suite tests calendrier |
+| `tests/client/balance-rules.test.ts` | ✅ | 17 tests |
+| `tests/client/balance.test.ts` | ✅ | 9 tests |
+| `tests/client/calendar-grid.test.ts` | ✅ | 8 tests |
+| `tests/client/calendar-integration.test.ts` | ✅ | 10 tests |
+| `tests/client/day-cell.test.ts` | ✅ | 8 tests |
+| `tests/client/event-form-modal.test.ts` | ✅ | 8 tests |
+| `tests/client/game-plan-viewer.test.ts` | ✅ | 7 tests |
+| `tests/client/map-viewer.test.ts` | ✅ | 33 tests |
+| `tests/client/permissions.test.ts` | ✅ | 16 tests |
+| `tests/client/use-calendar-events.test.ts` | ✅ | 15 tests |
+| `tests/client/use-calendar.test.ts` | ✅ | 21 tests |
+| `tests/client/use-rotation-calculator.test.ts` | ✅ | 15 tests |
+
+**Tests server :**
+| Fichier | Statut | Tests |
+|---------|--------|-------|
+| `tests/server/calendar-helper.test.ts` | ✅ | 2 tests |
+| `tests/server/date-helper.test.ts` | ✅ | 9 tests |
+| `tests/server/validation-helper.test.ts` | ✅ | 13 tests |
+
+**Tests shared :**
+| Fichier | Statut | Tests |
+|---------|--------|-------|
+| `tests/shared/validation.test.ts` | ✅ | 17 tests |
+
+**Tests quality :**
+| Fichier | Statut | Tests |
+|---------|--------|-------|
+| `tests/quality/encoding.test.ts` | ✅ | 4 tests |
 
 ---
 
-### Phase 3.10 - Base de données
+### Phase 3.10 - Base de données ✅
 
 | Élément | Statut | Notes |
 |---------|--------|-------|
-| `prisma/schema.prisma` | ⬜ | Modèles, relations, index |
-| Migrations | ⬜ | Cohérence, nettoyage éventuel |
+| `prisma/schema.prisma` | ✅ | Modèles bien structurés, relations correctes, index optimisés |
+| Migrations | ✅ | 0001_init à 0007_notes_refactor cohérentes |
 
 ---
 

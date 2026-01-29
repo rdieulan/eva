@@ -78,7 +78,6 @@ const {
   removeEvent,
   updateGamePlan,
 } = useCalendarEvents({
-  days,
   canCreate: computed(() => permissions.value.calendar.canCreateEvents),
   canEdit: computed(() => permissions.value.calendar.canEditEvents),
   canDelete: computed(() => permissions.value.calendar.canDeleteEvents),

@@ -37,7 +37,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { ERROR_MESSAGES } from '@shared/constants';
+import { ERROR } from '@shared/constants';
 import { useErrors } from '@/composables/useErrors';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 
@@ -72,7 +72,7 @@ function handleJoin() {
   const code = extractCode(inviteCode.value);
 
   if (!code) {
-    setError(ERROR_MESSAGES.inviteCodeInvalid);
+    setError(ERROR.inviteCodeInvalid);
     return;
   }
 

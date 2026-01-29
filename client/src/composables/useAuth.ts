@@ -1,19 +1,9 @@
 import { ref, computed } from 'vue';
-import type { UserPermissions } from '@shared/types';
+import type { UserPermissions, User } from '@shared/types';
 import { DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
 import { clearPlayersCache } from '@/api/players.api';
 import { getCurrentUser } from '@/api/auth.api';
 import { clearBalanceRulesCache } from '@/composables/useBalanceRules';
-
-// Types
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  permissions: UserPermissions;
-  teamId: string | null;
-  isLeader: boolean;
-}
 
 // Global state
 const user = ref<User | null>(null);

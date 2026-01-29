@@ -189,4 +189,141 @@ describe('useCalendar', () => {
       expect(currentMonth.value).toBe(6);
     });
   });
+
+  describe('Week Navigation', () => {
+    it('should navigate to previous week', () => {
+      const userId = ref<string | undefined>('user-1');
+      const { currentWeekStart, goToPrevWeek } = useCalendar({ userId });
+
+      // Set to a known date (Monday, January 20, 2026)
+      currentWeekStart.value = new Date(2026, 0, 20);
+      goToPrevWeek();
+
+      expect(currentWeekStart.value.getDate()).toBe(13);
+      expect(currentWeekStart.value.getMonth()).toBe(0);
+    });
+
+    it('should navigate to next week', () => {
+      const userId = ref<string | undefined>('user-1');
+      const { currentWeekStart, goToNextWeek } = useCalendar({ userId });
+
+      // Set to a known date (Monday, January 20, 2026)
+      currentWeekStart.value = new Date(2026, 0, 20);
+      goToNextWeek();
+
+      expect(currentWeekStart.value.getDate()).toBe(27);
+      expect(currentWeekStart.value.getMonth()).toBe(0);
+    });
+
+    it('should update month when week crosses month boundary', () => {
+      const userId = ref<string | undefined>('user-1');
+      const { currentWeekStart, currentMonth, goToNextWeek } = useCalendar({ userId });
+
+      // Set to last week of January 2026 (Monday, January 26)
+      currentWeekStart.value = new Date(2026, 0, 26);
+      currentMonth.value = 1;
+      goToNextWeek();
+
+      // Week of Feb 2 - mid-week (Feb 5) is in February
+      expect(currentMonth.value).toBe(2);
+    });
+
+    it('should call goToPrevWeek when in week view', () => {
+      const userId = ref<string | undefined>('user-1');
+      const { viewMode, currentWeekStart, goToPrev } = useCalendar({ userId });
+
+      viewMode.value = 'week';
+      currentWeekStart.value = new Date(2026, 0, 20);
+      goToPrev();
+
+      expect(currentWeekStart.value.getDate()).toBe(13);
+    });
+
+    it('should call goToNextWeek when in week view', () => {
+      const userId = ref<string | undefined>('user-1');
+      const { viewMode, currentWeekStart, goToNext } = useCalendar({ userId });
+
+      viewMode.value = 'week';
+      currentWeekStart.value = new Date(2026, 0, 20);
+      goToNext();
+
+      expect(currentWeekStart.value.getDate()).toBe(27);
+    });
+  });
+
+  describe('setAvailability', () => {
+    it('should perform optimistic update', async () => {
+      const userId = ref<string | undefined>('user-1');
+      const { days, setAvailability } = useCalendar({ userId });
+
+      // Setup initial data
+      days.value = {
+        '2026-01-20': {
+          date: '2026-01-20',
+          currentUserStatus: null,
+          playerAvailabilities: [{ userId: 'user-1', userName: 'Test', status: null }],
+          events: [],
+        },
+      };
+
+      // Don't await - check optimistic update
+      const promise = setAvailability('2026-01-20', 'AVAILABLE');
+
+      // Should be updated immediately (optimistic)
+      expect(days.value['2026-01-20'].currentUserStatus).toBe('AVAILABLE');
+
+      await promise;
+    });
+
+    it('should revert on API error', async () => {
+      const userId = ref<string | undefined>('user-1');
+      const { days, setAvailability } = useCalendar({ userId });
+
+      // Mock API to reject
+      const { setAvailability: setAvailabilityApi } = await import('@/api/calendar.api');
+      vi.mocked(setAvailabilityApi).mockRejectedValueOnce(new Error('API Error'));
+
+      // Setup initial data
+      days.value = {
+        '2026-01-20': {
+          date: '2026-01-20',
+          currentUserStatus: 'AVAILABLE',
+          playerAvailabilities: [{ userId: 'user-1', userName: 'Test', status: 'AVAILABLE' }],
+          events: [],
+        },
+      };
+
+      await setAvailability('2026-01-20', 'UNAVAILABLE');
+
+      // Should be reverted to original status
+      expect(days.value['2026-01-20'].currentUserStatus).toBe('AVAILABLE');
+    });
+
+    it('should update playerAvailabilities for current user', async () => {
+      const userId = ref<string | undefined>('user-1');
+      const { days, setAvailability } = useCalendar({ userId });
+
+      days.value = {
+        '2026-01-20': {
+          date: '2026-01-20',
+          currentUserStatus: null,
+          playerAvailabilities: [
+            { userId: 'user-1', userName: 'Test', status: null },
+            { userId: 'user-2', userName: 'Other', status: 'AVAILABLE' },
+          ],
+          events: [],
+        },
+      };
+
+      await setAvailability('2026-01-20', 'UNAVAILABLE');
+
+      // Current user's status should be updated
+      const user1Avail = days.value['2026-01-20'].playerAvailabilities.find(p => p.userId === 'user-1');
+      expect(user1Avail?.status).toBe('UNAVAILABLE');
+
+      // Other user's status should remain unchanged
+      const user2Avail = days.value['2026-01-20'].playerAvailabilities.find(p => p.userId === 'user-2');
+      expect(user2Avail?.status).toBe('AVAILABLE');
+    });
+  });
 });

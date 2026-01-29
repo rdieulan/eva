@@ -6,7 +6,7 @@ import RotationCalculatorModal from '@/components/common/rotation/RotationCalcul
 import GamePlanViewer from '@/components/common/GamePlanViewer.vue';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import { useErrors } from '@/composables/useErrors';
-import { ERROR_MESSAGES } from '@shared/constants';
+import { ERROR } from '@shared/constants';
 import type {
   EventType,
   CreateEventRequest,
@@ -112,15 +112,15 @@ function handleSubmit() {
   clearErrors();
 
   if (!date.value) {
-    addError(ERROR_MESSAGES.eventDateRequired);
+    addError(ERROR.eventDateRequired);
   }
   if (!title.value.trim()) {
-    addError(ERROR_MESSAGES.eventTitleRequired);
+    addError(ERROR.eventTitleRequired);
   }
   if (!startTime.value || !endTime.value) {
-    addError(ERROR_MESSAGES.eventTimeRequired);
+    addError(ERROR.eventTimeRequired);
   } else if (startTime.value >= endTime.value) {
-    addError(ERROR_MESSAGES.eventTimeInvalid);
+    addError(ERROR.eventTimeInvalid);
   }
 
   if (hasErrors()) {

@@ -72,3 +72,12 @@ export type {
 } from './balance.types';
 export { DEFAULT_BALANCE_RULES } from './balance.types';
 
+export type {
+  User,
+} from './user.types';
+
+export type {
+  LoginResponse,
+  LoginCredentials,
+} from './auth.types';
+

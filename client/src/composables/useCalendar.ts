@@ -7,14 +7,10 @@ import { ref, computed, watch, type Ref, type ComputedRef } from 'vue';
 import { fetchMonthData, setAvailability as setAvailabilityApi } from '@/api/calendar.api';
 import { getMonday } from '@/utils/calendar';
 import { useErrors } from '@/composables/useErrors';
+import { MONTH_NAMES } from '@/constants/calendar';
 import { ERROR } from '@shared/constants';
 import type { DayData, AvailabilityStatus } from '@shared/types';
 
-// Month names for display (French)
-const MONTH_NAMES = [
-  'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
-];
 
 export type ViewMode = 'month' | 'week';
 
