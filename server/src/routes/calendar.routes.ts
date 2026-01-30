@@ -25,10 +25,8 @@ router.get('/availability', authMiddleware, async (req: AuthRequest, res: Respon
     return;
   }
 
-  // User must belong to a team to see availabilities
   if (!teamId) {
-    console.log('[CALENDAR] User without team, returning empty data');
-    res.json(calendarService.buildEmptyCalendar(month));
+    res.status(403).json({ errors: [ERROR.teamRequiredForCalendar] });
     return;
   }
 
@@ -85,7 +83,7 @@ router.get('/events', authMiddleware, async (req: AuthRequest, res: Response) =>
   }
 
   if (!teamId) {
-    res.json([]);
+    res.status(403).json({ errors: [ERROR.teamRequiredForCalendar] });
     return;
   }
 

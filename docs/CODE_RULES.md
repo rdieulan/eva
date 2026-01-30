@@ -91,14 +91,6 @@ server/src/
 - **Types** : suffixe `.types.ts` (`map.types.ts`, `calendar.types.ts`)
 - **Tests** : suffixe `.test.ts` (`balance.test.ts`)
 
-### Organisation des tests
-```
-tests/
-├── client/        # Tests spécifiques au client (composants, composables)
-├── server/        # Tests spécifiques au serveur (routes, services)
-├── shared/        # Tests des utilitaires partagés (@shared/utils)
-└── quality/       # Tests transverses (encodage, lint, etc.)
-```
 
 ### Nomenclature des composants : Layout vs Fonctionnel
 
@@ -194,18 +186,124 @@ $breakpoint-large: 1440px;
 
 ## 🧪 Tests
 
-### Ce qu'on teste
+### Organisation des tests
+```
+tests/
+├── unit/          # Tests unitaires
+│   ├── client/    # Tests spécifiques au client (composants, composables)
+│   ├── server/    # Tests spécifiques au serveur (routes, services)
+│   └── shared/    # Tests des utilitaires partagés (@shared/utils)
+├── integration/   # Tests d'intégration (API complète)
+│   ├── helpers/   # Helpers de test (auth, db)
+│   └── *.test.ts  # Tests par domaine (auth, teams, maps, calendar)
+└── quality/       # Tests transverses (encodage, lint, etc.)
+```
+
+### Tests unitaires
+
+#### Ce qu'on teste
 - ✅ Fonctions utilitaires exportées (`@/utils/*`, `@shared/utils/*`)
 - ✅ Logique métier des composables (`@/composables/*`)
 - ✅ Composants Vue (comportement, pas implémentation)
-- ✅ Contrats API (structure des requêtes/réponses)
 
-### Ce qu'on ne teste PAS
+#### Ce qu'on ne teste PAS
 - ❌ Fonctions définies localement dans le fichier de test
 - ❌ Code de librairies tierces
 - ❌ Détails d'implémentation CSS
 - ❌ **Structure de types** (tests qui vérifient juste que TypeScript compile)
 - ❌ **Valeurs de constantes statiques** (si elles changent, c'est volontaire)
+
+### Tests d'intégration
+
+Les tests d'intégration testent les routes API de bout en bout avec une vraie base de données.
+
+#### Principes
+- **Utiliser l'API** : Les helpers doivent créer les données via l'API, pas via Prisma
+- **Vérifier la DB** : Après une action, vérifier que les données sont bien persistées
+- **Tester l'isolation** : Vérifier que les données d'une équipe ne sont pas visibles par une autre
+
+#### Helpers disponibles (`tests/integration/helpers/`)
+
+| Helper | Description |
+|--------|-------------|
+| `createTestUser(options)` | Crée un user via `POST /api/auth/register` |
+| `createAuthenticatedUser(options)` | Crée un user + login, retourne `{ user, token }` |
+| `createUserWithTeam(options)` | Crée un user + équipe, retourne `{ user, token, team }` |
+| `expectNoRecordCreated(countFn, action)` | Vérifie qu'aucun enregistrement n'a été créé |
+| `prisma` | Client Prisma pour les vérifications (lecture seule) |
+
+#### Règles d'utilisation de Prisma dans les tests
+
+| Action | Autorisé | Exemple |
+|--------|----------|---------|
+| Création de données | ❌ | Utiliser l'API |
+| Lecture/vérification | ✅ | `prisma.user.findUnique(...)` |
+| Modification (cas spéciaux) | ✅ | Créer des données invalides pour tester les rejets |
+
+#### Structure d'un test d'intégration
+```typescript
+import { describe, it, expect } from 'vitest';
+import request from 'supertest';
+import { app } from '../../server/src/app';
+import { createUserWithTeam } from './helpers/auth';
+import { prisma, expectNoRecordCreated } from './helpers/db';
+import { ERROR } from '@shared/constants/error.constants';
+
+describe('Feature API', () => {
+  describe('POST /api/feature', () => {
+    it('should create successfully', async () => {
+      const { token, team } = await createUserWithTeam();
+
+      const res = await request(app)
+        .post('/api/feature')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ data: 'value' });
+
+      expect(res.status).toBe(201);
+
+      // Vérifier en DB
+      const record = await prisma.feature.findUnique({ where: { id: res.body.id } });
+      expect(record).not.toBeNull();
+      expect(record!.teamId).toBe(team.id);
+    });
+
+    it('should reject without authentication', async () => {
+      const res = await request(app)
+        .post('/api/feature')
+        .send({ data: 'value' });
+
+      expect(res.status).toBe(401);
+      expect(res.body.errors).toContain(ERROR.tokenMissing);
+    });
+
+    it('should reject and not create record', async () => {
+      const { token, team } = await createUserWithTeam();
+
+      const res = await expectNoRecordCreated(
+        () => prisma.feature.count({ where: { teamId: team.id } }),
+        () => request(app)
+          .post('/api/feature')
+          .set('Authorization', `Bearer ${token}`)
+          .send({ invalidData: true })
+      );
+
+      expect(res.status).toBe(400);
+    });
+  });
+});
+```
+
+#### Commandes
+```bash
+# Lancer les tests d'intégration
+npm run test:integration
+
+# Lancer les tests unitaires
+npm run test:unit
+
+# Lancer tous les tests
+npm run test
+```
 
 #### Exemples de tests inutiles (à NE PAS écrire) :
 ```typescript
@@ -369,5 +467,5 @@ export function useExemple(options?: ExempleOptions) {
 
 ## 🔄 Dernière mise à jour
 
-**Date** : 2026-01-15
+**Date** : 2026-01-29
 

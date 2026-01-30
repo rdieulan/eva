@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import { prisma } from '@db/prisma';
 import type { UserPermissions } from '@shared/types';
 import { DEFAULT_PLAYER_PERMISSIONS, LEADER_PERMISSIONS } from '@shared/types';
+import { ERROR } from '@shared/constants';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key';
 
@@ -88,7 +89,7 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     console.log('[AUTH] Middleware: Missing or invalid Authorization header');
-    return res.status(401).json({ errors: ['Token manquant'] });
+    return res.status(401).json({ errors: [ERROR.tokenMissing] });
   }
 
   const token = authHeader.substring(7);
@@ -96,7 +97,7 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
 
   if (!payload) {
     console.log('[AUTH] Middleware: Invalid token');
-    return res.status(401).json({ errors: ['Token invalide'] });
+    return res.status(401).json({ errors: [ERROR.tokenInvalid] });
   }
 
   // Enrich payload with teamId from database

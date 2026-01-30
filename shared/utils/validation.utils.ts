@@ -1,6 +1,8 @@
 // Validation utilities - Single source of truth for all validation rules
 // Used by both server and client
 
+import { ERROR } from '@shared/constants';
+
 // ============================================
 // Validation Rules
 // ============================================
@@ -25,7 +27,7 @@ export function validateEmail(email: string): ValidationResult {
   const errors: string[] = [];
 
   if (!EMAIL_REGEX.test(email)) {
-    errors.push('Format d\'email invalide');
+    errors.push(ERROR.emailInvalid);
   }
 
   return errors.length ? errors : true;
@@ -41,15 +43,15 @@ export function validatePassword(password: string): ValidationResult {
   const errors: string[] = [];
 
   if (password.length < PASSWORD_MIN_LENGTH) {
-    errors.push(`Le mot de passe doit contenir au moins ${PASSWORD_MIN_LENGTH} caractères`);
+    errors.push(ERROR.passwordTooShort);
   }
 
   if (!/[0-9]/.test(password)) {
-    errors.push('Le mot de passe doit contenir au moins un chiffre');
+    errors.push(ERROR.passwordNoDigit);
   }
 
   if (!/[A-Z]/.test(password)) {
-    errors.push('Le mot de passe doit contenir au moins une majuscule');
+    errors.push(ERROR.passwordNoUppercase);
   }
 
   return errors.length ? errors : true;
@@ -65,11 +67,11 @@ export function validateName(name: string): ValidationResult {
   const trimmed = name.trim();
 
   if (trimmed.length < NAME_MIN_LENGTH) {
-    errors.push(`Le pseudo doit contenir au moins ${NAME_MIN_LENGTH} caractères`);
+    errors.push(ERROR.nameTooShort);
   }
 
   if (!NAME_REGEX.test(trimmed)) {
-    errors.push('Le pseudo ne doit contenir que des lettres et des chiffres');
+    errors.push(ERROR.nameInvalidChars);
   }
 
   return errors.length ? errors : true;
@@ -84,7 +86,7 @@ export function validateTeamName(name: string): ValidationResult {
   const trimmed = name?.trim() || '';
 
   if (trimmed.length < TEAM_NAME_MIN_LENGTH) {
-    errors.push(`Le nom de l'équipe doit contenir au moins ${TEAM_NAME_MIN_LENGTH} caractères`);
+    errors.push(ERROR.teamNameTooShort);
   }
 
   return errors.length ? errors : true;
@@ -95,7 +97,7 @@ export function validateTeamName(name: string): ValidationResult {
  */
 export function validatePasswordsMatch(password: string, confirmPassword: string): ValidationResult {
   if (password !== confirmPassword) {
-    return ['Les mots de passe ne correspondent pas'];
+    return [ERROR.passwordsMismatch];
   }
   return true;
 }

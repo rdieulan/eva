@@ -3,7 +3,7 @@
 import { prisma } from '@db/prisma';
 import type { UserPermissions } from '@shared/types';
 import { LEADER_PERMISSIONS, DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
-import { DEFAULT_ASSIGNMENTS, DEFAULT_GAME_PLAN_NOTES } from '@shared/constants';
+import { DEFAULT_ASSIGNMENTS, DEFAULT_GAME_PLAN_NOTES, ERROR } from '@shared/constants';
 
 // ============================================
 // Types
@@ -76,7 +76,7 @@ export async function createTeam(data: TeamCreateData) {
   });
 
   if (user?.teamId) {
-    return { error: 'Vous êtes déjà membre d\'une équipe' };
+    return { error: ERROR.userAlreadyInTeam };
   }
 
   // Create team with current user as leader
@@ -168,7 +168,7 @@ export async function updateMemberPermissions(
   });
 
   if (!currentUser?.team) {
-    return { success: false, error: 'Aucune équipe trouvée' };
+    return { success: false, error: ERROR.teamNotFound };
   }
 
   // Verify target member is in the same team
@@ -178,17 +178,17 @@ export async function updateMemberPermissions(
   });
 
   if (!targetMember || targetMember.teamId !== currentUser.team.id) {
-    return { success: false, error: 'Membre non trouvé dans cette équipe' };
+    return { success: false, error: ERROR.memberNotFound };
   }
 
   // Cannot modify leader's permissions
   if (targetMember.ledTeam) {
-    return { success: false, error: 'Impossible de modifier les permissions du leader' };
+    return { success: false, error: ERROR.cannotModifyLeaderPermissions };
   }
 
   // Cannot modify own permissions
   if (memberId === currentUserId) {
-    return { success: false, error: 'Impossible de modifier vos propres permissions' };
+    return { success: false, error: ERROR.cannotModifyOwnPermissions };
   }
 
   await prisma.user.update({
@@ -212,7 +212,7 @@ export async function removeMember(
   });
 
   if (!currentUser?.team) {
-    return { success: false, error: 'Aucune équipe trouvée' };
+    return { success: false, error: ERROR.teamNotFound };
   }
 
   const targetMember = await prisma.user.findUnique({
@@ -221,17 +221,17 @@ export async function removeMember(
   });
 
   if (!targetMember || targetMember.teamId !== currentUser.team.id) {
-    return { success: false, error: 'Membre non trouvé dans cette équipe' };
+    return { success: false, error: ERROR.memberNotFound };
   }
 
   // Cannot remove the leader
   if (targetMember.ledTeam) {
-    return { success: false, error: 'Impossible de retirer le leader de l\'équipe' };
+    return { success: false, error: ERROR.cannotRemoveLeader };
   }
 
   // Cannot remove yourself
   if (memberId === currentUserId) {
-    return { success: false, error: 'Impossible de vous retirer vous-même' };
+    return { success: false, error: ERROR.cannotRemoveSelf };
   }
 
   await prisma.user.update({
@@ -258,11 +258,11 @@ export async function deleteTeam(userId: string): Promise<{ success: boolean; er
   });
 
   if (!currentUser?.team) {
-    return { success: false, error: 'Aucune équipe trouvée' };
+    return { success: false, error: ERROR.teamNotFound };
   }
 
   if (!currentUser.ledTeam) {
-    return { success: false, error: 'Seul le leader peut supprimer l\'équipe' };
+    return { success: false, error: ERROR.onlyLeaderCanDelete };
   }
 
   const teamId = currentUser.team.id;
@@ -297,11 +297,11 @@ export async function leaveTeam(userId: string): Promise<{ success: boolean; err
   });
 
   if (!currentUser?.team) {
-    return { success: false, error: 'Aucune équipe trouvée' };
+    return { success: false, error: ERROR.teamNotFound };
   }
 
   if (currentUser.ledTeam) {
-    return { success: false, error: 'Le leader ne peut pas quitter l\'équipe. Supprimez l\'équipe ou transférez la direction.' };
+    return { success: false, error: ERROR.leaderCannotLeave };
   }
 
   await prisma.user.update({

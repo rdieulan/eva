@@ -2,6 +2,7 @@
 
 import { prisma } from '@db/prisma';
 import crypto from 'crypto';
+import { ERROR } from '@shared/constants';
 
 // ============================================
 // Constants
@@ -32,10 +33,10 @@ export function buildInviteUrl(code: string): string {
  */
 export function getInviteError(invite: { expiresAt: Date; uses: number; maxUses: number }): string | null {
   if (new Date() > invite.expiresAt) {
-    return 'Ce lien d\'invitation a expiré';
+    return ERROR.inviteExpired;
   }
   if (invite.uses >= invite.maxUses) {
-    return 'Ce lien d\'invitation a atteint sa limite d\'utilisation';
+    return ERROR.inviteMaxUsesReached;
   }
   return null;
 }
@@ -157,7 +158,7 @@ export async function verifyInviteCode(code: string) {
   });
 
   if (!invite) {
-    return { valid: false, reason: 'Lien d\'invitation invalide' };
+    return { valid: false, reason: ERROR.inviteInvalid };
   }
 
   const inviteError = getInviteError(invite);
@@ -186,7 +187,7 @@ export async function joinTeamWithCode(
   });
 
   if (user?.teamId) {
-    return { success: false, error: 'Vous êtes déjà membre d\'une équipe' };
+    return { success: false, error: ERROR.userAlreadyInTeam };
   }
 
   // Find and validate invite
@@ -198,7 +199,7 @@ export async function joinTeamWithCode(
   });
 
   if (!invite) {
-    return { success: false, error: 'Lien d\'invitation invalide' };
+    return { success: false, error: ERROR.inviteInvalid };
   }
 
   const inviteError = getInviteError(invite);

@@ -123,7 +123,7 @@ router.post('/invites/:code/join', authMiddleware, async (req: AuthRequest, res:
     const result = await invitesService.joinTeamWithCode(req.user!.userId, code);
 
     if (!result.success) {
-      const status = result.error?.includes('invalide') ? 404 : 400;
+      const status = result.error === ERROR.inviteInvalid ? 404 : 400;
       return res.status(status).json({ errors: [result.error] });
     }
 

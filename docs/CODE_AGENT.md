@@ -108,12 +108,122 @@ npm run script:dry -- <script-name> [args]
 
 ---
 
-## 📋 Checklist avant chaque action
+## 📋 Processus d'implémentation de features
 
-- [ ] Ai-je lu et compris la demande ?
-- [ ] Ai-je fait une analyse préalable ?
-- [ ] Ai-je soumis l'analyse pour validation ?
-- [ ] Ai-je reçu la validation explicite ?
-- [ ] Mon code respecte-t-il CODE_RULES.md ?
-- [ ] Ai-je vérifié le build après modification ?
-- [ ] Ai-je attendu avant de commit/push ?
+### Phase 1 - Analyse (AVANT toute modification)
+
+| Étape | Description | Validation requise |
+|-------|-------------|-------------------|
+| 1.1 | **Comprendre le besoin** : Reformuler la demande pour s'assurer de la compréhension | ✅ |
+| 1.2 | **Identifier les composants impactés** : Lister les fichiers/modules concernés | ✅ |
+| 1.3 | **Analyser le code existant** : Lire et comprendre le code actuel | ❌ |
+| 1.4 | **Identifier les dépendances** : Autres features, données, permissions | ❌ |
+| 1.5 | **Réfléchir aux implications** : Effets de bord, cas limites, sécurité | ✅ |
+
+### Phase 2 - Planification
+
+| Étape | Description | Validation requise |
+|-------|-------------|-------------------|
+| 2.1 | **Rédiger le plan d'action** : Étapes ordonnées et détaillées | ✅ |
+| 2.2 | **Mettre à jour la ROADMAP** : Ajouter les tâches (non cochées) | ✅ |
+| 2.3 | **Identifier les tests nécessaires** : Unitaires et/ou intégration | ✅ |
+| 2.4 | **Identifier les migrations DB** : Si changement de schéma | ✅ |
+
+### Phase 3 - Implémentation
+
+| Étape | Description | Validation requise |
+|-------|-------------|-------------------|
+| 3.1 | **Implémenter étape par étape** : Une étape à la fois, pas d'enchaînement | ✅ par étape |
+| 3.2 | **Respecter CODE_RULES.md** : Nommage, structure, imports | ❌ |
+| 3.3 | **Vérifier les erreurs IDE** : Pas de warning/erreur ignoré | ❌ |
+| 3.4 | **Pause après chaque étape** : Permettre la review | ✅ |
+
+### Phase 4 - Validation technique
+
+| Étape | Description | Validation requise |
+|-------|-------------|-------------------|
+| 4.1 | **Build** : `npm run build` doit passer | ❌ |
+| 4.2 | **Tests unitaires** : `npm run test:unit` | ❌ |
+| 4.3 | **Tests d'intégration** : `npm run test:integration` | ❌ |
+| 4.4 | **Test manuel** : Si applicable, décrire ce qui a été testé | ✅ |
+
+### Phase 5 - Finalisation
+
+| Étape | Description | Validation requise |
+|-------|-------------|-------------------|
+| 5.1 | **Mettre à jour la ROADMAP** : Cocher les tâches terminées | ✅ |
+| 5.2 | **Mettre à jour la documentation** : Si nouveau pattern/règle | ✅ |
+| 5.3 | **Commit/Push** : Attendre l'instruction explicite | ✅ |
+
+---
+
+## 🧪 Décision : Tests nécessaires ?
+
+### Tests unitaires
+
+| Situation | Test unitaire ? |
+|-----------|----------------|
+| Nouvelle fonction utilitaire (`@/utils`, `@shared/utils`) | ✅ Oui |
+| Nouveau composable avec logique métier | ✅ Oui |
+| Nouvelle constante de validation | ✅ Oui |
+| Modification de logique existante testée | ✅ Oui (adapter) |
+| Nouveau composant Vue (UI pure) | ❌ Non |
+| Modification CSS/style | ❌ Non |
+
+### Tests d'intégration
+
+| Situation | Test intégration ? |
+|-----------|-------------------|
+| Nouvelle route API | ✅ Oui |
+| Modification de route existante (comportement) | ✅ Oui (adapter) |
+| Nouveau middleware/permission | ✅ Oui |
+| Modification de service avec effet DB | ✅ Oui |
+| Modification frontend uniquement | ❌ Non |
+
+---
+
+## ⚡ Checklist rapide (avant chaque action)
+
+```
+[ ] Ai-je compris la demande ?
+[ ] Ai-je fait l'analyse préalable ?
+[ ] Ai-je soumis mon plan pour validation ?
+[ ] Ai-je reçu la validation explicite ?
+[ ] Mon code respecte-t-il CODE_RULES.md ?
+[ ] Ai-je vérifié build + tests ?
+[ ] Ai-je marqué une pause avant de continuer ?
+[ ] Ai-je attendu l'accord avant commit/push ?
+```
+
+---
+
+## 🚨 Points de vigilance par domaine
+
+### Backend (routes, services)
+
+- [ ] Vérifier l'isolation par équipe (`teamId`)
+- [ ] Vérifier les permissions requises
+- [ ] Utiliser les constantes `ERROR` pour les messages
+- [ ] Retourner `{ errors: [...] }` en cas d'erreur
+- [ ] Logger les erreurs serveur
+
+### Frontend (composants, pages)
+
+- [ ] Utiliser les alias d'import (`@/`, `@shared/`)
+- [ ] Utiliser les variables SCSS (pas de couleurs en dur)
+- [ ] Gérer les erreurs avec `useErrors` / `ErrorModal`
+- [ ] Vérifier le rendu mobile
+
+### Base de données
+
+- [ ] Migration nécessaire ?
+- [ ] Données existantes à migrer ?
+- [ ] Index nécessaires ?
+- [ ] Cascade delete configuré ?
+
+### Sécurité
+
+- [ ] Route protégée par `authMiddleware` ?
+- [ ] Permission vérifiée si nécessaire ?
+- [ ] Données d'une équipe non accessibles par une autre ?
+- [ ] Pas d'information sensible dans les messages d'erreur ?

@@ -1,6 +1,12 @@
 // Common error messages - Single source of truth for error messages
 // Used by both server and client
 
+import {
+  PASSWORD_MIN_LENGTH,
+  NAME_MIN_LENGTH,
+  TEAM_NAME_MIN_LENGTH,
+} from '@shared/utils/validation.utils';
+
 // ============================================
 // Error Messages
 // ============================================
@@ -11,6 +17,16 @@ export const ERROR = {
   connectionError: 'Erreur de connexion au serveur',
   requiredFieldsMissing: 'Veuillez remplir tous les champs',
   copyFailed: 'Impossible de copier le lien',
+
+  // Validation (using constants from validation.utils)
+  emailInvalid: 'Format d\'email invalide',
+  passwordTooShort: `Le mot de passe doit contenir au moins ${PASSWORD_MIN_LENGTH} caractères`,
+  passwordNoDigit: 'Le mot de passe doit contenir au moins un chiffre',
+  passwordNoUppercase: 'Le mot de passe doit contenir au moins une majuscule',
+  nameTooShort: `Le pseudo doit contenir au moins ${NAME_MIN_LENGTH} caractères`,
+  nameInvalidChars: 'Le pseudo ne doit contenir que des lettres et des chiffres',
+  teamNameTooShort: `Le nom de l'équipe doit contenir au moins ${TEAM_NAME_MIN_LENGTH} caractères`,
+  passwordsMismatch: 'Les mots de passe ne correspondent pas',
 
   // Authentication
   loginFailed: 'Identifiants invalides',
@@ -46,6 +62,15 @@ export const ERROR = {
   teamRequiredForMaps: 'Vous devez appartenir à une équipe pour accéder aux cartes',
   teamRequiredForPlans: 'Vous devez appartenir à une équipe pour accéder aux plans',
   teamRequiredForEvents: 'Vous devez appartenir à une équipe pour créer des événements',
+  teamRequiredForCalendar: 'Vous devez appartenir à une équipe pour accéder au calendrier',
+  userAlreadyInTeam: 'Vous êtes déjà membre d\'une équipe',
+  memberNotFound: 'Membre non trouvé dans cette équipe',
+  cannotModifyLeaderPermissions: 'Impossible de modifier les permissions du leader',
+  cannotModifyOwnPermissions: 'Impossible de modifier vos propres permissions',
+  cannotRemoveLeader: 'Impossible de retirer le leader de l\'équipe',
+  cannotRemoveSelf: 'Impossible de vous retirer vous-même',
+  onlyLeaderCanDelete: 'Seul le leader peut supprimer l\'équipe',
+  leaderCannotLeave: 'Le leader ne peut pas quitter l\'équipe. Supprimez l\'équipe ou transférez la direction.',
 
   // Invitations
   inviteNotFound: 'Invitation non trouvée',

@@ -15,7 +15,8 @@ export default defineConfig({
     globals: true,
     environment: 'happy-dom',
     setupFiles: ['./tests/setup.ts'],
-    include: ['client/**/*.{test,spec}.{js,ts}', 'server/**/*.{test,spec}.{js,ts}', 'tests/**/*.{test,spec}.{js,ts}'],
+    include: ['tests/unit/**/*.{test,spec}.{js,ts}', 'tests/quality/**/*.{test,spec}.{js,ts}'],
+    exclude: ['tests/integration/**', 'tests/e2e/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
