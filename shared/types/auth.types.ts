@@ -1,13 +1,13 @@
 // Authentication types
 
-import type { User } from './user.types';
+import type { Account } from './account.types';
 
 /**
  * Login response from the API
  */
 export interface LoginResponse {
   token: string;
-  user: User;
+  user: Account;
 }
 
 /**

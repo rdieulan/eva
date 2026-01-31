@@ -81,7 +81,10 @@ async function renameSymbol(project: Project, filePath: string, oldName: string,
 
   if (isDryRun) {
     console.log('\n🔸 DRY RUN - No .ts files modified');
-    console.log(`   Would rename "${oldName}" → "${newName}" in ${affectedFiles.size} .ts file(s)`);
+    console.log(`   Would rename "${oldName}" → "${newName}" in ${affectedFiles.size} .ts file(s) via AST`);
+
+    // Also check additional .ts files with namespace usage
+    await updateTsFilesWithRegex(oldName, newName, affectedFiles);
 
     // Also check .vue files in dry-run
     await updateVueFiles(oldName, newName);
@@ -118,10 +121,72 @@ async function renameSymbol(project: Project, filePath: string, oldName: string,
 
   // Save all modified files
   project.saveSync();
-  console.log(`\n✅ Renamed "${oldName}" → "${newName}" in ${affectedFiles.size} .ts file(s)`);
+  console.log(`\n✅ Renamed "${oldName}" → "${newName}" in ${affectedFiles.size} .ts file(s) (via AST)`);
+
+  // Also update remaining .ts files using regex (for namespace imports like `service.functionName`)
+  await updateTsFilesWithRegex(oldName, newName, affectedFiles);
 
   // Also update .vue files using regex
   await updateVueFiles(oldName, newName);
+}
+
+// ============================================
+// Update .ts files using regex (for namespace imports)
+// ============================================
+async function updateTsFilesWithRegex(oldName: string, newName: string, alreadyUpdated: Set<string>): Promise<void> {
+  const tsFiles = glob.sync('{client/src,server/src,shared}/**/*.ts', { cwd: process.cwd() });
+
+  // Regex to match the symbol (including after a dot for namespace access)
+  const regex = new RegExp(`\\b${escapeRegex(oldName)}\\b`, 'g');
+
+  const filesToUpdate: { file: string; original: string; updated: string; matches: number }[] = [];
+
+  for (const file of tsFiles) {
+    const filePath = path.resolve(process.cwd(), file);
+
+    // Skip files already updated by AST
+    if (alreadyUpdated.has(filePath)) continue;
+
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const matches = content.match(regex);
+
+    if (matches && matches.length > 0) {
+      const updatedContent = content.replace(regex, newName);
+      filesToUpdate.push({
+        file,
+        original: content,
+        updated: updatedContent,
+        matches: matches.length,
+      });
+    }
+  }
+
+  if (filesToUpdate.length === 0) {
+    console.log('\n📁 No additional .ts files affected (namespace imports)');
+    return;
+  }
+
+  console.log(`\n📁 Additional .ts files with namespace usage (${filesToUpdate.length}):`);
+  filesToUpdate.forEach(({ file, matches }) => console.log(`   - ${file} (${matches} occurrence(s))`));
+
+  if (isDryRun) {
+    console.log('\n--- DIFF PREVIEW (.ts namespace) ---\n');
+    for (const { file, original, updated } of filesToUpdate) {
+      console.log(`${colors.cyan}File: ${file}${colors.reset}`);
+      showDiff(original, updated);
+      console.log('');
+    }
+    console.log(`🔸 DRY RUN - Would update ${filesToUpdate.length} additional .ts file(s)`);
+    return;
+  }
+
+  // Apply changes (non-interactive for .ts since they're more controlled)
+  for (const { file, updated } of filesToUpdate) {
+    const filePath = path.resolve(process.cwd(), file);
+    fs.writeFileSync(filePath, updated, 'utf-8');
+  }
+
+  console.log(`✅ Updated ${filesToUpdate.length} additional .ts file(s) via regex`);
 }
 
 // ============================================

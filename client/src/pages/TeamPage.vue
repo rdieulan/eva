@@ -16,7 +16,7 @@ import {
   revokeInvite,
 } from '@/api';
 import type { TeamWithMembers, TeamMember, TeamInvite } from '@/api';
-import type { UserPermissions } from '@shared/types';
+import type { AccountPermissions } from '@shared/types';
 import { DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
 import { ERROR } from '@shared/constants';
 import { useErrors } from '@/composables/useErrors';
@@ -42,7 +42,7 @@ const successMessage = ref<string | null>(null);
 // Permissions modal
 const showPermissionsModal = ref(false);
 const selectedMember = ref<TeamMember | null>(null);
-const editingPermissions = ref<UserPermissions>({ ...DEFAULT_PLAYER_PERMISSIONS });
+const editingPermissions = ref<AccountPermissions>({ ...DEFAULT_PLAYER_PERMISSIONS });
 
 // Remove member modal
 const showRemoveModal = ref(false);
@@ -154,7 +154,7 @@ function openPermissionsModal(member: TeamMember) {
   showPermissionsModal.value = true;
 }
 
-async function savePermissions(perms: UserPermissions) {
+async function savePermissions(perms: AccountPermissions) {
   if (!token.value || !selectedMember.value) return;
 
   try {

@@ -17,8 +17,8 @@ const router = Router();
 // GET /api/calendar/availability?month=YYYY-MM
 router.get('/availability', authMiddleware, async (req: AuthRequest, res: Response) => {
   const { month } = req.query;
-  const teamId = req.user?.teamId;
-  const userId = req.user?.userId;
+  const teamId = req.account?.teamId;
+  const playerId = req.account?.playerId;
 
   if (!calendarService.isValidMonth(month)) {
     res.status(400).json({ errors: [ERROR.monthParamRequired] });
@@ -31,7 +31,7 @@ router.get('/availability', authMiddleware, async (req: AuthRequest, res: Respon
   }
 
   try {
-    const result = await calendarService.getMonthAvailability(month, teamId, userId!);
+    const result = await calendarService.getMonthAvailability(month, teamId, playerId!);
     res.json(result);
   } catch (error) {
     console.error('[CALENDAR] Error fetching availability:', error);
@@ -42,7 +42,7 @@ router.get('/availability', authMiddleware, async (req: AuthRequest, res: Respon
 // POST /api/calendar/availability
 router.post('/availability', authMiddleware, async (req: AuthRequest, res: Response) => {
   const { date, status } = req.body as SetAvailabilityRequest;
-  const userId = req.user!.userId;
+  const playerId = req.account!.playerId!;
 
   if (!calendarService.isValidDate(date)) {
     res.status(400).json({ errors: [ERROR.dateInvalid] });
@@ -55,7 +55,7 @@ router.post('/availability', authMiddleware, async (req: AuthRequest, res: Respo
   }
 
   try {
-    const result = await calendarService.setAvailability(userId, date, status);
+    const result = await calendarService.setAvailability(playerId, date, status);
 
     if (result.deleted) {
       res.json({ success: true, deleted: true });
@@ -75,7 +75,7 @@ router.post('/availability', authMiddleware, async (req: AuthRequest, res: Respo
 // GET /api/calendar/events?month=YYYY-MM
 router.get('/events', authMiddleware, async (req: AuthRequest, res: Response) => {
   const { month } = req.query;
-  const teamId = req.user?.teamId;
+  const teamId = req.account?.teamId;
 
   if (!calendarService.isValidMonth(month)) {
     res.status(400).json({ errors: [ERROR.monthParamRequired] });
@@ -99,8 +99,8 @@ router.get('/events', authMiddleware, async (req: AuthRequest, res: Response) =>
 // POST /api/calendar/events
 router.post('/events', authMiddleware, requirePermission('calendar', 'canCreateEvents'), async (req: AuthRequest, res: Response) => {
   const { date, startTime, endTime, type, title, description } = req.body as CreateEventRequest;
-  const createdById = req.user!.userId;
-  const teamId = req.user?.teamId;
+  const createdByAccountId = req.account!.userId;
+  const teamId = req.account?.teamId;
 
   if (!teamId) {
     res.status(400).json({ errors: [ERROR.teamRequiredForEvents] });
@@ -138,7 +138,7 @@ router.post('/events', authMiddleware, requirePermission('calendar', 'canCreateE
       title,
       description,
       teamId,
-      createdById,
+      createdByUserId: createdByAccountId,
     });
 
     res.status(201).json(event);
@@ -151,7 +151,7 @@ router.post('/events', authMiddleware, requirePermission('calendar', 'canCreateE
 // DELETE /api/calendar/events/:id
 router.delete('/events/:id', authMiddleware, requirePermission('calendar', 'canDeleteEvents'), async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
-  const teamId = req.user?.teamId;
+  const teamId = req.account?.teamId;
 
   try {
     const result = await calendarService.getEventWithTeamCheck(id, teamId || undefined);
@@ -178,7 +178,7 @@ router.delete('/events/:id', authMiddleware, requirePermission('calendar', 'canD
 router.put('/events/:id', authMiddleware, requirePermission('calendar', 'canEditEvents'), async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
   const { date, startTime, endTime, type, title, description } = req.body as CreateEventRequest;
-  const teamId = req.user?.teamId;
+  const teamId = req.account?.teamId;
 
   // Validation
   if (date && !calendarService.isValidDate(date)) {
@@ -231,7 +231,7 @@ router.put('/events/:id', authMiddleware, requirePermission('calendar', 'canEdit
 router.put('/events/:id/gameplan', authMiddleware, requirePermission('calendar', 'canAttachGamePlan'), async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
   const { gamePlan } = req.body;
-  const teamId = req.user?.teamId;
+  const teamId = req.account?.teamId;
 
   try {
     const result = await calendarService.getEventWithTeamCheck(id, teamId || undefined);

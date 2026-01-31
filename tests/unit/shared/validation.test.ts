@@ -6,10 +6,12 @@ import {
   validateName,
   validateTeamName,
   validateRegistration,
+} from '@shared/utils';
+import {
   PASSWORD_MIN_LENGTH,
   NAME_MIN_LENGTH,
   TEAM_NAME_MIN_LENGTH,
-} from '@shared/utils';
+} from '@shared/constants/validation.constants';
 
 // ============================================
 // UNIT TESTS: Shared Validation Utils

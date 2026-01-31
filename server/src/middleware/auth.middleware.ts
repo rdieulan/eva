@@ -3,7 +3,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { prisma } from '@db/prisma';
-import type { UserPermissions } from '@shared/types';
+import type { AccountPermissions, AccountType } from '@shared/types';
 import { DEFAULT_PLAYER_PERMISSIONS, LEADER_PERMISSIONS } from '@shared/types';
 import { ERROR } from '@shared/constants';
 
@@ -17,11 +17,17 @@ if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
 export interface JwtPayload {
   userId: string;
   email: string;
+  accountType?: AccountType;
+  // Type-specific IDs (only one will be set)
+  playerId?: string;
+  managerId?: string;
+  adminId?: string;
+  // Player-specific (enriched by middleware)
   teamId?: string;
 }
 
 export interface AuthRequest extends Request {
-  user?: JwtPayload;
+  account?: JwtPayload;
 }
 
 /**
@@ -35,54 +41,61 @@ export function verifyToken(token: string): JwtPayload | null {
   }
 }
 
-/**
- * Get user's team ID from database
- */
-export async function getUserTeamId(userId: string): Promise<string | undefined> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { teamId: true },
-  });
-  return user?.teamId ?? undefined;
-}
+// Import player helpers
+import { getPlayerTeamId } from '@services/player.service';
 
 /**
- * Get user permissions from database
- * Leaders get full permissions, others get stored permissions or defaults
+ * Get account permissions from database
+ * Detects account type (Player, Manager, Admin) and returns appropriate permissions
  */
-export async function getUserPermissions(userId: string): Promise<UserPermissions> {
-  const user = await prisma.user.findUnique({
+export async function getAccountPermissions(userId: string): Promise<AccountPermissions> {
+  const account = await prisma.user.findUnique({
     where: { id: userId },
-    include: { ledTeam: true },
+    include: {
+      player: { include: { ledTeam: true } },
+      manager: true,
+      admin: true,
+    },
   });
 
-  if (!user) return DEFAULT_PLAYER_PERMISSIONS;
-
-  // If user is a leader, grant full permissions
-  if (user.ledTeam) {
-    return LEADER_PERMISSIONS;
+  // Admin permissions
+  if (account?.admin) {
+    return (account.admin.permissions as unknown as AccountPermissions) ?? LEADER_PERMISSIONS;
   }
 
-  // Return stored permissions or defaults
-  return (user.permissions as unknown as UserPermissions) ?? DEFAULT_PLAYER_PERMISSIONS;
+  // Manager permissions
+  if (account?.manager) {
+    return (account.manager.permissions as unknown as AccountPermissions) ?? DEFAULT_PLAYER_PERMISSIONS;
+  }
+
+  // Player permissions
+  if (account?.player) {
+    // If player is a leader, grant full permissions
+    if (account.player.ledTeam) {
+      return LEADER_PERMISSIONS;
+    }
+    return (account.player.permissions as unknown as AccountPermissions) ?? DEFAULT_PLAYER_PERMISSIONS;
+  }
+
+  return DEFAULT_PLAYER_PERMISSIONS;
 }
 
 /**
- * Check if user has specific permission
+ * Check if account has specific permission
  */
 export async function hasPermission(
   userId: string,
-  category: keyof UserPermissions,
+  category: keyof AccountPermissions,
   permission: string
 ): Promise<boolean> {
-  const permissions = await getUserPermissions(userId);
+  const permissions = await getAccountPermissions(userId);
   const categoryPerms = permissions[category];
   return (categoryPerms as unknown as Record<string, boolean>)?.[permission] ?? false;
 }
 
 /**
  * Authentication middleware - requires valid JWT token
- * Enriches the payload with teamId from database
+ * Enriches the payload with teamId from database (for Players only)
  */
 export function authMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
@@ -100,36 +113,43 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
     return res.status(401).json({ errors: [ERROR.tokenInvalid] });
   }
 
-  // Enrich payload with teamId from database
-  getUserTeamId(payload.userId).then(teamId => {
-    console.log('[AUTH] Middleware: Token valid for user', payload.email, 'team:', teamId);
-    req.user = { ...payload, teamId };
+  // Enrich payload with teamId from database (only for Players)
+  if (payload.playerId) {
+    getPlayerTeamId(payload.playerId).then(teamId => {
+      console.log('[AUTH] Middleware: Token valid for player', payload.email, 'team:', teamId);
+      req.account = { ...payload, teamId };
+      next();
+    }).catch(error => {
+      console.error('[AUTH] Error fetching team:', error);
+      req.account = payload;
+      next();
+    });
+  } else {
+    // Manager or Admin - no teamId needed
+    console.log('[AUTH] Middleware: Token valid for', payload.accountType, payload.email);
+    req.account = payload;
     next();
-  }).catch(error => {
-    console.error('[AUTH] Error fetching team:', error);
-    req.user = payload;
-    next();
-  });
+  }
 }
 
 /**
  * Permission middleware factory - checks for specific permission
  * Usage: requirePermission('planner', 'canEdit')
  */
-export function requirePermission(category: keyof UserPermissions, permission: string) {
+export function requirePermission(category: keyof AccountPermissions, permission: string) {
   return async (req: AuthRequest, res: Response, next: NextFunction) => {
-    if (!req.user) {
+    if (!req.account) {
       return res.status(401).json({ errors: ['Non authentifié'] });
     }
 
-    const allowed = await hasPermission(req.user.userId, category, permission);
+    const allowed = await hasPermission(req.account.userId, category, permission);
 
     if (!allowed) {
-      console.log(`[AUTH] Permission denied: ${category}.${permission} for user ${req.user.email}`);
+      console.log(`[AUTH] Permission denied: ${category}.${permission} for account ${req.account.email}`);
       return res.status(403).json({ errors: ['Permission refusée'] });
     }
 
-    console.log(`[AUTH] Permission granted: ${category}.${permission} for user ${req.user.email}`);
+    console.log(`[AUTH] Permission granted: ${category}.${permission} for account ${req.account.email}`);
     next();
   };
 }

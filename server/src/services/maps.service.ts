@@ -36,7 +36,11 @@ export async function getAllMapsForTeam(teamId: string): Promise<MapForFrontend[
     include: {
       gamePlans: {
         where: { teamId },
-        include: { players: true },
+        include: {
+          players: {
+            include: { player: { include: { user: true } } }
+          }
+        },
         orderBy: { name: 'asc' },
       },
     },
@@ -76,7 +80,11 @@ export async function getMapForTeam(mapId: string, teamId: string): Promise<MapF
     include: {
       gamePlans: {
         where: { teamId },
-        include: { players: true },
+        include: {
+          players: {
+            include: { player: { include: { user: true } } }
+          }
+        },
         orderBy: { name: 'asc' },
       },
     },
@@ -109,7 +117,7 @@ export async function getPlansForMapAndTeam(mapId: string, teamId: string) {
     include: {
       players: {
         include: {
-          user: { select: { id: true, name: true } },
+          player: { include: { user: { select: { id: true, name: true } } } },
         },
       },
     },

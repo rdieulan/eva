@@ -4,8 +4,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@db/prisma';
 import type { JwtPayload } from '@middleware/auth.middleware';
-import { getUserPermissions } from '@middleware/auth.middleware';
-import type { UserPermissions } from '@shared/types';
+import type { AccountPermissions } from '@shared/types';
 
 // Re-export validation functions from shared (single source of truth)
 export {
@@ -25,15 +24,21 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
 
 // ============================================
-// User data returned to client
+// Account types and data returned to client
 // ============================================
-export interface AuthUserData {
+export type AccountType = 'player' | 'manager' | 'admin';
+
+export interface AuthAccountData {
   id: string;
   email: string;
   name: string;
-  permissions: UserPermissions;
+  accountType: AccountType;
+  permissions: AccountPermissions;
+  // Player-specific data (null if not a player)
   teamId: string | null;
   isLeader: boolean;
+  // Manager-specific data (null if not a manager)
+  managedVenueIds: string[] | null;
 }
 
 /**
@@ -84,9 +89,25 @@ export async function deleteSession(token: string): Promise<number> {
 }
 
 /**
- * Find user by email (case-insensitive)
+ * Check if an email already exists (for registration uniqueness check)
  */
-export async function findUserByEmail(email: string) {
+export async function emailExists(email: string): Promise<boolean> {
+  const count = await prisma.user.count({
+    where: {
+      email: {
+        equals: email,
+        mode: 'insensitive',
+      },
+    },
+  });
+  return count > 0;
+}
+
+/**
+ * Find account by email for authentication (login, change-password)
+ * Returns Account with Player/Manager/Admin relations for building auth data
+ */
+export async function findAccountByEmail(email: string) {
   return prisma.user.findFirst({
     where: {
       email: {
@@ -95,78 +116,88 @@ export async function findUserByEmail(email: string) {
       },
     },
     include: {
-      ledTeam: true,
+      player: { include: { ledTeam: true } },
+      manager: { include: { managedVenues: true } },
+      admin: true,
     },
   });
 }
 
 /**
- * Find user by ID and return formatted auth data
+ * Get account by ID and return formatted auth data
  */
-export async function findUserById(userId: string): Promise<AuthUserData | null> {
-  const user = await prisma.user.findUnique({
+export async function getAccountById(userId: string): Promise<AuthAccountData | null> {
+  const account = await prisma.user.findUnique({
     where: { id: userId },
     include: {
-      ledTeam: true,
+      player: { include: { ledTeam: true } },
+      manager: { include: { managedVenues: true } },
+      admin: true,
     },
   });
 
-  if (!user) return null;
+  if (!account) return null;
 
-  const permissions = await getUserPermissions(userId);
-
-  return {
-    id: user.id,
-    email: user.email,
-    name: user.name,
-    permissions,
-    teamId: user.teamId,
-    isLeader: !!user.ledTeam,
-  };
+  return buildAuthAccountData(account);
 }
 
 /**
- * Build auth user data from user record
+ * Determine account type from account record
  */
-export async function buildAuthUserData(user: {
+function getAccountType(account: {
+  player?: unknown | null;
+  manager?: unknown | null;
+  admin?: unknown | null;
+}): AccountType {
+  if (account.admin) return 'admin';
+  if (account.manager) return 'manager';
+  return 'player';
+}
+
+/**
+ * Build auth account data from account record
+ */
+export async function buildAuthAccountData(account: {
   id: string;
   email: string;
   name: string;
-  teamId: string | null;
-  ledTeam: { id: string } | null;
-}): Promise<AuthUserData> {
-  const permissions = await getUserPermissions(user.id);
+  player?: {
+    teamId: string | null;
+    ledTeam: { id: string } | null;
+  } | null;
+  manager?: {
+    managedVenues: { venueId: string }[];
+  } | null;
+  admin?: object | null;
+}): Promise<AuthAccountData> {
+  // Import dynamically to avoid circular dependency
+  const { getAccountPermissions } = await import('@middleware/auth.middleware');
+  const permissions = await getAccountPermissions(account.id);
+
+  const accountType = getAccountType(account);
 
   return {
-    id: user.id,
-    email: user.email,
-    name: user.name,
+    id: account.id,
+    email: account.email,
+    name: account.name,
+    accountType,
     permissions,
-    teamId: user.teamId,
-    isLeader: !!user.ledTeam,
+    // Player-specific
+    teamId: account.player?.teamId ?? null,
+    isLeader: !!account.player?.ledTeam,
+    // Manager-specific
+    managedVenueIds: account.manager?.managedVenues.map(v => v.venueId) ?? null,
   };
 }
 
 /**
- * Update user password
+ * Update account password
  */
-export async function updateUserPassword(userId: string, hashedPassword: string): Promise<void> {
+export async function updateAccountPassword(userId: string, hashedPassword: string): Promise<void> {
   await prisma.user.update({
     where: { id: userId },
     data: { password: hashedPassword },
   });
 }
 
-/**
- * Create a new user
- */
-export async function createUser(email: string, hashedPassword: string, name: string) {
-  return prisma.user.create({
-    data: {
-      email: email.toLowerCase(),
-      password: hashedPassword,
-      name,
-    },
-  });
-}
 

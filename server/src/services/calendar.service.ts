@@ -29,26 +29,28 @@ export {
 export async function getMonthAvailability(
   month: string,
   teamId: string,
-  currentUserId: string
+  currentPlayerId: string
 ): Promise<{ month: string; days: Record<string, DayData> }> {
   const { startDate, endDate, year, monthNum } = parseMonthRange(month);
 
-  // Fetch all availabilities for the month (filtered by team via user)
+  // Fetch all availabilities for the month (filtered by team via player)
   const availabilities = await prisma.availability.findMany({
     where: {
       date: { gte: startDate, lte: endDate },
-      user: { teamId },
+      player: { teamId },
     },
     include: {
-      user: { select: { id: true, name: true } },
+      player: {
+        include: { user: { select: { id: true, name: true } } }
+      },
     },
   });
 
-  // Fetch all users of the same team for the player list
-  const users = await prisma.user.findMany({
+  // Fetch all players of the same team
+  const players = await prisma.player.findMany({
     where: { teamId },
-    select: { id: true, name: true },
-    orderBy: { name: 'asc' },
+    include: { user: { select: { id: true, name: true } } },
+    orderBy: { user: { name: 'asc' } },
   });
 
   // Fetch all events for the month (filtered by team)
@@ -68,9 +70,9 @@ export async function getMonthAvailability(
     const date = new Date(year, monthNum - 1, day);
     const dateStr = formatDateStr(date);
 
-    const playerAvailabilities: PlayerAvailability[] = users.map(user => ({
-      userId: user.id,
-      userName: user.name,
+    const playerAvailabilities: PlayerAvailability[] = players.map(player => ({
+      userId: player.user!.id,
+      userName: player.user!.name,
       status: null,
     }));
 
@@ -86,15 +88,17 @@ export async function getMonthAvailability(
   for (const availability of availabilities) {
     const dateStr = formatDateStr(availability.date);
     const dayData = days[dateStr];
+    const odataPlayerId = availability.playerId;
+    const odataUserId = availability.player.user!.id;
 
     if (dayData) {
-      const playerAvail = dayData.playerAvailabilities.find(
-        p => p.userId === availability.userId
+      const playerAvailability = dayData.playerAvailabilities.find(
+        p => p.userId === odataUserId
       );
-      if (playerAvail) {
-        playerAvail.status = availability.status;
+      if (playerAvailability) {
+        playerAvailability.status = availability.status;
       }
-      if (availability.userId === currentUserId) {
+      if (odataPlayerId === currentPlayerId) {
         dayData.currentUserStatus = availability.status;
       }
     }
@@ -135,27 +139,28 @@ export function buildEmptyCalendar(month: string): { month: string; days: Record
 }
 
 /**
- * Set or remove availability for a user
+ * Set or remove availability for a player
  */
 export async function setAvailability(
-  userId: string,
+  playerId: string,
   date: string,
   status: AvailabilityStatus | null
 ): Promise<{ success: boolean; deleted?: boolean; availability?: unknown }> {
   const dateObj = new Date(date);
 
+
   if (status === null) {
     await prisma.availability.deleteMany({
-      where: { userId, date: dateObj },
+      where: { playerId, date: dateObj },
     });
     return { success: true, deleted: true };
   }
 
   const availability = await prisma.availability.upsert({
     where: {
-      userId_date: { userId, date: dateObj },
+      playerId_date: { playerId, date: dateObj },
     },
-    create: { userId, date: dateObj, status },
+    create: { playerId, date: dateObj, status },
     update: { status },
   });
 
@@ -163,7 +168,7 @@ export async function setAvailability(
     success: true,
     availability: {
       id: availability.id,
-      userId: availability.userId,
+      playerId: availability.playerId,
       date: formatDateStr(availability.date),
       status: availability.status,
     },
@@ -199,13 +204,23 @@ export interface CreateEventData {
   title: string;
   description?: string;
   teamId: string;
-  createdById: string;
+  createdByUserId: string;
 }
 
 /**
  * Create a new event
  */
 export async function createEvent(data: CreateEventData) {
+  // Get player ID from user ID
+  const user = await prisma.user.findUnique({
+    where: { id: data.createdByUserId },
+    include: { player: true },
+  });
+
+  if (!user?.player) {
+    throw new Error('Account not found or has no player profile');
+  }
+
   const event = await prisma.calendarEvent.create({
     data: {
       date: new Date(data.date),
@@ -214,7 +229,7 @@ export async function createEvent(data: CreateEventData) {
       type: data.type,
       title: data.title.trim(),
       description: data.description?.trim() || null,
-      createdById: data.createdById,
+      createdById: user.player.id,
       teamId: data.teamId,
     },
   });

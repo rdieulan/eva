@@ -5,7 +5,7 @@ import request from 'supertest';
 import { app } from '../../server/src/app';
 import { createTestUser, isValidJwtFormat } from './helpers/auth';
 import { prisma } from './helpers/db';
-import { PASSWORD_MIN_LENGTH, NAME_MIN_LENGTH } from '@shared/utils/validation.utils';
+import { PASSWORD_MIN_LENGTH, NAME_MIN_LENGTH } from '@shared/constants/validation.constants';
 import { ERROR } from '@shared/constants/error.constants';
 
 // Valid test data based on validation rules

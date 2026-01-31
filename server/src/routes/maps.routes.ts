@@ -11,7 +11,7 @@ const router = Router();
 
 // GET /api/maps - Get all maps
 router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
-  const teamId = req.user?.teamId;
+  const teamId = req.account?.teamId;
 
   if (!teamId) {
     res.status(403).json({ errors: [ERROR.teamRequiredForMaps] });
@@ -33,7 +33,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
 // GET /api/maps/:mapId - Get a specific map
 router.get('/:mapId', authMiddleware, async (req: AuthRequest, res: Response) => {
   const { mapId } = req.params;
-  const teamId = req.user?.teamId;
+  const teamId = req.account?.teamId;
 
   if (!teamId) {
     res.status(403).json({ errors: [ERROR.teamRequiredForMaps] });
@@ -66,7 +66,7 @@ router.post('/:mapId', authMiddleware, requirePermission('planner', 'canEdit'), 
 
   try {
     await mapsService.upsertMap(mapId, { name, images, template });
-    console.log(`Map updated by ${req.user?.email}: ${mapId}`);
+    console.log(`Map updated by ${req.account?.email}: ${mapId}`);
     res.json({ success: true, message: `Carte ${mapId} sauvegardée` });
   } catch (error) {
     console.error('Error saving map:', error);
@@ -77,7 +77,7 @@ router.post('/:mapId', authMiddleware, requirePermission('planner', 'canEdit'), 
 // GET /api/maps/:mapId/plans - Get all game plans for a map
 router.get('/:mapId/plans', authMiddleware, async (req: AuthRequest, res: Response) => {
   const { mapId } = req.params;
-  const teamId = req.user?.teamId;
+  const teamId = req.account?.teamId;
 
   if (!teamId) {
     res.status(403).json({ errors: [ERROR.teamRequiredForPlans] });
@@ -97,7 +97,7 @@ router.get('/:mapId/plans', authMiddleware, async (req: AuthRequest, res: Respon
 router.post('/:mapId/plans', authMiddleware, requirePermission('planner', 'canCreate'), async (req: AuthRequest, res: Response) => {
   const { mapId } = req.params;
   const { name } = req.body;
-  const teamId = req.user?.teamId;
+  const teamId = req.account?.teamId;
 
   if (!teamId) {
     res.status(400).json({ errors: [ERROR.teamRequiredForPlans] });
@@ -113,7 +113,7 @@ router.post('/:mapId/plans', authMiddleware, requirePermission('planner', 'canCr
     }
 
 
-    console.log(`Game plan created by ${req.user?.email}: ${plan.id} for map ${mapId}`);
+    console.log(`Game plan created by ${req.account?.email}: ${plan.id} for map ${mapId}`);
     res.json(plan);
   } catch (error) {
     console.error('Error creating game plan:', error);

@@ -1,7 +1,7 @@
 // Team service - business logic
 
 import { prisma } from '@db/prisma';
-import type { UserPermissions } from '@shared/types';
+import type { AccountPermissions } from '@shared/types';
 import { LEADER_PERMISSIONS, DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
 import { DEFAULT_ASSIGNMENTS, DEFAULT_GAME_PLAN_NOTES, ERROR } from '@shared/constants';
 
@@ -11,14 +11,14 @@ import { DEFAULT_ASSIGNMENTS, DEFAULT_GAME_PLAN_NOTES, ERROR } from '@shared/con
 export interface TeamCreateData {
   name: string;
   logo?: string | null;
-  location?: string | null;
+  venueId?: string | null;
   leaderId: string;
 }
 
 export interface TeamUpdateData {
   name?: string;
   logo?: string | null;
-  location?: string | null;
+  venueId?: string | null;
 }
 
 export interface MemberWithRole {
@@ -29,38 +29,8 @@ export interface MemberWithRole {
   isLeader: boolean;
 }
 
-// ============================================
-// User helpers
-// ============================================
-
-/**
- * Check if user already has a team
- */
-export async function getUserWithTeam(userId: string) {
-  return prisma.user.findUnique({
-    where: { id: userId },
-    include: {
-      team: {
-        include: {
-          leader: { select: { id: true, name: true, email: true } },
-          members: { select: { id: true, name: true, email: true, permissions: true } },
-        },
-      },
-      ledTeam: true,
-    },
-  });
-}
-
-/**
- * Verify user belongs to a team and return their team
- */
-export async function getUserTeam(userId: string) {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    include: { team: true },
-  });
-  return user?.team || null;
-}
+// Re-export player helpers for convenience
+export { getPlayerWithTeam, getPlayerTeam } from '@services/player.service';
 
 // ============================================
 // Team operations
@@ -70,29 +40,33 @@ export async function getUserTeam(userId: string) {
  * Create a new team with the user as leader
  */
 export async function createTeam(data: TeamCreateData) {
-  // Check if user already has a team
+  // Check if user already has a team (via Player)
   const user = await prisma.user.findUnique({
     where: { id: data.leaderId },
+    include: { player: true },
   });
 
-  if (user?.teamId) {
+  if (!user?.player) {
+    return { error: ERROR.userNotFound };
+  }
+
+  if (user.player.teamId) {
     return { error: ERROR.userAlreadyInTeam };
   }
 
-  // Create team with current user as leader
+  // Create team with current player as leader
   const team = await prisma.team.create({
     data: {
       name: data.name.trim(),
       logo: data.logo || null,
-      location: data.location || null,
-      leader: { connect: { id: data.leaderId } },
-      members: { connect: { id: data.leaderId } },
+      leader: { connect: { id: user.player.id } },
+      members: { connect: { id: user.player.id } },
     },
   });
 
-  // Update user with leader permissions
-  await prisma.user.update({
-    where: { id: data.leaderId },
+  // Update player with leader permissions and teamId
+  await prisma.player.update({
+    where: { id: user.player.id },
     data: {
       teamId: team.id,
       permissions: LEADER_PERMISSIONS as unknown as object,
@@ -123,7 +97,7 @@ export async function updateTeam(teamId: string, data: TeamUpdateData) {
     data: {
       ...(data.name && { name: data.name.trim() }),
       ...(data.logo !== undefined && { logo: data.logo }),
-      ...(data.location !== undefined && { location: data.location }),
+      ...(data.venueId !== undefined && { venueId: data.venueId }),
     },
   });
 }
@@ -132,24 +106,21 @@ export async function updateTeam(teamId: string, data: TeamUpdateData) {
  * Get team members with roles
  */
 export async function getTeamMembers(teamId: string): Promise<MemberWithRole[]> {
-  const members = await prisma.user.findMany({
+  const players = await prisma.player.findMany({
     where: { teamId },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      permissions: true,
+    include: {
+      user: { select: { id: true, name: true, email: true } },
       ledTeam: { select: { id: true } },
     },
-    orderBy: { name: 'asc' },
+    orderBy: { user: { name: 'asc' } },
   });
 
-  return members.map(member => ({
-    id: member.id,
-    name: member.name,
-    email: member.email,
-    permissions: member.permissions,
-    isLeader: !!member.ledTeam,
+  return players.map(player => ({
+    id: player.user!.id,
+    name: player.user!.name,
+    email: player.user!.email,
+    permissions: player.permissions,
+    isLeader: !!player.ledTeam,
   }));
 }
 
@@ -159,30 +130,30 @@ export async function getTeamMembers(teamId: string): Promise<MemberWithRole[]> 
 export async function updateMemberPermissions(
   currentUserId: string,
   memberId: string,
-  permissions: UserPermissions
+  permissions: AccountPermissions
 ): Promise<{ success: boolean; error?: string }> {
-  // Get current user's team
+  // Get current user's player and team
   const currentUser = await prisma.user.findUnique({
     where: { id: currentUserId },
-    include: { team: true },
+    include: { player: { include: { team: true } } },
   });
 
-  if (!currentUser?.team) {
+  if (!currentUser?.player?.team) {
     return { success: false, error: ERROR.teamNotFound };
   }
 
-  // Verify target member is in the same team
-  const targetMember = await prisma.user.findUnique({
+  // Find the target user and their player
+  const targetUser = await prisma.user.findUnique({
     where: { id: memberId },
-    include: { ledTeam: true },
+    include: { player: { include: { ledTeam: true } } },
   });
 
-  if (!targetMember || targetMember.teamId !== currentUser.team.id) {
+  if (!targetUser?.player || targetUser.player.teamId !== currentUser.player.team.id) {
     return { success: false, error: ERROR.memberNotFound };
   }
 
   // Cannot modify leader's permissions
-  if (targetMember.ledTeam) {
+  if (targetUser.player.ledTeam) {
     return { success: false, error: ERROR.cannotModifyLeaderPermissions };
   }
 
@@ -191,8 +162,8 @@ export async function updateMemberPermissions(
     return { success: false, error: ERROR.cannotModifyOwnPermissions };
   }
 
-  await prisma.user.update({
-    where: { id: memberId },
+  await prisma.player.update({
+    where: { id: targetUser.player.id },
     data: { permissions: permissions as unknown as object },
   });
 
@@ -208,24 +179,24 @@ export async function removeMember(
 ): Promise<{ success: boolean; error?: string }> {
   const currentUser = await prisma.user.findUnique({
     where: { id: currentUserId },
-    include: { team: true },
+    include: { player: { include: { team: true } } },
   });
 
-  if (!currentUser?.team) {
+  if (!currentUser?.player?.team) {
     return { success: false, error: ERROR.teamNotFound };
   }
 
-  const targetMember = await prisma.user.findUnique({
+  const targetUser = await prisma.user.findUnique({
     where: { id: memberId },
-    include: { ledTeam: true },
+    include: { player: { include: { ledTeam: true } } },
   });
 
-  if (!targetMember || targetMember.teamId !== currentUser.team.id) {
+  if (!targetUser?.player || targetUser.player.teamId !== currentUser.player.team.id) {
     return { success: false, error: ERROR.memberNotFound };
   }
 
   // Cannot remove the leader
-  if (targetMember.ledTeam) {
+  if (targetUser.player.ledTeam) {
     return { success: false, error: ERROR.cannotRemoveLeader };
   }
 
@@ -234,8 +205,8 @@ export async function removeMember(
     return { success: false, error: ERROR.cannotRemoveSelf };
   }
 
-  await prisma.user.update({
-    where: { id: memberId },
+  await prisma.player.update({
+    where: { id: targetUser.player.id },
     data: {
       teamId: null,
       permissions: DEFAULT_PLAYER_PERMISSIONS as unknown as object,
@@ -248,27 +219,24 @@ export async function removeMember(
 /**
  * Delete a team (leader only)
  */
-export async function deleteTeam(userId: string): Promise<{ success: boolean; error?: string }> {
-  const currentUser = await prisma.user.findUnique({
-    where: { id: userId },
-    include: {
-      team: true,
-      ledTeam: true,
-    },
+export async function deleteTeam(playerId: string): Promise<{ success: boolean; error?: string }> {
+  const player = await prisma.player.findUnique({
+    where: { id: playerId },
+    include: { team: true, ledTeam: true },
   });
 
-  if (!currentUser?.team) {
+  if (!player?.team) {
     return { success: false, error: ERROR.teamNotFound };
   }
 
-  if (!currentUser.ledTeam) {
+  if (!player.ledTeam) {
     return { success: false, error: ERROR.onlyLeaderCanDelete };
   }
 
-  const teamId = currentUser.team.id;
+  const teamId = player.team.id;
 
-  // Reset permissions and remove teamId from all members
-  await prisma.user.updateMany({
+  // Reset permissions and remove teamId from all players in the team
+  await prisma.player.updateMany({
     where: { teamId },
     data: {
       teamId: null,
@@ -287,25 +255,22 @@ export async function deleteTeam(userId: string): Promise<{ success: boolean; er
 /**
  * Leave team (for non-leader members)
  */
-export async function leaveTeam(userId: string): Promise<{ success: boolean; error?: string }> {
-  const currentUser = await prisma.user.findUnique({
-    where: { id: userId },
-    include: {
-      team: true,
-      ledTeam: true,
-    },
+export async function leaveTeam(playerId: string): Promise<{ success: boolean; error?: string }> {
+  const player = await prisma.player.findUnique({
+    where: { id: playerId },
+    include: { team: true, ledTeam: true },
   });
 
-  if (!currentUser?.team) {
+  if (!player?.team) {
     return { success: false, error: ERROR.teamNotFound };
   }
 
-  if (currentUser.ledTeam) {
+  if (player.ledTeam) {
     return { success: false, error: ERROR.leaderCannotLeave };
   }
 
-  await prisma.user.update({
-    where: { id: userId },
+  await prisma.player.update({
+    where: { id: playerId },
     data: {
       teamId: null,
       permissions: DEFAULT_PLAYER_PERMISSIONS as unknown as object,

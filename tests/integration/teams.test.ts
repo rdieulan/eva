@@ -5,7 +5,7 @@ import request from 'supertest';
 import { app } from '../../server/src/app';
 import { createAuthenticatedUser, createUserWithTeam } from './helpers/auth';
 import { prisma, expectNoRecordCreated } from './helpers/db';
-import { TEAM_NAME_MIN_LENGTH } from '@shared/utils/validation.utils';
+import { TEAM_NAME_MIN_LENGTH } from '@shared/constants/validation.constants';
 import { ERROR } from '@shared/constants/error.constants';
 
 // Valid test data based on validation rules
@@ -32,11 +32,11 @@ describe('Teams API', () => {
       const team = await prisma.team.findUnique({ where: { id: res.body.id } });
       expect(team).not.toBeNull();
       expect(team!.name).toBe(VALID_TEAM_NAME);
-      expect(team!.leaderId).toBe(user.id);
+      expect(team!.leaderId).toBe(user.playerId);
 
-      // Verify user is now in the team
-      const updatedUser = await prisma.user.findUnique({ where: { id: user.id } });
-      expect(updatedUser!.teamId).toBe(res.body.id);
+      // Verify player is now in the team
+      const updatedPlayer = await prisma.player.findUnique({ where: { id: user.playerId! } });
+      expect(updatedPlayer!.teamId).toBe(res.body.id);
 
       // Verify default game plans were created for each map
       const gamePlans = await prisma.gamePlan.findMany({
@@ -95,49 +95,45 @@ describe('Teams API', () => {
 
   describe('POST /api/invites/:code/join', () => {
     it('should join with valid invite code', async () => {
-      const { user: leader } = await createUserWithTeam();
+      const { token: leaderToken, team } = await createUserWithTeam();
 
-      const invite = await prisma.teamInvite.create({
-        data: {
-          teamId: leader.teamId!,
-          createdById: leader.id,
-          code: 'TESTCODE123',
-          expiresAt: new Date(Date.now() + 86400000),
-          maxUses: 5,
-          uses: 0,
-        },
-      });
+      // Create invitation via API
+      const inviteRes = await request(app)
+        .post(`/api/teams/${team.id}/invites`)
+        .set('Authorization', `Bearer ${leaderToken}`)
+        .send({ expiresInHours: 24, maxUses: 5 });
 
-      const { token: joinerToken, user: joiner } = await createAuthenticatedUser({
+      expect(inviteRes.status).toBe(201);
+
+      const { token: joinerToken } = await createAuthenticatedUser({
         email: 'joiner@example.com',
       });
 
       const res = await request(app)
-        .post(`/api/invites/${invite.code}/join`)
+        .post(`/api/invites/${inviteRes.body.code}/join`)
         .set('Authorization', `Bearer ${joinerToken}`);
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty('teamId');
       expect(res.body).toHaveProperty('teamName');
-
-      // Verify user is now in the team
-      const updatedJoiner = await prisma.user.findUnique({ where: { id: joiner.id } });
-      expect(updatedJoiner!.teamId).toBe(leader.teamId);
+      expect(res.body.teamId).toBe(team.id);
 
       // Verify invite uses incremented
-      const updatedInvite = await prisma.teamInvite.findUnique({ where: { id: invite.id } });
+      const updatedInvite = await prisma.teamInvite.findUnique({ where: { code: inviteRes.body.code } });
       expect(updatedInvite!.uses).toBe(1);
     });
 
     it('should reject expired invite code', async () => {
-      const { user: leader } = await createUserWithTeam();
+      const { user: leader, team } = await createUserWithTeam();
 
+      // NOTE: We use Prisma directly here because we need to create an INVALID invitation
+      // (expired) that cannot be created via the API
       await prisma.teamInvite.create({
         data: {
-          teamId: leader.teamId!,
-          createdById: leader.id,
+          teamId: team.id,
+          createdById: leader.playerId!,
           code: 'EXPIREDCODE',
-          expiresAt: new Date(Date.now() - 1000),
+          expiresAt: new Date(Date.now() - 1000), // Already expired
           maxUses: 5,
           uses: 0,
         },
@@ -185,7 +181,7 @@ describe('Teams API', () => {
       const invite = await prisma.teamInvite.findUnique({ where: { code: res.body.code } });
       expect(invite).not.toBeNull();
       expect(invite!.teamId).toBe(team.id);
-      expect(invite!.createdById).toBe(user.id);
+      expect(invite!.createdById).toBe(user.playerId);
       expect(invite!.maxUses).toBe(5);
       expect(invite!.uses).toBe(0);
     });
@@ -205,19 +201,25 @@ describe('Teams API', () => {
     });
 
     it('should reject user without canInviteMembers permission', async () => {
-      const { team } = await createUserWithTeam();
+      const { token: leaderToken, team } = await createUserWithTeam();
 
       // Create a member without invite permission
-      const { token: memberToken, user: member } = await createAuthenticatedUser({
+      const { token: memberToken } = await createAuthenticatedUser({
         email: 'member@example.com',
       });
 
-      // Add member to team
-      await prisma.user.update({
-        where: { id: member.id },
-        data: { teamId: team.id },
-      });
+      // Create invitation with leader
+      const inviteRes = await request(app)
+        .post(`/api/teams/${team.id}/invites`)
+        .set('Authorization', `Bearer ${leaderToken}`)
+        .send({ expiresInHours: 24, maxUses: 1 });
 
+      // Member joins via invite (they don't have canInviteMembers by default)
+      await request(app)
+        .post(`/api/invites/${inviteRes.body.code}/join`)
+        .set('Authorization', `Bearer ${memberToken}`);
+
+      // Member tries to create an invite (should fail - no permission)
       const res = await expectNoRecordCreated(
         () => prisma.teamInvite.count({ where: { teamId: team.id } }),
         () => request(app)

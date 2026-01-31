@@ -2,49 +2,80 @@
 
 ## 📋 En cours
 
+### Feature : Salles (Venues) et Gérants (Managers)
+
+**Objectif** : Introduire la notion de salle de jeu EVA et de comptes gérants pour administrer ces salles.
+
+**Décisions d'architecture :**
+- Tables séparées : User (auth) + Player + Manager + Admin
+- User peut avoir plusieurs rôles via playerId, managerId, adminId
+- Les comptes peuvent être liés pour switch rapide (style Google)
+- Super Admin = Admin avec toutes les permissions à true
+
 ---
 
-## Feature : Tests d'intégration (Supertest)
-
-**Objectif**: Mettre en place des tests d'intégration pour tester les endpoints API de bout en bout, afin de détecter les régressions rapidement.
-
----
-
-### Phase 1 - Setup ✅
+#### Phase 1 - Schéma DB (backbone)
 
 | Tâche | Statut | Notes |
 |-------|--------|-------|
-| 1.1 Restructurer le serveur (app.ts séparé) | ✅ | `server/src/app.ts` créé, `server/index.ts` simplifié |
-| 1.2 Créer `tests/integration/setup.ts` | ✅ | Configuration DB test, cleanup |
-| 1.3 Créer helpers d'authentification | ✅ | `createTestUser`, `createTestToken`, `createAuthenticatedUser`, `isValidJwtFormat` |
-| 1.4 Créer helpers de données | ✅ | `createTestTeam`, `createUserWithTeam`, `cleanDatabase` |
-| 1.5 Configurer Vitest pour les tests d'intégration | ✅ | `vitest.integration.config.mts` + script `npm run test:integration` |
-| 1.6 Installer Supertest | ✅ | `supertest` + `@types/supertest` |
+| 1.1 Créer la table `Venue` | ✅ | `id`, `name`, `city`, `address`, `phone`, `createdAt`, `updatedAt` |
+| 1.2 Modifier la table `Team` | ✅ | Supprimer `location`, ajouter `venueId`, leader pointe vers Player |
+| 1.3 Créer la table `VenueManager` | ✅ | Table de liaison `managerId` + `venueId` |
+| 1.4 Créer la table `Player` | ✅ | `id`, `permissions`, `teamId`, relations joueur |
+| 1.5 Créer la table `Manager` | ✅ | `id`, `permissions`, relation managedVenues |
+| 1.6 Créer la table `Admin` | ✅ | `id`, `permissions` (superAdmin = toutes à true) |
+| 1.7 Refactoriser `User` | ✅ | Auth uniquement + `playerId`, `managerId`, `adminId` |
+| 1.8 Ajouter champs d'activation | ✅ | `activationToken` + `activationTokenExpiresAt` sur `User` |
+| 1.9 Créer la table `LinkedAccountGroup` | ✅ | Pour lier plusieurs comptes |
+| 1.10 Créer la migration Prisma | ✅ | Migration `0007_add_venues_and_roles` |
+| 1.11 Adapter le backend | ✅ | Services, routes, middleware adaptés à la nouvelle architecture |
+
+#### Phase 2 - API Backend
+
+| Tâche | Statut | Notes |
+|-------|--------|-------|
+| 2.1 Route publique `GET /api/venues` | ⬜ | Liste des salles (visible par tous les users authentifiés) |
+| 2.2 Route équipe `PUT /api/teams/:id/venue` | ⬜ | Changer l'affiliation d'une équipe à une salle |
+| 2.3 Route activation `POST /api/auth/activate` | ⬜ | Permettre au manager de définir son password via le lien |
+| 2.4 Route liaison `POST /api/auth/link-account` | ⬜ | Lier deux comptes (nécessite auth sur les deux) |
+| 2.5 Route switch `POST /api/auth/switch-account` | ⬜ | Changer de compte actif dans un groupe lié |
+| 2.6 Routes admin (futures) | ⬜ | `POST /api/admin/venues`, `POST /api/admin/managers` |
+
+#### Phase 3 - Frontend
+
+| Tâche | Statut | Notes |
+|-------|--------|-------|
+| 3.1 Remplacer le sélecteur de localisation | ⬜ | Sélecteur de salle dans la page Team |
+| 3.2 Afficher la salle affiliée | ⬜ | Dans les infos de l'équipe |
+| 3.3 Page d'activation manager | ⬜ | `/activate/:token` - Définir le mot de passe |
+| 3.4 Switch de compte dans le profil | ⬜ | Dropdown avec comptes liés |
+| 3.5 Bouton "Lier un compte" | ⬜ | Dans le profil |
+
+#### Phase 4 - Tests
+
+| Tâche | Statut | Notes |
+|-------|--------|-------|
+| 4.1 Tests d'intégration Venues | ⬜ | `GET /api/venues`, `PUT /api/teams/:id/venue` |
+| 4.2 Tests d'intégration activation | ⬜ | `POST /api/auth/activate` |
+| 4.3 Tests d'intégration comptes liés | ⬜ | `POST /api/auth/link-account`, `POST /api/auth/switch-account` |
 
 ---
 
-### Phase 2 - Tests critiques ✅
+## ✅ Terminé
 
-| Route | Priorité | Statut | Cas testés |
-|-------|----------|--------|------------|
-| `POST /api/auth/login` | Haute | ✅ | Succès + format JWT, case-insensitive email, mauvais password, user inexistant, sécurité (même erreur) |
-| `POST /api/auth/register` | Haute | ✅ | Succès + userId valide, email existant (409), validation password/email/username |
-| `POST /api/teams` | Haute | ✅ | Création équipe + game plans par défaut, 401 sans auth, rejet si déjà dans une équipe |
-| `GET /api/teams/current` | Haute | ✅ | Retour info équipe, 404 si pas d'équipe |
-| `POST /api/invites/:code/join` | Haute | ✅ | Join valide + DB (user.teamId, invite.uses), code expiré (400), code invalide (404) |
-| `POST /api/teams/invites` | Haute | ✅ | Création succès + DB, 401 sans auth, 403 sans permission, 403 autre équipe, 400 params invalides |
-| `GET /api/maps` | Moyenne | ✅ | Succès + structure + DB, 401 sans auth, 403 sans équipe, isolation par équipe |
-| `GET /api/calendar/availability` | Moyenne | ✅ | Succès + structure, 401, 400 month invalide, 403 sans équipe |
-| `GET /api/calendar/events` | Moyenne | ✅ | Succès + contenu vérifié, 401, 400, 403 sans équipe, isolation par équipe |
-| `POST /api/calendar/availability` | Moyenne | ✅ | Succès + DB, 401, 400 date/status invalide |
-| `POST /api/calendar/events` | Moyenne | ✅ | Succès + DB, 401, 403 sans équipe, 400 validations (date, type, titre) |
-| `PUT /api/calendar/events/:id` | Moyenne | ✅ | Succès + DB, 401, 404, 403 autre équipe |
-| `DELETE /api/calendar/events/:id` | Moyenne | ✅ | Succès + DB suppression vérifiée, 401, 404, 403 autre équipe |
-| `PUT /api/calendar/events/:id/gameplan` | Moyenne | ✅ | Succès MATCH + DB, 400 si EVENT, 401, 404 |
+### Tests d'intégration - Setup & Tests critiques
+
+> **59 tests d'intégration** couvrant : Auth (login, register), Teams (création, join, invites), Maps (isolation équipe), Calendar (availability, events, CRUD complet)
+>
+> Helpers : `createAuthenticatedUser`, `createUserWithTeam`, `expectNoRecordCreated`
+>
+> Backend corrigé : 403 pour users sans équipe sur calendar
 
 ---
 
-### Phase 3 - Tests complémentaires (À faire au fil de l'eau) ⬜
+## 📅 À faire plus tard
+
+### Tests d'intégration - Phase 3 : Tests complémentaires ⬜
 
 > Ces tests seront ajoutés progressivement lors du développement de nouvelles features.
 
@@ -55,9 +86,7 @@
 | Balance Rules | `GET/PUT /api/balance-rules` | ⬜ |
 | Users | `GET /api/users`, `PUT /api/users/:id/password` | ⬜ |
 
----
-
-### Phase 4 - CI/CD (Optionnel, plus tard) ⬜
+### Tests d'intégration - Phase 4 : CI/CD ⬜
 
 | Tâche | Statut | Notes |
 |-------|--------|-------|
@@ -68,7 +97,7 @@
 
 ## 📝 Notes techniques
 
-### Structure cible
+### Structure des tests
 
 ```
 tests/
@@ -76,11 +105,9 @@ tests/
 │   ├── client/       # Tests unitaires frontend
 │   ├── server/       # Tests unitaires backend
 │   └── shared/       # Tests unitaires shared
-├── integration/      # Tests d'intégration API (serveur)
+├── integration/      # Tests d'intégration API (59 tests)
 │   ├── setup.ts
 │   ├── helpers/
-│   │   ├── auth.ts
-│   │   └── db.ts
 │   ├── auth.test.ts
 │   ├── teams.test.ts
 │   ├── calendar.test.ts
@@ -96,12 +123,3 @@ JWT_SECRET=test-secret              # Secret pour les tokens de test
 ```
 
 ---
-
-## ✅ Terminé
-
-*(Historique des features complétées)*
-
-- Feature 1 : Intégration de la notion d'équipe (Team Isolation)
-- Feature 2 : Système d'invitations
-- Feature 3 : Review de code complète (Phase 3.1 à 3.10)
-- Refactorisation des boutons (mixins SCSS)

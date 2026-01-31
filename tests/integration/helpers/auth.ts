@@ -4,7 +4,7 @@ import request from 'supertest';
 import { app } from '../../../server/src/app';
 import { prisma } from './db';
 import type { User } from '@prisma/client';
-import { PASSWORD_MIN_LENGTH, NAME_MIN_LENGTH, TEAM_NAME_MIN_LENGTH } from '@shared/utils/validation.utils';
+import { PASSWORD_MIN_LENGTH, NAME_MIN_LENGTH, TEAM_NAME_MIN_LENGTH } from '@shared/constants/validation.constants';
 
 // Generate valid test data based on validation rules
 const DEFAULT_TEST_PASSWORD = 'A' + '1' + 'a'.repeat(PASSWORD_MIN_LENGTH - 2); // Uppercase + digit + filler

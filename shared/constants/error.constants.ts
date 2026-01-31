@@ -5,7 +5,7 @@ import {
   PASSWORD_MIN_LENGTH,
   NAME_MIN_LENGTH,
   TEAM_NAME_MIN_LENGTH,
-} from '@shared/utils/validation.utils';
+} from '@shared/constants/validation.constants';
 
 // ============================================
 // Error Messages
@@ -43,7 +43,7 @@ export const ERROR = {
   currentAndNewPasswordRequired: 'Mot de passe actuel et nouveau requis',
   currentPasswordIncorrect: 'Mot de passe actuel incorrect',
 
-  // User
+  // Account
   userNotFound: 'Utilisateur non trouvé',
   playersLoadFailed: 'Erreur lors du chargement des joueurs',
   playersNotLoaded: 'Joueurs non chargés',

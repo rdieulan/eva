@@ -1,6 +1,6 @@
 // Teams API client
 
-import type { UserPermissions, Team } from '@shared/types';
+import type { AccountPermissions, Team } from '@shared/types';
 import { ERROR } from '@shared/constants';
 import { authFetch } from '@/api/utils';
 import { ApiError } from '@/api/error';
@@ -11,7 +11,7 @@ export interface TeamMember {
   id: string;
   name: string;
   email: string;
-  permissions: UserPermissions | null;
+  permissions: AccountPermissions | null;
   isLeader: boolean;
 }
 
@@ -93,7 +93,7 @@ export async function fetchTeamMembers(): Promise<TeamMember[]> {
  */
 export async function updateMemberPermissions(
   memberId: string,
-  permissions: UserPermissions
+  permissions: AccountPermissions
 ): Promise<void> {
   return authFetch<void>(
     `${API_BASE}/current/members/${memberId}/permissions`,

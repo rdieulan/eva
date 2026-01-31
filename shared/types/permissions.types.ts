@@ -33,7 +33,7 @@ export interface TeamPermissions {
 /**
  * Complete user permissions structure
  */
-export interface UserPermissions {
+export interface AccountPermissions {
   planner: PlannerPermissions;
   calendar: CalendarPermissions;
   team: TeamPermissions;
@@ -42,7 +42,7 @@ export interface UserPermissions {
 /**
  * Default permissions for new players (minimal access)
  */
-export const DEFAULT_PLAYER_PERMISSIONS: UserPermissions = {
+export const DEFAULT_PLAYER_PERMISSIONS: AccountPermissions = {
   planner: {
     canCreate: false,
     canEdit: false,
@@ -66,7 +66,7 @@ export const DEFAULT_PLAYER_PERMISSIONS: UserPermissions = {
 /**
  * Full permissions for team leaders
  */
-export const LEADER_PERMISSIONS: UserPermissions = {
+export const LEADER_PERMISSIONS: AccountPermissions = {
   planner: {
     canCreate: true,
     canEdit: true,
@@ -86,3 +86,50 @@ export const LEADER_PERMISSIONS: UserPermissions = {
     canManagePermissions: true,
   },
 };
+
+/**
+ * Manager permissions structure (venue management focused)
+ */
+export interface ManagerPermissions {
+  venues: {
+    canManageVenue: boolean;      // Edit venue info
+    canManageCalendar: boolean;   // Manage venue calendar
+    canViewStats: boolean;        // View venue statistics
+  };
+}
+
+/**
+ * Default permissions for new managers
+ */
+export const DEFAULT_MANAGER_PERMISSIONS: ManagerPermissions = {
+  venues: {
+    canManageVenue: true,
+    canManageCalendar: true,
+    canViewStats: true,
+  },
+};
+
+/**
+ * Admin permissions structure (system-wide access)
+ */
+export interface AdminPermissions {
+  system: {
+    canManageVenues: boolean;     // Create/edit/delete venues
+    canManageManagers: boolean;   // Create/edit manager accounts
+    canManageAdmins: boolean;     // Create/edit admin accounts (super admin only)
+    canViewAllData: boolean;      // Access all data across teams
+  };
+}
+
+/**
+ * Default permissions for new admins
+ */
+export const DEFAULT_ADMIN_PERMISSIONS: AdminPermissions = {
+  system: {
+    canManageVenues: true,
+    canManageManagers: true,
+    canManageAdmins: false,  // Only super admin can manage other admins
+    canViewAllData: true,
+  },
+};
+

@@ -11,15 +11,16 @@ import {
   hashPassword,
   createSession,
   deleteSession,
-  findUserByEmail,
-  findUserById,
-  updateUserPassword,
-  buildAuthUserData,
-  createUser,
+  emailExists,
+  findAccountByEmail,
+  getAccountById,
+  updateAccountPassword,
+  buildAuthAccountData,
   validateEmail,
   validatePassword,
   validateName,
 } from '@services/auth.service';
+import { createPlayer } from '@services/player.service';
 
 const router = Router();
 
@@ -54,20 +55,20 @@ router.post('/register', async (req: Request, res: Response) => {
 
   try {
     // Check if email already exists
-    const existingUser = await findUserByEmail(email);
-    if (existingUser) {
+    if (await emailExists(email)) {
       console.log('[AUTH] Register failed: email already exists');
       return res.status(409).json({ errors: [ERROR.emailAlreadyUsed] });
     }
 
-    // Create user
+    // Create player account
     const hashedPassword = await hashPassword(password);
-    const user = await createUser(email, hashedPassword, name.trim());
+    const user = await createPlayer(email, hashedPassword, name.trim());
 
     console.log('[AUTH] Register success for:', email);
     res.status(201).json({
       message: 'Compte créé avec succès',
       userId: user.id,
+      playerId: user.player!.id,
     });
   } catch (error) {
     console.error('[AUTH] Register error:', error);
@@ -88,33 +89,39 @@ router.post('/login', async (req: Request, res: Response) => {
   console.log('[AUTH] Login attempt for:', email);
 
   try {
-    const user = await findUserByEmail(email);
+    const account = await findAccountByEmail(email);
 
-    if (!user) {
-      console.log('[AUTH] Login failed: user not found');
+    if (!account) {
+      console.log('[AUTH] Login failed: account not found');
       return res.status(401).json({ errors: [ERROR.loginFailed] });
     }
 
-    const validPassword = await comparePassword(password, user.password);
+    const validPassword = await comparePassword(password, account.password);
 
     if (!validPassword) {
       console.log('[AUTH] Login failed: invalid password');
       return res.status(401).json({ errors: [ERROR.loginFailed] });
     }
 
+    // Determine account type and specific ID
+    const accountType = account.admin ? 'admin' : account.manager ? 'manager' : 'player';
     const token = generateToken({
-      userId: user.id,
-      email: user.email,
+      userId: account.id,
+      email: account.email,
+      accountType,
+      playerId: account.player?.id,
+      managerId: account.manager?.id,
+      adminId: account.admin?.id,
     });
 
-    await createSession(user.id, token);
+    await createSession(account.id, token);
 
-    const authUser = await buildAuthUserData(user);
+    const authAccount = await buildAuthAccountData(account);
 
     console.log('[AUTH] Login success for:', email);
     res.json({
       token,
-      user: authUser,
+      user: authAccount,
     });
   } catch (error) {
     console.error('[AUTH] Login error:', error);
@@ -124,7 +131,7 @@ router.post('/login', async (req: Request, res: Response) => {
 
 // POST /api/auth/logout
 router.post('/logout', authMiddleware, async (req: AuthRequest, res: Response) => {
-  console.log('[AUTH] POST /api/auth/logout - User:', req.user?.email);
+  console.log('[AUTH] POST /api/auth/logout - Account:', req.account?.email);
   const authHeader = req.headers.authorization;
   const token = authHeader?.substring(7);
 
@@ -138,17 +145,17 @@ router.post('/logout', authMiddleware, async (req: AuthRequest, res: Response) =
 
 // GET /api/auth/me
 router.get('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
-  console.log('[AUTH] GET /api/auth/me - User:', req.user?.email);
+  console.log('[AUTH] GET /api/auth/me - Account:', req.account?.email);
   try {
-    const user = await findUserById(req.user!.userId);
+    const account = await getAccountById(req.account!.userId);
 
-    if (!user) {
-      console.log('[AUTH] /me: User not found in DB');
+    if (!account) {
+      console.log('[AUTH] /me: Account not found in DB');
       return res.status(404).json({ errors: [ERROR.userNotFound] });
     }
 
-    console.log('[AUTH] /me: Returning user data');
-    res.json({ user });
+    console.log('[AUTH] /me: Returning account data');
+    res.json({ user: account });
   } catch (error) {
     console.error('[AUTH] /me error:', error);
     res.status(500).json({ errors: [ERROR.serverError] });
@@ -157,7 +164,7 @@ router.get('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
 
 // POST /api/auth/change-password
 router.post('/change-password', authMiddleware, async (req: AuthRequest, res: Response) => {
-  console.log('[AUTH] POST /api/auth/change-password - User:', req.user?.email);
+  console.log('[AUTH] POST /api/auth/change-password - Account:', req.account?.email);
   const { currentPassword, newPassword } = req.body;
 
   if (!currentPassword || !newPassword) {
@@ -170,13 +177,13 @@ router.post('/change-password', authMiddleware, async (req: AuthRequest, res: Re
   }
 
   try {
-    const user = await findUserByEmail(req.user!.email);
+    const account = await findAccountByEmail(req.account!.email);
 
-    if (!user) {
+    if (!account) {
       return res.status(404).json({ errors: [ERROR.userNotFound] });
     }
 
-    const validPassword = await comparePassword(currentPassword, user.password);
+    const validPassword = await comparePassword(currentPassword, account.password);
 
     if (!validPassword) {
       console.log('[AUTH] Change password failed: invalid current password');
@@ -184,9 +191,9 @@ router.post('/change-password', authMiddleware, async (req: AuthRequest, res: Re
     }
 
     const hashedPassword = await hashPassword(newPassword);
-    await updateUserPassword(user.id, hashedPassword);
+    await updateAccountPassword(account.id, hashedPassword);
 
-    console.log('[AUTH] Password changed successfully for:', req.user?.email);
+    console.log('[AUTH] Password changed successfully for:', req.account?.email);
     res.json({ message: 'Mot de passe modifié avec succès' });
   } catch (error) {
     console.error('[AUTH] Change password error:', error);

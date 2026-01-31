@@ -204,6 +204,27 @@ function handleSelectPlan(planId: string) {
   selectPlan(planId);
 }
 
+// Handle create plan with unsaved changes check
+function handleCreatePlan() {
+  if (editMode.value && hasChanges.value) {
+    pendingAction.value = 'create-plan';
+    showUnsavedChangesModal.value = true;
+    return;
+  }
+  createPlan();
+}
+
+// Handle duplicate plan with unsaved changes check
+function handleDuplicatePlan(planId: string) {
+  if (editMode.value && hasChanges.value) {
+    pendingPlanId.value = planId;
+    pendingAction.value = 'duplicate-plan';
+    showUnsavedChangesModal.value = true;
+    return;
+  }
+  duplicatePlan(planId);
+}
+
 function handleMapUpdate(updatedMap: MapConfig) {
   const index = editableMaps.value.findIndex(m => m.id === updatedMap.id);
   if (index !== -1) {
@@ -294,7 +315,7 @@ function handleAddZone() {
 // Unsaved changes confirmation
 const showUnsavedChangesModal = ref(false);
 const pendingDestination = ref<RouteLocationNormalized | null>(null);
-const pendingAction = ref<'navigate' | 'switch-mode' | 'switch-plan' | null>(null);
+const pendingAction = ref<'navigate' | 'switch-mode' | 'switch-plan' | 'create-plan' | 'duplicate-plan' | null>(null);
 const pendingPlanId = ref<string | null>(null);
 const modalSaveState = ref<'idle' | 'saving' | 'success' | 'error'>('idle');
 
@@ -324,6 +345,22 @@ const modalTexts = computed(() => {
         btnStay: 'Rester sur ce plan',
         btnLeave: 'Changer sans sauvegarder',
         btnSave: 'Sauvegarder et changer',
+      };
+    case 'create-plan':
+      return {
+        title: 'Modifications non sauvegardées',
+        message: 'Vous avez des modifications en cours. Que souhaitez-vous faire avant de créer un nouveau plan ?',
+        btnStay: 'Rester sur ce plan',
+        btnLeave: 'Créer sans sauvegarder',
+        btnSave: 'Sauvegarder et créer',
+      };
+    case 'duplicate-plan':
+      return {
+        title: 'Modifications non sauvegardées',
+        message: 'Vous avez des modifications en cours. Que souhaitez-vous faire avant de dupliquer ?',
+        btnStay: 'Rester sur ce plan',
+        btnLeave: 'Dupliquer sans sauvegarder',
+        btnSave: 'Sauvegarder et dupliquer',
       };
     default:
       return {
@@ -391,6 +428,13 @@ async function handleSaveAndLeave() {
         editableMaps.value = JSON.parse(JSON.stringify(maps.value));
         selectPlan(pendingPlanId.value);
         pendingPlanId.value = null;
+      } else if (pendingAction.value === 'create-plan') {
+        editableMaps.value = JSON.parse(JSON.stringify(maps.value));
+        createPlan();
+      } else if (pendingAction.value === 'duplicate-plan' && pendingPlanId.value) {
+        editableMaps.value = JSON.parse(JSON.stringify(maps.value));
+        duplicatePlan(pendingPlanId.value);
+        pendingPlanId.value = null;
       }
 
       pendingAction.value = null;
@@ -416,6 +460,11 @@ function handleLeaveWithoutSaving() {
     editMode.value = false;
   } else if (pendingAction.value === 'switch-plan' && pendingPlanId.value) {
     selectPlan(pendingPlanId.value);
+    pendingPlanId.value = null;
+  } else if (pendingAction.value === 'create-plan') {
+    createPlan();
+  } else if (pendingAction.value === 'duplicate-plan' && pendingPlanId.value) {
+    duplicatePlan(pendingPlanId.value);
     pendingPlanId.value = null;
   }
 
@@ -454,8 +503,8 @@ function handleCancelLeave() {
         @toggle-assignment="toggleAssignment"
         @update:currentPhase="currentPhase = $event"
         @select-plan="handleSelectPlan"
-        @create-plan="createPlan"
-        @duplicate-plan="duplicatePlan"
+        @create-plan="handleCreatePlan"
+        @duplicate-plan="handleDuplicatePlan"
         @delete-plan="deletePlan"
         @rename-plan="renamePlan"
         @open-balance-rules="showBalanceRulesModal = true"

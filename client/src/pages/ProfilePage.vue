@@ -100,7 +100,7 @@ async function handleLogout() {
     <div class="profile-container">
       <h1>Mon Profil</h1>
 
-      <!-- User information -->
+      <!-- Account information -->
       <section class="profile-section" v-if="user">
         <h2>Informations</h2>
         <div class="info-grid">

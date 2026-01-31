@@ -11,7 +11,7 @@ const router = Router();
 
 // GET /api/balance-rules - Get team's balance rules
 router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
-  const teamId = req.user?.teamId;
+  const teamId = req.account?.teamId;
 
   if (!teamId) {
     return res.status(404).json({ errors: [ERROR.teamNotFound] });
@@ -34,7 +34,7 @@ router.put(
   async (req: AuthRequest, res: Response) => {
     const { ruleId } = req.params;
     const { severity, enabled, params } = req.body;
-    const teamId = req.user?.teamId;
+    const teamId = req.account?.teamId;
 
     if (!teamId) {
       return res.status(404).json({ errors: [ERROR.teamNotFound] });
@@ -65,7 +65,7 @@ router.post(
   authMiddleware,
   requirePermission('planner', 'canManageBalanceRules'),
   async (req: AuthRequest, res: Response) => {
-    const teamId = req.user?.teamId;
+    const teamId = req.account?.teamId;
 
     if (!teamId) {
       return res.status(404).json({ errors: [ERROR.teamNotFound] });

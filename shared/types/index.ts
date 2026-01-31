@@ -47,11 +47,15 @@ export type {
   PlannerPermissions,
   CalendarPermissions,
   TeamPermissions,
-  UserPermissions,
+  AccountPermissions,
+  ManagerPermissions,
+  AdminPermissions,
 } from './permissions.types';
 export {
   DEFAULT_PLAYER_PERMISSIONS,
   LEADER_PERMISSIONS,
+  DEFAULT_MANAGER_PERMISSIONS,
+  DEFAULT_ADMIN_PERMISSIONS,
 } from './permissions.types';
 
 export type {
@@ -73,8 +77,9 @@ export type {
 export { DEFAULT_BALANCE_RULES } from './balance.types';
 
 export type {
-  User,
-} from './user.types';
+  Account,
+  AccountType,
+} from './account.types';
 
 export type {
   LoginResponse,

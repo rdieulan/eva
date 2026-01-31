@@ -1,23 +1,23 @@
 <script setup lang="ts">
-import type { UserPermissions } from '@shared/types';
+import type { AccountPermissions } from '@shared/types';
 import Modal from '@/components/common/Modal.vue';
 
 const props = defineProps<{
   open: boolean;
   memberName: string;
-  permissions: UserPermissions;
+  permissions: AccountPermissions;
 }>();
 
 const emit = defineEmits<{
   close: [];
-  save: [permissions: UserPermissions];
+  save: [permissions: AccountPermissions];
 }>();
 
 // Local copy of permissions for editing
-const editingPermissions = defineModel<UserPermissions>('permissions', { required: true });
+const editingPermissions = defineModel<AccountPermissions>('permissions', { required: true });
 
 // Toggle permission
-function togglePermission(category: keyof UserPermissions, perm: string) {
+function togglePermission(category: keyof AccountPermissions, perm: string) {
   const cat = editingPermissions.value[category] as unknown as Record<string, boolean>;
   cat[perm] = !cat[perm];
 }

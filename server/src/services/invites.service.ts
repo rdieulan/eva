@@ -41,15 +41,8 @@ export function getInviteError(invite: { expiresAt: Date; uses: number; maxUses:
   return null;
 }
 
-/**
- * Verify user belongs to the specified team
- */
-export async function verifyUserBelongsToTeam(userId: string, teamId: string) {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-  });
-  return user?.teamId === teamId ? user : null;
-}
+// Re-export from player.service for convenience
+export { verifyPlayerBelongsToTeam } from '@services/player.service';
 
 // ============================================
 // Invite operations
@@ -57,7 +50,7 @@ export async function verifyUserBelongsToTeam(userId: string, teamId: string) {
 
 export interface CreateInviteData {
   teamId: string;
-  createdById: string;
+  createdByPlayerId: string;
   expiresInHours?: number;
   maxUses?: number;
 }
@@ -78,7 +71,7 @@ export async function createInvite(data: CreateInviteData) {
     data: {
       teamId: data.teamId,
       code,
-      createdById: data.createdById,
+      createdById: data.createdByPlayerId,
       expiresAt,
       maxUses,
     },
@@ -105,7 +98,9 @@ export async function getActiveInvites(teamId: string) {
     },
     orderBy: { createdAt: 'desc' },
     include: {
-      createdBy: { select: { name: true } },
+      createdBy: {
+        include: { user: { select: { name: true } } }
+      },
     },
   });
 
@@ -119,7 +114,7 @@ export async function getActiveInvites(teamId: string) {
     expiresAt: invite.expiresAt,
     maxUses: invite.maxUses,
     uses: invite.uses,
-    createdBy: invite.createdBy.name,
+    createdBy: invite.createdBy.user!.name,
     createdAt: invite.createdAt,
   }));
 }
@@ -178,15 +173,20 @@ export async function verifyInviteCode(code: string) {
  * Join a team using an invite code
  */
 export async function joinTeamWithCode(
-  userId: string,
+  playerId: string,
   code: string
 ): Promise<{ success: boolean; error?: string; teamId?: string; teamName?: string }> {
-  // Check if user already has a team
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
+  // Check if player already has a team
+  const player = await prisma.player.findUnique({
+    where: { id: playerId },
+    select: { id: true, teamId: true },
   });
 
-  if (user?.teamId) {
+  if (!player) {
+    return { success: false, error: ERROR.userNotFound };
+  }
+
+  if (player.teamId) {
     return { success: false, error: ERROR.userAlreadyInTeam };
   }
 
@@ -209,8 +209,8 @@ export async function joinTeamWithCode(
 
   // Use transaction to ensure atomicity
   await prisma.$transaction([
-    prisma.user.update({
-      where: { id: userId },
+    prisma.player.update({
+      where: { id: playerId },
       data: { teamId: invite.teamId },
     }),
     prisma.teamInvite.update({

@@ -1,12 +1,12 @@
 import { ref, computed } from 'vue';
-import type { UserPermissions, User } from '@shared/types';
+import type { AccountPermissions, Account } from '@shared/types';
 import { DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
 import { clearPlayersCache } from '@/api/players.api';
 import { getCurrentUser } from '@/api/auth.api';
 import { clearBalanceRulesCache } from '@/composables/useBalanceRules';
 
 // Global state
-const user = ref<User | null>(null);
+const user = ref<Account | null>(null);
 const token = ref<string | null>(null);
 const isLoading = ref(true);
 const isInitialized = ref(false);
@@ -59,7 +59,7 @@ function clearAuth() {
 }
 
 // Set user after login
-function setAuth(newToken: string, newUser: User) {
+function setAuth(newToken: string, newUser: Account) {
   token.value = newToken;
   user.value = newUser;
   isInitialized.value = true;
@@ -130,7 +130,7 @@ async function doInitAuth(): Promise<void> {
 }
 
 // Get user permissions (with fallback to default)
-const permissions = computed<UserPermissions>(() => {
+const permissions = computed<AccountPermissions>(() => {
   return user.value?.permissions ?? DEFAULT_PLAYER_PERMISSIONS;
 });
 

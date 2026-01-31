@@ -39,7 +39,7 @@ export async function getPlanById(planId: string, teamId?: string) {
       map: true,
       players: {
         include: {
-          user: { select: { id: true, name: true } },
+          player: { include: { user: { select: { id: true, name: true } } } },
         },
       },
     },
@@ -114,14 +114,22 @@ export async function updatePlan(
 
     for (const playerAssignment of data.players) {
       if (playerAssignment.userId && playerAssignment.assignmentIds?.length > 0) {
-        await prisma.gamePlanPlayer.create({
-          data: {
-            gamePlanId: planId,
-            userId: playerAssignment.userId,
-            assignmentIds: playerAssignment.assignmentIds,
-            mainAssignmentId: playerAssignment.mainAssignmentId ?? null,
-          },
+        // Get playerId from userId
+        const user = await prisma.user.findUnique({
+          where: { id: playerAssignment.userId },
+          include: { player: true },
         });
+
+        if (user?.player) {
+          await prisma.gamePlanPlayer.create({
+            data: {
+              gamePlanId: planId,
+              playerId: user.player.id,
+              assignmentIds: playerAssignment.assignmentIds,
+              mainAssignmentId: playerAssignment.mainAssignmentId ?? null,
+            },
+          });
+        }
       }
     }
   }

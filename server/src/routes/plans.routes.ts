@@ -12,7 +12,7 @@ const router = Router();
 // GET /api/plans/:planId - Get a specific game plan
 router.get('/:planId', authMiddleware, async (req: AuthRequest, res: Response) => {
   const { planId } = req.params;
-  const teamId = req.user?.teamId;
+  const teamId = req.account?.teamId;
 
   try {
     const result = await plansService.getPlanById(planId, teamId || undefined);
@@ -38,10 +38,10 @@ router.get('/:planId', authMiddleware, async (req: AuthRequest, res: Response) =
 router.put('/:planId', authMiddleware, requirePermission('planner', 'canEdit'), async (req: AuthRequest, res: Response) => {
   const { planId } = req.params;
   const { name, assignments, players, notes } = req.body;
-  const teamId = req.user?.teamId;
+  const teamId = req.account?.teamId;
 
   console.log(`[API] PUT /api/plans/${planId}`);
-  console.log('[API] User:', req.user?.email);
+  console.log('[API] Account:', req.account?.email);
 
   try {
     const result = await plansService.updatePlan(
@@ -56,7 +56,7 @@ router.put('/:planId', authMiddleware, requirePermission('planner', 'canEdit'), 
       return;
     }
 
-    console.log(`[API] Game plan updated by ${req.user?.email}: ${planId}`);
+    console.log(`[API] Game plan updated by ${req.account?.email}: ${planId}`);
     res.json(result.plan);
   } catch (error) {
     console.error('[API] Error updating game plan:', error);
@@ -67,7 +67,7 @@ router.put('/:planId', authMiddleware, requirePermission('planner', 'canEdit'), 
 // DELETE /api/plans/:planId - Delete a game plan
 router.delete('/:planId', authMiddleware, requirePermission('planner', 'canDelete'), async (req: AuthRequest, res: Response) => {
   const { planId } = req.params;
-  const teamId = req.user?.teamId;
+  const teamId = req.account?.teamId;
 
   try {
     const result = await plansService.deletePlan(planId, teamId || undefined);
@@ -78,7 +78,7 @@ router.delete('/:planId', authMiddleware, requirePermission('planner', 'canDelet
       return;
     }
 
-    console.log(`Game plan deleted by ${req.user?.email}: ${planId}`);
+    console.log(`Game plan deleted by ${req.account?.email}: ${planId}`);
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting game plan:', error);

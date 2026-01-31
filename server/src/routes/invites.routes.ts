@@ -28,15 +28,15 @@ router.post(
     }
 
     try {
-      // Verify user belongs to this team
-      const user = await invitesService.verifyUserBelongsToTeam(req.user!.userId, teamId);
-      if (!user) {
+      // Verify player belongs to this team
+      const player = await invitesService.verifyPlayerBelongsToTeam(req.account!.playerId!, teamId);
+      if (!player) {
         return res.status(403).json({ errors: [ERROR.forbidden] });
       }
 
       const invite = await invitesService.createInvite({
         teamId,
-        createdById: req.user!.userId,
+        createdByPlayerId: req.account!.playerId!,
         expiresInHours,
         maxUses,
       });
@@ -58,9 +58,9 @@ router.get(
     const { teamId } = req.params;
 
     try {
-      // Verify user belongs to this team
-      const user = await invitesService.verifyUserBelongsToTeam(req.user!.userId, teamId);
-      if (!user) {
+      // Verify player belongs to this team
+      const player = await invitesService.verifyPlayerBelongsToTeam(req.account!.playerId!, teamId);
+      if (!player) {
         return res.status(403).json({ errors: [ERROR.forbidden] });
       }
 
@@ -82,9 +82,9 @@ router.delete(
     const { teamId, inviteId } = req.params;
 
     try {
-      // Verify user belongs to this team
-      const user = await invitesService.verifyUserBelongsToTeam(req.user!.userId, teamId);
-      if (!user) {
+      // Verify player belongs to this team
+      const player = await invitesService.verifyPlayerBelongsToTeam(req.account!.playerId!, teamId);
+      if (!player) {
         return res.status(403).json({ errors: [ERROR.forbidden] });
       }
 
@@ -120,7 +120,7 @@ router.post('/invites/:code/join', authMiddleware, async (req: AuthRequest, res:
   const { code } = req.params;
 
   try {
-    const result = await invitesService.joinTeamWithCode(req.user!.userId, code);
+    const result = await invitesService.joinTeamWithCode(req.account!.playerId!, code);
 
     if (!result.success) {
       const status = result.error === ERROR.inviteInvalid ? 404 : 400;

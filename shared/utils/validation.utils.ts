@@ -2,16 +2,14 @@
 // Used by both server and client
 
 import { ERROR } from '@shared/constants';
+import {
+  EMAIL_REGEX,
+  PASSWORD_MIN_LENGTH,
+  NAME_MIN_LENGTH,
+  NAME_REGEX,
+  TEAM_NAME_MIN_LENGTH,
+} from '@shared/constants/validation.constants';
 
-// ============================================
-// Validation Rules
-// ============================================
-
-export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-export const PASSWORD_MIN_LENGTH = 8;
-export const NAME_MIN_LENGTH = 3;
-export const NAME_REGEX = /^[a-zA-Z0-9]+$/;
-export const TEAM_NAME_MIN_LENGTH = 2;
 
 /**
  * Validation result type

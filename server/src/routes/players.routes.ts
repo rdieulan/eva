@@ -11,24 +11,27 @@ const router = Router();
 
 // GET /api/players - Get players list filtered by team
 router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
-  const teamId = req.user?.teamId;
+  const teamId = req.account?.teamId;
 
-  // User must belong to a team to see team players
+  // Account must belong to a team to see team players
   if (!teamId) {
     res.json([]);
     return;
   }
 
   try {
-    const users = await prisma.user.findMany({
+    const players = await prisma.player.findMany({
       where: { teamId },
-      select: {
-        id: true,
-        name: true,
+      include: {
+        user: { select: { id: true, name: true } },
       },
-      orderBy: { name: 'asc' },
+      orderBy: { user: { name: 'asc' } },
     });
-    res.json(users);
+    // Return format compatible with frontend (using user.id and user.name)
+    res.json(players.map(p => ({
+      id: p.user!.id,
+      name: p.user!.name,
+    })));
   } catch (error) {
     console.error('Error fetching players:', error);
     res.status(500).json({ errors: [ERROR.serverError] });

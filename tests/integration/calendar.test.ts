@@ -91,7 +91,7 @@ describe('Calendar API', () => {
 
       // Verify in DB
       const availability = await prisma.availability.findFirst({
-        where: { userId: user.id, date: new Date(date) },
+        where: { playerId: user.playerId!, date: new Date(date) },
       });
       expect(availability).not.toBeNull();
       expect(availability!.status).toBe('AVAILABLE');

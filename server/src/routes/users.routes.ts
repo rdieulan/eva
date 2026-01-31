@@ -11,27 +11,37 @@ const router = Router();
 
 // GET /api/users - Get all users (team management permission required)
 router.get('/', authMiddleware, requirePermission('team', 'canManagePermissions'), async (req: AuthRequest, res: Response) => {
-  const teamId = req.user?.teamId;
+  const teamId = req.account?.teamId;
 
-  // User must belong to a team to see team members
+  // Account must belong to a team to see team members
   if (!teamId) {
     res.json([]);
     return;
   }
 
   try {
-    const users = await prisma.user.findMany({
+    const players = await prisma.player.findMany({
       where: { teamId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        permissions: true,
-        teamId: true,
-        createdAt: true,
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            createdAt: true,
+          },
+        },
       },
     });
-    res.json(users);
+    // Return format compatible with frontend
+    res.json(players.map(p => ({
+      id: p.user!.id,
+      email: p.user!.email,
+      name: p.user!.name,
+      permissions: p.permissions,
+      teamId: p.teamId,
+      createdAt: p.user!.createdAt,
+    })));
   } catch (error) {
     console.error('Error fetching users:', error);
     res.status(500).json({ errors: [ERROR.serverError] });

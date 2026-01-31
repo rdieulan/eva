@@ -4,8 +4,7 @@ import { Router } from 'express';
 import type { Response } from 'express';
 import { authMiddleware, requirePermission } from '@middleware/auth.middleware';
 import type { AuthRequest } from '@middleware/auth.middleware';
-import type { UserPermissions } from '@shared/types';
-import { TEAM_LOCATIONS } from '@shared/types';
+import type { AccountPermissions } from '@shared/types';
 import { validateTeamName } from '@shared/utils';
 import { ERROR } from '@shared/constants';
 import * as teamsService from '@services/teams.service';
@@ -14,7 +13,7 @@ const router = Router();
 
 // POST /api/teams - Create a new team
 router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
-  const { name, logo, location } = req.body;
+  const { name, logo, venueId } = req.body;
 
   const nameValid = validateTeamName(name);
   if (nameValid !== true) {
@@ -25,8 +24,8 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     const result = await teamsService.createTeam({
       name,
       logo,
-      location,
-      leaderId: req.user!.userId,
+      venueId,
+      leaderId: req.account!.userId,
     });
 
     if ('error' in result) {
@@ -46,15 +45,15 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
 // GET /api/teams/current - Get current user's team
 router.get('/current', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const user = await teamsService.getUserWithTeam(req.user!.userId);
+    const playerData = await teamsService.getPlayerWithTeam(req.account!.playerId!);
 
-    if (!user?.team) {
+    if (!playerData?.team) {
       return res.status(404).json({ errors: [ERROR.teamNotFound] });
     }
 
     res.json({
-      ...user.team,
-      isLeader: !!user.ledTeam,
+      ...playerData.team,
+      isLeader: !!playerData.ledTeam,
     });
   } catch (error) {
     console.error('Error fetching team:', error);
@@ -62,21 +61,16 @@ router.get('/current', authMiddleware, async (req: AuthRequest, res: Response) =
   }
 });
 
-// GET /api/teams/locations - Get available locations
-router.get('/locations', authMiddleware, (_req, res: Response) => {
-  res.json(TEAM_LOCATIONS);
-});
-
-// PUT /api/teams/current - Update team info
+// GET /api/teams/current - Get current user's team
 router.put('/current', authMiddleware, requirePermission('team', 'canManageTeam'), async (req: AuthRequest, res: Response) => {
   try {
-    const team = await teamsService.getUserTeam(req.user!.userId);
+    const team = await teamsService.getPlayerTeam(req.account!.playerId!);
 
     if (!team) {
       return res.status(404).json({ errors: [ERROR.teamNotFound] });
     }
 
-    const { name, logo, location } = req.body;
+    const { name, logo, venueId } = req.body;
 
     if (name !== undefined) {
       const nameValid = validateTeamName(name);
@@ -85,7 +79,7 @@ router.put('/current', authMiddleware, requirePermission('team', 'canManageTeam'
       }
     }
 
-    const updatedTeam = await teamsService.updateTeam(team.id, { name, logo, location });
+    const updatedTeam = await teamsService.updateTeam(team.id, { name, logo, venueId });
     res.json(updatedTeam);
   } catch (error) {
     console.error('Error updating team:', error);
@@ -96,7 +90,7 @@ router.put('/current', authMiddleware, requirePermission('team', 'canManageTeam'
 // GET /api/teams/current/members - Get team members with permissions
 router.get('/current/members', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const team = await teamsService.getUserTeam(req.user!.userId);
+    const team = await teamsService.getPlayerTeam(req.account!.playerId!);
 
     if (!team) {
       return res.status(404).json({ errors: [ERROR.teamNotFound] });
@@ -117,11 +111,11 @@ router.put(
   requirePermission('team', 'canManagePermissions'),
   async (req: AuthRequest, res: Response) => {
     const { memberId } = req.params;
-    const { permissions } = req.body as { permissions: UserPermissions };
+    const { permissions } = req.body as { permissions: AccountPermissions };
 
     try {
       const result = await teamsService.updateMemberPermissions(
-        req.user!.userId,
+        req.account!.userId,
         memberId,
         permissions
       );
@@ -148,7 +142,7 @@ router.delete(
     const { memberId } = req.params;
 
     try {
-      const result = await teamsService.removeMember(req.user!.userId, memberId);
+      const result = await teamsService.removeMember(req.account!.userId, memberId);
 
       if (!result.success) {
         const status = result.error?.includes('trouvé') ? 404 : 403;
@@ -166,7 +160,7 @@ router.delete(
 // DELETE /api/teams/current - Delete the team (leader only)
 router.delete('/current', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const result = await teamsService.deleteTeam(req.user!.userId);
+    const result = await teamsService.deleteTeam(req.account!.playerId!);
 
     if (!result.success) {
       const status = result.error?.includes('leader') ? 403 : 404;
@@ -183,7 +177,7 @@ router.delete('/current', authMiddleware, async (req: AuthRequest, res: Response
 // POST /api/teams/current/leave - Leave the team (for non-leader members)
 router.post('/current/leave', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const result = await teamsService.leaveTeam(req.user!.userId);
+    const result = await teamsService.leaveTeam(req.account!.playerId!);
 
     if (!result.success) {
       const status = result.error?.includes('leader') ? 403 : 404;

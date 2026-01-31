@@ -6,55 +6,34 @@ datasource db {
   provider = "postgresql"
 }
 
+// ============================================
+// Auth & Account Linking
+// ============================================
+
 model User {
-  id              String           @id @default(cuid())
-  email           String           @unique
-  password        String
-  name            String
-  permissions     Json?            // Granular permissions JSON
-  teamId          String?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  team            Team?            @relation("TeamMembers", fields: [teamId], references: [id])
-  ledTeam         Team?            @relation("TeamLeader")
-  availabilities  Availability[]
-  createdEvents   CalendarEvent[]
-  gamePlanPlayers GamePlanPlayer[]
-  sessions        Session[]
-  createdInvites  TeamInvite[]
+  id                        String              @id @default(cuid())
+  email                     String              @unique
+  password                  String
+  name                      String
+  playerId                  String?             @unique
+  managerId                 String?             @unique
+  adminId                   String?             @unique
+  linkedAccountGroupId      String?
+  createdAt                 DateTime            @default(now())
+  updatedAt                 DateTime            @updatedAt
+  player                    Player?             @relation(fields: [playerId], references: [id], onDelete: SetNull)
+  manager                   Manager?            @relation(fields: [managerId], references: [id], onDelete: SetNull)
+  admin                     Admin?              @relation(fields: [adminId], references: [id], onDelete: SetNull)
+  linkedAccountGroup        LinkedAccountGroup? @relation(fields: [linkedAccountGroupId], references: [id])
+  sessions                  Session[]
+
+  @@index([linkedAccountGroupId])
 }
 
-model Team {
-  id             String          @id @default(cuid())
-  name           String
-  logo           String?
-  location       String?
-  leaderId       String          @unique
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  leader         User            @relation("TeamLeader", fields: [leaderId], references: [id])
-  members        User[]          @relation("TeamMembers")
-  balanceRules   BalanceRule[]
-  gamePlans      GamePlan[]
-  calendarEvents CalendarEvent[]
-  invites        TeamInvite[]
-}
-
-model BalanceRule {
-  id          String          @id @default(cuid())
-  teamId      String
-  ruleKey     String          // Unique key identifying the rule type
-  name        String          // Display name
-  description String?         // Rule description
-  severity    BalanceSeverity @default(ERROR)
-  enabled     Boolean         @default(true)
-  params      Json?           // Rule-specific parameters
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-  team        Team            @relation(fields: [teamId], references: [id], onDelete: Cascade)
-
-  @@unique([teamId, ruleKey])
-  @@index([teamId])
+model LinkedAccountGroup {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  accounts  User[]
 }
 
 model Session {
@@ -67,6 +46,108 @@ model Session {
 
   @@index([token])
 }
+
+// ============================================
+// Player (joueur affilié à une équipe)
+// ============================================
+
+model Player {
+  id              String           @id @default(cuid())
+  permissions     Json?            // Granular permissions JSON
+  teamId          String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  user            User?
+  team            Team?            @relation("TeamMembers", fields: [teamId], references: [id])
+  ledTeam         Team?            @relation("TeamLeader")
+  availabilities  Availability[]
+  createdEvents   CalendarEvent[]
+  gamePlanPlayers GamePlanPlayer[]
+  createdInvites  TeamInvite[]
+
+  @@index([teamId])
+}
+
+// ============================================
+// Manager (gérant de salle)
+// ============================================
+
+model Manager {
+  id                       String         @id @default(cuid())
+  permissions              Json?          // Manager-specific permissions
+  activationToken          String?        @unique
+  activationTokenExpiresAt DateTime?
+  createdAt                DateTime       @default(now())
+  updatedAt                DateTime       @updatedAt
+  user                     User?
+  managedVenues            VenueManager[]
+}
+
+// ============================================
+// Admin (administrateur)
+// ============================================
+
+model Admin {
+  id                       String   @id @default(cuid())
+  permissions              Json     // Toutes les permissions admin (superAdmin = toutes à true)
+  activationToken          String?  @unique
+  activationTokenExpiresAt DateTime?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+  user                     User?
+}
+
+// ============================================
+// Team & Venue
+// ============================================
+
+model Team {
+  id             String          @id @default(cuid())
+  name           String
+  logo           String?
+  venueId        String?
+  leaderId       String          @unique
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  venue          Venue?          @relation(fields: [venueId], references: [id])
+  leader         Player          @relation("TeamLeader", fields: [leaderId], references: [id])
+  members        Player[]        @relation("TeamMembers")
+  balanceRules   BalanceRule[]
+  gamePlans      GamePlan[]
+  calendarEvents CalendarEvent[]
+  invites        TeamInvite[]
+
+  @@index([venueId])
+}
+
+model Venue {
+  id        String         @id @default(cuid())
+  name      String
+  city      String
+  address   String
+  phone     String?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  teams     Team[]
+  managers  VenueManager[]
+}
+
+model VenueManager {
+  id        String   @id @default(cuid())
+  managerId String
+  venueId   String
+  createdAt DateTime @default(now())
+  manager   Manager  @relation(fields: [managerId], references: [id], onDelete: Cascade)
+  venue     Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@unique([managerId, venueId])
+  @@index([managerId])
+  @@index([venueId])
+}
+
+// ============================================
+// Game Plans & Maps
+// ============================================
 
 model Map {
   id        String     @id
@@ -98,25 +179,29 @@ model GamePlan {
 model GamePlanPlayer {
   id               String   @id @default(cuid())
   gamePlanId       String
-  userId           String
+  playerId         String
   assignmentIds    Int[]
   mainAssignmentId Int?
   gamePlan         GamePlan @relation(fields: [gamePlanId], references: [id], onDelete: Cascade)
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  player           Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
 
-  @@unique([gamePlanId, userId])
+  @@unique([gamePlanId, playerId])
   @@index([gamePlanId])
-  @@index([userId])
+  @@index([playerId])
 }
 
-model Availability {
-  id     String             @id @default(cuid())
-  userId String
-  date   DateTime           @db.Date
-  status AvailabilityStatus
-  user   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+// ============================================
+// Calendar & Availability
+// ============================================
 
-  @@unique([userId, date])
+model Availability {
+  id       String             @id @default(cuid())
+  playerId String
+  date     DateTime           @db.Date
+  status   AvailabilityStatus
+  player   Player             @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([playerId, date])
   @@index([date])
 }
 
@@ -134,7 +219,7 @@ model CalendarEvent {
   updatedAt   DateTime  @updatedAt
   gamePlan    Json?
   team        Team?     @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  createdBy   User      @relation(fields: [createdById], references: [id])
+  createdBy   Player    @relation(fields: [createdById], references: [id])
 
   @@index([date])
   @@index([teamId])
@@ -146,7 +231,7 @@ model TeamInvite {
   team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
   code        String   @unique
   createdById String
-  createdBy   User     @relation(fields: [createdById], references: [id])
+  createdBy   Player   @relation(fields: [createdById], references: [id])
   expiresAt   DateTime
   maxUses     Int      @default(1)
   uses        Int      @default(0)
@@ -156,6 +241,30 @@ model TeamInvite {
   @@index([code])
 }
 
+// ============================================
+// Balance Rules
+// ============================================
+
+model BalanceRule {
+  id          String          @id @default(cuid())
+  teamId      String
+  ruleKey     String
+  name        String
+  description String?
+  severity    BalanceSeverity @default(ERROR)
+  enabled     Boolean         @default(true)
+  params      Json?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  team        Team            @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, ruleKey])
+  @@index([teamId])
+}
+
+// ============================================
+// Enums
+// ============================================
 
 enum AvailabilityStatus {
   AVAILABLE
@@ -172,4 +281,5 @@ enum BalanceSeverity {
   ERROR
   WARNING
 }
+
 

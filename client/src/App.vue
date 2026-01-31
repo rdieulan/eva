@@ -22,7 +22,7 @@ watch(isAuthenticated, async (authenticated) => {
   }
 }, { immediate: true });
 
-// User name for the TopBar
+// Account name for the TopBar
 const userName = computed(() => user.value?.name);
 
 // Determine if TopBar should be displayed (not on login page)
