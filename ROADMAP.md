@@ -34,19 +34,19 @@
 
 | Tâche | Statut | Notes |
 |-------|--------|-------|
-| 2.1 Route publique `GET /api/venues` | ⬜ | Liste des salles (visible par tous les users authentifiés) |
-| 2.2 Route équipe `PUT /api/teams/:id/venue` | ⬜ | Changer l'affiliation d'une équipe à une salle |
-| 2.3 Route activation `POST /api/auth/activate` | ⬜ | Permettre au manager de définir son password via le lien |
-| 2.4 Route liaison `POST /api/auth/link-account` | ⬜ | Lier deux comptes (nécessite auth sur les deux) |
-| 2.5 Route switch `POST /api/auth/switch-account` | ⬜ | Changer de compte actif dans un groupe lié |
+| 2.1 Route publique `GET /api/venues` | ✅ | Liste des salles (visible par tous les users authentifiés) |
+| 2.2 Route équipe `PUT /api/teams/:id/venue` | ✅ | Changer l'affiliation d'une équipe à une salle |
+| 2.3 Route activation `POST /api/auth/activate` | ✅ | Permettre au manager de définir son password via le lien |
+| 2.4 Route liaison `POST /api/auth/link-account` | ✅ | Lier deux comptes (nécessite auth sur les deux) |
+| 2.5 Route switch `POST /api/auth/switch-account` | ✅ | Changer de compte actif dans un groupe lié |
 | 2.6 Routes admin (futures) | ⬜ | `POST /api/admin/venues`, `POST /api/admin/managers` |
 
 #### Phase 3 - Frontend
 
 | Tâche | Statut | Notes |
 |-------|--------|-------|
-| 3.1 Remplacer le sélecteur de localisation | ⬜ | Sélecteur de salle dans la page Team |
-| 3.2 Afficher la salle affiliée | ⬜ | Dans les infos de l'équipe |
+| 3.1 Remplacer le sélecteur de localisation | ✅ | Sélecteur de salle dans la page Team et CreateTeam |
+| 3.2 Afficher la salle affiliée | ✅ | Dans les infos de l'équipe |
 | 3.3 Page d'activation manager | ⬜ | `/activate/:token` - Définir le mot de passe |
 | 3.4 Switch de compte dans le profil | ⬜ | Dropdown avec comptes liés |
 | 3.5 Bouton "Lier un compte" | ⬜ | Dans le profil |

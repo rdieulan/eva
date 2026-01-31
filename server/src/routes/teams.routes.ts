@@ -28,7 +28,7 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
       leaderId: req.account!.userId,
     });
 
-    if ('error' in result) {
+    if (result.error) {
       return res.status(400).json({ errors: [result.error] });
     }
 
@@ -79,8 +79,13 @@ router.put('/current', authMiddleware, requirePermission('team', 'canManageTeam'
       }
     }
 
-    const updatedTeam = await teamsService.updateTeam(team.id, { name, logo, venueId });
-    res.json(updatedTeam);
+    const result = await teamsService.updateTeam(team.id, { name, logo, venueId });
+
+    if (result.error) {
+      return res.status(400).json({ errors: [result.error] });
+    }
+
+    res.json(result.team);
   } catch (error) {
     console.error('Error updating team:', error);
     res.status(500).json({ errors: [ERROR.serverError] });

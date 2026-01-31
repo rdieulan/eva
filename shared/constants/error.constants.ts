@@ -43,6 +43,21 @@ export const ERROR = {
   currentAndNewPasswordRequired: 'Mot de passe actuel et nouveau requis',
   currentPasswordIncorrect: 'Mot de passe actuel incorrect',
 
+  // Activation
+  activationTokenRequired: 'Token d\'activation requis',
+  activationTokenInvalid: 'Token d\'activation invalide ou expiré',
+  activationFailed: 'Erreur lors de l\'activation du compte',
+  passwordRequired: 'Mot de passe requis',
+
+  // Linked accounts
+  linkedAccountCredentialsRequired: 'Identifiants du compte à lier requis',
+  cannotLinkSameAccount: 'Impossible de lier un compte à lui-même',
+  accountAlreadyLinked: 'Ce compte est déjà lié à un groupe',
+  linkAccountFailed: 'Erreur lors de la liaison des comptes',
+  targetAccountIdRequired: 'ID du compte cible requis',
+  accountNotInGroup: 'Ce compte ne fait pas partie de votre groupe lié',
+  switchAccountFailed: 'Erreur lors du changement de compte',
+
   // Account
   userNotFound: 'Utilisateur non trouvé',
   playersLoadFailed: 'Erreur lors du chargement des joueurs',
@@ -55,7 +70,6 @@ export const ERROR = {
   teamUpdateFailed: 'Erreur lors de la mise à jour de l\'équipe',
   teamDeleteFailed: 'Erreur lors de la suppression de l\'équipe',
   teamLeaveFailed: 'Erreur lors du départ de l\'équipe',
-  teamLocationsFetchFailed: 'Erreur lors de la récupération des localisations',
   teamMembersFetchFailed: 'Erreur lors de la récupération des membres',
   teamMemberRemoveFailed: 'Erreur lors du retrait du membre',
   teamPermissionsUpdateFailed: 'Erreur lors de la mise à jour des permissions',
@@ -71,6 +85,11 @@ export const ERROR = {
   cannotRemoveSelf: 'Impossible de vous retirer vous-même',
   onlyLeaderCanDelete: 'Seul le leader peut supprimer l\'équipe',
   leaderCannotLeave: 'Le leader ne peut pas quitter l\'équipe. Supprimez l\'équipe ou transférez la direction.',
+
+  // Venues
+  venueNotFound: 'Salle non trouvée',
+  venuesFetchFailed: 'Erreur lors de la récupération des salles',
+  venueUpdateFailed: 'Erreur lors de la mise à jour de la salle',
 
   // Invitations
   inviteNotFound: 'Invitation non trouvée',

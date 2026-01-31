@@ -1,6 +1,6 @@
 // Teams API client
 
-import type { AccountPermissions, Team } from '@shared/types';
+import type { AccountPermissions, Team, Venue } from '@shared/types';
 import { ERROR } from '@shared/constants';
 import { authFetch } from '@/api/utils';
 import { ApiError } from '@/api/error';
@@ -44,7 +44,7 @@ export async function fetchCurrentTeam(): Promise<TeamWithMembers | null> {
  * Create a new team (current player becomes leader)
  */
 export async function createTeam(
-  teamData: { name: string; logo?: string | null; location?: string | null }
+  teamData: { name: string; logo?: string | null; venueId?: string | null }
 ): Promise<TeamWithMembers> {
   return authFetch<TeamWithMembers>(
     API_BASE,
@@ -54,13 +54,13 @@ export async function createTeam(
 }
 
 /**
- * Get available team locations
+ * Get available venues
  */
-export async function fetchTeamLocations(): Promise<string[]> {
-  return authFetch<string[]>(
-    `${API_BASE}/locations`,
+export async function fetchVenues(): Promise<Venue[]> {
+  return authFetch<Venue[]>(
+    '/api/venues',
     undefined,
-    ERROR.teamLocationsFetchFailed
+    ERROR.venuesFetchFailed
   );
 }
 
@@ -68,7 +68,7 @@ export async function fetchTeamLocations(): Promise<string[]> {
  * Update team info
  */
 export async function updateTeam(
-  teamData: { name?: string; logo?: string | null; location?: string | null }
+  teamData: { name?: string; logo?: string | null; venueId?: string | null }
 ): Promise<Team> {
   return authFetch<Team>(
     `${API_BASE}/current`,

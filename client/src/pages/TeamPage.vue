@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
 import {
   fetchCurrentTeam,
-  fetchTeamLocations,
+  fetchVenues,
   updateTeam,
   fetchTeamMembers,
   updateMemberPermissions,
@@ -16,7 +16,7 @@ import {
   revokeInvite,
 } from '@/api';
 import type { TeamWithMembers, TeamMember, TeamInvite } from '@/api';
-import type { AccountPermissions } from '@shared/types';
+import type { AccountPermissions, Venue } from '@shared/types';
 import { DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
 import { ERROR } from '@shared/constants';
 import { useErrors } from '@/composables/useErrors';
@@ -31,10 +31,11 @@ import TeamInviteModal from '@/components/team/TeamInviteModal.vue';
 const router = useRouter();
 const { token, permissions, account } = useAuth();
 
+
 // State
 const team = ref<TeamWithMembers | null>(null);
 const members = ref<TeamMember[]>([]);
-const locations = ref<string[]>([]);
+const venues = ref<Venue[]>([]);
 const isLoading = ref(true);
 const { errors, setError, setErrorFromException, clearErrors } = useErrors();
 const successMessage = ref<string | null>(null);
@@ -82,7 +83,7 @@ async function loadData() {
 
     team.value = teamData;
     members.value = await fetchTeamMembers();
-    locations.value = await fetchTeamLocations();
+    venues.value = await fetchVenues();
 
     if (permissions.value.team.canInviteMembers) {
       try {
@@ -105,13 +106,13 @@ function showSuccess(message: string) {
 }
 
 // Team info handlers
-async function handleSaveTeam(data: { name: string; location: string | null }) {
+async function handleSaveTeam(data: { name: string; venueId: string | null }) {
   if (!token.value || !team.value) return;
 
   try {
     await updateTeam(data);
     team.value.name = data.name;
-    team.value.location = data.location ?? undefined;
+    team.value.venueId = data.venueId ?? undefined;
     showSuccess('Équipe mise à jour');
   } catch (e) {
     setErrorFromException(e, ERROR.serverError);
@@ -260,7 +261,7 @@ onMounted(loadData);
       <!-- Team info section -->
       <TeamInfo
         :team="team"
-        :locations="locations"
+        :venues="venues"
         :can-manage-team="canManageTeam"
         :is-leader="isLeader"
         @save="handleSaveTeam"

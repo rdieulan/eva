@@ -1,36 +1,44 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
+import type { Venue } from '@shared/types';
 import SvgIcon from '@/components/common/SvgIcon.vue';
 
 interface TeamData {
   id: string;
   name: string;
-  location?: string;
+  venueId?: string;
   leader: { id: string; name: string };
 }
 
 const props = defineProps<{
   team: TeamData;
-  locations: string[];
+  venues: Venue[];
   canManageTeam: boolean;
   isLeader: boolean;
 }>();
 
 const emit = defineEmits<{
-  save: [data: { name: string; location: string | null }];
+  save: [data: { name: string; venueId: string | null }];
   deleteTeam: [];
   leaveTeam: [];
 }>();
 
+// Computed venue name
+const venueName = computed(() => {
+  if (!props.team.venueId) return 'Non affiliée';
+  const venue = props.venues.find(v => v.id === props.team.venueId);
+  return venue ? `${venue.name} - ${venue.city}` : 'Inconnue';
+});
+
 // Edit mode state
 const isEditing = ref(false);
 const editName = ref('');
-const editLocation = ref<string | null>(null);
+const editVenueId = ref<string | null>(null);
 
 // Start editing
 function startEdit() {
   editName.value = props.team.name;
-  editLocation.value = props.team.location ?? null;
+  editVenueId.value = props.team.venueId ?? null;
   isEditing.value = true;
 }
 
@@ -43,7 +51,7 @@ function cancelEdit() {
 function saveChanges() {
   emit('save', {
     name: editName.value,
-    location: editLocation.value,
+    venueId: editVenueId.value,
   });
   isEditing.value = false;
 }
@@ -65,10 +73,12 @@ function saveChanges() {
         <input v-model="editName" type="text" placeholder="Nom de l'équipe" />
       </div>
       <div class="form-group">
-        <label>Localisation</label>
-        <select v-model="editLocation">
-          <option :value="null">Non spécifiée</option>
-          <option v-for="loc in locations" :key="loc" :value="loc">{{ loc }}</option>
+        <label>Salle affiliée</label>
+        <select v-model="editVenueId">
+          <option :value="null">Non affiliée</option>
+          <option v-for="venue in venues" :key="venue.id" :value="venue.id">
+            {{ venue.name }} - {{ venue.city }}
+          </option>
         </select>
       </div>
       <div class="form-actions">
@@ -83,8 +93,8 @@ function saveChanges() {
         <span>{{ team.name }}</span>
       </div>
       <div class="info-item">
-        <label>Localisation</label>
-        <span>{{ team.location || 'Non spécifiée' }}</span>
+        <label>Salle affiliée</label>
+        <span>{{ venueName }}</span>
       </div>
       <div class="info-item">
         <label>Leader</label>

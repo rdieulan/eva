@@ -7,7 +7,7 @@ export interface Team {
   id: string;
   name: string;
   logo?: string;
-  location?: string;
+  venueId?: string;
   leaderId: string;
   createdAt: string;
   updatedAt: string;

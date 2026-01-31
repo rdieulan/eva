@@ -92,7 +92,15 @@ export async function createTeam(data: TeamCreateData) {
  * Update team info
  */
 export async function updateTeam(teamId: string, data: TeamUpdateData) {
-  return prisma.team.update({
+  // Validate venue exists if provided
+  if (data.venueId) {
+    const venue = await prisma.venue.findUnique({ where: { id: data.venueId } });
+    if (!venue) {
+      return { error: ERROR.venueNotFound };
+    }
+  }
+
+  const team = await prisma.team.update({
     where: { id: teamId },
     data: {
       ...(data.name && { name: data.name.trim() }),
@@ -100,6 +108,8 @@ export async function updateTeam(teamId: string, data: TeamUpdateData) {
       ...(data.venueId !== undefined && { venueId: data.venueId }),
     },
   });
+
+  return { team };
 }
 
 /**

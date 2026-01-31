@@ -89,3 +89,4 @@ export type {
   LoginCredentials,
 } from './auth.types';
 
+export type { Venue } from './venue.types';

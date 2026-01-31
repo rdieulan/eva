@@ -38,7 +38,7 @@ export { clearBalanceRulesCache } from '@/composables/useBalanceRules';
 export {
   fetchCurrentTeam,
   createTeam,
-  fetchTeamLocations,
+  fetchVenues,
   updateTeam,
   fetchTeamMembers,
   updateMemberPermissions,

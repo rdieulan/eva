@@ -19,6 +19,11 @@ import {
   validateEmail,
   validatePassword,
   validateName,
+  findManagerByActivationToken,
+  activateManagerAccount,
+  linkAccounts,
+  getLinkedAccounts,
+  isAccountInSameGroup,
 } from '@services/auth.service';
 import { createPlayer } from '@services/player.service';
 
@@ -198,6 +203,139 @@ router.post('/change-password', authMiddleware, async (req: AuthRequest, res: Re
   } catch (error) {
     console.error('[AUTH] Change password error:', error);
     res.status(500).json({ errors: [ERROR.serverError] });
+  }
+});
+
+// POST /api/auth/activate - Activate manager account with password
+router.post('/activate', async (req: Request, res: Response) => {
+  console.log('[AUTH] POST /api/auth/activate');
+  const { token, password } = req.body;
+
+  if (!token) {
+    return res.status(400).json({ errors: [ERROR.activationTokenRequired] });
+  }
+
+  if (!password) {
+    return res.status(400).json({ errors: [ERROR.passwordRequired] });
+  }
+
+  const passwordValid = validatePassword(password);
+  if (passwordValid !== true) {
+    return res.status(400).json({ errors: passwordValid });
+  }
+
+  try {
+    const manager = await findManagerByActivationToken(token);
+
+    if (!manager || !manager.user) {
+      return res.status(400).json({ errors: [ERROR.activationTokenInvalid] });
+    }
+
+    const hashedPassword = await hashPassword(password);
+    await activateManagerAccount(manager.id, manager.user.id, hashedPassword);
+
+    console.log('[AUTH] Account activated successfully for:', manager.user.email);
+    res.json({ message: 'Compte activé avec succès' });
+  } catch (error) {
+    console.error('[AUTH] Activation error:', error);
+    res.status(500).json({ errors: [ERROR.activationFailed] });
+  }
+});
+
+// POST /api/auth/link-account - Link current account to another
+router.post('/link-account', authMiddleware, async (req: AuthRequest, res: Response) => {
+  console.log('[AUTH] POST /api/auth/link-account');
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ errors: [ERROR.linkedAccountCredentialsRequired] });
+  }
+
+  try {
+    // Find the account to link
+    const targetAccount = await findAccountByEmail(email);
+
+    if (!targetAccount) {
+      return res.status(401).json({ errors: [ERROR.loginFailed] });
+    }
+
+    // Verify password
+    const validPassword = await comparePassword(password, targetAccount.password);
+    if (!validPassword) {
+      return res.status(401).json({ errors: [ERROR.loginFailed] });
+    }
+
+    // Check not linking to self
+    if (targetAccount.id === req.account!.userId) {
+      return res.status(400).json({ errors: [ERROR.cannotLinkSameAccount] });
+    }
+
+    // Link the accounts
+    const { groupId } = await linkAccounts(req.account!.userId, targetAccount.id);
+
+    console.log('[AUTH] Accounts linked successfully, group:', groupId);
+    res.json({ message: 'Comptes liés avec succès', groupId });
+  } catch (error) {
+    console.error('[AUTH] Link account error:', error);
+    res.status(500).json({ errors: [ERROR.linkAccountFailed] });
+  }
+});
+
+// GET /api/auth/linked-accounts - Get all linked accounts
+router.get('/linked-accounts', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const linkedAccounts = await getLinkedAccounts(req.account!.userId);
+    res.json(linkedAccounts);
+  } catch (error) {
+    console.error('[AUTH] Get linked accounts error:', error);
+    res.status(500).json({ errors: [ERROR.serverError] });
+  }
+});
+
+// POST /api/auth/switch-account - Switch to another linked account
+router.post('/switch-account', authMiddleware, async (req: AuthRequest, res: Response) => {
+  console.log('[AUTH] POST /api/auth/switch-account');
+  const { targetAccountId } = req.body;
+
+  if (!targetAccountId) {
+    return res.status(400).json({ errors: [ERROR.targetAccountIdRequired] });
+  }
+
+  try {
+    // Verify target is in same linked group
+    const inSameGroup = await isAccountInSameGroup(req.account!.userId, targetAccountId);
+
+    if (!inSameGroup) {
+      return res.status(403).json({ errors: [ERROR.accountNotInGroup] });
+    }
+
+    // Get target account data
+    const targetAccount = await getAccountById(targetAccountId);
+
+    if (!targetAccount) {
+      return res.status(404).json({ errors: [ERROR.userNotFound] });
+    }
+
+    // Generate new token for target account
+    const token = generateToken({
+      userId: targetAccount.id,
+      playerId: targetAccount.playerId ?? undefined,
+      managerId: targetAccount.managerId ?? undefined,
+      adminId: targetAccount.adminId ?? undefined,
+      email: targetAccount.email,
+      teamId: targetAccount.teamId ?? undefined,
+    });
+
+    await createSession(targetAccount.id, token);
+
+    console.log('[AUTH] Account switched to:', targetAccount.email);
+    res.json({
+      token,
+      account: targetAccount,
+    });
+  } catch (error) {
+    console.error('[AUTH] Switch account error:', error);
+    res.status(500).json({ errors: [ERROR.switchAccountFailed] });
   }
 });
 

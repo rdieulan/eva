@@ -195,4 +195,136 @@ export async function updateAccountPassword(userId: string, hashedPassword: stri
   });
 }
 
+// ============================================
+// Activation (for Manager accounts)
+// ============================================
 
+/**
+ * Find manager by activation token
+ */
+export async function findManagerByActivationToken(token: string) {
+  return prisma.manager.findFirst({
+    where: {
+      activationToken: token,
+      activationTokenExpiresAt: { gte: new Date() },
+    },
+    include: {
+      user: true,
+    },
+  });
+}
+
+/**
+ * Activate manager account (set password and clear activation token)
+ */
+export async function activateManagerAccount(managerId: string, userId: string, hashedPassword: string): Promise<void> {
+  await prisma.$transaction([
+    prisma.manager.update({
+      where: { id: managerId },
+      data: {
+        activationToken: null,
+        activationTokenExpiresAt: null,
+      },
+    }),
+    prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword },
+    }),
+  ]);
+}
+
+// ============================================
+// Linked accounts
+// ============================================
+
+/**
+ * Link two accounts together
+ */
+export async function linkAccounts(userId1: string, userId2: string): Promise<{ groupId: string }> {
+  // Get both accounts
+  const [account1, account2] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId1 } }),
+    prisma.user.findUnique({ where: { id: userId2 } }),
+  ]);
+
+  if (!account1 || !account2) {
+    throw new Error('Account not found');
+  }
+
+  // Check if either already has a group
+  const existingGroupId = account1.linkedAccountGroupId || account2.linkedAccountGroupId;
+
+  if (existingGroupId) {
+    // Add the other account to the existing group
+    const accountToAdd = account1.linkedAccountGroupId ? account2 : account1;
+    await prisma.user.update({
+      where: { id: accountToAdd.id },
+      data: { linkedAccountGroupId: existingGroupId },
+    });
+    return { groupId: existingGroupId };
+  }
+
+  // Create new group and link both accounts
+  const group = await prisma.linkedAccountGroup.create({
+    data: {
+      accounts: {
+        connect: [{ id: userId1 }, { id: userId2 }],
+      },
+    },
+  });
+
+  return { groupId: group.id };
+}
+
+/**
+ * Get all accounts in a linked group
+ */
+export async function getLinkedAccounts(userId: string): Promise<Account[]> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { linkedAccountGroupId: true },
+  });
+
+  if (!user?.linkedAccountGroupId) {
+    return [];
+  }
+
+  const linkedUsers = await prisma.user.findMany({
+    where: {
+      linkedAccountGroupId: user.linkedAccountGroupId,
+      id: { not: userId }, // Exclude current user
+    },
+    include: {
+      player: {
+        include: {
+          team: true,
+          ledTeam: true,
+        },
+      },
+      manager: {
+        include: {
+          managedVenues: true,
+        },
+      },
+      admin: true,
+    },
+  });
+
+  return Promise.all(linkedUsers.map(buildAccountData));
+}
+
+/**
+ * Check if target account is in the same linked group
+ */
+export async function isAccountInSameGroup(currentUserId: string, targetUserId: string): Promise<boolean> {
+  const [current, target] = await Promise.all([
+    prisma.user.findUnique({ where: { id: currentUserId }, select: { linkedAccountGroupId: true } }),
+    prisma.user.findUnique({ where: { id: targetUserId }, select: { linkedAccountGroupId: true } }),
+  ]);
+
+  if (!current?.linkedAccountGroupId || !target?.linkedAccountGroupId) {
+    return false;
+  }
+
+  return current.linkedAccountGroupId === target.linkedAccountGroupId;
+}

@@ -3,25 +3,27 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
 import { useErrors } from '@/composables/useErrors';
-import { createTeam, fetchTeamLocations } from '@/api';
+import { createTeam, fetchVenues } from '@/api';
 import { validateTeamName } from '@shared/utils';
 import { ERROR } from '@shared/constants';
+import type { Venue } from '@shared/types';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 
 const router = useRouter();
 const { hasTeam, refreshAccount } = useAuth();
 
+
 // State
-const locations = ref<string[]>([]);
+const venues = ref<Venue[]>([]);
 const isLoading = ref(true);
 const isSubmitting = ref(false);
 const { errors, setErrors, setErrorFromException, clearErrors } = useErrors();
 
 // Form
 const teamName = ref('');
-const teamLocation = ref<string | null>(null);
+const selectedVenueId = ref<string | null>(null);
 
-// Load locations
+// Load venues
 onMounted(async () => {
   // Redirect if already has a team
   if (hasTeam.value) {
@@ -30,9 +32,9 @@ onMounted(async () => {
   }
 
   try {
-    locations.value = await fetchTeamLocations();
+    venues.value = await fetchVenues();
   } catch (e) {
-    console.error('Error loading locations:', e);
+    console.error('Error loading venues:', e);
   } finally {
     isLoading.value = false;
   }
@@ -52,7 +54,7 @@ async function handleSubmit() {
   try {
     await createTeam({
       name: teamName.value.trim(),
-      location: teamLocation.value,
+      venueId: selectedVenueId.value,
     });
 
     // Refresh account data to update teamId and permissions
@@ -102,10 +104,12 @@ function goBack() {
         </div>
 
         <div class="form-group">
-          <label for="team-location">Localisation</label>
-          <select id="team-location" v-model="teamLocation" :disabled="isSubmitting">
+          <label for="team-venue">Salle affiliée</label>
+          <select id="team-venue" v-model="selectedVenueId" :disabled="isSubmitting">
             <option :value="null">Non spécifiée</option>
-            <option v-for="loc in locations" :key="loc" :value="loc">{{ loc }}</option>
+            <option v-for="venue in venues" :key="venue.id" :value="venue.id">
+              {{ venue.name }} - {{ venue.city }}
+            </option>
           </select>
         </div>
 

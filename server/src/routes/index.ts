@@ -11,6 +11,7 @@ import teamsRoutes from '@routes/teams.routes';
 import balanceRulesRoutes from '@routes/balance-rules.routes';
 import invitesRoutes from '@routes/invites.routes';
 import playersRoutes from '@routes/players.routes';
+import venuesRoutes from '@routes/venues.routes';
 import { prisma, pool } from '@db/prisma';
 
 const router = Router();
@@ -67,6 +68,7 @@ router.use('/calendar', calendarRoutes);
 router.use('/teams', teamsRoutes);
 router.use('/balance-rules', balanceRulesRoutes);
 router.use('/players', playersRoutes);
+router.use('/venues', venuesRoutes);
 router.use('/', invitesRoutes); // Handles /teams/:teamId/invites and /invites/:code
 
 export default router;
