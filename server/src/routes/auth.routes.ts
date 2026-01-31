@@ -15,7 +15,7 @@ import {
   findAccountByEmail,
   getAccountById,
   updateAccountPassword,
-  buildAuthAccountData,
+  buildAccountData,
   validateEmail,
   validatePassword,
   validateName,
@@ -116,12 +116,12 @@ router.post('/login', async (req: Request, res: Response) => {
 
     await createSession(account.id, token);
 
-    const authAccount = await buildAuthAccountData(account);
+    const authAccount = await buildAccountData(account);
 
     console.log('[AUTH] Login success for:', email);
     res.json({
       token,
-      user: authAccount,
+      account: authAccount,
     });
   } catch (error) {
     console.error('[AUTH] Login error:', error);
@@ -155,7 +155,7 @@ router.get('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
     }
 
     console.log('[AUTH] /me: Returning account data');
-    res.json({ user: account });
+    res.json({ account });
   } catch (error) {
     console.error('[AUTH] /me error:', error);
     res.status(500).json({ errors: [ERROR.serverError] });

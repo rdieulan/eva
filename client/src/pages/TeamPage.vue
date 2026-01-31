@@ -29,7 +29,7 @@ import TeamPermissionsModal from '@/components/team/TeamPermissionsModal.vue';
 import TeamInviteModal from '@/components/team/TeamInviteModal.vue';
 
 const router = useRouter();
-const { token, permissions, user } = useAuth();
+const { token, permissions, account } = useAuth();
 
 // State
 const team = ref<TeamWithMembers | null>(null);
@@ -53,7 +53,7 @@ const canManageTeam = computed(() => permissions.value.team.canManageTeam);
 const canManagePermissions = computed(() => permissions.value.team.canManagePermissions);
 const canRemoveMembers = computed(() => permissions.value.team.canRemoveMembers);
 const canInviteMembers = computed(() => permissions.value.team.canInviteMembers);
-const isLeader = computed(() => team.value?.leader.id === user.value?.id);
+const isLeader = computed(() => team.value?.leader.id === account.value?.id);
 
 // Delete/Leave team modals
 const showDeleteTeamModal = ref(false);
@@ -273,7 +273,7 @@ onMounted(loadData);
         <!-- Members section -->
         <TeamMembers
           :members="members"
-          :current-user-id="user?.id"
+          :current-user-id="account?.id"
           :can-manage-permissions="canManagePermissions"
           :can-remove-members="canRemoveMembers"
           :can-invite-members="canInviteMembers"

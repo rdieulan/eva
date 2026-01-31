@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@db/prisma';
 import type { JwtPayload } from '@middleware/auth.middleware';
-import type { AccountPermissions } from '@shared/types';
+import type { AccountPermissions, Account, AccountType } from '@shared/types';
 
 // Re-export validation functions from shared (single source of truth)
 export {
@@ -23,23 +23,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
 
-// ============================================
-// Account types and data returned to client
-// ============================================
-export type AccountType = 'player' | 'manager' | 'admin';
-
-export interface AuthAccountData {
-  id: string;
-  email: string;
-  name: string;
-  accountType: AccountType;
-  permissions: AccountPermissions;
-  // Player-specific data (null if not a player)
-  teamId: string | null;
-  isLeader: boolean;
-  // Manager-specific data (null if not a manager)
-  managedVenueIds: string[] | null;
-}
+// Re-export Account type for backward compatibility
+export type { Account, AccountType };
 
 /**
  * Generate a JWT token
@@ -126,7 +111,7 @@ export async function findAccountByEmail(email: string) {
 /**
  * Get account by ID and return formatted auth data
  */
-export async function getAccountById(userId: string): Promise<AuthAccountData | null> {
+export async function getAccountById(userId: string): Promise<Account | null> {
   const account = await prisma.user.findUnique({
     where: { id: userId },
     include: {
@@ -138,7 +123,7 @@ export async function getAccountById(userId: string): Promise<AuthAccountData | 
 
   if (!account) return null;
 
-  return buildAuthAccountData(account);
+  return buildAccountData(account);
 }
 
 /**
@@ -155,21 +140,28 @@ function getAccountType(account: {
 }
 
 /**
- * Build auth account data from account record
+ * Build account data from account record
  */
-export async function buildAuthAccountData(account: {
+export async function buildAccountData(account: {
   id: string;
   email: string;
   name: string;
+  playerId?: string | null;
+  managerId?: string | null;
+  adminId?: string | null;
   player?: {
+    id: string;
     teamId: string | null;
     ledTeam: { id: string } | null;
   } | null;
   manager?: {
+    id: string;
     managedVenues: { venueId: string }[];
   } | null;
-  admin?: object | null;
-}): Promise<AuthAccountData> {
+  admin?: {
+    id: string;
+  } | null;
+}): Promise<Account> {
   // Import dynamically to avoid circular dependency
   const { getAccountPermissions } = await import('@middleware/auth.middleware');
   const permissions = await getAccountPermissions(account.id);
@@ -178,6 +170,9 @@ export async function buildAuthAccountData(account: {
 
   return {
     id: account.id,
+    playerId: account.player?.id ?? account.playerId ?? null,
+    managerId: account.manager?.id ?? account.managerId ?? null,
+    adminId: account.admin?.id ?? account.adminId ?? null,
     email: account.email,
     name: account.name,
     accountType,

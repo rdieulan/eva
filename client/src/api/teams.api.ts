@@ -22,7 +22,7 @@ export interface TeamWithMembers extends Team {
 }
 
 /**
- * Get current user's team
+ * Get current player's team
  * Note: Uses raw authFetch due to special 404 handling
  */
 export async function fetchCurrentTeam(): Promise<TeamWithMembers | null> {
@@ -41,7 +41,7 @@ export async function fetchCurrentTeam(): Promise<TeamWithMembers | null> {
 }
 
 /**
- * Create a new team (current user becomes leader)
+ * Create a new team (current player becomes leader)
  */
 export async function createTeam(
   teamData: { name: string; logo?: string | null; location?: string | null }

@@ -10,7 +10,7 @@ import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import SvgIcon from '@/components/common/SvgIcon.vue';
 
 const router = useRouter();
-const { user, token, clearAuth } = useAuth();
+const { account, token, clearAuth } = useAuth();
 
 // Password change
 const currentPassword = ref('');
@@ -101,21 +101,21 @@ async function handleLogout() {
       <h1>Mon Profil</h1>
 
       <!-- Account information -->
-      <section class="profile-section" v-if="user">
+      <section class="profile-section" v-if="account">
         <h2>Informations</h2>
         <div class="info-grid">
           <div class="info-item">
             <label>Nom</label>
-            <span>{{ user.name }}</span>
+            <span>{{ account.name }}</span>
           </div>
           <div class="info-item">
             <label>Email</label>
-            <span>{{ user.email }}</span>
+            <span>{{ account.email }}</span>
           </div>
           <div class="info-item">
             <label>Statut</label>
-            <span class="role-badge" :class="user.isLeader ? 'leader' : 'player'">
-              {{ user.isLeader ? 'Leader' : 'Joueur' }}
+            <span class="role-badge" :class="account.isLeader ? 'leader' : 'player'">
+              {{ account.isLeader ? 'Leader' : 'Joueur' }}
             </span>
           </div>
         </div>

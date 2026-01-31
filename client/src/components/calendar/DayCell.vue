@@ -14,7 +14,7 @@ interface Props {
   isCurrentMonth: boolean;
   isToday: boolean;
   isPast: boolean;
-  currentUserStatus: AvailabilityStatus | null;
+  currentPlayerStatus: AvailabilityStatus | null;
   playerAvailabilities: PlayerAvailability[];
   events: CalendarEvent[];
   showDayNumber?: boolean;
@@ -50,9 +50,9 @@ const hasEvents = computed(() => props.events.length > 0);
 // Cell background class based on current user's availability
 const cellStatusClass = computed(() => {
   if (props.isPast) return 'status-past';
-  if (props.currentUserStatus === 'AVAILABLE') return 'status-available';
-  if (props.currentUserStatus === 'CONDITIONAL') return 'status-conditional';
-  if (props.currentUserStatus === 'UNAVAILABLE') return 'status-unavailable';
+  if (props.currentPlayerStatus === 'AVAILABLE') return 'status-available';
+  if (props.currentPlayerStatus === 'CONDITIONAL') return 'status-conditional';
+  if (props.currentPlayerStatus === 'UNAVAILABLE') return 'status-unavailable';
   return 'status-unknown';
 });
 
@@ -107,11 +107,11 @@ function cycleAvailability() {
   if (props.isPast) return;
 
   let newStatus: AvailabilityStatus | null;
-  if (props.currentUserStatus === null || props.currentUserStatus === undefined) {
+  if (props.currentPlayerStatus === null || props.currentPlayerStatus === undefined) {
     newStatus = 'AVAILABLE';
-  } else if (props.currentUserStatus === 'AVAILABLE') {
+  } else if (props.currentPlayerStatus === 'AVAILABLE') {
     newStatus = 'CONDITIONAL';
-  } else if (props.currentUserStatus === 'CONDITIONAL') {
+  } else if (props.currentPlayerStatus === 'CONDITIONAL') {
     newStatus = 'UNAVAILABLE';
   } else {
     // UNAVAILABLE -> back to null (grey)
@@ -162,19 +162,19 @@ function cycleAvailability() {
     <div class="players-summary">
       <div
         v-for="player in sortedPlayers"
-        :key="player.userId"
+        :key="player.playerId"
         class="player-avatar"
         :class="getPlayerStatusClass(player.status)"
       >
-        {{ getInitials(player.userName) }}
+        {{ getInitials(player.playerName) }}
       </div>
     </div>
 
     <!-- Background status icon (only in edit mode) -->
     <div v-if="!isPast && editMode" class="status-bg-icon">
-      <template v-if="currentUserStatus === 'AVAILABLE'">✓</template>
-      <template v-else-if="currentUserStatus === 'CONDITIONAL'">~</template>
-      <template v-else-if="currentUserStatus === 'UNAVAILABLE'">✗</template>
+      <template v-if="currentPlayerStatus === 'AVAILABLE'">✓</template>
+      <template v-else-if="currentPlayerStatus === 'CONDITIONAL'">~</template>
+      <template v-else-if="currentPlayerStatus === 'UNAVAILABLE'">✗</template>
       <template v-else>?</template>
     </div>
   </div>

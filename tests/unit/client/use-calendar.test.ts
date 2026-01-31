@@ -29,8 +29,8 @@ describe('useCalendar', () => {
 
   describe('Month Navigation', () => {
     it('should navigate to next month within same year', () => {
-      const userId = ref<string | undefined>('user-1');
-      const { currentMonth, currentYear, goToNextMonth } = useCalendar({ userId });
+      const playerId = ref<string | undefined>('player-1');
+      const { currentMonth, currentYear, goToNextMonth } = useCalendar({ playerId });
 
       currentMonth.value = 5;
       currentYear.value = 2026;
@@ -41,8 +41,8 @@ describe('useCalendar', () => {
     });
 
     it('should navigate to next year when going from December', () => {
-      const userId = ref<string | undefined>('user-1');
-      const { currentMonth, currentYear, goToNextMonth } = useCalendar({ userId });
+      const playerId = ref<string | undefined>('player-1');
+      const { currentMonth, currentYear, goToNextMonth } = useCalendar({ playerId });
 
       currentMonth.value = 12;
       currentYear.value = 2026;
@@ -53,8 +53,8 @@ describe('useCalendar', () => {
     });
 
     it('should navigate to previous month within same year', () => {
-      const userId = ref<string | undefined>('user-1');
-      const { currentMonth, currentYear, goToPrevMonth } = useCalendar({ userId });
+      const playerId = ref<string | undefined>('player-1');
+      const { currentMonth, currentYear, goToPrevMonth } = useCalendar({ playerId });
 
       currentMonth.value = 5;
       currentYear.value = 2026;
@@ -65,8 +65,8 @@ describe('useCalendar', () => {
     });
 
     it('should navigate to previous year when going from January', () => {
-      const userId = ref<string | undefined>('user-1');
-      const { currentMonth, currentYear, goToPrevMonth } = useCalendar({ userId });
+      const playerId = ref<string | undefined>('player-1');
+      const { currentMonth, currentYear, goToPrevMonth } = useCalendar({ playerId });
 
       currentMonth.value = 1;
       currentYear.value = 2026;
@@ -79,8 +79,8 @@ describe('useCalendar', () => {
 
   describe('Computed Properties', () => {
     it('should format monthString correctly', () => {
-      const userId = ref<string | undefined>('user-1');
-      const { currentMonth, currentYear, monthString } = useCalendar({ userId });
+      const playerId = ref<string | undefined>('player-1');
+      const { currentMonth, currentYear, monthString } = useCalendar({ playerId });
 
       currentMonth.value = 1;
       currentYear.value = 2026;
@@ -91,8 +91,8 @@ describe('useCalendar', () => {
     });
 
     it('should format monthDisplay in French', () => {
-      const userId = ref<string | undefined>('user-1');
-      const { currentMonth, currentYear, monthDisplay } = useCalendar({ userId });
+      const playerId = ref<string | undefined>('player-1');
+      const { currentMonth, currentYear, monthDisplay } = useCalendar({ playerId });
 
       currentMonth.value = 1;
       currentYear.value = 2026;
@@ -103,8 +103,8 @@ describe('useCalendar', () => {
     });
 
     it('should return navigationTitle based on viewMode', () => {
-      const userId = ref<string | undefined>('user-1');
-      const { viewMode, currentMonth, currentYear, navigationTitle, monthDisplay } = useCalendar({ userId });
+      const playerId = ref<string | undefined>('player-1');
+      const { viewMode, currentMonth, currentYear, navigationTitle, monthDisplay } = useCalendar({ playerId });
 
       currentMonth.value = 3;
       currentYear.value = 2026;
@@ -116,8 +116,8 @@ describe('useCalendar', () => {
 
   describe('Edit Mode', () => {
     it('should toggle edit mode', async () => {
-      const userId = ref<string | undefined>('user-1');
-      const { editMode, toggleEditMode } = useCalendar({ userId });
+      const playerId = ref<string | undefined>('player-1');
+      const { editMode, toggleEditMode } = useCalendar({ playerId });
 
       expect(editMode.value).toBe(false);
       toggleEditMode();
@@ -131,8 +131,8 @@ describe('useCalendar', () => {
     });
 
     it('should debounce rapid toggles', () => {
-      const userId = ref<string | undefined>('user-1');
-      const { editMode, toggleEditMode } = useCalendar({ userId });
+      const playerId = ref<string | undefined>('player-1');
+      const { editMode, toggleEditMode } = useCalendar({ playerId });
 
       expect(editMode.value).toBe(false);
       toggleEditMode();
@@ -146,15 +146,15 @@ describe('useCalendar', () => {
 
   describe('View Mode', () => {
     it('should start in month view', () => {
-      const userId = ref<string | undefined>('user-1');
-      const { viewMode } = useCalendar({ userId });
+      const playerId = ref<string | undefined>('player-1');
+      const { viewMode } = useCalendar({ playerId });
 
       expect(viewMode.value).toBe('month');
     });
 
     it('should switch between month and week views', () => {
-      const userId = ref<string | undefined>('user-1');
-      const { viewMode } = useCalendar({ userId });
+      const playerId = ref<string | undefined>('player-1');
+      const { viewMode } = useCalendar({ playerId });
 
       viewMode.value = 'week';
       expect(viewMode.value).toBe('week');
@@ -166,8 +166,8 @@ describe('useCalendar', () => {
 
   describe('goToPrev and goToNext', () => {
     it('should call goToPrevMonth when in month view', () => {
-      const userId = ref<string | undefined>('user-1');
-      const { viewMode, currentMonth, currentYear, goToPrev } = useCalendar({ userId });
+      const playerId = ref<string | undefined>('player-1');
+      const { viewMode, currentMonth, currentYear, goToPrev } = useCalendar({ playerId });
 
       viewMode.value = 'month';
       currentMonth.value = 5;
@@ -178,8 +178,8 @@ describe('useCalendar', () => {
     });
 
     it('should call goToNextMonth when in month view', () => {
-      const userId = ref<string | undefined>('user-1');
-      const { viewMode, currentMonth, currentYear, goToNext } = useCalendar({ userId });
+      const playerId = ref<string | undefined>('player-1');
+      const { viewMode, currentMonth, currentYear, goToNext } = useCalendar({ playerId });
 
       viewMode.value = 'month';
       currentMonth.value = 5;
@@ -192,8 +192,8 @@ describe('useCalendar', () => {
 
   describe('Week Navigation', () => {
     it('should navigate to previous week', () => {
-      const userId = ref<string | undefined>('user-1');
-      const { currentWeekStart, goToPrevWeek } = useCalendar({ userId });
+      const playerId = ref<string | undefined>('player-1');
+      const { currentWeekStart, goToPrevWeek } = useCalendar({ playerId });
 
       // Set to a known date (Monday, January 20, 2026)
       currentWeekStart.value = new Date(2026, 0, 20);
@@ -204,8 +204,8 @@ describe('useCalendar', () => {
     });
 
     it('should navigate to next week', () => {
-      const userId = ref<string | undefined>('user-1');
-      const { currentWeekStart, goToNextWeek } = useCalendar({ userId });
+      const playerId = ref<string | undefined>('player-1');
+      const { currentWeekStart, goToNextWeek } = useCalendar({ playerId });
 
       // Set to a known date (Monday, January 20, 2026)
       currentWeekStart.value = new Date(2026, 0, 20);
@@ -216,8 +216,8 @@ describe('useCalendar', () => {
     });
 
     it('should update month when week crosses month boundary', () => {
-      const userId = ref<string | undefined>('user-1');
-      const { currentWeekStart, currentMonth, goToNextWeek } = useCalendar({ userId });
+      const playerId = ref<string | undefined>('player-1');
+      const { currentWeekStart, currentMonth, goToNextWeek } = useCalendar({ playerId });
 
       // Set to last week of January 2026 (Monday, January 26)
       currentWeekStart.value = new Date(2026, 0, 26);
@@ -229,8 +229,8 @@ describe('useCalendar', () => {
     });
 
     it('should call goToPrevWeek when in week view', () => {
-      const userId = ref<string | undefined>('user-1');
-      const { viewMode, currentWeekStart, goToPrev } = useCalendar({ userId });
+      const playerId = ref<string | undefined>('player-1');
+      const { viewMode, currentWeekStart, goToPrev } = useCalendar({ playerId });
 
       viewMode.value = 'week';
       currentWeekStart.value = new Date(2026, 0, 20);
@@ -240,8 +240,8 @@ describe('useCalendar', () => {
     });
 
     it('should call goToNextWeek when in week view', () => {
-      const userId = ref<string | undefined>('user-1');
-      const { viewMode, currentWeekStart, goToNext } = useCalendar({ userId });
+      const playerId = ref<string | undefined>('player-1');
+      const { viewMode, currentWeekStart, goToNext } = useCalendar({ playerId });
 
       viewMode.value = 'week';
       currentWeekStart.value = new Date(2026, 0, 20);
@@ -253,15 +253,15 @@ describe('useCalendar', () => {
 
   describe('setAvailability', () => {
     it('should perform optimistic update', async () => {
-      const userId = ref<string | undefined>('user-1');
-      const { days, setAvailability } = useCalendar({ userId });
+      const playerId = ref<string | undefined>('player-1');
+      const { days, setAvailability } = useCalendar({ playerId });
 
       // Setup initial data
       days.value = {
         '2026-01-20': {
           date: '2026-01-20',
-          currentUserStatus: null,
-          playerAvailabilities: [{ userId: 'user-1', userName: 'Test', status: null }],
+          currentPlayerStatus: null,
+          playerAvailabilities: [{ playerId: 'player-1', playerName: 'Test', status: null }],
           events: [],
         },
       };
@@ -270,14 +270,14 @@ describe('useCalendar', () => {
       const promise = setAvailability('2026-01-20', 'AVAILABLE');
 
       // Should be updated immediately (optimistic)
-      expect(days.value['2026-01-20'].currentUserStatus).toBe('AVAILABLE');
+      expect(days.value['2026-01-20'].currentPlayerStatus).toBe('AVAILABLE');
 
       await promise;
     });
 
     it('should revert on API error', async () => {
-      const userId = ref<string | undefined>('user-1');
-      const { days, setAvailability } = useCalendar({ userId });
+      const playerId = ref<string | undefined>('player-1');
+      const { days, setAvailability } = useCalendar({ playerId });
 
       // Mock API to reject
       const { setAvailability: setAvailabilityApi } = await import('@/api/calendar.api');
@@ -287,8 +287,8 @@ describe('useCalendar', () => {
       days.value = {
         '2026-01-20': {
           date: '2026-01-20',
-          currentUserStatus: 'AVAILABLE',
-          playerAvailabilities: [{ userId: 'user-1', userName: 'Test', status: 'AVAILABLE' }],
+          currentPlayerStatus: 'AVAILABLE',
+          playerAvailabilities: [{ playerId: 'player-1', playerName: 'Test', status: 'AVAILABLE' }],
           events: [],
         },
       };
@@ -296,20 +296,20 @@ describe('useCalendar', () => {
       await setAvailability('2026-01-20', 'UNAVAILABLE');
 
       // Should be reverted to original status
-      expect(days.value['2026-01-20'].currentUserStatus).toBe('AVAILABLE');
+      expect(days.value['2026-01-20'].currentPlayerStatus).toBe('AVAILABLE');
     });
 
     it('should update playerAvailabilities for current user', async () => {
-      const userId = ref<string | undefined>('user-1');
-      const { days, setAvailability } = useCalendar({ userId });
+      const playerId = ref<string | undefined>('player-1');
+      const { days, setAvailability } = useCalendar({ playerId });
 
       days.value = {
         '2026-01-20': {
           date: '2026-01-20',
-          currentUserStatus: null,
+          currentPlayerStatus: null,
           playerAvailabilities: [
-            { userId: 'user-1', userName: 'Test', status: null },
-            { userId: 'user-2', userName: 'Other', status: 'AVAILABLE' },
+            { playerId: 'player-1', playerName: 'Test', status: null },
+            { playerId: 'player-2', playerName: 'Other', status: 'AVAILABLE' },
           ],
           events: [],
         },
@@ -318,12 +318,12 @@ describe('useCalendar', () => {
       await setAvailability('2026-01-20', 'UNAVAILABLE');
 
       // Current user's status should be updated
-      const user1Avail = days.value['2026-01-20'].playerAvailabilities.find(p => p.userId === 'user-1');
-      expect(user1Avail?.status).toBe('UNAVAILABLE');
+      const player1Avail = days.value['2026-01-20'].playerAvailabilities.find(p => p.playerId === 'player-1');
+      expect(player1Avail?.status).toBe('UNAVAILABLE');
 
       // Other user's status should remain unchanged
-      const user2Avail = days.value['2026-01-20'].playerAvailabilities.find(p => p.userId === 'user-2');
-      expect(user2Avail?.status).toBe('AVAILABLE');
+      const player2Avail = days.value['2026-01-20'].playerAvailabilities.find(p => p.playerId === 'player-2');
+      expect(player2Avail?.status).toBe('AVAILABLE');
     });
   });
 });

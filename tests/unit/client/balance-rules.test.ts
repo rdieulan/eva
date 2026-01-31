@@ -38,10 +38,10 @@ describe('Balance Rules System', () => {
       { id: 4, name: 'Right', x: 75, y: 75 },
     ],
     players: [
-      { userId: 'player-1', assignmentIds: [1, 2] },
-      { userId: 'player-2', assignmentIds: [2, 3] },
-      { userId: 'player-3', assignmentIds: [3, 4] },
-      { userId: 'player-4', assignmentIds: [1, 4] },
+      { playerId: 'player-1', assignmentIds: [1, 2] },
+      { playerId: 'player-2', assignmentIds: [2, 3] },
+      { playerId: 'player-3', assignmentIds: [3, 4] },
+      { playerId: 'player-4', assignmentIds: [1, 4] },
     ],
     ...overrides,
   });
@@ -105,8 +105,8 @@ describe('Balance Rules System', () => {
     it('should return errors when a role has no players', () => {
       const map = createMockMap({
         players: [
-          { userId: 'player-1', assignmentIds: [1, 2] },
-          { userId: 'player-2', assignmentIds: [2, 3] },
+          { playerId: 'player-1', assignmentIds: [1, 2] },
+          { playerId: 'player-2', assignmentIds: [2, 3] },
           // No one assigned to role 4
         ],
       });
@@ -121,10 +121,10 @@ describe('Balance Rules System', () => {
     it('should return errors when a player has too few roles', () => {
       const map = createMockMap({
         players: [
-          { userId: 'player-1', assignmentIds: [1] }, // Only 1 role
-          { userId: 'player-2', assignmentIds: [2, 3] },
-          { userId: 'player-3', assignmentIds: [3, 4] },
-          { userId: 'player-4', assignmentIds: [1, 4] },
+          { playerId: 'player-1', assignmentIds: [1] }, // Only 1 role
+          { playerId: 'player-2', assignmentIds: [2, 3] },
+          { playerId: 'player-3', assignmentIds: [3, 4] },
+          { playerId: 'player-4', assignmentIds: [1, 4] },
         ],
       });
 
@@ -139,10 +139,10 @@ describe('Balance Rules System', () => {
     it('should categorize ERROR rules as errors', () => {
       const map = createMockMap({
         players: [
-          { userId: 'player-1', assignmentIds: [1] }, // Too few roles = ERROR
-          { userId: 'player-2', assignmentIds: [2, 3] },
-          { userId: 'player-3', assignmentIds: [3, 4] },
-          { userId: 'player-4', assignmentIds: [1, 4] },
+          { playerId: 'player-1', assignmentIds: [1] }, // Too few roles = ERROR
+          { playerId: 'player-2', assignmentIds: [2, 3] },
+          { playerId: 'player-3', assignmentIds: [3, 4] },
+          { playerId: 'player-4', assignmentIds: [1, 4] },
         ],
       });
 
@@ -162,10 +162,10 @@ describe('Balance Rules System', () => {
 
       const map = createMockMap({
         players: [
-          { userId: 'player-1', assignmentIds: [1, 2, 3] }, // 3 roles = warning
-          { userId: 'player-2', assignmentIds: [2, 3] },
-          { userId: 'player-3', assignmentIds: [3, 4] },
-          { userId: 'player-4', assignmentIds: [1, 4] },
+          { playerId: 'player-1', assignmentIds: [1, 2, 3] }, // 3 roles = warning
+          { playerId: 'player-2', assignmentIds: [2, 3] },
+          { playerId: 'player-3', assignmentIds: [3, 4] },
+          { playerId: 'player-4', assignmentIds: [1, 4] },
         ],
       });
 
@@ -202,10 +202,10 @@ describe('Balance Rules System', () => {
 
       const map = createMockMap({
         players: [
-          { userId: 'player-1', assignmentIds: [1] }, // Only 1 role, but rule disabled
-          { userId: 'player-2', assignmentIds: [2, 3] },
-          { userId: 'player-3', assignmentIds: [3, 4] },
-          { userId: 'player-4', assignmentIds: [1, 4] },
+          { playerId: 'player-1', assignmentIds: [1] }, // Only 1 role, but rule disabled
+          { playerId: 'player-2', assignmentIds: [2, 3] },
+          { playerId: 'player-3', assignmentIds: [3, 4] },
+          { playerId: 'player-4', assignmentIds: [1, 4] },
         ],
       });
 
@@ -265,10 +265,10 @@ describe('Balance Rules System', () => {
     it('should detect duplicate pairs', () => {
       const map = createMockMap({
         players: [
-          { userId: 'player-1', assignmentIds: [1, 2] }, // Covers Front and Back
-          { userId: 'player-2', assignmentIds: [1, 2] }, // Same pair for Front and Back
-          { userId: 'player-3', assignmentIds: [3, 4] },
-          { userId: 'player-4', assignmentIds: [3, 4] },
+          { playerId: 'player-1', assignmentIds: [1, 2] }, // Covers Front and Back
+          { playerId: 'player-2', assignmentIds: [1, 2] }, // Same pair for Front and Back
+          { playerId: 'player-3', assignmentIds: [3, 4] },
+          { playerId: 'player-4', assignmentIds: [3, 4] },
         ],
       });
 
@@ -298,7 +298,7 @@ describe('Balance Rules System', () => {
       it('should return main assignment when defined', () => {
         const mapWithMain = createMockMap({
           players: [
-            { userId: 'player-1', assignmentIds: [1, 2], mainAssignmentId: 1 },
+            { playerId: 'player-1', assignmentIds: [1, 2], mainAssignmentId: 1 },
           ],
         });
         const result = getPlayerMainAssignment(mapWithMain, 'player-1');

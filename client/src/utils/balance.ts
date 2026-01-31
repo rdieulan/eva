@@ -45,28 +45,28 @@ function getRuleParam(ruleKey: RuleKey, paramKey: string, defaultValue: number):
 }
 
 /**
- * Get assignment IDs for a specific user on a map
+ * Get assignment IDs for a specific player on a map
  */
-export function getPlayerAssignments(map: MapConfig, userId: string): number[] {
-  const playerAssignment = map.players.find(p => p.userId === userId);
+export function getPlayerAssignments(map: MapConfig, playerId: string): number[] {
+  const playerAssignment = map.players.find(p => p.playerId === playerId);
   return playerAssignment?.assignmentIds || [];
 }
 
 /**
- * Get main assignment ID for a specific user on a map
+ * Get main assignment ID for a specific player on a map
  */
-export function getPlayerMainAssignment(map: MapConfig, userId: string): number | null {
-  const playerAssignment = map.players.find(p => p.userId === userId);
+export function getPlayerMainAssignment(map: MapConfig, playerId: string): number | null {
+  const playerAssignment = map.players.find(p => p.playerId === playerId);
   return playerAssignment?.mainAssignmentId ?? null;
 }
 
 /**
- * Get user IDs assigned to a specific assignment on a map
+ * Get player IDs assigned to a specific assignment on a map
  */
 export function getAssignmentPlayers(map: MapConfig, assignmentId: number): string[] {
   return map.players
     .filter(p => p.assignmentIds.includes(assignmentId))
-    .map(p => p.userId);
+    .map(p => p.playerId);
 }
 
 /**
@@ -101,15 +101,15 @@ export function checkMapBalance(map: MapConfig): BalanceCheckResult {
   const minPlayersRule = getRule('MIN_PLAYERS_PER_ROLE');
   if (minPlayersRule) {
     const minPlayers = getRuleParam('MIN_PLAYERS_PER_ROLE', 'minPlayers', 2);
-    for (const [assignmentIdStr, userIds] of Object.entries(assignmentToPlayers)) {
+    for (const [assignmentIdStr, playerIds] of Object.entries(assignmentToPlayers)) {
       const assignmentId = Number(assignmentIdStr);
-      if (userIds.length < minPlayers) {
+      if (playerIds.length < minPlayers) {
         const assignment = map.assignments.find(a => a.id === assignmentId);
         const assignmentName = assignment?.name || String(assignmentId);
-        if (userIds.length === 0) {
+        if (playerIds.length === 0) {
           addResult('MIN_PLAYERS_PER_ROLE', minPlayersRule.name, `${assignmentName} n'a aucun joueur`);
         } else {
-          const playerNames = userIds.map(uid => playerList.find(p => p.id === uid)?.name || uid);
+          const playerNames = playerIds.map(pid => playerList.find(p => p.id === pid)?.name || pid);
           addResult('MIN_PLAYERS_PER_ROLE', minPlayersRule.name, `${assignmentName} n'a que ${playerNames.join(', ')} (min: ${minPlayers})`);
         }
       }
@@ -122,7 +122,7 @@ export function checkMapBalance(map: MapConfig): BalanceCheckResult {
     const minRoles = getRuleParam('MIN_ROLES_PER_PLAYER', 'minRoles', 2);
     for (const playerAssignment of map.players) {
       if (playerAssignment.assignmentIds.length < minRoles) {
-        const playerName = playerList.find(p => p.id === playerAssignment.userId)?.name || playerAssignment.userId;
+        const playerName = playerList.find(p => p.id === playerAssignment.playerId)?.name || playerAssignment.playerId;
         if (playerAssignment.assignmentIds.length === 0) {
           addResult('MIN_ROLES_PER_PLAYER', minRolesRule.name, `${playerName} n'a aucun poste`);
         } else {
@@ -142,7 +142,7 @@ export function checkMapBalance(map: MapConfig): BalanceCheckResult {
     const maxRoles = getRuleParam('MAX_ROLES_PER_PLAYER', 'maxRoles', 2);
     for (const playerAssignment of map.players) {
       if (playerAssignment.assignmentIds.length > maxRoles) {
-        const playerName = playerList.find(p => p.id === playerAssignment.userId)?.name || playerAssignment.userId;
+        const playerName = playerList.find(p => p.id === playerAssignment.playerId)?.name || playerAssignment.playerId;
         addResult('MAX_ROLES_PER_PLAYER', maxRolesRule.name, `${playerName} a ${playerAssignment.assignmentIds.length} postes (max: ${maxRoles})`);
       }
     }
@@ -152,19 +152,19 @@ export function checkMapBalance(map: MapConfig): BalanceCheckResult {
   const duplicatePairsRule = getRule('NO_DUPLICATE_PAIRS');
   if (duplicatePairsRule) {
     const minPlayers = getRuleParam('MIN_PLAYERS_PER_ROLE', 'minPlayers', 2);
-    const assignmentsWithMinPlayers: { assignmentId: number; userIds: string[] }[] = [];
-    for (const [assignmentIdStr, userIds] of Object.entries(assignmentToPlayers)) {
-      if (userIds.length === minPlayers) {
+    const assignmentsWithMinPlayers: { assignmentId: number; playerIds: string[] }[] = [];
+    for (const [assignmentIdStr, playerIds] of Object.entries(assignmentToPlayers)) {
+      if (playerIds.length === minPlayers) {
         assignmentsWithMinPlayers.push({
           assignmentId: Number(assignmentIdStr),
-          userIds: userIds.sort()
+          playerIds: playerIds.sort()
         });
       }
     }
 
     const pairToAssignments: Record<string, number[]> = {};
-    for (const { assignmentId, userIds } of assignmentsWithMinPlayers) {
-      const pairKey = userIds.join('-');
+    for (const { assignmentId, playerIds } of assignmentsWithMinPlayers) {
+      const pairKey = playerIds.join('-');
       if (!pairToAssignments[pairKey]) {
         pairToAssignments[pairKey] = [];
       }

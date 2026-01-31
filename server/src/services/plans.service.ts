@@ -1,9 +1,10 @@
 // Game plans service - business logic
 
 import { prisma } from '@db/prisma';
-import { DEFAULT_GAME_PLAN_NOTES } from '@shared/constants';
+import { DEFAULT_GAME_PLAN_NOTES, ERROR } from '@shared/constants';
 import { mapPlayersForFrontend } from './helpers/player.helper';
 import { migrateAssignmentsToPhases, type Assignment } from './helpers/migration.helper';
+import type { PlayerAssignment } from '@shared/types';
 
 // ============================================
 // Types
@@ -13,14 +14,14 @@ export interface PlanForFrontend {
   name: string;
   images: unknown;
   assignments: unknown;
-  players: { userId: string; assignmentIds: number[]; mainAssignmentId: number | null }[];
+  players: PlayerAssignment[];
   planId: string;
   planName: string;
   notes: unknown;
 }
 
 export interface PlayerAssignmentInput {
-  userId: string;
+  playerId: string;
   assignmentIds: number[];
   mainAssignmentId?: number;
 }
@@ -82,10 +83,10 @@ export async function updatePlan(
   // Verify plan exists and belongs to user's team
   const existingPlan = await prisma.gamePlan.findUnique({ where: { id: planId } });
   if (!existingPlan) {
-    return { success: false, error: 'Plan not found' };
+    return { success: false, error: ERROR.planNotFound };
   }
   if (teamId && existingPlan.teamId && existingPlan.teamId !== teamId) {
-    return { success: false, error: 'Access denied' };
+    return { success: false, error: ERROR.accessDenied };
   }
 
   const updateData: Record<string, unknown> = {};
@@ -113,23 +114,15 @@ export async function updatePlan(
     });
 
     for (const playerAssignment of data.players) {
-      if (playerAssignment.userId && playerAssignment.assignmentIds?.length > 0) {
-        // Get playerId from userId
-        const user = await prisma.user.findUnique({
-          where: { id: playerAssignment.userId },
-          include: { player: true },
+      if (playerAssignment.playerId && playerAssignment.assignmentIds?.length > 0) {
+        await prisma.gamePlanPlayer.create({
+          data: {
+            gamePlanId: planId,
+            playerId: playerAssignment.playerId,
+            assignmentIds: playerAssignment.assignmentIds,
+            mainAssignmentId: playerAssignment.mainAssignmentId ?? null,
+          },
         });
-
-        if (user?.player) {
-          await prisma.gamePlanPlayer.create({
-            data: {
-              gamePlanId: planId,
-              playerId: user.player.id,
-              assignmentIds: playerAssignment.assignmentIds,
-              mainAssignmentId: playerAssignment.mainAssignmentId ?? null,
-            },
-          });
-        }
       }
     }
   }
@@ -146,12 +139,12 @@ export async function deletePlan(
 ): Promise<{ success: boolean; error?: string }> {
   const plan = await prisma.gamePlan.findUnique({ where: { id: planId } });
   if (!plan) {
-    return { success: false, error: 'Plan not found' };
+    return { success: false, error: ERROR.planNotFound };
   }
 
   // Verify plan belongs to user's team
   if (teamId && plan.teamId && plan.teamId !== teamId) {
-    return { success: false, error: 'Access denied' };
+    return { success: false, error: ERROR.accessDenied };
   }
 
   await prisma.gamePlan.delete({ where: { id: planId } });

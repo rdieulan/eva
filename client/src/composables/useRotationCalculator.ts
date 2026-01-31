@@ -500,7 +500,7 @@ export function useRotationCalculator(
                 const assignment = effectiveMap?.assignments.find(a => a.id === assignmentId);
                 const assignmentName = assignment?.name || `Assignment #${assignmentId}`;
                 // Get main role directly from effectiveMap to avoid extra function call
-                const playerAssignment = effectiveMap?.players.find(p => p.userId === playerId);
+                const playerAssignment = effectiveMap?.players.find(p => p.playerId === playerId);
                 const isMainRole = playerAssignment?.mainAssignmentId === assignmentId;
                 return {
                   assignmentId,

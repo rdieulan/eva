@@ -10,7 +10,7 @@ import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 
 const route = useRoute();
 const router = useRouter();
-const { user, token, refreshUser } = useAuth();
+const { account, token, refreshAccount } = useAuth();
 
 // State
 const isLoading = ref(true);
@@ -52,7 +52,7 @@ async function handleJoin() {
     await joinTeamWithCode(inviteCode.value);
 
     // Refresh user data to update teamId
-    await refreshUser();
+    await refreshAccount();
 
     success.value = true;
 
@@ -122,7 +122,7 @@ function goToLogin() {
 
         <!-- Logged in -->
         <div v-else class="join-section">
-          <p>Vous êtes connecté en tant que <strong>{{ user?.name }}</strong></p>
+          <p>Vous êtes connecté en tant que <strong>{{ account?.name }}</strong></p>
 
           <ErrorDisplay :errors="errors" />
 

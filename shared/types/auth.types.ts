@@ -7,7 +7,7 @@ import type { Account } from './account.types';
  */
 export interface LoginResponse {
   token: string;
-  user: Account;
+  account: Account;
 }
 
 /**

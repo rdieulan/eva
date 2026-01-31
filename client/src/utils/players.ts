@@ -27,7 +27,7 @@ export function sortPlayersByAvailability(players: PlayerAvailability[]): Player
       return priorityA - priorityB;
     }
 
-    return a.userName.localeCompare(b.userName);
+    return a.playerName.localeCompare(b.playerName);
   });
 }
 

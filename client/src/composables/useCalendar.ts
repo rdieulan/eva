@@ -15,7 +15,7 @@ import type { DayData, AvailabilityStatus } from '@shared/types';
 export type ViewMode = 'month' | 'week';
 
 export interface UseCalendarOptions {
-  userId: Ref<string | undefined>;
+  playerId: Ref<string | undefined>;
   onError?: (errors: string[]) => void;
 }
 
@@ -60,7 +60,7 @@ export interface UseCalendarReturn {
 }
 
 export function useCalendar(options: UseCalendarOptions): UseCalendarReturn {
-  const { userId, onError } = options;
+  const { playerId, onError } = options;
 
   // View mode state
   const viewMode = ref<ViewMode>('month');
@@ -229,17 +229,17 @@ export function useCalendar(options: UseCalendarOptions): UseCalendarReturn {
   // Set availability with optimistic update
   async function setAvailability(date: string, newStatus: AvailabilityStatus | null) {
     // Store previous status for rollback
-    const previousStatus = days.value[date]?.currentUserStatus ?? null;
+    const previousStatus = days.value[date]?.currentPlayerStatus ?? null;
 
     // Optimistic update
     if (days.value[date]) {
-      days.value[date].currentUserStatus = newStatus;
+      days.value[date].currentPlayerStatus = newStatus;
 
       // Also update in playerAvailabilities
-      const currentUserId = userId.value;
-      if (currentUserId) {
+      const currentPlayerId = playerId.value;
+      if (currentPlayerId) {
         const playerAvail = days.value[date].playerAvailabilities.find(
-          p => p.userId === currentUserId
+          p => p.playerId === currentPlayerId
         );
         if (playerAvail) {
           playerAvail.status = newStatus;
@@ -253,11 +253,11 @@ export function useCalendar(options: UseCalendarOptions): UseCalendarReturn {
       console.error('Error setting availability:', err);
       // Revert on error
       if (days.value[date]) {
-        days.value[date].currentUserStatus = previousStatus;
-        const currentUserId = userId.value;
-        if (currentUserId) {
+        days.value[date].currentPlayerStatus = previousStatus;
+        const currentPlayerId = playerId.value;
+        if (currentPlayerId) {
           const playerAvail = days.value[date].playerAvailabilities.find(
-            p => p.userId === currentUserId
+            p => p.playerId === currentPlayerId
           );
           if (playerAvail) {
             playerAvail.status = previousStatus;

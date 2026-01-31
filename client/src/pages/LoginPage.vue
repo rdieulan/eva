@@ -42,12 +42,12 @@ async function handleLogin() {
       return;
     }
 
-    // Clear cached data from previous user session
+    // Clear cached data from previous account session
     clearPlayersCache();
     clearBalanceRulesCache();
 
     // Set auth using composable
-    setAuth(data.token, data.user);
+    setAuth(data.token, data.account);
 
     // Redirect to original page or homepage
     const redirectPath = route.query.redirect as string || '/';

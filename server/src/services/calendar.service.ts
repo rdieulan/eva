@@ -71,14 +71,14 @@ export async function getMonthAvailability(
     const dateStr = formatDateStr(date);
 
     const playerAvailabilities: PlayerAvailability[] = players.map(player => ({
-      userId: player.user!.id,
-      userName: player.user!.name,
+      playerId: player.id,
+      playerName: player.user!.name,
       status: null,
     }));
 
     days[dateStr] = {
       date: dateStr,
-      currentUserStatus: null,
+      currentPlayerStatus: null,
       playerAvailabilities,
       events: [],
     };
@@ -88,18 +88,17 @@ export async function getMonthAvailability(
   for (const availability of availabilities) {
     const dateStr = formatDateStr(availability.date);
     const dayData = days[dateStr];
-    const odataPlayerId = availability.playerId;
-    const odataUserId = availability.player.user!.id;
+    const availabilityPlayerId = availability.playerId;
 
     if (dayData) {
       const playerAvailability = dayData.playerAvailabilities.find(
-        p => p.userId === odataUserId
+        p => p.playerId === availabilityPlayerId
       );
       if (playerAvailability) {
         playerAvailability.status = availability.status;
       }
-      if (odataPlayerId === currentPlayerId) {
-        dayData.currentUserStatus = availability.status;
+      if (availabilityPlayerId === currentPlayerId) {
+        dayData.currentPlayerStatus = availability.status;
       }
     }
   }
@@ -129,7 +128,7 @@ export function buildEmptyCalendar(month: string): { month: string; days: Record
     const dateStr = formatDateStr(date);
     days[dateStr] = {
       date: dateStr,
-      currentUserStatus: null,
+      currentPlayerStatus: null,
       playerAvailabilities: [],
       events: [],
     };

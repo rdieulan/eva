@@ -38,10 +38,13 @@ export type {
   MonthData,
   SetAvailabilityRequest,
   CreateEventRequest,
+} from './calendar.types';
+
+export type {
   MapAssignment,
   MapGamePlan,
   MatchGamePlan,
-} from './calendar.types';
+} from './map.types';
 
 export type {
   PlannerPermissions,

@@ -564,9 +564,9 @@ function togglePlayerAssignmentAssociation(playerId: string, assignmentId: numbe
   const updatedMap = JSON.parse(JSON.stringify(props.map)) as MapConfig;
 
   // Find or create player assignment entry
-  let playerAssignment = updatedMap.players.find(p => p.userId === playerId);
+  let playerAssignment = updatedMap.players.find(p => p.playerId === playerId);
   if (!playerAssignment) {
-    playerAssignment = { userId: playerId, assignmentIds: [] };
+    playerAssignment = { playerId: playerId, assignmentIds: [] };
     updatedMap.players.push(playerAssignment);
   }
 

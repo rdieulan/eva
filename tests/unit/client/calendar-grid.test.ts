@@ -11,18 +11,18 @@ describe('CalendarGrid Component', () => {
     mockDays = {
       '2026-01-01': {
         date: '2026-01-01',
-        currentUserStatus: 'AVAILABLE',
+        currentPlayerStatus: 'AVAILABLE',
         playerAvailabilities: [
-          { userId: 'user-1', userName: 'Alice', status: 'AVAILABLE' },
-          { userId: 'user-2', userName: 'Bob', status: 'UNAVAILABLE' },
+          { playerId: 'player-1', playerName: 'Alice', status: 'AVAILABLE' },
+          { playerId: 'player-2', playerName: 'Bob', status: 'UNAVAILABLE' },
         ],
         events: [],
       },
       '2026-01-15': {
         date: '2026-01-15',
-        currentUserStatus: 'UNAVAILABLE',
+        currentPlayerStatus: 'UNAVAILABLE',
         playerAvailabilities: [
-          { userId: 'user-1', userName: 'Alice', status: 'UNAVAILABLE' },
+          { playerId: 'player-1', playerName: 'Alice', status: 'UNAVAILABLE' },
         ],
         events: [
           {
@@ -39,7 +39,7 @@ describe('CalendarGrid Component', () => {
       },
       '2026-01-20': {
         date: '2026-01-20',
-        currentUserStatus: null,
+        currentPlayerStatus: null,
         playerAvailabilities: [],
         events: [],
       },
@@ -155,7 +155,7 @@ describe('CalendarGrid Component', () => {
     const pastDays: Record<string, DayData> = {
       '2025-12-01': {
         date: '2025-12-01',
-        currentUserStatus: null,
+        currentPlayerStatus: null,
         playerAvailabilities: [],
         events: [],
       },

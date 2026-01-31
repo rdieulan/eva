@@ -51,7 +51,7 @@ router.put('/:planId', authMiddleware, requirePermission('planner', 'canEdit'), 
     );
 
     if (!result.success) {
-      const status = result.error === 'Access denied' ? 403 : 404;
+      const status = result.error === ERROR.accessDenied ? 403 : 404;
       res.status(status).json({ errors: [result.error] });
       return;
     }
@@ -73,7 +73,7 @@ router.delete('/:planId', authMiddleware, requirePermission('planner', 'canDelet
     const result = await plansService.deletePlan(planId, teamId || undefined);
 
     if (!result.success) {
-      const status = result.error === 'Access denied' ? 403 : 404;
+      const status = result.error === ERROR.accessDenied ? 403 : 404;
       res.status(status).json({ errors: [result.error] });
       return;
     }

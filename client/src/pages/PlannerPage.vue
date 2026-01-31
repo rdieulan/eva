@@ -20,9 +20,9 @@ import { useErrors } from '@/composables/useErrors';
 import { ERROR } from '@shared/constants';
 import type { MapConfig, Player, GamePhase } from '@shared/types';
 
-const { permissions, user } = useAuth();
+const { permissions, account } = useAuth();
 const router = useRouter();
-const noTeam = computed(() => !user.value?.teamId);
+const noTeam = computed(() => !account.value?.teamId);
 const canCreate = computed(() => permissions.value.planner.canCreate);
 const canEdit = computed(() => permissions.value.planner.canEdit);
 const canDelete = computed(() => permissions.value.planner.canDelete);
@@ -241,7 +241,7 @@ function handlePlayerAssignmentChanged(playerId: string, assignmentId: number, a
 function handleMainAssignmentChanged(playerId: string, assignmentId: number | null) {
   const map = editableMaps.value.find(m => m.id === selectedMapId.value);
   if (!map) return;
-  const playerAssignment = map.players.find(p => p.userId === playerId);
+  const playerAssignment = map.players.find(p => p.playerId === playerId);
   if (playerAssignment) {
     playerAssignment.mainAssignmentId = assignmentId ?? undefined;
   }

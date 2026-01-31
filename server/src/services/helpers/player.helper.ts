@@ -1,10 +1,6 @@
 // Player data helper functions
 
-export interface PlayerAssignment {
-  userId: string;
-  assignmentIds: number[];
-  mainAssignmentId: number | null;
-}
+import type { PlayerAssignment } from '@shared/types';
 
 export interface GamePlanPlayerWithUser {
   playerId: string;
@@ -19,15 +15,14 @@ export interface GamePlanPlayerWithUser {
 
 /**
  * Transform GamePlanPlayer records for frontend consumption
- * Now expects playerId instead of userId
+ * Returns playerId for frontend use
  */
 export function mapPlayersForFrontend(
   players: GamePlanPlayerWithUser[]
 ): PlayerAssignment[] {
   return players.map(p => ({
-    // Get userId from the nested player.user relation if available, otherwise use playerId
-    userId: p.player?.user?.id || p.playerId,
+    playerId: p.playerId,
     assignmentIds: p.assignmentIds,
-    mainAssignmentId: p.mainAssignmentId,
+    mainAssignmentId: p.mainAssignmentId ?? undefined,
   }));
 }

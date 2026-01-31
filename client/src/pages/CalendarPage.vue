@@ -16,7 +16,7 @@ import { fetchAllMaps, fetchPlayers } from '@/api';
 import { ERROR } from '@shared/constants';
 import type { MapConfig, Player } from '@shared/types';
 
-const { permissions, user } = useAuth();
+const { permissions, account } = useAuth();
 
 // Error handling
 const { errors, setErrors, setErrorFromException } = useErrors();
@@ -55,7 +55,7 @@ const {
   loadCalendarData,
   setAvailability,
 } = useCalendar({
-  userId: computed(() => user.value?.id),
+  playerId: computed(() => account.value?.playerId ?? undefined),
   onError: handleError,
 });
 

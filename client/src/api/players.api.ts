@@ -4,7 +4,7 @@ import type { Player } from '@shared/types';
 import { ERROR } from '@shared/constants';
 import { authFetch } from '@/api/utils';
 
-// Cache for players - keyed by token to invalidate on user change
+// Cache for players - keyed by token to invalidate on account change
 let cachedPlayers: Player[] | null = null;
 let cachedForToken: string | null = null;
 

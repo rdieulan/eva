@@ -21,9 +21,9 @@ describe('Balance Service - getPlayerAssignments (real code)', () => {
       { id: 3, name: 'Left', x: 25, y: 75 },
     ],
     players: [
-      { userId: 'player-1', assignmentIds: [1, 2] },
-      { userId: 'player-2', assignmentIds: [2, 3] },
-      { userId: 'player-3', assignmentIds: [1] },
+      { playerId: 'player-1', assignmentIds: [1, 2] },
+      { playerId: 'player-2', assignmentIds: [2, 3] },
+      { playerId: 'player-3', assignmentIds: [1] },
     ],
   };
 
@@ -53,8 +53,8 @@ describe('Balance Service - getPlayerMainAssignment (real code)', () => {
       { id: 2, name: 'Back', x: 75, y: 25 },
     ],
     players: [
-      { userId: 'player-1', assignmentIds: [1, 2], mainAssignmentId: 1 },
-      { userId: 'player-2', assignmentIds: [1, 2] },
+      { playerId: 'player-1', assignmentIds: [1, 2], mainAssignmentId: 1 },
+      { playerId: 'player-2', assignmentIds: [1, 2] },
     ],
   };
 
@@ -85,9 +85,9 @@ describe('Balance Service - getAssignmentPlayers (real code)', () => {
       { id: 3, name: 'Unused', x: 50, y: 50 },
     ],
     players: [
-      { userId: 'player-1', assignmentIds: [1, 2] },
-      { userId: 'player-2', assignmentIds: [1] },
-      { userId: 'player-3', assignmentIds: [2] },
+      { playerId: 'player-1', assignmentIds: [1, 2] },
+      { playerId: 'player-2', assignmentIds: [1] },
+      { playerId: 'player-3', assignmentIds: [2] },
     ],
   };
 

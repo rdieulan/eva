@@ -9,7 +9,7 @@ import { ERROR } from '@shared/constants';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 
 const router = useRouter();
-const { hasTeam, refreshUser } = useAuth();
+const { hasTeam, refreshAccount } = useAuth();
 
 // State
 const locations = ref<string[]>([]);
@@ -55,8 +55,8 @@ async function handleSubmit() {
       location: teamLocation.value,
     });
 
-    // Refresh user data to update teamId and permissions
-    await refreshUser();
+    // Refresh account data to update teamId and permissions
+    await refreshAccount();
 
     // Redirect to team page
     router.push('/team');

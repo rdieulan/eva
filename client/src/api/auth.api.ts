@@ -25,18 +25,18 @@ export async function login(credentials: LoginCredentials): Promise<LoginRespons
 }
 
 /**
- * Logout current user
+ * Logout current account
  */
 export async function logout(): Promise<void> {
   await authFetch('/api/auth/logout', { method: 'POST' });
 }
 
 /**
- * Get current user info
+ * Get current account info
  */
-export async function getCurrentUser(): Promise<Account> {
-  const response = await authFetch<{ user: Account }>('/api/auth/me', undefined, ERROR.unauthorized);
-  return response.user;
+export async function getCurrentAccount(): Promise<Account> {
+  const response = await authFetch<{ account: Account }>('/api/auth/me', undefined, ERROR.unauthorized);
+  return response.account;
 }
 
 /**

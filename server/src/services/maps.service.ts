@@ -3,6 +3,7 @@
 import { prisma } from '@db/prisma';
 import { DEFAULT_GAME_PLAN_NOTES } from '@shared/constants';
 import { mapPlayersForFrontend } from './helpers/player.helper';
+import type { PlayerAssignment } from '@shared/types';
 
 // ============================================
 // Types
@@ -12,12 +13,12 @@ export interface MapForFrontend {
   name: string;
   images: string[];
   assignments: unknown[];
-  players: { userId: string; assignmentIds: number[]; mainAssignmentId: number | null }[];
+  players: PlayerAssignment[];
   gamePlans: {
     id: string;
     name: string;
     assignments?: unknown;
-    players?: { userId: string; assignmentIds: number[]; mainAssignmentId: number | null }[];
+    players?: PlayerAssignment[];
     notes?: unknown;
   }[];
   notes: unknown;

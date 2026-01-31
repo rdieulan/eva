@@ -16,7 +16,7 @@ function handleUnauthorized(): void {
 
   // Clear auth data from localStorage
   localStorage.removeItem('token');
-  localStorage.removeItem('user');
+  localStorage.removeItem('account');
 
   // Redirect to login
   window.location.href = '/login';

@@ -5,7 +5,7 @@ import DynamicTopBar from '@/components/common/layout/DynamicTopBar.vue';
 import { useAuth } from '@/composables/useAuth';
 import { useBalanceRules } from '@/composables/useBalanceRules';
 
-const { isAuthenticated, user, isLoading, initAuth } = useAuth();
+const { isAuthenticated, account, isLoading, initAuth } = useAuth();
 const { fetchRules } = useBalanceRules();
 
 const route = useRoute();
@@ -23,7 +23,7 @@ watch(isAuthenticated, async (authenticated) => {
 }, { immediate: true });
 
 // Account name for the TopBar
-const userName = computed(() => user.value?.name);
+const userName = computed(() => account.value?.name);
 
 // Determine if TopBar should be displayed (not on login page)
 const showTopBar = computed(() => route.name !== 'login');

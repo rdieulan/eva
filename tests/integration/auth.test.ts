@@ -111,8 +111,8 @@ describe('Auth API', () => {
         });
 
       expect(res.status).toBe(200);
-      expect(res.body).toHaveProperty('user');
-      expect(res.body.user.email).toBe('login@example.com');
+      expect(res.body).toHaveProperty('account');
+      expect(res.body.account.email).toBe('login@example.com');
 
       // Verify token is a valid JWT format
       expect(res.body).toHaveProperty('token');

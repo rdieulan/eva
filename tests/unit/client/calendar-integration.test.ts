@@ -50,22 +50,22 @@ describe('Calendar Integration Tests', () => {
     days: {
       '2026-01-01': {
         date: '2026-01-01',
-        currentUserStatus: null,
+        currentPlayerStatus: null,
         playerAvailabilities: [],
         events: [],
       },
       '2026-01-15': {
         date: '2026-01-15',
-        currentUserStatus: 'AVAILABLE',
+        currentPlayerStatus: 'AVAILABLE',
         playerAvailabilities: [
-          { userId: 'user-1', userName: 'Alice', status: 'AVAILABLE' },
-          { userId: 'user-2', userName: 'Bob', status: 'UNAVAILABLE' },
+          { playerId: 'player-1', playerName: 'Alice', status: 'AVAILABLE' },
+          { playerId: 'player-2', playerName: 'Bob', status: 'UNAVAILABLE' },
         ],
         events: [],
       },
       '2026-01-20': {
         date: '2026-01-20',
-        currentUserStatus: null,
+        currentPlayerStatus: null,
         playerAvailabilities: [],
         events: [
           {
@@ -105,7 +105,7 @@ describe('Calendar Integration Tests', () => {
   it('should cycle through availability states when toggling', async () => {
     (calendarApi.setAvailability as any).mockResolvedValue({
       id: 'avail-1',
-      userId: 'user-1',
+      playerId: 'player-1',
       date: '2026-01-15',
       status: 'UNAVAILABLE',
     });
@@ -124,7 +124,7 @@ describe('Calendar Integration Tests', () => {
   it('should set availability to AVAILABLE when requested', async () => {
     (calendarApi.setAvailability as any).mockResolvedValue({
       id: 'avail-2',
-      userId: 'user-1',
+      playerId: 'player-1',
       date: '2026-01-01',
       status: 'AVAILABLE',
     });
@@ -232,7 +232,7 @@ describe('Calendar Integration Tests', () => {
   it('should refresh calendar data after availability change', async () => {
     (calendarApi.setAvailability as any).mockResolvedValue({
       id: 'avail-1',
-      userId: 'user-1',
+      playerId: 'player-1',
       date: '2026-01-15',
       status: 'UNAVAILABLE',
     });
@@ -259,7 +259,7 @@ describe('Calendar Integration Tests', () => {
       days: {
         [pastDate]: {
           date: pastDate,
-          currentUserStatus: null,
+          currentPlayerStatus: null,
           playerAvailabilities: [],
           events: [],
         },

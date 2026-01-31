@@ -28,7 +28,7 @@ function isMainRoleForPlayer(mapId: string, playerId: string, assignmentId: numb
     ? props.loadedPlans[planId]
     : props.maps.find(m => m.id === mapId);
   if (!effectiveMap) return false;
-  const playerAssignment = effectiveMap.players.find(p => p.userId === playerId);
+  const playerAssignment = effectiveMap.players.find(p => p.playerId === playerId);
   return playerAssignment?.mainAssignmentId === assignmentId;
 }
 
