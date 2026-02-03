@@ -277,40 +277,60 @@ export async function linkAccounts(userId1: string, userId2: string): Promise<{ 
 }
 
 /**
- * Get all accounts in a linked group
+ * Linked account summary for account switching
  */
-export async function getLinkedAccounts(userId: string): Promise<Account[]> {
+export interface LinkedAccountSummary {
+  id: string;
+  email: string;
+  name: string;
+  accountType: 'player' | 'manager' | 'admin';
+  isCurrent: boolean;
+}
+
+/**
+ * Get all accounts in a linked group (including current)
+ */
+export async function getLinkedAccounts(userId: string): Promise<LinkedAccountSummary[]> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { linkedAccountGroupId: true },
   });
 
   if (!user?.linkedAccountGroupId) {
-    return [];
+    // Return only the current user
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { player: true, manager: true, admin: true },
+    });
+    if (!currentUser) return [];
+
+    return [{
+      id: currentUser.id,
+      email: currentUser.email,
+      name: currentUser.name,
+      accountType: currentUser.admin ? 'admin' : currentUser.manager ? 'manager' : 'player',
+      isCurrent: true,
+    }];
   }
 
   const linkedUsers = await prisma.user.findMany({
     where: {
       linkedAccountGroupId: user.linkedAccountGroupId,
-      id: { not: userId }, // Exclude current user
     },
     include: {
-      player: {
-        include: {
-          team: true,
-          ledTeam: true,
-        },
-      },
-      manager: {
-        include: {
-          managedVenues: true,
-        },
-      },
+      player: true,
+      manager: true,
       admin: true,
     },
   });
 
-  return Promise.all(linkedUsers.map(buildAccountData));
+  return linkedUsers.map(u => ({
+    id: u.id,
+    email: u.email,
+    name: u.name,
+    accountType: u.admin ? 'admin' : u.manager ? 'manager' : 'player' as const,
+    isCurrent: u.id === userId,
+  }));
 }
 
 /**

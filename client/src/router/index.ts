@@ -3,7 +3,7 @@ import type { RouteRecordRaw } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
 
 // Pages allowed without team membership
-const ALLOWED_WITHOUT_TEAM = ['home', 'profile', 'team', 'create-team', 'join-team', 'login', 'register'] as const;
+const ALLOWED_WITHOUT_TEAM = ['home', 'profile', 'team', 'create-team', 'join-team', 'login', 'register', 'activate'] as const;
 
 // Lazy loading des pages
 const HomePage = () => import('@/pages/HomePage.vue');
@@ -15,6 +15,7 @@ const CreateTeamPage = () => import('@/pages/CreateTeamPage.vue');
 const JoinTeamPage = () => import('@/pages/JoinTeamPage.vue');
 const LoginPage = () => import('@/pages/LoginPage.vue');
 const RegisterPage = () => import('@/pages/RegisterPage.vue');
+const ActivatePage = () => import('@/pages/ActivatePage.vue');
 
 const routes: RouteRecordRaw[] = [
   {
@@ -70,6 +71,12 @@ const routes: RouteRecordRaw[] = [
     name: 'register',
     component: RegisterPage,
     meta: { title: 'Inscription', requiresAuth: false }
+  },
+  {
+    path: '/activate/:token',
+    name: 'activate',
+    component: ActivatePage,
+    meta: { title: 'Activer le compte', requiresAuth: false }
   },
 ];
 

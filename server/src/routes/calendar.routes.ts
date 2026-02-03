@@ -6,6 +6,7 @@ import { authMiddleware, requirePermission } from '@middleware/auth.middleware';
 import type { AuthRequest } from '@middleware/auth.middleware';
 import type { SetAvailabilityRequest, CreateEventRequest } from '@shared/types';
 import { ERROR } from '@shared/constants';
+import { apiLogger } from '@utils/logger';
 import * as calendarService from '@services/calendar.service';
 
 const router = Router();
@@ -34,7 +35,7 @@ router.get('/availability', authMiddleware, async (req: AuthRequest, res: Respon
     const result = await calendarService.getMonthAvailability(month, teamId, playerId!);
     res.json(result);
   } catch (error) {
-    console.error('[CALENDAR] Error fetching availability:', error);
+    apiLogger.error('Error fetching availability:', error);
     res.status(500).json({ errors: [ERROR.serverError] });
   }
 });
@@ -63,7 +64,7 @@ router.post('/availability', authMiddleware, async (req: AuthRequest, res: Respo
       res.json(result.availability);
     }
   } catch (error) {
-    console.error('[CALENDAR] Error setting availability:', error);
+    apiLogger.error('Error setting availability:', error);
     res.status(500).json({ errors: [ERROR.serverError] });
   }
 });
@@ -91,7 +92,7 @@ router.get('/events', authMiddleware, async (req: AuthRequest, res: Response) =>
     const events = await calendarService.getMonthEvents(month, teamId);
     res.json(events);
   } catch (error) {
-    console.error('[CALENDAR] Error fetching events:', error);
+    apiLogger.error('Error fetching events:', error);
     res.status(500).json({ errors: [ERROR.serverError] });
   }
 });
@@ -143,7 +144,7 @@ router.post('/events', authMiddleware, requirePermission('calendar', 'canCreateE
 
     res.status(201).json(event);
   } catch (error) {
-    console.error('[CALENDAR] Error creating event:', error);
+    apiLogger.error('Error creating event:', error);
     res.status(500).json({ errors: [ERROR.serverError] });
   }
 });
@@ -169,7 +170,7 @@ router.delete('/events/:id', authMiddleware, requirePermission('calendar', 'canD
     await calendarService.deleteEvent(id);
     res.json({ success: true });
   } catch (error) {
-    console.error('[CALENDAR] Error deleting event:', error);
+    apiLogger.error('Error deleting event:', error);
     res.status(500).json({ errors: [ERROR.serverError] });
   }
 });
@@ -222,7 +223,7 @@ router.put('/events/:id', authMiddleware, requirePermission('calendar', 'canEdit
 
     res.json(event);
   } catch (error) {
-    console.error('[CALENDAR] Error updating event:', error);
+    apiLogger.error('Error updating event:', error);
     res.status(500).json({ errors: [ERROR.serverError] });
   }
 });
@@ -254,7 +255,7 @@ router.put('/events/:id/gameplan', authMiddleware, requirePermission('calendar',
     const event = await calendarService.updateEventGamePlan(id, gamePlan);
     res.json(event);
   } catch (error) {
-    console.error('[CALENDAR] Error updating game plan:', error);
+    apiLogger.error('Error updating game plan:', error);
     res.status(500).json({ errors: [ERROR.serverError] });
   }
 });

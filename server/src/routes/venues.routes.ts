@@ -4,6 +4,7 @@ import { Router, Response } from 'express';
 import { authMiddleware, AuthRequest } from '@middleware/auth.middleware';
 import * as venuesService from '@services/venues.service';
 import { ERROR } from '@shared/constants';
+import { apiLogger } from '@utils/logger';
 
 const router = Router();
 
@@ -13,7 +14,7 @@ router.get('/', authMiddleware, async (_req: AuthRequest, res: Response) => {
     const venues = await venuesService.getAllVenues();
     res.json(venues);
   } catch (error) {
-    console.error('[API] Error fetching venues:', error);
+    apiLogger.error('Error fetching venues:', error);
     res.status(500).json({ errors: [ERROR.serverError] });
   }
 });
@@ -30,7 +31,7 @@ router.get('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
 
     res.json(venue);
   } catch (error) {
-    console.error('[API] Error fetching venue:', error);
+    apiLogger.error('Error fetching venue:', error);
     res.status(500).json({ errors: [ERROR.serverError] });
   }
 });

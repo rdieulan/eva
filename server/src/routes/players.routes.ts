@@ -6,6 +6,7 @@ import { prisma } from '@db/prisma';
 import { authMiddleware } from '@middleware/auth.middleware';
 import type { AuthRequest } from '@middleware/auth.middleware';
 import { ERROR } from '@shared/constants';
+import { apiLogger } from '@utils/logger';
 
 const router = Router();
 
@@ -33,7 +34,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
       name: p.user!.name,
     })));
   } catch (error) {
-    console.error('Error fetching players:', error);
+    apiLogger.error('Error fetching players:', error);
     res.status(500).json({ errors: [ERROR.serverError] });
   }
 });

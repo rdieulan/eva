@@ -6,6 +6,7 @@ import { prisma } from '@db/prisma';
 import { authMiddleware, requirePermission } from '@middleware/auth.middleware';
 import type { AuthRequest } from '@middleware/auth.middleware';
 import { ERROR } from '@shared/constants';
+import { apiLogger } from '@utils/logger';
 
 const router = Router();
 
@@ -43,7 +44,7 @@ router.get('/', authMiddleware, requirePermission('team', 'canManagePermissions'
       createdAt: p.user!.createdAt,
     })));
   } catch (error) {
-    console.error('Error fetching users:', error);
+    apiLogger.error('Error fetching users:', error);
     res.status(500).json({ errors: [ERROR.serverError] });
   }
 });

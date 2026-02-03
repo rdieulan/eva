@@ -5,6 +5,7 @@ import type { Response } from 'express';
 import { authMiddleware, requirePermission } from '@middleware/auth.middleware';
 import type { AuthRequest } from '@middleware/auth.middleware';
 import { ERROR } from '@shared/constants';
+import { apiLogger } from '@utils/logger';
 import * as plansService from '@services/plans.service';
 
 const router = Router();
@@ -29,7 +30,7 @@ router.get('/:planId', authMiddleware, async (req: AuthRequest, res: Response) =
 
     res.json(result);
   } catch (error) {
-    console.error('Error fetching game plan:', error);
+    apiLogger.error('Error fetching game plan:', error);
     res.status(500).json({ errors: [ERROR.serverError] });
   }
 });
@@ -40,8 +41,8 @@ router.put('/:planId', authMiddleware, requirePermission('planner', 'canEdit'), 
   const { name, assignments, players, notes } = req.body;
   const teamId = req.account?.teamId;
 
-  console.log(`[API] PUT /api/plans/${planId}`);
-  console.log('[API] Account:', req.account?.email);
+  apiLogger.debug(`[API] PUT /api/plans/${planId}`);
+  apiLogger.debug(' Account:', req.account?.email);
 
   try {
     const result = await plansService.updatePlan(
@@ -56,10 +57,10 @@ router.put('/:planId', authMiddleware, requirePermission('planner', 'canEdit'), 
       return;
     }
 
-    console.log(`[API] Game plan updated by ${req.account?.email}: ${planId}`);
+    apiLogger.debug(`[API] Game plan updated by ${req.account?.email}: ${planId}`);
     res.json(result.plan);
   } catch (error) {
-    console.error('[API] Error updating game plan:', error);
+    apiLogger.error(' Error updating game plan:', error);
     res.status(500).json({ errors: [ERROR.serverError] });
   }
 });
@@ -78,10 +79,10 @@ router.delete('/:planId', authMiddleware, requirePermission('planner', 'canDelet
       return;
     }
 
-    console.log(`Game plan deleted by ${req.account?.email}: ${planId}`);
+    apiLogger.debug(`Game plan deleted by ${req.account?.email}: ${planId}`);
     res.json({ success: true });
   } catch (error) {
-    console.error('Error deleting game plan:', error);
+    apiLogger.error('Error deleting game plan:', error);
     res.status(500).json({ errors: [ERROR.serverError] });
   }
 });

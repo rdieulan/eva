@@ -7,6 +7,7 @@ import type { AuthRequest } from '@middleware/auth.middleware';
 import type { AccountPermissions } from '@shared/types';
 import { validateTeamName } from '@shared/utils';
 import { ERROR } from '@shared/constants';
+import { apiLogger } from '@utils/logger';
 import * as teamsService from '@services/teams.service';
 
 const router = Router();
@@ -37,7 +38,7 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
       isLeader: result.isLeader,
     });
   } catch (error) {
-    console.error('Error creating team:', error);
+    apiLogger.error('Error creating team:', error);
     res.status(500).json({ errors: [ERROR.serverError] });
   }
 });
@@ -56,7 +57,7 @@ router.get('/current', authMiddleware, async (req: AuthRequest, res: Response) =
       isLeader: !!playerData.ledTeam,
     });
   } catch (error) {
-    console.error('Error fetching team:', error);
+    apiLogger.error('Error fetching team:', error);
     res.status(500).json({ errors: [ERROR.serverError] });
   }
 });
@@ -87,7 +88,7 @@ router.put('/current', authMiddleware, requirePermission('team', 'canManageTeam'
 
     res.json(result.team);
   } catch (error) {
-    console.error('Error updating team:', error);
+    apiLogger.error('Error updating team:', error);
     res.status(500).json({ errors: [ERROR.serverError] });
   }
 });
@@ -104,7 +105,7 @@ router.get('/current/members', authMiddleware, async (req: AuthRequest, res: Res
     const members = await teamsService.getTeamMembers(team.id);
     res.json(members);
   } catch (error) {
-    console.error('Error fetching members:', error);
+    apiLogger.error('Error fetching members:', error);
     res.status(500).json({ errors: [ERROR.serverError] });
   }
 });
@@ -132,7 +133,7 @@ router.put(
 
       res.json({ message: 'Permissions mises à jour' });
     } catch (error) {
-      console.error('Error updating permissions:', error);
+      apiLogger.error('Error updating permissions:', error);
       res.status(500).json({ errors: [ERROR.serverError] });
     }
   }
@@ -156,7 +157,7 @@ router.delete(
 
       res.json({ message: 'Membre retiré de l\'équipe' });
     } catch (error) {
-      console.error('Error removing member:', error);
+      apiLogger.error('Error removing member:', error);
       res.status(500).json({ errors: [ERROR.serverError] });
     }
   }
@@ -174,7 +175,7 @@ router.delete('/current', authMiddleware, async (req: AuthRequest, res: Response
 
     res.json({ message: 'Équipe supprimée avec succès' });
   } catch (error) {
-    console.error('Error deleting team:', error);
+    apiLogger.error('Error deleting team:', error);
     res.status(500).json({ errors: [ERROR.serverError] });
   }
 });
@@ -191,7 +192,7 @@ router.post('/current/leave', authMiddleware, async (req: AuthRequest, res: Resp
 
     res.json({ message: 'Vous avez quitté l\'équipe' });
   } catch (error) {
-    console.error('Error leaving team:', error);
+    apiLogger.error('Error leaving team:', error);
     res.status(500).json({ errors: [ERROR.serverError] });
   }
 });

@@ -98,7 +98,8 @@ describe('Auth API', () => {
   describe('POST /api/auth/login', () => {
     it('should login successfully with valid credentials', async () => {
       // Create a user with known password
-      await createTestUser({
+
+      const user = await createTestUser({
         email: 'login@example.com',
         password: VALID_PASSWORD,
       });
@@ -113,23 +114,30 @@ describe('Auth API', () => {
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty('account');
       expect(res.body.account.email).toBe('login@example.com');
+      expect(res.body.account).toHaveProperty('playerId');
 
       // Verify token is a valid JWT format
       expect(res.body).toHaveProperty('token');
       expect(typeof res.body.token).toBe('string');
       expect(isValidJwtFormat(res.body.token)).toBe(true);
+
+      // Verify session was created in DB
+      const sessions = await prisma.session.findMany({ where: { userId: user.id } });
+      expect(sessions.length).toBeGreaterThan(0);
+      expect(sessions[0].token).toBe(res.body.token);
     });
 
     it('should login with email case-insensitive', async () => {
       await createTestUser({
-        email: 'CaseTest@Example.com',
+        email: 'casetest@example.com',
         password: VALID_PASSWORD,
       });
 
+      // Login with different case should work
       const res = await request(app)
         .post('/api/auth/login')
         .send({
-          email: 'casetest@example.com', // Different case
+          email: 'CASETEST@EXAMPLE.COM', // All uppercase
           password: VALID_PASSWORD,
         });
 
@@ -141,10 +149,13 @@ describe('Auth API', () => {
       const correctPassword = VALID_PASSWORD;
       const wrongPassword = VALID_PASSWORD + 'wrong';
 
-      await createTestUser({
+      const user = await createTestUser({
         email: 'wrongpass@example.com',
         password: correctPassword,
       });
+
+      // Count sessions before attempt
+      const sessionsBefore = await prisma.session.count({ where: { userId: user.id } });
 
       const res = await request(app)
         .post('/api/auth/login')
@@ -155,6 +166,10 @@ describe('Auth API', () => {
 
       expect(res.status).toBe(401);
       expect(res.body.errors).toContain(ERROR.loginFailed);
+
+      // Verify no session was created
+      const sessionsAfter = await prisma.session.count({ where: { userId: user.id } });
+      expect(sessionsAfter).toBe(sessionsBefore);
     });
 
     it('should reject login with non-existent user', async () => {

@@ -25,3 +25,14 @@ export interface Account {
   // Manager-specific data (null if not a manager)
   managedVenueIds: string[] | null;
 }
+
+/**
+ * Linked account summary for account switching
+ */
+export interface LinkedAccount {
+  id: string;
+  email: string;
+  name: string;
+  accountType: AccountType;
+  isCurrent: boolean;
+}

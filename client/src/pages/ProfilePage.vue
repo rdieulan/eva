@@ -8,6 +8,7 @@ import { validatePassword, validatePasswordsMatch } from '@shared/utils';
 import { ERROR } from '@shared/constants';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import SvgIcon from '@/components/common/SvgIcon.vue';
+import LinkedAccountsSection from '@/components/profile/LinkedAccountsSection.vue';
 
 const router = useRouter();
 const { account, token, clearAuth } = useAuth();
@@ -169,6 +170,9 @@ async function handleLogout() {
           </button>
         </form>
       </section>
+
+      <!-- Linked accounts -->
+      <LinkedAccountsSection />
 
       <!-- Logout -->
       <section class="profile-section">

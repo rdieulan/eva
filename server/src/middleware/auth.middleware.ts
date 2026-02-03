@@ -6,12 +6,13 @@ import { prisma } from '@db/prisma';
 import type { AccountPermissions, AccountType } from '@shared/types';
 import { DEFAULT_PLAYER_PERMISSIONS, LEADER_PERMISSIONS } from '@shared/types';
 import { ERROR } from '@shared/constants';
+import { authLogger } from '@utils/logger';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key';
 
 // Security warning for production
 if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
-  console.error('[AUTH] WARNING: JWT_SECRET not set in production! Using insecure default.');
+  authLogger.error('WARNING: JWT_SECRET not set in production! Using insecure default.');
 }
 
 export interface JwtPayload {
@@ -101,7 +102,7 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    console.log('[AUTH] Middleware: Missing or invalid Authorization header');
+    authLogger.debug('Middleware: Missing or invalid Authorization header');
     return res.status(401).json({ errors: [ERROR.tokenMissing] });
   }
 
@@ -109,24 +110,24 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
   const payload = verifyToken(token);
 
   if (!payload) {
-    console.log('[AUTH] Middleware: Invalid token');
+    authLogger.debug('Middleware: Invalid token');
     return res.status(401).json({ errors: [ERROR.tokenInvalid] });
   }
 
   // Enrich payload with teamId from database (only for Players)
   if (payload.playerId) {
     getPlayerTeamId(payload.playerId).then(teamId => {
-      console.log('[AUTH] Middleware: Token valid for player', payload.email, 'team:', teamId);
+      authLogger.debug('Middleware: Token valid for player', payload.email, 'team:', teamId);
       req.account = { ...payload, teamId };
       next();
     }).catch(error => {
-      console.error('[AUTH] Error fetching team:', error);
+      authLogger.error('Error fetching team:', error);
       req.account = payload;
       next();
     });
   } else {
     // Manager or Admin - no teamId needed
-    console.log('[AUTH] Middleware: Token valid for', payload.accountType, payload.email);
+    authLogger.debug('Middleware: Token valid for', payload.accountType, payload.email);
     req.account = payload;
     next();
   }
@@ -145,11 +146,11 @@ export function requirePermission(category: keyof AccountPermissions, permission
     const allowed = await hasPermission(req.account.userId, category, permission);
 
     if (!allowed) {
-      console.log(`[AUTH] Permission denied: ${category}.${permission} for account ${req.account.email}`);
+      authLogger.debug(`Permission denied: ${category}.${permission} for account ${req.account.email}`);
       return res.status(403).json({ errors: ['Permission refusée'] });
     }
 
-    console.log(`[AUTH] Permission granted: ${category}.${permission} for account ${req.account.email}`);
+    authLogger.debug(`Permission granted: ${category}.${permission} for account ${req.account.email}`);
     next();
   };
 }

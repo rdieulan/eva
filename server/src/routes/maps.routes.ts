@@ -5,6 +5,7 @@ import type { Response } from 'express';
 import { authMiddleware, requirePermission } from '@middleware/auth.middleware';
 import type { AuthRequest } from '@middleware/auth.middleware';
 import { ERROR } from '@shared/constants';
+import { apiLogger } from '@utils/logger';
 import * as mapsService from '@services/maps.service';
 
 const router = Router();
@@ -18,14 +19,14 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     return;
   }
 
-  console.log('[API] GET /api/maps for team:', teamId);
+  apiLogger.debug('GET /api/maps for team:', teamId);
 
   try {
     const maps = await mapsService.getAllMapsForTeam(teamId);
-    console.log('[API] Returning', maps.length, 'maps');
+    apiLogger.debug('Returning', maps.length, 'maps');
     res.json(maps);
   } catch (error) {
-    console.error('[API] Error fetching maps:', error);
+    apiLogger.error('Error fetching maps:', error);
     res.status(500).json({ errors: [ERROR.serverError] });
   }
 });
@@ -40,21 +41,21 @@ router.get('/:mapId', authMiddleware, async (req: AuthRequest, res: Response) =>
     return;
   }
 
-  console.log('[API] GET /api/maps/' + mapId + ' for team:', teamId);
+  apiLogger.debug('GET /api/maps/' + mapId + ' for team:', teamId);
 
   try {
     const map = await mapsService.getMapForTeam(mapId, teamId);
 
     if (!map) {
-      console.log('[API] Map not found:', mapId);
+      apiLogger.debug('Map not found:', mapId);
       res.status(404).json({ errors: [ERROR.mapNotFound] });
       return;
     }
 
-    console.log('[API] Returning map with', map.players.length, 'players');
+    apiLogger.debug('Returning map with', map.players.length, 'players');
     res.json(map);
   } catch (error) {
-    console.error('[API] Error fetching map:', error);
+    apiLogger.error('Error fetching map:', error);
     res.status(500).json({ errors: [ERROR.serverError] });
   }
 });
@@ -66,10 +67,10 @@ router.post('/:mapId', authMiddleware, requirePermission('planner', 'canEdit'), 
 
   try {
     await mapsService.upsertMap(mapId, { name, images, template });
-    console.log(`Map updated by ${req.account?.email}: ${mapId}`);
+    apiLogger.debug(`Map updated by ${req.account?.email}: ${mapId}`);
     res.json({ success: true, message: `Carte ${mapId} sauvegardée` });
   } catch (error) {
-    console.error('Error saving map:', error);
+    apiLogger.error('Error saving map:', error);
     res.status(500).json({ errors: [ERROR.serverError] });
   }
 });
@@ -88,7 +89,7 @@ router.get('/:mapId/plans', authMiddleware, async (req: AuthRequest, res: Respon
     const plans = await mapsService.getPlansForMapAndTeam(mapId, teamId);
     res.json(plans);
   } catch (error) {
-    console.error('Error fetching game plans:', error);
+    apiLogger.error('Error fetching game plans:', error);
     res.status(500).json({ errors: [ERROR.serverError] });
   }
 });
@@ -113,10 +114,10 @@ router.post('/:mapId/plans', authMiddleware, requirePermission('planner', 'canCr
     }
 
 
-    console.log(`Game plan created by ${req.account?.email}: ${plan.id} for map ${mapId}`);
+    apiLogger.debug(`Game plan created by ${req.account?.email}: ${plan.id} for map ${mapId}`);
     res.json(plan);
   } catch (error) {
-    console.error('Error creating game plan:', error);
+    apiLogger.error('Error creating game plan:', error);
     res.status(500).json({ errors: [ERROR.serverError] });
   }
 });

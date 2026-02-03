@@ -5,6 +5,7 @@ import type { Response } from 'express';
 import { authMiddleware, requirePermission } from '@middleware/auth.middleware';
 import type { AuthRequest } from '@middleware/auth.middleware';
 import { ERROR } from '@shared/constants';
+import { apiLogger } from '@utils/logger';
 import * as invitesService from '@services/invites.service';
 
 const router = Router();
@@ -43,7 +44,7 @@ router.post(
 
       res.status(201).json(invite);
     } catch (error) {
-      console.error('Error creating invite:', error);
+      apiLogger.error('Error creating invite:', error);
       res.status(500).json({ errors: [ERROR.serverError] });
     }
   }
@@ -67,7 +68,7 @@ router.get(
       const invites = await invitesService.getActiveInvites(teamId);
       res.json(invites);
     } catch (error) {
-      console.error('Error listing invites:', error);
+      apiLogger.error('Error listing invites:', error);
       res.status(500).json({ errors: [ERROR.serverError] });
     }
   }
@@ -96,7 +97,7 @@ router.delete(
 
       res.json({ message: 'Invitation révoquée' });
     } catch (error) {
-      console.error('Error deleting invite:', error);
+      apiLogger.error('Error deleting invite:', error);
       res.status(500).json({ errors: [ERROR.serverError] });
     }
   }
@@ -110,7 +111,7 @@ router.get('/invites/:code', authMiddleware, async (req, res: Response) => {
     const result = await invitesService.verifyInviteCode(code);
     res.json(result);
   } catch (error) {
-    console.error('Error verifying invite:', error);
+    apiLogger.error('Error verifying invite:', error);
     res.status(500).json({ errors: [ERROR.serverError] });
   }
 });
@@ -133,7 +134,7 @@ router.post('/invites/:code/join', authMiddleware, async (req: AuthRequest, res:
       teamName: result.teamName,
     });
   } catch (error) {
-    console.error('Error joining team:', error);
+    apiLogger.error('Error joining team:', error);
     res.status(500).json({ errors: [ERROR.serverError] });
   }
 });

@@ -13,6 +13,7 @@ import invitesRoutes from '@routes/invites.routes';
 import playersRoutes from '@routes/players.routes';
 import venuesRoutes from '@routes/venues.routes';
 import { prisma, pool } from '@db/prisma';
+import { logger } from '@utils/logger';
 
 const router = Router();
 
@@ -43,11 +44,11 @@ router.get('/health', async (_req: Request, res: Response) => {
       poolWaiting: pool.waitingCount,
     };
 
-    console.log(`[HEALTH] Check passed - DB response time: ${responseTime}ms, Pool: ${pool.totalCount} total, ${pool.idleCount} idle`);
+    logger.info(`[HEALTH] Check passed - DB response time: ${responseTime}ms, Pool: ${pool.totalCount} total, ${pool.idleCount} idle`);
     res.json({ ...healthcheck, dbResponseTime: responseTime });
   } catch (error) {
     const err = error as Error;
-    console.error('[HEALTH] Database health check failed:', err.message);
+    logger.error('[HEALTH] Database health check failed:', err.message);
 
     healthcheck.status = 'degraded';
     healthcheck.database.status = 'disconnected';

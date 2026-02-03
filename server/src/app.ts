@@ -6,6 +6,7 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import routes from "@routes/index";
+import { logger } from '@utils/logger';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,7 +24,7 @@ if (process.env.NODE_ENV !== 'test') {
     const start = Date.now();
     res.on('finish', () => {
       const duration = Date.now() - start;
-      console.log(`[${req.method}] ${req.path} - ${res.statusCode} (${duration}ms)`);
+      logger.debug(`[${req.method}] ${req.path} - ${res.statusCode} (${duration}ms)`);
     });
     next();
   });

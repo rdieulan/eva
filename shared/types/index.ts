@@ -82,6 +82,7 @@ export { DEFAULT_BALANCE_RULES } from './balance.types';
 export type {
   Account,
   AccountType,
+  LinkedAccount,
 } from './account.types';
 
 export type {

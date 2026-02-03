@@ -25,6 +25,7 @@ export default defineConfig({
       '@routes': path.resolve(__dirname, 'server/src/routes'),
       '@middleware': path.resolve(__dirname, 'server/src/middleware'),
       '@services': path.resolve(__dirname, 'server/src/services'),
+      '@utils': path.resolve(__dirname, 'server/src/utils'),
       '@shared': path.resolve(__dirname, 'shared'),
     },
   },

@@ -1,6 +1,6 @@
 // Authentication API client
 
-import type { Account, LoginResponse, LoginCredentials } from '@shared/types';
+import type { Account, LoginResponse, LoginCredentials, LinkedAccount } from '@shared/types';
 import { ERROR } from '@shared/constants';
 import { authFetch } from '@/api/utils';
 import { ApiError } from '@/api/error';
@@ -53,3 +53,48 @@ export async function changePassword(
   );
 }
 
+/**
+ * Activate manager account with password
+ * Note: Does not use authFetch because no token exists yet
+ */
+export async function activateAccount(activationToken: string, password: string): Promise<void> {
+  const response = await fetch('/api/auth/activate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: activationToken, password }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw ApiError.fromResponse(errorData, ERROR.activationFailed);
+  }
+}
+
+/**
+ * Link current account to another account
+ */
+export async function linkAccount(email: string, password: string): Promise<{ groupId: string }> {
+  return authFetch<{ groupId: string }>(
+    '/api/auth/link-account',
+    { method: 'POST', body: JSON.stringify({ email, password }) },
+    ERROR.linkAccountFailed
+  );
+}
+
+/**
+ * Get all linked accounts for current user
+ */
+export async function getLinkedAccounts(): Promise<LinkedAccount[]> {
+  return authFetch<LinkedAccount[]>('/api/auth/linked-accounts', undefined, ERROR.serverError);
+}
+
+/**
+ * Switch to another linked account
+ */
+export async function switchAccount(targetAccountId: string): Promise<LoginResponse> {
+  return authFetch<LoginResponse>(
+    '/api/auth/switch-account',
+    { method: 'POST', body: JSON.stringify({ targetAccountId }) },
+    ERROR.switchAccountFailed
+  );
+}
