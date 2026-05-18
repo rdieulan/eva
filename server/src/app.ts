@@ -33,10 +33,10 @@ if (process.env.NODE_ENV !== 'test') {
 // API routes
 app.use('/api', routes);
 
-// Serve frontend in production
+// Serve frontend in production. Resolve from CWD (Docker WORKDIR /app) which is
+// independent of where the compiled JS ends up under dist-server/.
 if (isProduction) {
-  // From dist-server/server/, go up 2 levels to reach /app/, then into dist/
-  const distPath = path.join(__dirname, '..', '..', 'dist');
+  const distPath = path.join(process.cwd(), 'dist');
   app.use(express.static(distPath));
   app.use((_req, res) => {
     res.sendFile(path.join(distPath, 'index.html'));
