@@ -7,7 +7,14 @@ import mapsRoutes from '@routes/maps.routes';
 import plansRoutes from '@routes/plans.routes';
 import usersRoutes from '@routes/users.routes';
 import calendarRoutes from '@routes/calendar.routes';
+import teamsRoutes from '@routes/teams.routes';
+import balanceRulesRoutes from '@routes/balance-rules.routes';
+import invitesRoutes from '@routes/invites.routes';
+import playersRoutes from '@routes/players.routes';
+import venuesRoutes from '@routes/venues.routes';
+import adminRoutes from '@routes/admin.routes';
 import { prisma, pool } from '@db/prisma';
+import { logger } from '@utils/logger';
 
 const router = Router();
 
@@ -38,18 +45,18 @@ router.get('/health', async (_req: Request, res: Response) => {
       poolWaiting: pool.waitingCount,
     };
 
-    console.log(`[HEALTH] Check passed - DB response time: ${responseTime}ms, Pool: ${pool.totalCount} total, ${pool.idleCount} idle`);
+    logger.info(`[HEALTH] Check passed - DB response time: ${responseTime}ms, Pool: ${pool.totalCount} total, ${pool.idleCount} idle`);
     res.json({ ...healthcheck, dbResponseTime: responseTime });
   } catch (error) {
     const err = error as Error;
-    console.error('[HEALTH] Database health check failed:', err.message);
+    logger.error('[HEALTH] Database health check failed:', err.message);
 
     healthcheck.status = 'degraded';
     healthcheck.database.status = 'disconnected';
 
     res.status(503).json({
       ...healthcheck,
-      error: err.message,
+      errors: [err.message],
     });
   }
 });
@@ -60,23 +67,11 @@ router.use('/maps', mapsRoutes);
 router.use('/plans', plansRoutes);
 router.use('/users', usersRoutes);
 router.use('/calendar', calendarRoutes);
-
-// GET /api/players - Public endpoint for player list
-router.get('/players', async (_req: Request, res: Response) => {
-  try {
-    const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        name: true,
-      },
-      orderBy: { name: 'asc' },
-    });
-    res.json(users);
-  } catch (error) {
-    console.error('Error fetching players:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
+router.use('/teams', teamsRoutes);
+router.use('/balance-rules', balanceRulesRoutes);
+router.use('/players', playersRoutes);
+router.use('/venues', venuesRoutes);
+router.use('/admin', adminRoutes);
+router.use('/', invitesRoutes); // Handles /teams/:teamId/invites and /invites/:code
 
 export default router;
-

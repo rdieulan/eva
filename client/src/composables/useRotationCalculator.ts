@@ -438,6 +438,18 @@ export function useRotationCalculator(
     { deep: true }
   );
 
+  // Watch for maps being loaded and select all by default
+  watch(
+    () => maps.value,
+    (newMaps) => {
+      // Only auto-select if no maps are currently selected and no initial game plan
+      if (selectedMaps.value.length === 0 && newMaps.length > 0 && !initialGamePlan?.value) {
+        selectedMaps.value = newMaps.map(m => m.id);
+      }
+    },
+    { immediate: true }
+  );
+
   // Configuration selection
   function selectConfiguration(mapId: string, configIndex: number) {
     selectedConfigurations.value[mapId] = configIndex;
@@ -488,7 +500,7 @@ export function useRotationCalculator(
                 const assignment = effectiveMap?.assignments.find(a => a.id === assignmentId);
                 const assignmentName = assignment?.name || `Assignment #${assignmentId}`;
                 // Get main role directly from effectiveMap to avoid extra function call
-                const playerAssignment = effectiveMap?.players.find(p => p.userId === playerId);
+                const playerAssignment = effectiveMap?.players.find(p => p.playerId === playerId);
                 const isMainRole = playerAssignment?.mainAssignmentId === assignmentId;
                 return {
                   assignmentId,

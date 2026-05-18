@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { AvailabilityStatus, PlayerAvailability, CalendarEvent } from '@shared/types';
-import { getPlayerInitials, getPlayerStatusClass as getPlayerStatusClassUtil } from '@/utils/players';
+import {
+  getPlayerInitials,
+  getPlayerStatusClass as getPlayerStatusClassUtil,
+  sortPlayersByAvailability,
+} from '@/utils/players';
 import { getEventTypeClass } from '@/utils/calendar';
 
 interface Props {
@@ -10,7 +14,7 @@ interface Props {
   isCurrentMonth: boolean;
   isToday: boolean;
   isPast: boolean;
-  currentUserStatus: AvailabilityStatus | null;
+  currentPlayerStatus: AvailabilityStatus | null;
   playerAvailabilities: PlayerAvailability[];
   events: CalendarEvent[];
   showDayNumber?: boolean;
@@ -35,15 +39,20 @@ const sortedEvents = computed(() => {
   });
 });
 
+// Sort players by availability status then by name
+const sortedPlayers = computed(() => {
+  return sortPlayersByAvailability(props.playerAvailabilities);
+});
+
 // Check if there are events
 const hasEvents = computed(() => props.events.length > 0);
 
 // Cell background class based on current user's availability
 const cellStatusClass = computed(() => {
   if (props.isPast) return 'status-past';
-  if (props.currentUserStatus === 'AVAILABLE') return 'status-available';
-  if (props.currentUserStatus === 'CONDITIONAL') return 'status-conditional';
-  if (props.currentUserStatus === 'UNAVAILABLE') return 'status-unavailable';
+  if (props.currentPlayerStatus === 'AVAILABLE') return 'status-available';
+  if (props.currentPlayerStatus === 'CONDITIONAL') return 'status-conditional';
+  if (props.currentPlayerStatus === 'UNAVAILABLE') return 'status-unavailable';
   return 'status-unknown';
 });
 
@@ -98,11 +107,11 @@ function cycleAvailability() {
   if (props.isPast) return;
 
   let newStatus: AvailabilityStatus | null;
-  if (props.currentUserStatus === null || props.currentUserStatus === undefined) {
+  if (props.currentPlayerStatus === null || props.currentPlayerStatus === undefined) {
     newStatus = 'AVAILABLE';
-  } else if (props.currentUserStatus === 'AVAILABLE') {
+  } else if (props.currentPlayerStatus === 'AVAILABLE') {
     newStatus = 'CONDITIONAL';
-  } else if (props.currentUserStatus === 'CONDITIONAL') {
+  } else if (props.currentPlayerStatus === 'CONDITIONAL') {
     newStatus = 'UNAVAILABLE';
   } else {
     // UNAVAILABLE -> back to null (grey)
@@ -152,20 +161,20 @@ function cycleAvailability() {
     <!-- Player availability summary (always visible) -->
     <div class="players-summary">
       <div
-        v-for="player in playerAvailabilities"
-        :key="player.userId"
+        v-for="player in sortedPlayers"
+        :key="player.playerId"
         class="player-avatar"
         :class="getPlayerStatusClass(player.status)"
       >
-        {{ getInitials(player.userName) }}
+        {{ getInitials(player.playerName) }}
       </div>
     </div>
 
     <!-- Background status icon (only in edit mode) -->
     <div v-if="!isPast && editMode" class="status-bg-icon">
-      <template v-if="currentUserStatus === 'AVAILABLE'">✓</template>
-      <template v-else-if="currentUserStatus === 'CONDITIONAL'">~</template>
-      <template v-else-if="currentUserStatus === 'UNAVAILABLE'">✗</template>
+      <template v-if="currentPlayerStatus === 'AVAILABLE'">✓</template>
+      <template v-else-if="currentPlayerStatus === 'CONDITIONAL'">~</template>
+      <template v-else-if="currentPlayerStatus === 'UNAVAILABLE'">✗</template>
       <template v-else>?</template>
     </div>
   </div>
@@ -173,6 +182,7 @@ function cycleAvailability() {
 
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
+@use 'sass:color';
 
 .day-cell {
   position: relative;
@@ -191,11 +201,11 @@ function cycleAvailability() {
   overflow: hidden;
 
   &.status-unknown {
-    background: #1e1e32;
+    background: $color-bg-secondary;
     border-color: $color-bg-tertiary;
 
     &:hover {
-      background: #252540;
+      background: $color-bg-tertiary;
       border-color: $color-border-light;
     }
   }
@@ -221,24 +231,74 @@ function cycleAvailability() {
   }
 
   &.status-unavailable {
-    background: rgba(248, 113, 113, 0.15);
-    border-color: rgba(248, 113, 113, 0.4);
+    background: rgba($color-danger, 0.15);
+    border-color: rgba($color-danger, 0.4);
 
     &:hover {
-      background: rgba(248, 113, 113, 0.25);
-      border-color: rgba(248, 113, 113, 0.6);
+      background: rgba($color-danger, 0.25);
+      border-color: rgba($color-danger, 0.6);
     }
   }
 
   &.status-past {
-    background: #18181f;
-    border-color: #222;
-    cursor: not-allowed;
-    opacity: 0.5;
+    background: rgba($color-black, 0.3);
+    border-color: rgba($color-border, 0.3);
+    cursor: default;
+
+    .day-number {
+      color: rgba($color-text-muted, 0.4);
+    }
+
+    .event-badge {
+      opacity: 0.4;
+    }
+
+    .players-summary {
+      opacity: 0.5;
+    }
   }
 
   &.other-month {
-    opacity: 0.4;
+    background: rgba($color-bg-primary, 0.6);
+    border-color: rgba($color-border, 0.2);
+    cursor: default;
+    pointer-events: none;
+
+    .day-number {
+      color: rgba($color-text-muted, 0.35);
+    }
+
+    .event-badge {
+      opacity: 0.5;
+    }
+
+    .players-summary {
+      opacity: 0.4;
+    }
+
+    // Disable hover effects for other month days
+    &:hover {
+      background: rgba($color-bg-primary, 0.6);
+      border-color: rgba($color-border, 0.2);
+    }
+  }
+
+  // Past days of other month - even more faded
+  &.status-past.other-month {
+    background: rgba($color-black, 0.4);
+    border-color: rgba($color-border, 0.15);
+
+    .day-number {
+      color: rgba($color-text-muted, 0.25);
+    }
+
+    .event-badge {
+      opacity: 0.3;
+    }
+
+    .players-summary {
+      opacity: 0.3;
+    }
   }
 
   &.is-today {
@@ -281,7 +341,7 @@ function cycleAvailability() {
 .day-number {
   font-weight: 600;
   font-size: 0.9rem;
-  color: #ccc;
+  color: $color-text-muted;
   width: 24px;
   height: 24px;
   display: flex;
@@ -291,7 +351,7 @@ function cycleAvailability() {
 
   .is-today & {
     background: $color-accent;
-    color: #fff;
+    color: $color-white;
   }
 
   @include tablet {
@@ -334,11 +394,11 @@ function cycleAvailability() {
   }
 
   .status-unavailable & {
-    color: #f87171;
+    color: $color-danger;
   }
 
   .status-unknown & {
-    color: #888;
+    color: $color-text-secondary;
   }
 
   @include tablet {
@@ -403,13 +463,13 @@ function cycleAvailability() {
 .event-match {
   background: rgba($color-warning, 0.3);
   border-left: 2px solid $color-warning;
-  color: #fdba74;
+  color: $color-warning;
 }
 
 .event-event {
   background: rgba($color-info, 0.3);
   border-left: 2px solid $color-info;
-  color: #93c5fd;
+  color: $color-info;
 }
 
 .event-time {
@@ -466,7 +526,7 @@ function cycleAvailability() {
   justify-content: center;
   font-size: 0.55rem;
   font-weight: 700;
-  color: #fff;
+  color: $color-white;
 
   @include tablet {
     width: 20px;
@@ -490,23 +550,23 @@ function cycleAvailability() {
 }
 
 .player-unknown {
-  background: #444;
+  background: $color-border;
   color: $color-text-secondary;
 }
 
 .player-available {
-  background: #166534;
+  background: color.scale($color-success, $lightness: -43%);
   border: 1px solid $color-success;
 }
 
 .player-conditional {
-  background: #854d0e;
+  background: color.scale($color-conditional, $lightness: -28%);
   border: 1px solid $color-conditional;
 }
 
 .player-unavailable {
-  background: #991b1b;
-  border: 1px solid #f87171;
+  background: color.scale($color-danger, $lightness: -36%);
+  border: 1px solid color.scale($color-danger, $lightness: 34%);
 }
 </style>
 

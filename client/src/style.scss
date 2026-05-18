@@ -183,3 +183,37 @@ button {
   }
 }
 
+// ===========================================
+// Form Messages
+// ===========================================
+
+
+.success-message {
+  background-color: rgba($color-success, 0.1);
+  border: 1px solid rgba($color-success, 0.3);
+  color: $color-success;
+  padding: $spacing-md;
+  border-radius: $radius-sm;
+  text-align: center;
+  font-size: $font-size-base;
+}
+
+// ===========================================
+// Global Button Classes
+// ===========================================
+
+.btn-secondary {
+  padding: $spacing-sm $spacing-lg;
+  background: $color-bg-tertiary;
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  color: $color-text-primary;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background: $color-bg-secondary;
+  }
+}
+

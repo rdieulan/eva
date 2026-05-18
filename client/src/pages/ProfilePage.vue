@@ -1,37 +1,46 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
+import { useErrors } from '@/composables/useErrors';
+import { clearPlayersCache } from '@/api';
+import { validatePassword, validatePasswordsMatch } from '@shared/utils';
+import { ERROR } from '@shared/constants';
+import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import SvgIcon from '@/components/common/SvgIcon.vue';
+import LinkedAccountsSection from '@/components/profile/LinkedAccountsSection.vue';
 
 const router = useRouter();
-const { user, token, clearAuth } = useAuth();
+const { account, token, clearAuth } = useAuth();
 
 // Password change
 const currentPassword = ref('');
 const newPassword = ref('');
 const confirmPassword = ref('');
-const passwordError = ref('');
+const { errors: passwordErrors, setError: setPasswordError, setErrors: setPasswordErrors, clearErrors: clearPasswordErrors } = useErrors();
 const passwordSuccess = ref('');
 const isChangingPassword = ref(false);
 
 // Change password
 async function handleChangePassword() {
-  passwordError.value = '';
+  clearPasswordErrors();
   passwordSuccess.value = '';
 
   if (!currentPassword.value || !newPassword.value || !confirmPassword.value) {
-    passwordError.value = 'Veuillez remplir tous les champs';
+    setPasswordError(ERROR.requiredFieldsMissing);
     return;
   }
 
-  if (newPassword.value !== confirmPassword.value) {
-    passwordError.value = 'Les nouveaux mots de passe ne correspondent pas';
+  // Use shared validators
+  const passwordValid = validatePassword(newPassword.value);
+  if (passwordValid !== true) {
+    setPasswordErrors(passwordValid);
     return;
   }
 
-  if (newPassword.value.length < 6) {
-    passwordError.value = 'Le nouveau mot de passe doit faire au moins 6 caractères';
+  const matchValid = validatePasswordsMatch(newPassword.value, confirmPassword.value);
+  if (matchValid !== true) {
+    setPasswordErrors(matchValid);
     return;
   }
 
@@ -53,15 +62,16 @@ async function handleChangePassword() {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.error || 'Erreur lors du changement de mot de passe');
+      setPasswordErrors(data.errors || [ERROR.passwordChangeFailed]);
+      return;
     }
 
     passwordSuccess.value = 'Mot de passe modifié avec succès';
     currentPassword.value = '';
     newPassword.value = '';
     confirmPassword.value = '';
-  } catch (err) {
-    passwordError.value = err instanceof Error ? err.message : 'Erreur lors du changement de mot de passe';
+  } catch {
+    setPasswordError(ERROR.passwordChangeFailed);
   } finally {
     isChangingPassword.value = false;
   }
@@ -79,6 +89,7 @@ async function handleLogout() {
   } catch {
     // Ignore server-side logout errors
   } finally {
+    clearPlayersCache();
     clearAuth();
     router.push('/login');
   }
@@ -90,21 +101,23 @@ async function handleLogout() {
     <div class="profile-container">
       <h1>Mon Profil</h1>
 
-      <!-- User information -->
-      <section class="profile-section" v-if="user">
+      <!-- Account information -->
+      <section class="profile-section" v-if="account">
         <h2>Informations</h2>
         <div class="info-grid">
           <div class="info-item">
             <label>Nom</label>
-            <span>{{ user.name }}</span>
+            <span>{{ account.name }}</span>
           </div>
           <div class="info-item">
             <label>Email</label>
-            <span>{{ user.email }}</span>
+            <span>{{ account.email }}</span>
           </div>
           <div class="info-item">
-            <label>Rôle</label>
-            <span class="role-badge" :class="user.role.toLowerCase()">{{ user.role }}</span>
+            <label>Statut</label>
+            <span class="role-badge" :class="account.isLeader ? 'leader' : 'player'">
+              {{ account.isLeader ? 'Leader' : 'Joueur' }}
+            </span>
           </div>
         </div>
       </section>
@@ -146,9 +159,7 @@ async function handleLogout() {
             />
           </div>
 
-          <div v-if="passwordError" class="message error">
-            {{ passwordError }}
-          </div>
+          <ErrorDisplay :errors="passwordErrors" />
 
           <div v-if="passwordSuccess" class="message success">
             {{ passwordSuccess }}
@@ -159,6 +170,9 @@ async function handleLogout() {
           </button>
         </form>
       </section>
+
+      <!-- Linked accounts -->
+      <LinkedAccountsSection />
 
       <!-- Logout -->
       <section class="profile-section">
@@ -174,15 +188,17 @@ async function handleLogout() {
 
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
+@use '@/styles/buttons' as *;
 
 .profile-page {
+  // ...existing code...
   min-height: 100%;
   width: 100%;
   display: flex;
   align-items: flex-start;
   justify-content: center;
   padding: $spacing-xl;
-  background: linear-gradient(135deg, $color-bg-secondary 0%, #16213e 100%);
+  background: linear-gradient(135deg, $color-bg-secondary 0%, $color-bg-tertiary 100%);
   overflow-y: auto;
 
   @include tablet {
@@ -204,7 +220,7 @@ async function handleLogout() {
 }
 
 h1 {
-  color: #fff;
+  color: $color-white;
   margin: 0 0 $spacing-xl;
   font-size: 2rem;
   text-align: center;
@@ -243,7 +259,7 @@ h1 {
   }
 
   h2 {
-    color: $color-accent-light;
+    color: $color-accent;
     margin: 0 0 $spacing-md;
     font-size: 1.1rem;
     font-weight: 600;
@@ -286,7 +302,7 @@ h1 {
   }
 
   span {
-    color: #fff;
+    color: $color-white;
     font-weight: 500;
   }
 }
@@ -298,14 +314,14 @@ h1 {
   font-weight: 600;
   text-transform: uppercase;
 
-  &.admin {
+  &.leader {
     background: rgba($color-success, 0.2);
     color: $color-success;
   }
 
   &.player {
     background: rgba($color-accent, 0.2);
-    color: $color-accent-light;
+    color: $color-accent;
   }
 }
 
@@ -334,7 +350,7 @@ h1 {
     background: $color-bg-secondary;
     border: 2px solid $color-border-light;
     border-radius: $radius-md;
-    color: #fff;
+    color: $color-white;
     font-size: 1rem;
     transition: border-color 0.2s;
 
@@ -344,7 +360,7 @@ h1 {
     }
 
     &::placeholder {
-      color: #555;
+      color: $color-text-secondary;
     }
 
     @include mobile-lg {
@@ -359,11 +375,6 @@ h1 {
   font-size: 0.9rem;
   text-align: center;
 
-  &.error {
-    background: rgba($color-danger, 0.1);
-    border: 1px solid rgba($color-danger, 0.3);
-    color: $color-danger;
-  }
 
   &.success {
     background: rgba($color-success, 0.1);
@@ -378,24 +389,7 @@ h1 {
 }
 
 .btn-primary {
-  padding: 0.875rem;
-  background: $color-accent;
-  border: none;
-  border-radius: $radius-md;
-  color: #fff;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover:not(:disabled) {
-    background: $color-accent-light;
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
+  @include btn-base($color-accent);
 
   @include mobile {
     padding: 0.75rem;
@@ -404,24 +398,8 @@ h1 {
 }
 
 .btn-logout {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: $spacing-sm;
+  @include btn-base($color-danger);
   width: 100%;
-  padding: 0.875rem;
-  background: transparent;
-  border: 2px solid $color-danger;
-  border-radius: $radius-md;
-  color: $color-danger;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover {
-    background: rgba($color-danger, 0.1);
-  }
 
   @include mobile {
     padding: 0.75rem;
@@ -430,8 +408,6 @@ h1 {
 }
 
 .logout-icon {
-  width: 20px;
-  height: 20px;
-  fill: currentColor;
+  font-size: 1.1em;
 }
 </style>

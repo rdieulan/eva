@@ -28,7 +28,7 @@ function isMainRoleForPlayer(mapId: string, playerId: string, assignmentId: numb
     ? props.loadedPlans[planId]
     : props.maps.find(m => m.id === mapId);
   if (!effectiveMap) return false;
-  const playerAssignment = effectiveMap.players.find(p => p.userId === playerId);
+  const playerAssignment = effectiveMap.players.find(p => p.playerId === playerId);
   return playerAssignment?.mainAssignmentId === assignmentId;
 }
 
@@ -137,7 +137,7 @@ function getAssignmentName(mapId: string, assignmentId: number): string {
 }
 
 .result-card {
-  background: #252540;
+  background: $color-bg-tertiary;
   border: 1px solid $color-border;
   border-radius: 6px;
   padding: $spacing-md;
@@ -149,7 +149,7 @@ function getAssignmentName(mapId: string, assignmentId: number): string {
   h3 {
     margin: 0;
     font-size: 1rem;
-    color: #fff;
+    color: $color-white;
   }
 }
 
@@ -171,9 +171,9 @@ function getAssignmentName(mapId: string, assignmentId: number): string {
 .plan-select {
   padding: 0.25rem 0.5rem;
   background: $color-bg-secondary;
-  border: 1px solid #555;
+  border: 1px solid $color-text-secondary;
   border-radius: $radius-sm;
-  color: #ccc;
+  color: $color-text-muted;
   font-size: 0.8rem;
   cursor: pointer;
 
@@ -226,8 +226,8 @@ function getAssignmentName(mapId: string, assignmentId: number): string {
   align-items: center;
 
   &:hover {
-    background: #252545;
-    border-color: #444;
+    background: $color-bg-tertiary;
+    border-color: $color-border;
   }
 
   &.selected {
@@ -241,7 +241,7 @@ function getAssignmentName(mapId: string, assignmentId: number): string {
 }
 
 .config-selector {
-  color: #666;
+  color: $color-text-secondary;
   font-size: 0.9rem;
   margin-right: $spacing-xs;
 }
@@ -267,7 +267,7 @@ function getAssignmentName(mapId: string, assignmentId: number): string {
 }
 
 .player-name {
-  color: #fff;
+  color: $color-white;
   font-size: 0.85rem;
 }
 

@@ -182,7 +182,7 @@ $tab-top: $spacing-md;
   background: $color-bg-secondary;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 20px $color-shadow;
   z-index: 50;
 
   @include mobile-lg {

@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import TopBar from '@/components/layout/TopBar.vue';
+import DynamicTopBar from '@/components/common/layout/DynamicTopBar.vue';
 import { useAuth } from '@/composables/useAuth';
+import { useBalanceRules } from '@/composables/useBalanceRules';
 
-const { isAuthenticated, user, isLoading, initAuth } = useAuth();
+const { isAuthenticated, account, isLoading, initAuth } = useAuth();
+const { fetchRules } = useBalanceRules();
 
 const route = useRoute();
 
@@ -13,8 +15,15 @@ onMounted(async () => {
   await initAuth();
 });
 
-// User name for the TopBar
-const userName = computed(() => user.value?.name);
+// Load balance rules when authenticated
+watch(isAuthenticated, async (authenticated) => {
+  if (authenticated) {
+    await fetchRules();
+  }
+}, { immediate: true });
+
+// Account name for the TopBar
+const userName = computed(() => account.value?.name);
 
 // Determine if TopBar should be displayed (not on login page)
 const showTopBar = computed(() => route.name !== 'login');
@@ -29,14 +38,14 @@ const showTopBar = computed(() => route.name !== 'login');
 
     <template v-else>
       <!-- Global TopBar with dynamic section -->
-      <TopBar
+      <DynamicTopBar
         v-if="showTopBar"
         :isAuthenticated="isAuthenticated"
         :userName="userName"
       >
         <!-- Dynamic content will be injected by each page via teleport -->
         <div id="topbar-dynamic-content" class="dynamic-content"></div>
-      </TopBar>
+      </DynamicTopBar>
 
       <!-- Page content -->
       <main class="page-content" :class="{ 'no-topbar': !showTopBar }">
@@ -71,7 +80,7 @@ const showTopBar = computed(() => route.name !== 'login');
   width: 40px;
   height: 40px;
   border: 3px solid $color-border;
-  border-top-color: #4ecdc4;
+  border-top-color: $color-accent;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }

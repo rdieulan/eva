@@ -5,9 +5,9 @@ export interface Player {
   name: string;
 }
 
-// Player assignment in a game plan (links userId to assignment IDs)
+// Player assignment in a game plan (links playerId to assignment IDs)
 export interface PlayerAssignment {
-  userId: string;
+  playerId: string;
   assignmentIds: number[];
   mainAssignmentId?: number; // Primary/preferred assignment ID
 }

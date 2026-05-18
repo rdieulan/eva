@@ -34,9 +34,14 @@ client/src/
 ├── api/           # Appels API (fetch)
 ├── components/    # Composants Vue (.vue uniquement)
 │   ├── calendar/  # Composants du calendrier
-│   ├── common/    # Composants réutilisables (Modal, Drawer, etc.)
-│   ├── layout/    # Composants de layout (TopBar, etc.)
+│   │   ├── layout/    # Composants layout (TopBar, Header, Body)
+│   │   └── *.vue      # Composants fonctionnels
+│   ├── common/    # Composants réutilisables
+│   │   ├── layout/    # Layout global (DynamicTopBar)
+│   │   └── *.vue      # Composants génériques (Modal, Drawer)
 │   └── planner/   # Composants du planificateur
+│       ├── layout/    # Composants layout
+│       └── *.vue      # Composants fonctionnels
 ├── composables/   # Logique réactive réutilisable (useAuth, etc.)
 ├── config/        # Re-exports pour rétrocompatibilité
 ├── constants/     # Données constantes (couleurs, paths SVG, etc.)
@@ -85,6 +90,46 @@ server/src/
 - **Fichiers TS** : kebab-case ou camelCase (`balance.service.ts`, `zones.ts`)
 - **Types** : suffixe `.types.ts` (`map.types.ts`, `calendar.types.ts`)
 - **Tests** : suffixe `.test.ts` (`balance.test.ts`)
+
+
+### Nomenclature des composants : Layout vs Fonctionnel
+
+Chaque feature (calendar, planner, etc.) sépare ses composants en deux catégories :
+
+#### Composants Layout (`*/layout/`)
+Gèrent **uniquement** l'agencement visuel (flexbox, grid, position). Pas de logique métier.
+
+| Position | Format | Exemples |
+|----------|--------|----------|
+| Haut (téléporté) | `*TopBar` | `CalendarTopBar`, `PlannerTopBar` |
+| Haut (intégré) | `*Header` | `CalendarHeader` |
+| Gauche | `*LeftBar` | `PlannerLeftBar` |
+| Centre | `*Body` | `CalendarBody`, `PlannerBody` |
+| Droite (drawer) | `*RightDrawer` | `PlannerRightDrawer` |
+
+#### Composants Fonctionnels (`*/`)
+Contiennent la logique métier, l'état, les interactions.
+
+```
+planner/
+├── layout/
+│   ├── PlannerTopBar.vue      # Agencement des contrôles
+│   ├── PlannerLeftBar.vue     # Wrapper sidebar
+│   ├── PlannerBody.vue        # Wrapper contenu central
+│   └── PlannerRightDrawer.vue # Wrapper drawer notes
+├── MapViewer.vue              # Logique affichage carte
+├── MapList.vue                # Logique liste maps
+├── PlannerNotes.vue           # Logique notes
+└── ...
+```
+
+#### Layout global (`common/layout/`)
+Composants de structure présents sur toutes les pages :
+- `DynamicTopBar.vue` : Barre de navigation avec zone téléport
+
+#### Composants réutilisables (`common/`)
+Composants génériques sans logique métier spécifique :
+- `Drawer.vue`, `Modal.vue`, etc.
 
 ---
 
@@ -141,18 +186,124 @@ $breakpoint-large: 1440px;
 
 ## 🧪 Tests
 
-### Ce qu'on teste
+### Organisation des tests
+```
+tests/
+├── unit/          # Tests unitaires
+│   ├── client/    # Tests spécifiques au client (composants, composables)
+│   ├── server/    # Tests spécifiques au serveur (routes, services)
+│   └── shared/    # Tests des utilitaires partagés (@shared/utils)
+├── integration/   # Tests d'intégration (API complète)
+│   ├── helpers/   # Helpers de test (auth, db)
+│   └── *.test.ts  # Tests par domaine (auth, teams, maps, calendar)
+└── quality/       # Tests transverses (encodage, lint, etc.)
+```
+
+### Tests unitaires
+
+#### Ce qu'on teste
 - ✅ Fonctions utilitaires exportées (`@/utils/*`, `@shared/utils/*`)
 - ✅ Logique métier des composables (`@/composables/*`)
 - ✅ Composants Vue (comportement, pas implémentation)
-- ✅ Contrats API (structure des requêtes/réponses)
 
-### Ce qu'on ne teste PAS
+#### Ce qu'on ne teste PAS
 - ❌ Fonctions définies localement dans le fichier de test
 - ❌ Code de librairies tierces
 - ❌ Détails d'implémentation CSS
 - ❌ **Structure de types** (tests qui vérifient juste que TypeScript compile)
 - ❌ **Valeurs de constantes statiques** (si elles changent, c'est volontaire)
+
+### Tests d'intégration
+
+Les tests d'intégration testent les routes API de bout en bout avec une vraie base de données.
+
+#### Principes
+- **Utiliser l'API** : Les helpers doivent créer les données via l'API, pas via Prisma
+- **Vérifier la DB** : Après une action, vérifier que les données sont bien persistées
+- **Tester l'isolation** : Vérifier que les données d'une équipe ne sont pas visibles par une autre
+
+#### Helpers disponibles (`tests/integration/helpers/`)
+
+| Helper | Description |
+|--------|-------------|
+| `createTestUser(options)` | Crée un user via `POST /api/auth/register` |
+| `createAuthenticatedUser(options)` | Crée un user + login, retourne `{ user, token }` |
+| `createUserWithTeam(options)` | Crée un user + équipe, retourne `{ user, token, team }` |
+| `expectNoRecordCreated(countFn, action)` | Vérifie qu'aucun enregistrement n'a été créé |
+| `prisma` | Client Prisma pour les vérifications (lecture seule) |
+
+#### Règles d'utilisation de Prisma dans les tests
+
+| Action | Autorisé | Exemple |
+|--------|----------|---------|
+| Création de données | ❌ | Utiliser l'API |
+| Lecture/vérification | ✅ | `prisma.user.findUnique(...)` |
+| Modification (cas spéciaux) | ✅ | Créer des données invalides pour tester les rejets |
+
+#### Structure d'un test d'intégration
+```typescript
+import { describe, it, expect } from 'vitest';
+import request from 'supertest';
+import { app } from '../../server/src/app';
+import { createUserWithTeam } from './helpers/auth';
+import { prisma, expectNoRecordCreated } from './helpers/db';
+import { ERROR } from '@shared/constants/error.constants';
+
+describe('Feature API', () => {
+  describe('POST /api/feature', () => {
+    it('should create successfully', async () => {
+      const { token, team } = await createUserWithTeam();
+
+      const res = await request(app)
+        .post('/api/feature')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ data: 'value' });
+
+      expect(res.status).toBe(201);
+
+      // Vérifier en DB
+      const record = await prisma.feature.findUnique({ where: { id: res.body.id } });
+      expect(record).not.toBeNull();
+      expect(record!.teamId).toBe(team.id);
+    });
+
+    it('should reject without authentication', async () => {
+      const res = await request(app)
+        .post('/api/feature')
+        .send({ data: 'value' });
+
+      expect(res.status).toBe(401);
+      expect(res.body.errors).toContain(ERROR.tokenMissing);
+    });
+
+    it('should reject and not create record', async () => {
+      const { token, team } = await createUserWithTeam();
+
+      const res = await expectNoRecordCreated(
+        () => prisma.feature.count({ where: { teamId: team.id } }),
+        () => request(app)
+          .post('/api/feature')
+          .set('Authorization', `Bearer ${token}`)
+          .send({ invalidData: true })
+      );
+
+      expect(res.status).toBe(400);
+    });
+  });
+});
+```
+
+#### Commandes
+```bash
+# Lancer les tests d'intégration
+npm run test:integration
+
+# Lancer les tests unitaires
+npm run test:unit
+
+# Lancer tous les tests
+npm run test
+```
 
 #### Exemples de tests inutiles (à NE PAS écrire) :
 ```typescript
@@ -304,10 +455,17 @@ export function useExemple(options?: ExempleOptions) {
 4. **Pas de code dupliqué** - factoriser
 5. **Pas de valeurs magiques** - utiliser des constantes nommées
 6. **Composants > 500 lignes** = refactorisation nécessaire
+7. **Syntaxe compacte** - utiliser les formes courtes quand c'est possible :
+   - `if (!value)` au lieu de `if (value === false)` ou `if (value !== true)`
+   - `if (value)` au lieu de `if (value === true)`
+   - `const x = a || b` au lieu de `const x = a ? a : b`
+   - `const x = a ?? b` pour les nullish
+   - `arr.length` au lieu de `arr.length > 0` pour les booléens (si contexte clair)
+   - **Exception** : `value !== true` est requis pour les union types `true | T` (ex: `ValidationResult`)
 
 ---
 
 ## 🔄 Dernière mise à jour
 
-**Date** : 2026-01-15
+**Date** : 2026-01-29
 

@@ -564,9 +564,9 @@ function togglePlayerAssignmentAssociation(playerId: string, assignmentId: numbe
   const updatedMap = JSON.parse(JSON.stringify(props.map)) as MapConfig;
 
   // Find or create player assignment entry
-  let playerAssignment = updatedMap.players.find(p => p.userId === playerId);
+  let playerAssignment = updatedMap.players.find(p => p.playerId === playerId);
   if (!playerAssignment) {
-    playerAssignment = { userId: playerId, assignmentIds: [] };
+    playerAssignment = { playerId: playerId, assignmentIds: [] };
     updatedMap.players.push(playerAssignment);
   }
 
@@ -911,9 +911,9 @@ defineExpose({
 
   button {
     padding: $spacing-sm $spacing-md;
-    border: 1px solid #444;
+    border: 1px solid $color-border;
     background: $color-bg-secondary;
-    color: #ccc;
+    color: $color-text-muted;
     border-radius: $radius-sm;
     cursor: pointer;
 
@@ -922,9 +922,9 @@ defineExpose({
     }
 
     &.active {
-      background: #4a4a8a;
-      border-color: #6a6aaa;
-      color: #fff;
+      background: rgba($color-accent, 0.4);
+      border-color: $color-accent;
+      color: $color-white;
     }
 
     @include tablet {
@@ -964,7 +964,7 @@ defineExpose({
   width: auto;
   height: auto;
   border-radius: $radius-md;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 4px 20px $color-shadow;
 }
 
 .overlay {
@@ -982,8 +982,8 @@ defineExpose({
 }
 
 .zone {
-  fill: rgba(100, 100, 100, 0.1);
-  stroke: rgba(100, 100, 100, 0.3);
+  fill: rgba($color-text-secondary, 0.1);
+  stroke: rgba($color-text-secondary, 0.3);
   stroke-width: 0.3;
 
   &.active {
@@ -1006,8 +1006,8 @@ defineExpose({
 }
 
 .marker {
-  fill: rgba(100, 100, 100, 0.1);
-  stroke: rgba(100, 100, 100, 0.3);
+  fill: rgba($color-text-secondary, 0.1);
+  stroke: rgba($color-text-secondary, 0.3);
   stroke-width: 0.3;
 
   &.active {
@@ -1039,13 +1039,13 @@ defineExpose({
 
   .marker-bg {
     fill: var(--marker-color);
-    stroke: #fff;
+    stroke: $color-white;
     stroke-width: 0.3;
     opacity: 0.9;
   }
 
   .marker-icon-path {
-    fill: #fff;
+    fill: $color-white;
     pointer-events: none;
   }
 
@@ -1065,21 +1065,21 @@ defineExpose({
 
 
 .point-handle {
-  fill: #fff;
+  fill: $color-white;
   stroke: $color-border;
   stroke-width: 0.3;
   cursor: move;
   opacity: 0.9;
 
   &:hover {
-    fill: #4ecdc4;
+    fill: $color-handle;
     opacity: 1;
   }
 }
 
 .add-point-handle {
-  fill: #4ecdc4;
-  stroke: #fff;
+  fill: $color-handle;
+  stroke: $color-white;
   stroke-width: 0.2;
   cursor: pointer;
   opacity: 0.5;
@@ -1100,7 +1100,7 @@ defineExpose({
   pointer-events: all;
 
   &:hover {
-    fill: #ff4444;
+    fill: $color-danger;
     opacity: 1;
   }
 }
@@ -1111,7 +1111,7 @@ defineExpose({
   text-anchor: middle;
 
   &.active {
-    fill: #fff;
+    fill: $color-white;
     font-weight: bold;
   }
 

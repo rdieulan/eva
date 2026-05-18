@@ -1,45 +1,51 @@
 // Users routes
 
 import { Router } from 'express';
-import type { Request, Response } from 'express';
+import type { Response } from 'express';
 import { prisma } from '@db/prisma';
-import { authMiddleware, adminMiddleware } from '@middleware/auth.middleware';
+import { authMiddleware, requirePermission } from '@middleware/auth.middleware';
+import type { AuthRequest } from '@middleware/auth.middleware';
+import { ERROR } from '@shared/constants';
+import { apiLogger } from '@utils/logger';
 
 const router = Router();
 
-// GET /api/users - Get all users (admin only)
-router.get('/', authMiddleware, adminMiddleware, async (_req: Request, res: Response) => {
-  try {
-    const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        createdAt: true,
-      },
-    });
-    res.json(users);
-  } catch (error) {
-    console.error('Error fetching users:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
+// GET /api/users - Get all users (team management permission required)
+router.get('/', authMiddleware, requirePermission('team', 'canManagePermissions'), async (req: AuthRequest, res: Response) => {
+  const teamId = req.account?.teamId;
 
-// GET /api/players - Get players list (public - for frontend player selection)
-router.get('/players', async (_req: Request, res: Response) => {
+  // Account must belong to a team to see team members
+  if (!teamId) {
+    res.json([]);
+    return;
+  }
+
   try {
-    const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        name: true,
+    const players = await prisma.player.findMany({
+      where: { teamId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            createdAt: true,
+          },
+        },
       },
-      orderBy: { name: 'asc' },
     });
-    res.json(users);
+    // Return format compatible with frontend
+    res.json(players.map(p => ({
+      id: p.user!.id,
+      email: p.user!.email,
+      name: p.user!.name,
+      permissions: p.permissions,
+      teamId: p.teamId,
+      createdAt: p.user!.createdAt,
+    })));
   } catch (error) {
-    console.error('Error fetching players:', error);
-    res.status(500).json({ error: 'Server error' });
+    apiLogger.error('Error fetching users:', error);
+    res.status(500).json({ errors: [ERROR.serverError] });
   }
 });
 

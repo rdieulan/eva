@@ -1,18 +1,31 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, provide } from 'vue';
-import CalendarGrid from '@/components/calendar/CalendarGrid.vue';
-import WeekGrid from '@/components/calendar/WeekGrid.vue';
-import CalendarToolbar from '@/components/calendar/CalendarToolbar.vue';
-import CalendarControls from '@/components/calendar/CalendarControls.vue';
+import CalendarTopBar from '@/components/calendar/layout/CalendarTopBar.vue';
+import CalendarHeader from '@/components/calendar/layout/CalendarHeader.vue';
+import CalendarBody from '@/components/calendar/layout/CalendarBody.vue';
 import EventFormModal from '@/components/calendar/EventFormModal.vue';
 import EventViewerModal from '@/components/calendar/EventViewerModal.vue';
+import NoTeamMessage from '@/components/common/NoTeamMessage.vue';
+import ErrorModal from '@/components/common/error/ErrorModal.vue';
+import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import { useAuth } from '@/composables/useAuth';
 import { useCalendar } from '@/composables/useCalendar';
 import { useCalendarEvents } from '@/composables/useCalendarEvents';
+import { useErrors } from '@/composables/useErrors';
 import { fetchAllMaps, fetchPlayers } from '@/api';
+import { ERROR } from '@shared/constants';
 import type { MapConfig, Player } from '@shared/types';
 
-const { permissions, user } = useAuth();
+const { permissions, account } = useAuth();
+
+// Error handling
+const { errors, setErrors, setErrorFromException } = useErrors();
+const showErrorModal = ref(false);
+
+function handleError(errorMessages: string[]) {
+  setErrors(errorMessages);
+  showErrorModal.value = true;
+}
 
 // Check if teleport target exists (for SSR/test compatibility)
 const teleportDisabled = ref(true);
@@ -29,7 +42,8 @@ const {
   navigationTitle,
   days,
   isLoading,
-  error,
+  errors: calendarErrors,
+  noTeam,
   editMode,
   toggleEditMode,
   goToPrev,
@@ -41,7 +55,8 @@ const {
   loadCalendarData,
   setAvailability,
 } = useCalendar({
-  userId: computed(() => user.value?.id),
+  playerId: computed(() => account.value?.playerId ?? undefined),
+  onError: handleError,
 });
 
 // Use calendar events composable
@@ -52,6 +67,8 @@ const {
   viewerEvents,
   viewerInitialIndex,
   canCreateEvents,
+  canEditEvents,
+  canDeleteEvents,
   openEventViewer,
   closeEventViewer,
   openCreateEvent,
@@ -61,9 +78,11 @@ const {
   removeEvent,
   updateGamePlan,
 } = useCalendarEvents({
-  days,
-  canEdit: computed(() => permissions.value.canEdit),
+  canCreate: computed(() => permissions.value.calendar.canCreateEvents),
+  canEdit: computed(() => permissions.value.calendar.canEditEvents),
+  canDelete: computed(() => permissions.value.calendar.canDeleteEvents),
   reloadData: loadCalendarData,
+  onError: handleError,
 });
 
 // Provide editMode and toggle function for TopBar
@@ -86,6 +105,8 @@ onMounted(async () => {
     players.value = loadedPlayers;
   } catch (err) {
     console.error('Error loading maps/players:', err);
+    setErrorFromException(err, ERROR.serverError);
+    showErrorModal.value = true;
   }
 
   loadCalendarData();
@@ -96,7 +117,7 @@ onMounted(async () => {
   <div class="calendar-page">
     <!-- Teleport toolbar to TopBar -->
     <Teleport v-if="!teleportDisabled" to="#topbar-dynamic-content">
-      <CalendarToolbar
+      <CalendarTopBar
         :edit-mode="editMode"
         @toggle-edit-mode="toggleEditMode"
       />
@@ -109,15 +130,18 @@ onMounted(async () => {
     </div>
 
     <!-- Error state -->
-    <div v-else-if="error" class="error-state">
-      <p>{{ error }}</p>
+    <div v-else-if="calendarErrors.length > 0" class="error-state">
+      <ErrorDisplay :errors="calendarErrors" />
       <button class="btn-retry" @click="loadCalendarData">Réessayer</button>
     </div>
+
+    <!-- No team state -->
+    <NoTeamMessage v-else-if="noTeam" />
 
     <!-- Calendar -->
     <template v-else>
       <!-- Calendar controls -->
-      <CalendarControls
+      <CalendarHeader
         :view-mode="viewMode"
         :navigation-title="navigationTitle"
         @update:view-mode="viewMode = $event"
@@ -127,28 +151,15 @@ onMounted(async () => {
 
       <!-- Scrollable calendar content -->
       <div class="calendar-content">
-        <!-- Month view -->
-        <CalendarGrid
-          v-if="viewMode === 'month'"
-          :year="currentYear"
-          :month="currentMonth"
-          :days="days"
-          :edit-mode="editMode"
-          @prev-month="goToPrevMonth"
-          @next-month="goToNextMonth"
-          @set-availability="setAvailability"
-          @open-event-viewer="openEventViewer"
-          @open-create-event="openCreateEvent"
-        />
-
-        <!-- Week view -->
-        <WeekGrid
-          v-else
+        <CalendarBody
+          :view-mode="viewMode"
           :year="currentYear"
           :month="currentMonth"
           :week-start="currentWeekStart"
           :days="days"
           :edit-mode="editMode"
+          @prev-month="goToPrevMonth"
+          @next-month="goToNextMonth"
           @prev-week="goToPrevWeek"
           @next-week="goToNextWeek"
           @set-availability="setAvailability"
@@ -162,7 +173,9 @@ onMounted(async () => {
     <EventViewerModal
       :events="viewerEvents"
       :initial-index="viewerInitialIndex"
-      :is-admin="canCreateEvents"
+      :can-create="canCreateEvents"
+      :can-edit="canEditEvents"
+      :can-delete="canDeleteEvents"
       :selected-date="viewerEvents[0]?.date"
       @close="closeEventViewer"
       @edit-event="editEventFromViewer"
@@ -174,13 +187,23 @@ onMounted(async () => {
       :open="showEventModal"
       :selected-date="selectedDate"
       :edit-event="editingEvent"
-      :read-only="!canCreateEvents"
+      :can-create="canCreateEvents"
+      :can-edit="canEditEvents"
+      :can-delete="canDeleteEvents"
+      :can-attach-game-plan="permissions.calendar.canAttachGamePlan"
       :maps="maps"
       :players="players"
       @close="showEventModal = false"
       @submit="submitEvent"
       @delete="removeEvent"
       @update-gameplan="updateGamePlan"
+    />
+
+    <!-- Error Modal -->
+    <ErrorModal
+      :open="showErrorModal"
+      :errors="errors"
+      @close="showErrorModal = false"
     />
   </div>
 </template>
@@ -194,7 +217,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: linear-gradient(135deg, $color-bg-secondary 0%, #16213e 100%);
+  background: linear-gradient(135deg, $color-bg-secondary 0%, $color-bg-tertiary 100%);
   overflow: hidden;
 }
 
@@ -229,7 +252,7 @@ onMounted(async () => {
   background: $color-bg-tertiary;
   border: 1px solid $color-border-light;
   border-radius: $radius-md;
-  color: #ccc;
+  color: $color-text-muted;
   cursor: pointer;
   transition: all 0.2s;
 
@@ -247,6 +270,13 @@ onMounted(async () => {
   flex-direction: column;
   align-items: center;
   padding: 0 $spacing-xl $spacing-md;
+
+  // Hide scrollbar but keep scroll functionality
+  scrollbar-width: none; // Firefox
+  -ms-overflow-style: none; // IE/Edge
+  &::-webkit-scrollbar {
+    display: none; // Chrome/Safari/Opera
+  }
 
   @include tablet {
     padding: 0 $spacing-lg $spacing-sm;

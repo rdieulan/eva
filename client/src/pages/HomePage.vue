@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
+import { useAuth } from '@/composables/useAuth';
+import NoTeamMessage from '@/components/common/NoTeamMessage.vue';
 
 const router = useRouter();
+const { hasTeam } = useAuth();
 
 function goToPlanner() {
   router.push('/planner');
@@ -9,6 +12,10 @@ function goToPlanner() {
 
 function goToCalendar() {
   router.push('/calendar');
+}
+
+function goToTeam() {
+  router.push('/team');
 }
 </script>
 
@@ -19,7 +26,8 @@ function goToCalendar() {
       <p class="subtitle">Outil de gestion d'équipe FPS 4v4</p>
     </div>
 
-    <nav class="nav-cards">
+    <!-- Show navigation only if user has a team -->
+    <nav v-if="hasTeam" class="nav-cards">
       <button class="nav-card" @click="goToPlanner">
         <div class="card-icon">📋</div>
         <h2>Planificateur</h2>
@@ -31,7 +39,16 @@ function goToCalendar() {
         <h2>Calendrier</h2>
         <p>Planifiez vos sessions d'entraînement</p>
       </button>
+
+      <button class="nav-card" @click="goToTeam">
+        <div class="card-icon">👥</div>
+        <h2>Mon équipe</h2>
+        <p>Gérez les membres et paramètres de votre équipe</p>
+      </button>
     </nav>
+
+    <!-- Show no team message if user has no team -->
+    <NoTeamMessage v-else />
   </div>
 </template>
 
@@ -46,7 +63,7 @@ function goToCalendar() {
   align-items: center;
   justify-content: center;
   padding: $spacing-xl;
-  background: linear-gradient(135deg, $color-bg-secondary 0%, #16213e 100%);
+  background: linear-gradient(135deg, $color-bg-secondary 0%, $color-bg-tertiary 100%);
 
   @include tablet {
     padding: $spacing-lg;
@@ -145,7 +162,7 @@ function goToCalendar() {
   &:hover {
     transform: translateY(-8px);
     border-color: $color-accent;
-    box-shadow: 0 12px 40px rgba(122, 122, 186, 0.2);
+    box-shadow: 0 12px 40px rgba($color-accent, 0.2);
   }
 
   @include tablet {
@@ -168,7 +185,7 @@ function goToCalendar() {
   }
 
   h2 {
-    color: #fff;
+    color: $color-white;
     margin: 0 0 $spacing-sm;
     font-size: 1.5rem;
 
@@ -204,27 +221,6 @@ function goToCalendar() {
   @include mobile {
     font-size: 2rem;
     margin-bottom: $spacing-sm;
-  }
-}
-
-.badge {
-  position: absolute;
-  top: $spacing-md;
-  right: $spacing-md;
-  padding: $spacing-xs $spacing-sm;
-  border-radius: $radius-sm;
-  font-size: 0.7rem;
-  font-weight: 600;
-
-  &.coming-soon {
-    background: $color-danger;
-    color: #fff;
-  }
-
-  @include mobile {
-    top: 0.75rem;
-    right: 0.75rem;
-    font-size: 0.65rem;
   }
 }
 </style>

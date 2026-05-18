@@ -10,14 +10,18 @@
     "baseUrl": "..",
     "paths": {
       "@/*": ["client/src/*"],
-      "@shared/*": ["shared/*"]
+      "@shared/*": ["shared/*"],
+      "@services/*": ["server/src/services/*"],
+      "@db/*": ["server/src/db/*"],
+      "@middleware/*": ["server/src/middleware/*"]
     }
   },
   "include": [
     "./**/*.ts",
     "../client/src/**/*.ts",
     "../client/src/**/*.vue",
-    "../shared/**/*.ts"
+    "../shared/**/*.ts",
+    "../server/src/services/helpers/**/*.ts"
   ]
 }
 

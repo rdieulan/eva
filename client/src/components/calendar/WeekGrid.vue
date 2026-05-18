@@ -118,7 +118,7 @@ watch(() => props.weekStart, () => {
           :is-current-month="cell.isCurrentMonth"
           :is-today="cell.isToday"
           :is-past="cell.isPast"
-          :current-user-status="cell.data?.currentUserStatus ?? null"
+          :current-player-status="cell.data?.currentPlayerStatus ?? null"
           :player-availabilities="cell.data?.playerAvailabilities ?? []"
           :events="cell.data?.events ?? []"
           class="week-day-cell"
@@ -239,10 +239,10 @@ watch(() => props.weekStart, () => {
 .day-number {
   font-size: 1.25rem;
   font-weight: 700;
-  color: #fff;
+  color: $color-white;
 
   &.other-month {
-    color: #555;
+    color: $color-text-secondary;
   }
 
   @include tablet {
@@ -308,7 +308,7 @@ watch(() => props.weekStart, () => {
       justify-content: center;
       gap: 2px;
       padding-left: 0.25rem;
-      border-left: 1px solid rgba(255, 255, 255, 0.1);
+      border-left: 1px solid rgba($color-white, 0.1);
     }
 
     // Hide day header (already shown in week-day-header)

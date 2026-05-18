@@ -7,34 +7,21 @@ import type {
   SetAvailabilityRequest,
   CreateEventRequest,
   AvailabilityStatus,
+  MatchGamePlan,
 } from '@shared/types';
-
-/**
- * Get auth headers
- */
-function getAuthHeaders(): HeadersInit {
-  const token = localStorage.getItem('token');
-  return {
-    'Content-Type': 'application/json',
-    ...(token && { Authorization: `Bearer ${token}` }),
-  };
-}
+import { ERROR } from '@shared/constants';
+import { authFetch } from '@/api/utils';
 
 /**
  * Fetch calendar data for a month
  * @param month Format YYYY-MM
  */
 export async function fetchMonthData(month: string): Promise<MonthData> {
-  const response = await fetch(`/api/calendar/availability?month=${month}`, {
-    headers: getAuthHeaders(),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Erreur lors du chargement du calendrier');
-  }
-
-  return response.json();
+  return authFetch<MonthData>(
+    `/api/calendar/availability?month=${month}`,
+    undefined,
+    ERROR.calendarLoadFailed
+  );
 }
 
 /**
@@ -47,19 +34,11 @@ export async function setAvailability(
   status: AvailabilityStatus | null
 ): Promise<Availability | { success: true; deleted: true }> {
   const body: SetAvailabilityRequest = { date, status };
-
-  const response = await fetch('/api/calendar/availability', {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(body),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Erreur lors de la mise à jour de la disponibilité');
-  }
-
-  return response.json();
+  return authFetch<Availability | { success: true; deleted: true }>(
+    '/api/calendar/availability',
+    { method: 'POST', body: JSON.stringify(body) },
+    ERROR.availabilityUpdateFailed
+  );
 }
 
 /**
@@ -67,34 +46,22 @@ export async function setAvailability(
  * @param month Format YYYY-MM
  */
 export async function fetchEvents(month: string): Promise<CalendarEvent[]> {
-  const response = await fetch(`/api/calendar/events?month=${month}`, {
-    headers: getAuthHeaders(),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Erreur lors du chargement des événements');
-  }
-
-  return response.json();
+  return authFetch<CalendarEvent[]>(
+    `/api/calendar/events?month=${month}`,
+    undefined,
+    ERROR.eventsLoadFailed
+  );
 }
 
 /**
  * Create a new event (Admin only)
  */
-export async function createEvent(event: CreateEventRequest): Promise<CalendarEvent> {
-  const response = await fetch('/api/calendar/events', {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(event),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Erreur lors de la création de l'événement");
-  }
-
-  return response.json();
+export async function createEvent(eventData: CreateEventRequest): Promise<CalendarEvent> {
+  return authFetch<CalendarEvent>(
+    '/api/calendar/events',
+    { method: 'POST', body: JSON.stringify(eventData) },
+    ERROR.eventCreationFailed
+  );
 }
 
 /**
@@ -102,35 +69,24 @@ export async function createEvent(event: CreateEventRequest): Promise<CalendarEv
  */
 export async function updateEvent(
   id: string,
-  event: Partial<CreateEventRequest>
+  eventData: Partial<CreateEventRequest>
 ): Promise<CalendarEvent> {
-  const response = await fetch(`/api/calendar/events/${id}`, {
-    method: 'PUT',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(event),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Erreur lors de la modification de l'événement");
-  }
-
-  return response.json();
+  return authFetch<CalendarEvent>(
+    `/api/calendar/events/${id}`,
+    { method: 'PUT', body: JSON.stringify(eventData) },
+    ERROR.eventUpdateFailed
+  );
 }
 
 /**
  * Delete an event (Admin only)
  */
 export async function deleteEvent(id: string): Promise<void> {
-  const response = await fetch(`/api/calendar/events/${id}`, {
-    method: 'DELETE',
-    headers: getAuthHeaders(),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Erreur lors de la suppression de l'événement");
-  }
+  return authFetch<void>(
+    `/api/calendar/events/${id}`,
+    { method: 'DELETE' },
+    ERROR.eventDeleteFailed
+  );
 }
 
 /**
@@ -138,19 +94,11 @@ export async function deleteEvent(id: string): Promise<void> {
  */
 export async function updateEventGamePlan(
   eventId: string,
-  gamePlan: import('@shared/types').MatchGamePlan | null
+  gamePlan: MatchGamePlan | null
 ): Promise<CalendarEvent> {
-  const response = await fetch(`/api/calendar/events/${eventId}/gameplan`, {
-    method: 'PUT',
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ gamePlan }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Erreur lors de la mise à jour du plan de jeu');
-  }
-
-  return response.json();
+  return authFetch<CalendarEvent>(
+    `/api/calendar/events/${eventId}/gameplan`,
+    { method: 'PUT', body: JSON.stringify({ gamePlan }) },
+    ERROR.eventGamePlanUpdateFailed
+  );
 }
-

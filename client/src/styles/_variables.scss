@@ -53,26 +53,73 @@ $font-size-4xl: 3rem;
 // ===== Touch Target =====
 $touch-target-min: 44px;
 
+
 // ===== Border Radius =====
 $radius-sm: 4px;
 $radius-md: 8px;
 $radius-lg: 12px;
 $radius-xl: 16px;
 
-// ===== Colors =====
+// ===========================================
+// COLOR PALETTE
+// All colors used by the application
+// Edit here to change the global theme
+// ===========================================
+
+// ===== Base Colors =====
+$color-white: #fff;
+$color-black: #000;
+
+// ===== Backgrounds (darkest to lightest) =====
 $color-bg-primary: #0f0f1a;
 $color-bg-secondary: #1a1a2e;
 $color-bg-tertiary: #2a2a4a;
+
+// ===== Borders =====
 $color-border: #333;
 $color-border-light: #3a3a5a;
+
+// ===== Text =====
 $color-text-primary: rgba(255, 255, 255, 0.87);
 $color-text-secondary: #888;
+$color-text-muted: #ccc;
+
+// ===== Accent (primary actions, buttons, links) =====
 $color-accent: #7a7aba;
-$color-accent-light: #9a9ada;
+
+// ===== Semantic =====
+// Success: validations, confirmations, available
 $color-success: #4ade80;
-$color-danger: #ff6b6b;
+
+// Danger: errors, deletions, cancellations, unavailable
+$color-danger: #981b1b;
+
+// Warning: alerts, attention required
 $color-warning: #fb923c;
-$color-conditional: #facc15;
+
+// Info: information, help
 $color-info: #60a5fa;
+
+// Conditional: conditional availability (yellow)
+$color-conditional: #facc15;
+
+// ===== Special =====
+// Star/favorite (main role)
 $color-star: #fbbf24;
+
+// Edit/modify actions (buttons, icons)
+$color-edit: #fbbf24;
+
+// Interactive handles (resize, drag, manipulation)
+$color-handle: #4ecdc4;
+
+// ===========================================
+// DERIVED COLORS (computed from base colors)
+// Use rgba() or color.adjust() in components
+// to create variants (hover, bg, border, etc.)
+// ===========================================
+
+// Overlay/Shadow
+$color-overlay: rgba($color-black, 0.7);
+$color-shadow: rgba($color-black, 0.3);
 

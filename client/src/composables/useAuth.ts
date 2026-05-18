@@ -1,44 +1,88 @@
 import { ref, computed } from 'vue';
-
-// Types
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: 'ADMIN' | 'PLAYER';
-}
-
-export interface Permissions {
-  canEdit: boolean;
-  canManageUsers: boolean;
-  canExportPlans: boolean;
-  canViewPlanner: boolean;
-  canViewCalendar: boolean;
-}
+import type { AccountPermissions, Account } from '@shared/types';
+import { DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
+import { clearPlayersCache } from '@/api/players.api';
+import { getCurrentAccount } from '@/api/auth.api';
+import { clearBalanceRulesCache } from '@/composables/useBalanceRules';
 
 // Global state
-const user = ref<User | null>(null);
+const account = ref<Account | null>(null);
 const token = ref<string | null>(null);
 const isLoading = ref(true);
 const isInitialized = ref(false);
 let initPromise: Promise<void> | null = null;
+let storageListenerInitialized = false;
+
+/**
+ * Setup listener for localStorage changes from other tabs
+ * Detects when another tab logs in/out or changes account
+ */
+function setupStorageListener(): void {
+  if (storageListenerInitialized) return;
+  storageListenerInitialized = true;
+
+  window.addEventListener('storage', (event) => {
+    // Only react to token changes
+    if (event.key !== 'token') return;
+
+    const currentToken = token.value;
+    const newToken = event.newValue;
+
+    // Another tab logged out
+    if (!newToken && currentToken) {
+      clearAuthState();
+      window.location.href = '/login';
+      return;
+    }
+
+    // Another tab logged in with a different account
+    if (newToken && newToken !== currentToken) {
+      // Reload the page to sync with the new session
+      window.location.reload();
+    }
+  });
+}
+
+// Clear authentication state (internal, without localStorage removal)
+function clearAuthState() {
+  token.value = null;
+  account.value = null;
+  clearPlayersCache();
+  clearBalanceRulesCache();
+}
 
 // Clear authentication
 function clearAuth() {
-  token.value = null;
-  user.value = null;
+  clearAuthState();
   localStorage.removeItem('token');
-  localStorage.removeItem('user');
+  localStorage.removeItem('account');
 }
 
-// Set user after login
-function setAuth(newToken: string, newUser: User) {
+// Set account after login
+function setAuth(newToken: string, newAccount: Account) {
   token.value = newToken;
-  user.value = newUser;
+  account.value = newAccount;
   isInitialized.value = true;
   isLoading.value = false;
   localStorage.setItem('token', newToken);
-  localStorage.setItem('user', JSON.stringify(newUser));
+  localStorage.setItem('account', JSON.stringify(newAccount));
+}
+
+// Refresh account data from server (after team join, permission changes, etc.)
+async function refreshAccount(): Promise<void> {
+  const currentToken = token.value || localStorage.getItem('token');
+  if (!currentToken) return;
+
+  try {
+    const refreshedAccount = await getCurrentAccount();
+    account.value = refreshedAccount;
+    localStorage.setItem('account', JSON.stringify(refreshedAccount));
+    // Clear caches as team data may have changed
+    clearPlayersCache();
+    clearBalanceRulesCache();
+  } catch {
+    // Ignore errors, keep current state
+  }
 }
 
 // Initialize and validate auth
@@ -58,6 +102,9 @@ function initAuth(): Promise<void> {
 async function doInitAuth(): Promise<void> {
   isLoading.value = true;
 
+  // Setup cross-tab session sync
+  setupStorageListener();
+
   const storedToken = localStorage.getItem('token');
 
   if (!storedToken) {
@@ -68,21 +115,12 @@ async function doInitAuth(): Promise<void> {
 
   // Validate token with server
   try {
-    const response = await fetch('/api/auth/me', {
-      headers: { 'Authorization': `Bearer ${storedToken}` }
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      token.value = storedToken;
-      user.value = data.user;
-      localStorage.setItem('user', JSON.stringify(data.user));
-    } else {
-      // Token invalid
-      clearAuth();
-    }
+    const validatedAccount = await getCurrentAccount();
+    token.value = storedToken;
+    account.value = validatedAccount;
+    localStorage.setItem('account', JSON.stringify(validatedAccount));
   } catch {
-    // Server error
+    // Token invalid or server error
     clearAuth();
   }
 
@@ -90,32 +128,24 @@ async function doInitAuth(): Promise<void> {
   isInitialized.value = true;
 }
 
-// Role-based permissions
-const permissions = computed<Permissions>(() => {
-  const role = user.value?.role;
-
-  return {
-    canEdit: role === 'ADMIN',
-    canManageUsers: role === 'ADMIN',
-    canExportPlans: role === 'ADMIN' || role === 'PLAYER',
-    canViewPlanner: role === 'ADMIN' || role === 'PLAYER',
-    canViewCalendar: role === 'ADMIN' || role === 'PLAYER',
-  };
+// Get account permissions (with fallback to default)
+const permissions = computed<AccountPermissions>(() => {
+  return account.value?.permissions ?? DEFAULT_PLAYER_PERMISSIONS;
 });
 
 // Exported composable
 export function useAuth() {
-  const isAuthenticated = computed(() => !!(token.value && user.value));
-  const isAdmin = computed(() => user.value?.role === 'ADMIN');
-  const isPlayer = computed(() => user.value?.role === 'PLAYER');
+  const isAuthenticated = computed(() => !!(token.value && account.value));
+  const isLeader = computed(() => account.value?.isLeader ?? false);
+  const hasTeam = computed(() => !!account.value?.teamId);
 
   return {
     // State
-    user: computed(() => user.value),
+    account: computed(() => account.value),
     token: computed(() => token.value),
     isAuthenticated,
-    isAdmin,
-    isPlayer,
+    isLeader,
+    hasTeam,
     isLoading: computed(() => isLoading.value),
     permissions,
 
@@ -123,6 +153,6 @@ export function useAuth() {
     setAuth,
     clearAuth,
     initAuth,
+    refreshAccount,
   };
 }
-

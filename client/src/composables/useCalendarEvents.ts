@@ -3,19 +3,23 @@
  * Handles event modals, CRUD operations
  */
 
-import { ref, type Ref, type ComputedRef, computed } from 'vue';
+import { ref, type Ref, type ComputedRef } from 'vue';
 import {
   createEvent,
   updateEvent,
   deleteEvent,
   updateEventGamePlan,
 } from '@/api/calendar.api';
-import type { CalendarEvent, CreateEventRequest, MatchGamePlan, DayData } from '@shared/types';
+import { useErrors } from '@/composables/useErrors';
+import { ERROR } from '@shared/constants';
+import type { CalendarEvent, CreateEventRequest, MatchGamePlan } from '@shared/types';
 
 export interface UseCalendarEventsOptions {
-  days: Ref<Record<string, DayData>>;
+  canCreate: ComputedRef<boolean>;
   canEdit: ComputedRef<boolean>;
+  canDelete: ComputedRef<boolean>;
   reloadData: () => Promise<void>;
+  onError?: (errors: string[]) => void;
 }
 
 export interface UseCalendarEventsReturn {
@@ -31,6 +35,8 @@ export interface UseCalendarEventsReturn {
 
   // Permissions
   canCreateEvents: ComputedRef<boolean>;
+  canEditEvents: ComputedRef<boolean>;
+  canDeleteEvents: ComputedRef<boolean>;
 
   // Event viewer methods
   openEventViewer: (events: CalendarEvent[], initialIndex: number) => void;
@@ -48,7 +54,10 @@ export interface UseCalendarEventsReturn {
 }
 
 export function useCalendarEvents(options: UseCalendarEventsOptions): UseCalendarEventsReturn {
-  const { canEdit, reloadData } = options;
+  const { canCreate, canEdit, canDelete, reloadData, onError } = options;
+
+  // Error handling
+  const { errors, setErrorFromException } = useErrors();
 
   // Event form modal state
   const showEventModal = ref(false);
@@ -60,8 +69,10 @@ export function useCalendarEvents(options: UseCalendarEventsOptions): UseCalenda
   const viewerEvents = ref<CalendarEvent[]>([]);
   const viewerInitialIndex = ref(0);
 
-  // Permissions
-  const canCreateEvents = computed(() => canEdit.value);
+  // Permissions - directly use the passed permissions
+  const canCreateEvents = canCreate;
+  const canEditEvents = canEdit;
+  const canDeleteEvents = canDelete;
 
   // Open event viewer modal (read-only with navigation)
   function openEventViewer(events: CalendarEvent[], initialIndex: number) {
@@ -114,7 +125,8 @@ export function useCalendarEvents(options: UseCalendarEventsOptions): UseCalenda
       await reloadData();
     } catch (err) {
       console.error('Error saving event:', err);
-      alert(err instanceof Error ? err.message : 'Erreur');
+      setErrorFromException(err, ERROR.serverError);
+      onError?.(errors.value);
     }
   }
 
@@ -126,7 +138,8 @@ export function useCalendarEvents(options: UseCalendarEventsOptions): UseCalenda
       await reloadData();
     } catch (err) {
       console.error('Error deleting event:', err);
-      alert(err instanceof Error ? err.message : 'Erreur');
+      setErrorFromException(err, ERROR.serverError);
+      onError?.(errors.value);
     }
   }
 
@@ -138,7 +151,8 @@ export function useCalendarEvents(options: UseCalendarEventsOptions): UseCalenda
       await reloadData();
     } catch (err) {
       console.error('Error updating game plan:', err);
-      alert(err instanceof Error ? err.message : 'Erreur');
+      setErrorFromException(err, ERROR.serverError);
+      onError?.(errors.value);
     }
   }
 
@@ -155,6 +169,8 @@ export function useCalendarEvents(options: UseCalendarEventsOptions): UseCalenda
 
     // Permissions
     canCreateEvents,
+    canEditEvents,
+    canDeleteEvents,
 
     // Event viewer methods
     openEventViewer,

@@ -63,6 +63,8 @@ const isActive = (phase: GamePhase) => props.modelValue === phase;
 
 .phase-selector {
   display: flex;
+  align-items: center;
+  justify-content: center;
   gap: $spacing-xs;
   background: $color-bg-secondary;
   padding: $spacing-xs;
@@ -75,7 +77,7 @@ const isActive = (phase: GamePhase) => props.modelValue === phase;
   }
 
   &.compact {
-    padding: 2px;
+    padding: $spacing-xs;
     gap: 2px;
 
     .phase-btn {

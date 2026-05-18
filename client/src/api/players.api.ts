@@ -1,25 +1,41 @@
 // Players API client
 
 import type { Player } from '@shared/types';
+import { ERROR } from '@shared/constants';
+import { authFetch } from '@/api/utils';
 
-// Cache for players (loaded once)
+// Cache for players - keyed by token to invalidate on account change
 let cachedPlayers: Player[] | null = null;
+let cachedForToken: string | null = null;
+
+/**
+ * Clear players cache (call on logout or team change)
+ */
+export function clearPlayersCache(): void {
+  cachedPlayers = null;
+  cachedForToken = null;
+}
 
 /**
  * Load all players from API (with caching)
+ * Requires authentication - returns team members only
+ * Cache is invalidated when token changes
  */
 export async function fetchPlayers(): Promise<Player[]> {
+  const currentToken = localStorage.getItem('token');
+
+  // Invalidate cache if token changed
+  if (cachedForToken !== currentToken) {
+    cachedPlayers = null;
+    cachedForToken = currentToken;
+  }
+
   if (cachedPlayers) {
     return cachedPlayers;
   }
 
-  const response = await fetch('/api/players');
-  if (!response.ok) {
-    throw new Error('Failed to load players from API');
-  }
-
-  cachedPlayers = await response.json();
-  return cachedPlayers!;
+  cachedPlayers = await authFetch<Player[]>('/api/players', undefined, ERROR.playersLoadFailed);
+  return cachedPlayers;
 }
 
 /**
@@ -27,7 +43,7 @@ export async function fetchPlayers(): Promise<Player[]> {
  */
 export function getPlayers(): Player[] {
   if (!cachedPlayers) {
-    throw new Error('Players not loaded. Call fetchPlayers() first.');
+    throw new Error(ERROR.playersNotLoaded);
   }
   return cachedPlayers;
 }
@@ -45,11 +61,3 @@ export function getPlayerById(id: string): Player | undefined {
 export function getPlayerName(id: string): string {
   return getPlayerById(id)?.name || id;
 }
-
-/**
- * Clear player cache (for testing or refresh)
- */
-export function clearPlayersCache(): void {
-  cachedPlayers = null;
-}
-

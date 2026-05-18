@@ -6,18 +6,17 @@
 import { ref, computed, watch, type Ref, type ComputedRef } from 'vue';
 import { fetchMonthData, setAvailability as setAvailabilityApi } from '@/api/calendar.api';
 import { getMonday } from '@/utils/calendar';
+import { useErrors } from '@/composables/useErrors';
+import { MONTH_NAMES } from '@/constants/calendar';
+import { ERROR } from '@shared/constants';
 import type { DayData, AvailabilityStatus } from '@shared/types';
 
-// Month names for display (French)
-const MONTH_NAMES = [
-  'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
-];
 
 export type ViewMode = 'month' | 'week';
 
 export interface UseCalendarOptions {
-  userId: Ref<string | undefined>;
+  playerId: Ref<string | undefined>;
+  onError?: (errors: string[]) => void;
 }
 
 export interface UseCalendarReturn {
@@ -40,7 +39,8 @@ export interface UseCalendarReturn {
   // Data
   days: Ref<Record<string, DayData>>;
   isLoading: Ref<boolean>;
-  error: Ref<string>;
+  errors: Ref<string[]>;
+  noTeam: Ref<boolean>;
 
   // Edit mode
   editMode: Ref<boolean>;
@@ -60,7 +60,7 @@ export interface UseCalendarReturn {
 }
 
 export function useCalendar(options: UseCalendarOptions): UseCalendarReturn {
-  const { userId } = options;
+  const { playerId, onError } = options;
 
   // View mode state
   const viewMode = ref<ViewMode>('month');
@@ -86,7 +86,8 @@ export function useCalendar(options: UseCalendarOptions): UseCalendarReturn {
   // Calendar data
   const days = ref<Record<string, DayData>>({});
   const isLoading = ref(true);
-  const error = ref('');
+  const { errors, clearErrors, setErrorFromException } = useErrors();
+  const noTeam = ref(false);
 
   // Month string for API (YYYY-MM)
   const monthString = computed(() => {
@@ -127,14 +128,15 @@ export function useCalendar(options: UseCalendarOptions): UseCalendarReturn {
   // Load calendar data
   async function loadCalendarData() {
     isLoading.value = true;
-    error.value = '';
+    clearErrors();
 
     try {
       const data = await fetchMonthData(monthString.value);
       days.value = data.days;
+      noTeam.value = data.noTeam === true;
     } catch (err) {
       console.error('Error loading calendar:', err);
-      error.value = err instanceof Error ? err.message : 'Erreur de chargement';
+      setErrorFromException(err, ERROR.serverError);
     } finally {
       isLoading.value = false;
     }
@@ -227,17 +229,17 @@ export function useCalendar(options: UseCalendarOptions): UseCalendarReturn {
   // Set availability with optimistic update
   async function setAvailability(date: string, newStatus: AvailabilityStatus | null) {
     // Store previous status for rollback
-    const previousStatus = days.value[date]?.currentUserStatus ?? null;
+    const previousStatus = days.value[date]?.currentPlayerStatus ?? null;
 
     // Optimistic update
     if (days.value[date]) {
-      days.value[date].currentUserStatus = newStatus;
+      days.value[date].currentPlayerStatus = newStatus;
 
       // Also update in playerAvailabilities
-      const currentUserId = userId.value;
-      if (currentUserId) {
+      const currentPlayerId = playerId.value;
+      if (currentPlayerId) {
         const playerAvail = days.value[date].playerAvailabilities.find(
-          p => p.userId === currentUserId
+          p => p.playerId === currentPlayerId
         );
         if (playerAvail) {
           playerAvail.status = newStatus;
@@ -251,18 +253,19 @@ export function useCalendar(options: UseCalendarOptions): UseCalendarReturn {
       console.error('Error setting availability:', err);
       // Revert on error
       if (days.value[date]) {
-        days.value[date].currentUserStatus = previousStatus;
-        const currentUserId = userId.value;
-        if (currentUserId) {
+        days.value[date].currentPlayerStatus = previousStatus;
+        const currentPlayerId = playerId.value;
+        if (currentPlayerId) {
           const playerAvail = days.value[date].playerAvailabilities.find(
-            p => p.userId === currentUserId
+            p => p.playerId === currentPlayerId
           );
           if (playerAvail) {
             playerAvail.status = previousStatus;
           }
         }
       }
-      alert(err instanceof Error ? err.message : 'Erreur');
+      setErrorFromException(err, ERROR.serverError);
+      onError?.(errors.value);
     }
   }
 
@@ -286,7 +289,8 @@ export function useCalendar(options: UseCalendarOptions): UseCalendarReturn {
     // Data
     days,
     isLoading,
-    error,
+    errors,
+    noTeam,
 
     // Edit mode
     editMode,

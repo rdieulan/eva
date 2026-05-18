@@ -1,9 +1,14 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import type { MatchGamePlan } from '@shared/types';
+import { ERROR } from '@shared/constants';
 
 const props = defineProps<{
   gamePlan: MatchGamePlan;
+}>();
+
+const emit = defineEmits<{
+  error: [message: string];
 }>();
 
 const exportContentRef = ref<HTMLDivElement | null>(null);
@@ -49,7 +54,7 @@ async function exportToPng() {
   try {
     const html2canvas = (await import('html2canvas')).default;
     const canvas = await html2canvas(exportContentRef.value, {
-      backgroundColor: '#1a1a2e',
+      backgroundColor: '-bg-secondary',
       scale: 2,
     });
 
@@ -59,7 +64,7 @@ async function exportToPng() {
     link.click();
   } catch (err) {
     console.error('PNG export error:', err);
-    alert("Erreur lors de l'export PNG");
+    emit('error', ERROR.exportPngFailed);
   }
 }
 </script>
@@ -144,13 +149,13 @@ async function exportToPng() {
 .viewer-title {
   font-size: 1rem;
   font-weight: 700;
-  color: #fff;
+  color: $color-white;
   letter-spacing: 0.05em;
 }
 
 .absent-badge {
-  background: rgba(248, 113, 113, 0.2);
-  color: #f87171;
+  background: rgba($color-danger, 0.2);
+  color: $color-danger;
   padding: $spacing-xs 0.75rem;
   border-radius: 20px;
   font-size: 0.8rem;
@@ -210,7 +215,7 @@ th {
 
 .map-name {
   text-align: left;
-  color: #fff;
+  color: $color-white;
   font-weight: 500;
 
   .plan-name {
@@ -256,19 +261,19 @@ th {
 }
 
 .btn-export-png {
-  align-self: flex-end;
-  padding: 0.5rem 1rem;
-  background: rgba($color-accent, 0.2);
-  border: 1px solid $color-accent;
+  align-self: center;
+  padding: 0.75rem 1.5rem;
+  background: rgba($color-success, 0.2);
+  border: 1px solid $color-success;
   border-radius: $radius-md;
-  color: $color-accent;
-  font-size: 0.85rem;
+  color: $color-success;
+  font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover {
-    background: rgba($color-accent, 0.3);
+    background: rgba($color-success, 0.3);
   }
 
   @include mobile-lg {

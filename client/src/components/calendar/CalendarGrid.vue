@@ -112,7 +112,7 @@ function handleSetAvailability(date: string, status: AvailabilityStatus | null) 
         :is-current-month="cell.isCurrentMonth"
         :is-today="cell.isToday"
         :is-past="cell.isPast"
-        :current-user-status="cell.data?.currentUserStatus ?? null"
+        :current-player-status="cell.data?.currentPlayerStatus ?? null"
         :player-availabilities="cell.data?.playerAvailabilities ?? []"
         :events="cell.data?.events ?? []"
         :edit-mode="props.editMode"

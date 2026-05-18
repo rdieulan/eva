@@ -1,7 +1,6 @@
-import { PrismaClient, Role } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
-import bcrypt from 'bcryptjs';
 
 const databaseUrl = process.env.DATABASE_URL || 'postgresql://eva_user:eva_secret_password@localhost:5432/eva_db';
 const pool = new pg.Pool({ connectionString: databaseUrl });
@@ -9,17 +8,16 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 // Default template structure (based on Outlaw - untouched reference)
-// Note: player assignments are managed via GamePlanPlayer table, not in template
+// Player assignments are managed via GamePlanPlayer, not the template.
 const DEFAULT_TEMPLATE = {
   assignments: [
-    { id: 1, name: "Poste 1", x: 25, y: 25, zone: { x1: 15, y1: 15, x2: 35, y2: 35 } },
-    { id: 2, name: "Poste 2", x: 75, y: 25, zone: { x1: 65, y1: 15, x2: 85, y2: 35 } },
-    { id: 3, name: "Poste 3", x: 25, y: 75, zone: { x1: 15, y1: 65, x2: 35, y2: 85 } },
-    { id: 4, name: "Poste 4", x: 75, y: 75, zone: { x1: 65, y1: 65, x2: 85, y2: 85 } }
-  ]
+    { id: 1, name: 'Poste 1', x: 25, y: 25, zone: { x1: 15, y1: 15, x2: 35, y2: 35 } },
+    { id: 2, name: 'Poste 2', x: 75, y: 25, zone: { x1: 65, y1: 15, x2: 85, y2: 35 } },
+    { id: 3, name: 'Poste 3', x: 25, y: 75, zone: { x1: 15, y1: 65, x2: 35, y2: 85 } },
+    { id: 4, name: 'Poste 4', x: 75, y: 75, zone: { x1: 65, y1: 65, x2: 85, y2: 85 } },
+  ],
 };
 
-// Maps data
 const MAPS = [
   { id: 'artefact', name: 'Artefact', images: ['/maps/artefact/Artefact.png'] },
   { id: 'atlantis', name: 'Atlantis', images: ['/maps/atlantis/Atlantis.png'] },
@@ -35,48 +33,12 @@ const MAPS = [
 ];
 
 async function main() {
-  console.log('Seeding database...\n');
+  console.log('Seeding maps...\n');
 
-  // ========== USERS ==========
-  console.log('Creating users...');
-  const users = [
-    { email: 'tailhades8@hotmail.com', name: 'Nyork', role: Role.PLAYER },
-    { email: 'Kevindijusco30@gmail.com', name: 'Kekew', role: Role.PLAYER },
-    { email: 'mathieu.lietsch@gmail.com', name: 'Matic', role: Role.PLAYER },
-    { email: 'sokehur@gmail.com', name: 'Sib', role: Role.ADMIN },
-    { email: 'clemencefadvolf0102@gmail.com', name: 'Celesta', role: Role.PLAYER },
-  ];
-
-  for (const user of users) {
-    const hashedPassword = await bcrypt.hash('changeme123', 10);
-
-    await prisma.user.upsert({
-      where: { email: user.email },
-      update: {
-        name: user.name,
-        role: user.role,
-        password: hashedPassword,
-      },
-      create: {
-        email: user.email,
-        password: hashedPassword,
-        name: user.name,
-        role: user.role,
-      },
-    });
-
-    console.log(`  ✓ ${user.name} (${user.email}) - ${user.role}`);
-  }
-
-  // ========== MAPS ==========
-  console.log('\nCreating maps with default templates...');
   for (const map of MAPS) {
     await prisma.map.upsert({
       where: { id: map.id },
-      update: {
-        name: map.name,
-        images: map.images,
-      },
+      update: { name: map.name, images: map.images },
       create: {
         id: map.id,
         name: map.name,
@@ -84,13 +46,10 @@ async function main() {
         template: DEFAULT_TEMPLATE,
       },
     });
-
     console.log(`  ✓ ${map.name} (${map.id})`);
   }
 
-  console.log('\n✅ Seed completed!');
-  console.log(`   - ${users.length} users created (default password: changeme123)`);
-  console.log(`   - ${MAPS.length} maps created with default templates`);
+  console.log(`\n✅ Seed completed — ${MAPS.length} maps`);
 }
 
 main()
@@ -100,4 +59,5 @@ main()
   })
   .finally(async () => {
     await prisma.$disconnect();
+    await pool.end();
   });

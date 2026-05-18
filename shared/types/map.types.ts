@@ -140,3 +140,31 @@ export interface AppState {
   selectedPhase: GamePhase; // Current phase being viewed/edited
 }
 
+// Assignment in a game plan (player -> assignment on a map)
+export interface MapAssignment {
+  visiblePlayerId: string;
+  visiblePlayerName: string;
+  assignmentId: number;
+  assignmentName: string;
+  assignmentColor: string;
+  isMainRole?: boolean; // True if this is the player's main role
+}
+
+// Game plan for a single map (with phase support)
+export interface MapGamePlan {
+  mapId: string;
+  mapName: string;
+  planName?: string; // Name of the selected game plan
+  assignments: MapAssignment[];
+  phaseNotes?: PhaseNotes; // Notes per phase for this map
+}
+
+// Complete game plan for a match (with phase support)
+export interface MatchGamePlan {
+  absentPlayerId: string;
+  absentPlayerName: string;
+  maps: MapGamePlan[];
+  generalNotes?: string; // General notes for the entire plan
+  selectedPhase?: GamePhase; // Last selected phase (for UI state)
+}
+

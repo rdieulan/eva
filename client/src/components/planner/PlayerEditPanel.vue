@@ -122,7 +122,7 @@ function cancelEditingName(): void {
   z-index: 1001;
   min-width: 180px;
   max-width: 250px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 12px $color-shadow;
   transform: translate(-50%, 10px);
 
   .panel-header {

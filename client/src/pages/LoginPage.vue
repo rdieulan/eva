@@ -2,24 +2,29 @@
 import { ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
+import { useErrors } from '@/composables/useErrors';
+import { clearPlayersCache, clearBalanceRulesCache } from '@/api';
+import { ERROR } from '@shared/constants';
+import { landingPathForAccount } from '@/router';
+import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 
 const router = useRouter();
 const route = useRoute();
 const { setAuth } = useAuth();
+const { errors, setError, setErrors, clearErrors } = useErrors();
 
 const email = ref('');
 const password = ref('');
-const error = ref('');
 const isLoading = ref(false);
 
 async function handleLogin() {
   if (!email.value || !password.value) {
-    error.value = 'Veuillez remplir tous les champs';
+    setError(ERROR.requiredFieldsMissing);
     return;
   }
 
   isLoading.value = true;
-  error.value = '';
+  clearErrors();
 
   try {
     const response = await fetch('/api/auth/login', {
@@ -34,17 +39,22 @@ async function handleLogin() {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.error || 'Erreur de connexion');
+      setErrors(data.errors || [ERROR.connectionError]);
+      return;
     }
 
-    // Utiliser le composable pour définir l'auth
-    setAuth(data.token, data.user);
+    // Clear cached data from previous account session
+    clearPlayersCache();
+    clearBalanceRulesCache();
 
-    // Rediriger vers la page d'origine ou la homepage
-    const redirectPath = route.query.redirect as string || '/';
+    // Set auth using composable
+    setAuth(data.token, data.account);
+
+    // Redirect to original page or to the account's default landing page
+    const redirectPath = (route.query.redirect as string) || landingPathForAccount(data.account);
     router.push(redirectPath);
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Erreur de connexion';
+  } catch {
+    setError(ERROR.connectionError);
   } finally {
     isLoading.value = false;
   }
@@ -79,20 +89,24 @@ async function handleLogin() {
           />
         </div>
 
-        <div v-if="error" class="error-message">
-          {{ error }}
-        </div>
+        <ErrorDisplay :errors="errors" />
 
         <button type="submit" class="btn-submit" :disabled="isLoading">
           {{ isLoading ? 'Connexion...' : 'Se connecter' }}
         </button>
       </form>
+
+      <div class="register-link">
+        <span>Pas encore de compte ?</span>
+        <router-link to="/register">Créer un compte</router-link>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
+@use 'sass:color';
 
 .login-page {
   min-height: 100%;
@@ -100,7 +114,7 @@ async function handleLogin() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, $color-bg-secondary 0%, #16213e 100%);
+  background: linear-gradient(135deg, $color-bg-secondary 0%, $color-bg-tertiary 100%);
   padding: $spacing-xl;
 
   @include tablet {
@@ -143,7 +157,7 @@ async function handleLogin() {
 }
 
 h1 {
-  color: #fff;
+  color: $color-white;
   text-align: center;
   margin: 0 0 $spacing-xl;
   font-size: 1.8rem;
@@ -184,7 +198,7 @@ input {
   background: $color-bg-secondary;
   border: 2px solid $color-border-light;
   border-radius: $radius-md;
-  color: #fff;
+  color: $color-white;
   font-size: 1rem;
   transition: border-color 0.2s;
 
@@ -194,7 +208,7 @@ input {
   }
 
   &::placeholder {
-    color: #555;
+    color: $color-text-secondary;
   }
 
   @include mobile-lg {
@@ -203,21 +217,6 @@ input {
   }
 }
 
-.error-message {
-  background: rgba($color-danger, 0.1);
-  border: 1px solid rgba($color-danger, 0.3);
-  color: $color-danger;
-  padding: 0.75rem;
-  border-radius: $radius-md;
-  margin-bottom: $spacing-lg;
-  font-size: 0.9rem;
-  text-align: center;
-
-  @include mobile {
-    font-size: 0.85rem;
-    padding: 0.625rem;
-  }
-}
 
 .btn-submit {
   width: 100%;
@@ -225,14 +224,14 @@ input {
   background: $color-accent;
   border: none;
   border-radius: $radius-md;
-  color: #fff;
+  color: $color-white;
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover:not(:disabled) {
-    background: $color-accent-light;
+    background: $color-accent;
   }
 
   &:disabled {
@@ -243,6 +242,22 @@ input {
   @include mobile {
     padding: 0.75rem;
     font-size: 0.95rem;
+  }
+}
+
+.register-link {
+  text-align: center;
+  margin-top: $spacing-md;
+  color: $color-text-muted;
+  font-size: $font-size-sm;
+
+  a {
+    color: $color-accent;
+    text-decoration: underline;
+
+    &:hover {
+      color: color.scale($color-accent, $lightness: 25%);
+    }
   }
 }
 </style>

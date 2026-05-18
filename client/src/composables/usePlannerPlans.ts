@@ -5,6 +5,8 @@
 
 import { ref, computed, watch, type Ref, type ComputedRef } from 'vue';
 import { fetchGamePlan, createGamePlan, deleteGamePlan, saveGamePlan } from '@/api';
+import { useErrors } from '@/composables/useErrors';
+import { ERROR } from '@shared/constants';
 import type { MapConfig, GamePlanSummary } from '@shared/types';
 
 export interface UsePlannerPlansOptions {
@@ -12,6 +14,7 @@ export interface UsePlannerPlansOptions {
   editableMaps: Ref<MapConfig[]>;
   selectedMapId: Ref<string | null>;
   editMode: Ref<boolean>;
+  onError?: (errors: string[]) => void;
 }
 
 export interface UsePlannerPlansReturn {
@@ -30,7 +33,10 @@ export interface UsePlannerPlansReturn {
 }
 
 export function usePlannerPlans(options: UsePlannerPlansOptions): UsePlannerPlansReturn {
-  const { maps, editableMaps, selectedMapId, editMode } = options;
+  const { maps, editableMaps, selectedMapId, editMode, onError } = options;
+
+  // Error handling
+  const { errors, setErrorFromException } = useErrors();
 
   const selectedPlanId = ref<string | null>(null);
 
@@ -72,6 +78,8 @@ export function usePlannerPlans(options: UsePlannerPlansOptions): UsePlannerPlan
       }
     } catch (error) {
       console.error('Error loading plan:', error);
+      setErrorFromException(error, ERROR.planLoadFailed);
+      onError?.(errors.value);
     }
   }
 
@@ -81,11 +89,8 @@ export function usePlannerPlans(options: UsePlannerPlansOptions): UsePlannerPlan
     const name = prompt('Nom du nouveau plan :');
     if (!name?.trim()) return;
 
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
     try {
-      const newPlan = await createGamePlan(selectedMapId.value, name.trim(), token);
+      const newPlan = await createGamePlan(selectedMapId.value, name.trim());
       if (newPlan) {
         // Add to current map's plans list with full data
         const map = maps.value.find(m => m.id === selectedMapId.value);
@@ -102,7 +107,8 @@ export function usePlannerPlans(options: UsePlannerPlansOptions): UsePlannerPlan
       }
     } catch (error) {
       console.error('Error creating plan:', error);
-      alert('Erreur lors de la création du plan');
+      setErrorFromException(error, ERROR.planCreationFailed);
+      onError?.(errors.value);
     }
   }
 
@@ -113,19 +119,16 @@ export function usePlannerPlans(options: UsePlannerPlansOptions): UsePlannerPlan
     const name = prompt('Nom du plan dupliqué :', `${sourcePlan?.name || 'Plan'} (copie)`);
     if (!name?.trim()) return;
 
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
     try {
       const currentMap = maps.value.find(m => m.id === selectedMapId.value);
-      const newPlan = await createGamePlan(selectedMapId.value, name.trim(), token);
+      const newPlan = await createGamePlan(selectedMapId.value, name.trim());
       if (newPlan && currentMap) {
         // Save current data to new plan
         await saveGamePlan(newPlan.id, {
           assignments: currentMap.assignments,
           players: currentMap.players,
           notes: currentMap.notes,
-        }, token);
+        });
 
         // Add to plans list with full data
         const map = maps.value.find(m => m.id === selectedMapId.value);
@@ -142,18 +145,16 @@ export function usePlannerPlans(options: UsePlannerPlansOptions): UsePlannerPlan
       }
     } catch (error) {
       console.error('Error duplicating plan:', error);
-      alert('Erreur lors de la duplication du plan');
+      setErrorFromException(error, ERROR.planDuplicationFailed);
+      onError?.(errors.value);
     }
   }
 
   async function deletePlan(planId: string): Promise<void> {
     if (!selectedMapId.value) return;
 
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
     try {
-      await deleteGamePlan(planId, token);
+      await deleteGamePlan(planId);
 
       // Remove from list
       const map = maps.value.find(m => m.id === selectedMapId.value);
@@ -169,16 +170,14 @@ export function usePlannerPlans(options: UsePlannerPlansOptions): UsePlannerPlan
       }
     } catch (error) {
       console.error('Error deleting plan:', error);
-      alert('Erreur lors de la suppression du plan');
+      setErrorFromException(error, ERROR.planDeletionFailed);
+      onError?.(errors.value);
     }
   }
 
   async function renamePlan(planId: string, newName: string): Promise<void> {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
     try {
-      await saveGamePlan(planId, { name: newName }, token);
+      await saveGamePlan(planId, { name: newName });
 
       // Update in local list
       const map = maps.value.find(m => m.id === selectedMapId.value);
@@ -190,6 +189,8 @@ export function usePlannerPlans(options: UsePlannerPlansOptions): UsePlannerPlan
       }
     } catch (error) {
       console.error('Error renaming plan:', error);
+      setErrorFromException(error, ERROR.planRenameFailed);
+      onError?.(errors.value);
     }
   }
 

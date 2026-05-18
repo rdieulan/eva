@@ -81,7 +81,7 @@ const emit = defineEmits<{
   padding: $spacing-sm;
   z-index: 1001;
   min-width: 200px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 12px $color-shadow;
   transform: translate(-50%, 10px);
 
   .marker-panel-header {

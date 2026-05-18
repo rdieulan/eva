@@ -2,13 +2,17 @@
 import { ref, computed, watch } from 'vue';
 import Modal from '@/components/common/Modal.vue';
 import GamePlanViewer from '@/components/common/GamePlanViewer.vue';
+import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
+import { useErrors } from '@/composables/useErrors';
 import type { CalendarEvent } from '@shared/types';
 import { getEventTypeLabel as getEventTypeLabelUtil, isPastDateStr } from '@/utils/calendar';
 
 const props = defineProps<{
   events: CalendarEvent[];
   initialIndex?: number;
-  isAdmin?: boolean;
+  canCreate?: boolean;
+  canEdit?: boolean;
+  canDelete?: boolean;
   selectedDate?: string;
 }>();
 
@@ -16,7 +20,11 @@ const emit = defineEmits<{
   close: [];
   'edit-event': [event: CalendarEvent];
   'create-event': [date: string];
+  'delete-event': [eventId: string];
 }>();
+
+// Error handling
+const { errors, setError } = useErrors();
 
 // Current event index
 const currentIndex = ref(props.initialIndex ?? 0);
@@ -35,8 +43,9 @@ const isEventPast = computed(() => {
   return isPastDateStr(currentEvent.value.date);
 });
 
-// Can edit (admin and not past)
-const canEdit = computed(() => props.isAdmin && !isEventPast.value);
+// Permissions - check if not past date
+const canEditEvent = computed(() => props.canEdit && !isEventPast.value);
+const canCreateEvent = computed(() => props.canCreate && !isEventPast.value);
 
 // Navigation
 const hasPrev = computed(() => currentIndex.value > 0);
@@ -152,9 +161,11 @@ function handleCreateEvent() {
         </div>
 
         <!-- Game Plan (for MATCH events) -->
+        <ErrorDisplay :errors="errors" />
         <GamePlanViewer
           v-if="currentEvent.type === 'MATCH' && currentEvent.gamePlan"
           :gamePlan="currentEvent.gamePlan"
+          @error="setError"
         />
       </div>
     </template>
@@ -162,11 +173,11 @@ function handleCreateEvent() {
     <template #footer>
       <div class="footer-actions">
         <!-- Admin buttons (only for non-past events) -->
-        <div v-if="canEdit" class="admin-actions">
-          <button class="btn btn-primary" @click="handleEditEvent" title="Modifier cet événement">
+        <div v-if="canEditEvent || canCreateEvent" class="admin-actions">
+          <button v-if="canEditEvent" class="btn btn-primary" @click="handleEditEvent" title="Modifier cet événement">
             ✏️ Modifier
           </button>
-          <button class="btn btn-accent" @click="handleCreateEvent" title="Ajouter un événement">
+          <button v-if="canCreateEvent" class="btn btn-accent" @click="handleCreateEvent" title="Ajouter un événement">
             ➕ Ajouter
           </button>
         </div>
@@ -206,11 +217,11 @@ function handleCreateEvent() {
   font-weight: 600;
 
   &.match {
-    color: #fdba74;
+    color: $color-warning;
   }
 
   &.event {
-    color: #93c5fd;
+    color: $color-info;
   }
 }
 
@@ -232,7 +243,7 @@ function handleCreateEvent() {
   &:hover:not(.disabled) {
     background: $color-border-light;
     border-color: $color-accent;
-    color: #fff;
+    color: $color-white;
   }
 
   &.disabled {
@@ -251,7 +262,7 @@ function handleCreateEvent() {
 .event-title {
   margin: 0;
   font-size: 1.5rem;
-  color: #fff;
+  color: $color-white;
   text-align: center;
 
   @include mobile-lg {
@@ -286,7 +297,7 @@ function handleCreateEvent() {
 }
 
 .detail-value {
-  color: #fff;
+  color: $color-white;
   font-weight: 500;
 }
 
@@ -302,7 +313,7 @@ function handleCreateEvent() {
 
   p {
     margin: 0;
-    color: #ccc;
+    color: $color-text-muted;
     white-space: pre-wrap;
   }
 }
@@ -327,8 +338,8 @@ function handleCreateEvent() {
 }
 
 .absent-badge {
-  background: rgba(248, 113, 113, 0.2);
-  color: #f87171;
+  background: rgba($color-danger, 0.2);
+  color: $color-danger;
   padding: $spacing-xs 0.75rem;
   border-radius: 20px;
   font-size: 0.8rem;
@@ -347,25 +358,25 @@ function handleCreateEvent() {
 
 .btn-secondary {
   background: $color-border-light;
-  color: #ccc;
+  color: $color-text-muted;
 
   &:hover {
-    background: #4a4a6a;
+    background: $color-bg-tertiary;
   }
 }
 
 .btn-primary {
   background: $color-accent;
-  color: #fff;
+  color: $color-white;
 
   &:hover {
-    background: $color-accent-light;
+    background: $color-accent;
   }
 }
 
 .btn-accent {
   background: $color-success;
-  color: #fff;
+  color: $color-white;
 
   &:hover {
     filter: brightness(1.1);

@@ -4,6 +4,7 @@ import { computed } from 'vue';
 // Import all icons
 import homeIcon from '@/assets/icons/home.svg?raw';
 import userIcon from '@/assets/icons/user.svg?raw';
+import usersIcon from '@/assets/icons/users.svg?raw';
 import logoutIcon from '@/assets/icons/logout.svg?raw';
 import closeIcon from '@/assets/icons/close.svg?raw';
 import chevronRightIcon from '@/assets/icons/chevron-right.svg?raw';
@@ -13,10 +14,14 @@ import flagIcon from '@/assets/icons/flag.svg?raw';
 import swordIcon from '@/assets/icons/sword.svg?raw';
 import shieldIcon from '@/assets/icons/shield.svg?raw';
 import notesIcon from '@/assets/icons/notes.svg?raw';
+import settingsIcon from '@/assets/icons/settings.svg?raw';
+import editIcon from '@/assets/icons/edit.svg?raw';
+import trashIcon from '@/assets/icons/trash.svg?raw';
 
 const icons: Record<string, string> = {
   home: homeIcon,
   user: userIcon,
+  users: usersIcon,
   logout: logoutIcon,
   close: closeIcon,
   'chevron-right': chevronRightIcon,
@@ -26,6 +31,9 @@ const icons: Record<string, string> = {
   sword: swordIcon,
   shield: shieldIcon,
   notes: notesIcon,
+  settings: settingsIcon,
+  edit: editIcon,
+  trash: trashIcon,
 };
 
 const props = defineProps<{
@@ -55,6 +63,8 @@ const sizeStyle = computed(() => {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  width: 1em;
+  height: 1em;
 
   :deep(svg) {
     width: 100%;

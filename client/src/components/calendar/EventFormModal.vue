@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
 import Modal from '@/components/common/Modal.vue';
-import RotationCalculator from '@/components/common/rotation/RotationCalculator.vue';
+import ConfirmModal from '@/components/common/ConfirmModal.vue';
+import RotationCalculatorModal from '@/components/common/rotation/RotationCalculatorModal.vue';
 import GamePlanViewer from '@/components/common/GamePlanViewer.vue';
+import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
+import { useErrors } from '@/composables/useErrors';
+import { ERROR } from '@shared/constants';
 import type {
   EventType,
   CreateEventRequest,
@@ -16,7 +20,10 @@ const props = defineProps<{
   open: boolean;
   selectedDate?: string; // Pre-fill date
   editEvent?: CalendarEvent; // Event to edit (if editing)
-  readOnly?: boolean; // View-only mode (for non-admin users)
+  canCreate?: boolean; // Can create events
+  canEdit?: boolean; // Can edit events
+  canDelete?: boolean; // Can delete events
+  canAttachGamePlan?: boolean; // Can attach game plan to match
   maps?: MapConfig[]; // Maps for RotationCalculator
   players?: Player[]; // Players for RotationCalculator
 }>();
@@ -39,16 +46,28 @@ const gamePlan = ref<MatchGamePlan | null>(null);
 
 // UI state
 const showRotationCalculator = ref(false);
+const showDeleteConfirm = ref(false);
 
-// Error message
-const error = ref('');
+// Error handling
+const { errors, setError, addError, clearErrors, hasErrors } = useErrors();
+
+// Computed permissions
+const isViewOnly = computed(() => {
+  // View-only if editing an event but no edit permission
+  if (props.editEvent && !props.canEdit) return true;
+  // View-only if creating but no create permission
+  if (!props.editEvent && !props.canCreate) return true;
+  return false;
+});
+
+const canShowDeleteButton = computed(() => props.canDelete && props.editEvent);
 
 // Reset form when modal opens
 watch(
   () => props.open,
   (isOpen) => {
     if (isOpen) {
-      error.value = '';
+      clearErrors();
       showRotationCalculator.value = false;
       if (props.editEvent) {
         // Edit/View mode: fill with existing event data
@@ -75,7 +94,7 @@ watch(
 
 // Modal title
 const modalTitle = computed(() => {
-  if (props.readOnly && props.editEvent) {
+  if (isViewOnly.value && props.editEvent) {
     return props.editEvent.type === 'MATCH' ? '🎮 Match' : '📅 Événement';
   }
   return props.editEvent ? 'Modifier l\'événement' : 'Créer un événement';
@@ -90,22 +109,21 @@ const formattedDate = computed(() => {
 
 // Validate and submit
 function handleSubmit() {
-  error.value = '';
+  clearErrors();
 
   if (!date.value) {
-    error.value = 'Veuillez sélectionner une date';
-    return;
+    addError(ERROR.eventDateRequired);
   }
   if (!title.value.trim()) {
-    error.value = 'Veuillez entrer un titre';
-    return;
+    addError(ERROR.eventTitleRequired);
   }
   if (!startTime.value || !endTime.value) {
-    error.value = 'Veuillez renseigner les heures de début et fin';
-    return;
+    addError(ERROR.eventTimeRequired);
+  } else if (startTime.value >= endTime.value) {
+    addError(ERROR.eventTimeInvalid);
   }
-  if (startTime.value >= endTime.value) {
-    error.value = 'L\'heure de fin doit être après l\'heure de début';
+
+  if (hasErrors()) {
     return;
   }
 
@@ -122,8 +140,13 @@ function handleSubmit() {
 }
 
 function handleDelete() {
-  if (props.editEvent && confirm('Supprimer cet événement ?')) {
+  showDeleteConfirm.value = true;
+}
+
+function confirmDelete() {
+  if (props.editEvent) {
     emit('delete', props.editEvent.id);
+    showDeleteConfirm.value = false;
   }
 }
 
@@ -145,7 +168,7 @@ function handleGamePlanAssociate(newGamePlan: MatchGamePlan) {
 
 // Check if we can show the game plan button
 const canSetGamePlan = computed(() => {
-  return type.value === 'MATCH' && props.maps && props.maps.length > 0 && props.players && props.players.length > 0;
+  return props.canAttachGamePlan && type.value === 'MATCH' && props.maps && props.maps.length > 0 && props.players && props.players.length > 0;
 });
 
 // Check if there's a game plan to display
@@ -161,10 +184,10 @@ const modalSize = computed(() => {
 
 <template>
   <!-- Rotation Calculator Modal -->
-  <RotationCalculator
-    v-if="showRotationCalculator && maps && players"
-    :maps="maps"
-    :players="players"
+  <RotationCalculatorModal
+    :open="showRotationCalculator && !!maps && !!players"
+    :maps="maps!"
+    :players="players!"
     :initialGamePlan="gamePlan"
     mode="associate"
     @close="showRotationCalculator = false"
@@ -173,7 +196,7 @@ const modalSize = computed(() => {
 
   <Modal :open="open && !showRotationCalculator" :title="modalTitle" :size="modalSize" @close="emit('close')">
     <!-- Read-only view for non-admin users -->
-    <div v-if="readOnly && editEvent" class="event-view">
+    <div v-if="isViewOnly && editEvent" class="event-view">
       <div class="event-view-header" :class="editEvent.type === 'MATCH' ? 'type-match' : 'type-event'">
         <span class="event-view-type">{{ editEvent.type === 'MATCH' ? '🎮 Match' : '📅 Événement' }}</span>
       </div>
@@ -200,15 +223,14 @@ const modalSize = computed(() => {
       <GamePlanViewer
         v-if="hasGamePlan && gamePlan"
         :gamePlan="gamePlan"
+        @error="setError"
       />
     </div>
 
     <!-- Edit form for admin users -->
     <form v-else class="event-form" @submit.prevent="handleSubmit">
       <!-- Error message -->
-      <div v-if="error" class="error-message">
-        {{ error }}
-      </div>
+      <ErrorDisplay :errors="errors" />
 
       <!-- Event type -->
       <div class="form-group">
@@ -303,7 +325,7 @@ const modalSize = computed(() => {
           <button type="button" class="btn-change-plan" @click="openRotationCalculator">
             ✏️ Modifier le plan
           </button>
-          <GamePlanViewer :gamePlan="gamePlan" />
+          <GamePlanViewer :gamePlan="gamePlan" @error="setError" />
         </div>
 
         <!-- Button to open rotation calculator if no plan yet -->
@@ -320,7 +342,7 @@ const modalSize = computed(() => {
 
     <template #footer>
       <!-- Read-only mode: only close button -->
-      <template v-if="readOnly">
+      <template v-if="isViewOnly">
         <button type="button" class="btn btn-secondary" @click="emit('close')">
           Fermer
         </button>
@@ -329,7 +351,7 @@ const modalSize = computed(() => {
       <!-- Edit mode: full controls -->
       <template v-else>
         <button
-          v-if="editEvent"
+          v-if="canShowDeleteButton"
           type="button"
           class="btn btn-danger"
           @click="handleDelete"
@@ -346,10 +368,21 @@ const modalSize = computed(() => {
       </template>
     </template>
   </Modal>
+
+  <!-- Delete Confirmation Modal -->
+  <ConfirmModal
+    :open="showDeleteConfirm"
+    title="Supprimer l'événement"
+    :message="`Êtes-vous sûr de vouloir supprimer l'événement « ${editEvent?.title || ''} » ?`"
+    :danger="true"
+    @confirm="confirmDelete"
+    @cancel="showDeleteConfirm = false"
+  />
 </template>
 
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
+@use 'sass:color';
 
 .event-form {
   display: flex;
@@ -365,14 +398,6 @@ const modalSize = computed(() => {
   }
 }
 
-.error-message {
-  background: rgba(248, 113, 113, 0.2);
-  border: 1px solid #f87171;
-  color: #fca5a5;
-  padding: 0.75rem;
-  border-radius: 6px;
-  font-size: 0.9rem;
-}
 
 .form-group {
   display: flex;
@@ -401,7 +426,7 @@ const modalSize = computed(() => {
 .form-label {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #aaa;
+  color: $color-text-secondary;
 
   @include mobile {
     font-size: 0.8rem;
@@ -413,7 +438,7 @@ const modalSize = computed(() => {
   background: $color-bg-tertiary;
   border: 1px solid $color-border-light;
   border-radius: 6px;
-  color: #fff;
+  color: $color-white;
   font-size: 0.95rem;
   transition: border-color 0.2s;
 
@@ -469,13 +494,13 @@ const modalSize = computed(() => {
   &.active.type-match {
     background: rgba($color-warning, 0.2);
     border-color: $color-warning;
-    color: #fdba74;
+    color: $color-warning;
   }
 
   &.active.type-event {
     background: rgba($color-info, 0.2);
     border-color: $color-info;
-    color: #93c5fd;
+    color: $color-info;
   }
 
   @include mobile-lg {
@@ -511,29 +536,29 @@ const modalSize = computed(() => {
 
 .btn-primary {
   background: $color-accent;
-  color: #fff;
+  color: $color-white;
 
   &:hover {
-    background: $color-accent-light;
+    background: $color-accent;
   }
 }
 
 .btn-secondary {
   background: $color-border-light;
-  color: #ccc;
+  color: $color-text-muted;
 
   &:hover {
-    background: #4a4a6a;
+    background: $color-bg-tertiary;
   }
 }
 
 .btn-danger {
-  background: rgba(248, 113, 113, 0.2);
-  color: #f87171;
-  border: 1px solid #f87171;
+  background: $color-danger;
+  color: white;
+  border: 1px solid $color-danger;
 
   &:hover {
-    background: rgba(248, 113, 113, 0.3);
+    background: color.adjust($color-danger, $lightness: 5%);
   }
 }
 
@@ -555,19 +580,19 @@ const modalSize = computed(() => {
 
   &.type-match {
     background: rgba($color-warning, 0.2);
-    color: #fdba74;
+    color: $color-warning;
   }
 
   &.type-event {
     background: rgba($color-info, 0.2);
-    color: #93c5fd;
+    color: $color-info;
   }
 }
 
 .event-view-title {
   margin: 0;
   font-size: 1.25rem;
-  color: #fff;
+  color: $color-white;
   text-align: center;
 
   @include mobile-lg {
@@ -606,7 +631,7 @@ const modalSize = computed(() => {
 }
 
 .event-view-value {
-  color: #fff;
+  color: $color-white;
   font-weight: 500;
 }
 
@@ -622,7 +647,7 @@ const modalSize = computed(() => {
 
   p {
     margin: 0;
-    color: #ccc;
+    color: $color-text-muted;
     white-space: pre-wrap;
   }
 }
@@ -657,8 +682,8 @@ const modalSize = computed(() => {
 }
 
 .absent-badge {
-  background: rgba(248, 113, 113, 0.2);
-  color: #f87171;
+  background: rgba($color-danger, 0.2);
+  color: $color-danger;
   padding: $spacing-xs 0.75rem;
   border-radius: 20px;
   font-size: 0.8rem;
@@ -683,16 +708,16 @@ const modalSize = computed(() => {
 .btn-change-plan {
   padding: 0.4rem 0.75rem;
   background: $color-border-light;
-  border: 1px solid #4a4a6a;
+  border: 1px solid $color-bg-tertiary;
   border-radius: $radius-sm;
-  color: #ccc;
+  color: $color-text-muted;
   font-size: 0.8rem;
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover {
-    background: #4a4a6a;
-    color: #fff;
+    background: $color-bg-tertiary;
+    color: $color-white;
   }
 
   @include mobile {
@@ -707,7 +732,7 @@ const modalSize = computed(() => {
   background: rgba($color-warning, 0.2);
   border: 2px dashed $color-warning;
   border-radius: $radius-md;
-  color: #fdba74;
+  color: $color-warning;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
