@@ -14,6 +14,10 @@ const __dirname = path.dirname(__filename);
 export const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
 
+// Trust the first proxy in front of us (Railway, etc.) so that
+// req.protocol / req.get('host') reflect the public origin.
+app.set('trust proxy', true);
+
 // Middleware
 app.use(cors());
 app.use(express.json());
