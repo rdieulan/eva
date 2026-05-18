@@ -1,7 +1,7 @@
 // Team invitations routes - HTTP protocol only, business logic in services
 
 import { Router } from 'express';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import { authMiddleware, requirePermission } from '@middleware/auth.middleware';
 import type { AuthRequest } from '@middleware/auth.middleware';
 import { ERROR } from '@shared/constants';
@@ -9,6 +9,14 @@ import { apiLogger } from '@utils/logger';
 import * as invitesService from '@services/invites.service';
 
 const router = Router();
+
+/**
+ * Resolve the public origin of the current request (e.g. https://eva.up.railway.app).
+ * Requires `app.set('trust proxy', true)` so the forwarded protocol is honored.
+ */
+function getOrigin(req: Request): string {
+  return `${req.protocol}://${req.get('host')}`;
+}
 
 // POST /api/teams/:teamId/invites - Create an invitation link
 router.post(
@@ -38,6 +46,7 @@ router.post(
       const invite = await invitesService.createInvite({
         teamId,
         createdByPlayerId: req.account!.playerId!,
+        baseUrl: getOrigin(req),
         expiresInHours,
         maxUses,
       });
@@ -65,7 +74,7 @@ router.get(
         return res.status(403).json({ errors: [ERROR.forbidden] });
       }
 
-      const invites = await invitesService.getActiveInvites(teamId);
+      const invites = await invitesService.getActiveInvites(teamId, getOrigin(req));
       res.json(invites);
     } catch (error) {
       apiLogger.error('Error listing invites:', error);

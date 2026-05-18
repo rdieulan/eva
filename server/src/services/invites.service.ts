@@ -5,11 +5,6 @@ import crypto from 'crypto';
 import { ERROR } from '@shared/constants';
 
 // ============================================
-// Constants
-// ============================================
-const APP_URL = process.env.APP_URL || 'http://localhost:5173';
-
-// ============================================
 // Helpers
 // ============================================
 
@@ -21,10 +16,12 @@ export function generateInviteCode(): string {
 }
 
 /**
- * Build the full invite URL
+ * Build the full invite URL using the public origin of the current request
+ * (e.g. https://eva.up.railway.app). The caller is expected to derive this
+ * from the Express request — see `invites.routes.ts`.
  */
-export function buildInviteUrl(code: string): string {
-  return `${APP_URL}/join/${code}`;
+export function buildInviteUrl(baseUrl: string, code: string): string {
+  return `${baseUrl.replace(/\/$/, '')}/join/${code}`;
 }
 
 /**
@@ -51,6 +48,7 @@ export { verifyPlayerBelongsToTeam } from '@services/player.service';
 export interface CreateInviteData {
   teamId: string;
   createdByPlayerId: string;
+  baseUrl: string;
   expiresInHours?: number;
   maxUses?: number;
 }
@@ -80,7 +78,7 @@ export async function createInvite(data: CreateInviteData) {
   return {
     id: invite.id,
     code: invite.code,
-    url: buildInviteUrl(invite.code),
+    url: buildInviteUrl(data.baseUrl, invite.code),
     expiresAt: invite.expiresAt,
     maxUses: invite.maxUses,
     uses: invite.uses,
@@ -90,7 +88,7 @@ export async function createInvite(data: CreateInviteData) {
 /**
  * Get active invitations for a team
  */
-export async function getActiveInvites(teamId: string) {
+export async function getActiveInvites(teamId: string, baseUrl: string) {
   const invites = await prisma.teamInvite.findMany({
     where: {
       teamId,
@@ -110,7 +108,7 @@ export async function getActiveInvites(teamId: string) {
   return activeInvites.map(invite => ({
     id: invite.id,
     code: invite.code,
-    url: buildInviteUrl(invite.code),
+    url: buildInviteUrl(baseUrl, invite.code),
     expiresAt: invite.expiresAt,
     maxUses: invite.maxUses,
     uses: invite.uses,
