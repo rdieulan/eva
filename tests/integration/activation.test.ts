@@ -1,6 +1,6 @@
 // Integration tests - Account activation routes
 
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import { app } from '../../server/src/app';
 import { prisma } from './helpers/db';
@@ -11,19 +11,16 @@ const VALID_PASSWORD = 'A' + '1' + 'a'.repeat(PASSWORD_MIN_LENGTH - 2);
 const TEST_VENUE_ID = 'test-venue-activation';
 
 describe('Account Activation API', () => {
-  beforeAll(async () => {
-    const existingVenue = await prisma.venue.findUnique({ where: { id: TEST_VENUE_ID } });
-    if (!existingVenue) {
-      await prisma.venue.create({
-        data: {
-          id: TEST_VENUE_ID,
-          name: 'Test Venue Activation',
-          city: 'Test City',
-          address: '123 Test Street',
-          phone: '+33 1 00 00 00 00',
-        },
-      });
-    }
+  beforeEach(async () => {
+    await prisma.venue.create({
+      data: {
+        id: TEST_VENUE_ID,
+        name: 'Test Venue Activation',
+        city: 'Test City',
+        address: '123 Test Street',
+        phone: '+33 1 00 00 00 00',
+      },
+    });
   });
 
   describe('POST /api/auth/activate', () => {

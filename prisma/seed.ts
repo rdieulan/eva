@@ -1,8 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
-import bcrypt from 'bcryptjs';
-import { LEADER_PERMISSIONS, DEFAULT_PLAYER_PERMISSIONS } from '../shared/types/permissions.types';
 
 const databaseUrl = process.env.DATABASE_URL || 'postgresql://eva_user:eva_secret_password@localhost:5432/eva_db';
 const pool = new pg.Pool({ connectionString: databaseUrl });
@@ -10,17 +8,16 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 // Default template structure (based on Outlaw - untouched reference)
-// Note: player assignments are managed via GamePlanPlayer table, not in template
+// Player assignments are managed via GamePlanPlayer, not the template.
 const DEFAULT_TEMPLATE = {
   assignments: [
-    { id: 1, name: "Poste 1", x: 25, y: 25, zone: { x1: 15, y1: 15, x2: 35, y2: 35 } },
-    { id: 2, name: "Poste 2", x: 75, y: 25, zone: { x1: 65, y1: 15, x2: 85, y2: 35 } },
-    { id: 3, name: "Poste 3", x: 25, y: 75, zone: { x1: 15, y1: 65, x2: 35, y2: 85 } },
-    { id: 4, name: "Poste 4", x: 75, y: 75, zone: { x1: 65, y1: 65, x2: 85, y2: 85 } }
-  ]
+    { id: 1, name: 'Poste 1', x: 25, y: 25, zone: { x1: 15, y1: 15, x2: 35, y2: 35 } },
+    { id: 2, name: 'Poste 2', x: 75, y: 25, zone: { x1: 65, y1: 15, x2: 85, y2: 35 } },
+    { id: 3, name: 'Poste 3', x: 25, y: 75, zone: { x1: 15, y1: 65, x2: 35, y2: 85 } },
+    { id: 4, name: 'Poste 4', x: 75, y: 75, zone: { x1: 65, y1: 65, x2: 85, y2: 85 } },
+  ],
 };
 
-// Maps data
 const MAPS = [
   { id: 'artefact', name: 'Artefact', images: ['/maps/artefact/Artefact.png'] },
   { id: 'atlantis', name: 'Atlantis', images: ['/maps/atlantis/Atlantis.png'] },
@@ -36,71 +33,12 @@ const MAPS = [
 ];
 
 async function main() {
-  console.log('Seeding database...\n');
+  console.log('Seeding maps...\n');
 
-  // ========== USERS ==========
-  console.log('Creating users...');
-  const users = [
-    { email: 'tailhades8@hotmail.com', name: 'Nyork', isLeader: false },
-    { email: 'Kevindijusco30@gmail.com', name: 'Kekew', isLeader: false },
-    { email: 'mathieu.lietsch@gmail.com', name: 'Matic', isLeader: false },
-    { email: 'sokehur@gmail.com', name: 'Sib', isLeader: true },
-    { email: 'clemencefadvolf0102@gmail.com', name: 'Celesta', isLeader: false },
-  ];
-
-  let leaderId: string | null = null;
-
-  for (const user of users) {
-    const hashedPassword = await bcrypt.hash('changeme123', 10);
-    const permissions = user.isLeader ? LEADER_PERMISSIONS : DEFAULT_PLAYER_PERMISSIONS;
-
-    const createdUser = await prisma.user.upsert({
-      where: { email: user.email },
-      update: {
-        name: user.name,
-        permissions: permissions as unknown as object,
-        password: hashedPassword,
-      },
-      create: {
-        email: user.email,
-        password: hashedPassword,
-        name: user.name,
-        permissions: permissions as unknown as object,
-      },
-    });
-
-    if (user.isLeader) {
-      leaderId = createdUser.id;
-    }
-
-    console.log(`  ✓ ${user.name} (${user.email}) - ${user.isLeader ? 'Leader' : 'Player'}`);
-  }
-
-  // ========== TEAM ==========
-  if (leaderId) {
-    console.log('\nCreating team...');
-    await prisma.team.upsert({
-      where: { leaderId },
-      update: {
-        name: 'EVA Team',
-      },
-      create: {
-        name: 'EVA Team',
-        leaderId,
-      },
-    });
-    console.log('  ✓ EVA Team created');
-  }
-
-  // ========== MAPS ==========
-  console.log('\nCreating maps with default templates...');
   for (const map of MAPS) {
     await prisma.map.upsert({
       where: { id: map.id },
-      update: {
-        name: map.name,
-        images: map.images,
-      },
+      update: { name: map.name, images: map.images },
       create: {
         id: map.id,
         name: map.name,
@@ -108,13 +46,10 @@ async function main() {
         template: DEFAULT_TEMPLATE,
       },
     });
-
     console.log(`  ✓ ${map.name} (${map.id})`);
   }
 
-  console.log('\n✅ Seed completed!');
-  console.log(`   - ${users.length} users created (default password: changeme123)`);
-  console.log(`   - ${MAPS.length} maps created with default templates`);
+  console.log(`\n✅ Seed completed — ${MAPS.length} maps`);
 }
 
 main()
@@ -124,4 +59,5 @@ main()
   })
   .finally(async () => {
     await prisma.$disconnect();
+    await pool.end();
   });

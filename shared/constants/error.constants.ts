@@ -89,7 +89,32 @@ export const ERROR = {
   // Venues
   venueNotFound: 'Salle non trouvée',
   venuesFetchFailed: 'Erreur lors de la récupération des salles',
+  venueCreationFailed: 'Erreur lors de la création de la salle',
   venueUpdateFailed: 'Erreur lors de la mise à jour de la salle',
+  venueDeleteFailed: 'Erreur lors de la suppression de la salle',
+  venueNameRequired: 'Le nom de la salle est requis',
+  venueCityRequired: 'La ville est requise',
+  venueAddressRequired: 'L\'adresse est requise',
+
+  // Admin
+  adminRequired: 'Accès administrateur requis',
+  managersFetchFailed: 'Erreur lors de la récupération des managers',
+  managerNotFound: 'Manager non trouvé',
+  managerCreationFailed: 'Erreur lors de la création du manager',
+  managerUpdateFailed: 'Erreur lors de la mise à jour du manager',
+  managerDeleteFailed: 'Erreur lors de la suppression du manager',
+  managerVenueIdsInvalid: 'Liste de salles invalide',
+  adminsFetchFailed: 'Erreur lors de la récupération des administrateurs',
+  adminNotFound: 'Administrateur non trouvé',
+  adminCreationFailed: 'Erreur lors de la création de l\'administrateur',
+  adminUpdateFailed: 'Erreur lors de la mise à jour de l\'administrateur',
+  adminDeleteFailed: 'Erreur lors de la suppression de l\'administrateur',
+  adminPermissionsInvalid: 'Permissions invalides',
+  adminCannotDeleteSelf: 'Vous ne pouvez pas supprimer votre propre compte administrateur',
+  adminCannotRemoveLastSuperAdmin: 'Impossible de supprimer le dernier super administrateur',
+  adminCannotDemoteLastSuperAdmin: 'Impossible de dégrader le dernier super administrateur',
+  playersAdminFetchFailed: 'Erreur lors de la récupération des joueurs',
+  teamsAdminFetchFailed: 'Erreur lors de la récupération des équipes',
 
   // Invitations
   inviteNotFound: 'Invitation non trouvée',

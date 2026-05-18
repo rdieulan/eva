@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@db/prisma';
 import type { JwtPayload } from '@middleware/auth.middleware';
-import type { AccountPermissions, Account, AccountType } from '@shared/types';
+import type { AccountPermissions, AdminPermissions, Account, AccountType } from '@shared/types';
 
 // Re-export validation functions from shared (single source of truth)
 export {
@@ -160,6 +160,7 @@ export async function buildAccountData(account: {
   } | null;
   admin?: {
     id: string;
+    permissions?: unknown;
   } | null;
 }): Promise<Account> {
   // Import dynamically to avoid circular dependency
@@ -167,6 +168,21 @@ export async function buildAccountData(account: {
   const permissions = await getAccountPermissions(account.id);
 
   const accountType = getAccountType(account);
+
+  // Load admin permissions separately when applicable (the admin record may have
+  // been provided without permissions — fetch fresh in that case).
+  let adminPermissions: AdminPermissions | null = null;
+  if (account.admin) {
+    if (account.admin.permissions !== undefined) {
+      adminPermissions = (account.admin.permissions ?? null) as AdminPermissions | null;
+    } else {
+      const fresh = await prisma.admin.findUnique({
+        where: { id: account.admin.id },
+        select: { permissions: true },
+      });
+      adminPermissions = (fresh?.permissions ?? null) as unknown as AdminPermissions | null;
+    }
+  }
 
   return {
     id: account.id,
@@ -182,6 +198,8 @@ export async function buildAccountData(account: {
     isLeader: !!account.player?.ledTeam,
     // Manager-specific
     managedVenueIds: account.manager?.managedVenues.map(v => v.venueId) ?? null,
+    // Admin-specific
+    adminPermissions,
   };
 }
 
@@ -196,38 +214,62 @@ export async function updateAccountPassword(userId: string, hashedPassword: stri
 }
 
 // ============================================
-// Activation (for Manager accounts)
+// Activation (for Manager + Admin accounts)
 // ============================================
 
-/**
- * Find manager by activation token
- */
-export async function findManagerByActivationToken(token: string) {
-  return prisma.manager.findFirst({
-    where: {
-      activationToken: token,
-      activationTokenExpiresAt: { gte: new Date() },
-    },
-    include: {
-      user: true,
-    },
-  });
+export type ActivationKind = 'manager' | 'admin';
+
+export interface ActivationLookup {
+  kind: ActivationKind;
+  recordId: string; // manager.id or admin.id
+  userId: string;
 }
 
 /**
- * Activate manager account (set password and clear activation token)
+ * Find an activation target by token. Looks in Manager then Admin.
+ * Returns null when the token doesn't exist or is expired.
  */
-export async function activateManagerAccount(managerId: string, userId: string, hashedPassword: string): Promise<void> {
+export async function findAccountByActivationToken(token: string): Promise<ActivationLookup | null> {
+  const now = new Date();
+
+  const manager = await prisma.manager.findFirst({
+    where: { activationToken: token, activationTokenExpiresAt: { gte: now } },
+    include: { user: { select: { id: true } } },
+  });
+  if (manager?.user) {
+    return { kind: 'manager', recordId: manager.id, userId: manager.user.id };
+  }
+
+  const admin = await prisma.admin.findFirst({
+    where: { activationToken: token, activationTokenExpiresAt: { gte: now } },
+    include: { user: { select: { id: true } } },
+  });
+  if (admin?.user) {
+    return { kind: 'admin', recordId: admin.id, userId: admin.user.id };
+  }
+
+  return null;
+}
+
+/**
+ * Activate an account by clearing its activation token and setting the
+ * password on the linked User. Works for both Manager and Admin.
+ */
+export async function activateAccount(lookup: ActivationLookup, hashedPassword: string): Promise<void> {
+  const clearTokenStatement = lookup.kind === 'manager'
+    ? prisma.manager.update({
+        where: { id: lookup.recordId },
+        data: { activationToken: null, activationTokenExpiresAt: null },
+      })
+    : prisma.admin.update({
+        where: { id: lookup.recordId },
+        data: { activationToken: null, activationTokenExpiresAt: null },
+      });
+
   await prisma.$transaction([
-    prisma.manager.update({
-      where: { id: managerId },
-      data: {
-        activationToken: null,
-        activationTokenExpiresAt: null,
-      },
-    }),
+    clearTokenStatement,
     prisma.user.update({
-      where: { id: userId },
+      where: { id: lookup.userId },
       data: { password: hashedPassword },
     }),
   ]);

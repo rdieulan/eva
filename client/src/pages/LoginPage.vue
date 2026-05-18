@@ -5,6 +5,7 @@ import { useAuth } from '@/composables/useAuth';
 import { useErrors } from '@/composables/useErrors';
 import { clearPlayersCache, clearBalanceRulesCache } from '@/api';
 import { ERROR } from '@shared/constants';
+import { landingPathForAccount } from '@/router';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 
 const router = useRouter();
@@ -49,8 +50,8 @@ async function handleLogin() {
     // Set auth using composable
     setAuth(data.token, data.account);
 
-    // Redirect to original page or homepage
-    const redirectPath = route.query.redirect as string || '/';
+    // Redirect to original page or to the account's default landing page
+    const redirectPath = (route.query.redirect as string) || landingPathForAccount(data.account);
     router.push(redirectPath);
   } catch {
     setError(ERROR.connectionError);

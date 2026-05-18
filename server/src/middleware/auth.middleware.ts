@@ -3,7 +3,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { prisma } from '@db/prisma';
-import type { AccountPermissions, AccountType } from '@shared/types';
+import type { AccountPermissions, AccountType, AdminPermissions } from '@shared/types';
 import { DEFAULT_PLAYER_PERMISSIONS, LEADER_PERMISSIONS } from '@shared/types';
 import { ERROR } from '@shared/constants';
 import { authLogger } from '@utils/logger';
@@ -151,6 +151,55 @@ export function requirePermission(category: keyof AccountPermissions, permission
     }
 
     authLogger.debug(`Permission granted: ${category}.${permission} for account ${req.account.email}`);
+    next();
+  };
+}
+
+/**
+ * Admin middleware - requires the account to be an admin
+ * Must be chained after authMiddleware.
+ */
+export function requireAdmin(req: AuthRequest, res: Response, next: NextFunction) {
+  if (!req.account) {
+    return res.status(401).json({ errors: [ERROR.unauthorized] });
+  }
+
+  if (!req.account.adminId) {
+    authLogger.debug('Admin access denied for', req.account.email);
+    return res.status(403).json({ errors: [ERROR.adminRequired] });
+  }
+
+  next();
+}
+
+/**
+ * Admin permission middleware factory - checks for a specific admin permission
+ * Usage: requireAdminPermission('canManageVenues')
+ * Must be chained after authMiddleware + requireAdmin (or used directly after authMiddleware).
+ */
+export function requireAdminPermission(permission: keyof AdminPermissions['system']) {
+  return async (req: AuthRequest, res: Response, next: NextFunction) => {
+    if (!req.account) {
+      return res.status(401).json({ errors: [ERROR.unauthorized] });
+    }
+
+    if (!req.account.adminId) {
+      return res.status(403).json({ errors: [ERROR.adminRequired] });
+    }
+
+    const admin = await prisma.admin.findUnique({
+      where: { id: req.account.adminId },
+      select: { permissions: true },
+    });
+
+    const perms = (admin?.permissions ?? {}) as unknown as AdminPermissions;
+    const allowed = perms.system?.[permission] === true;
+
+    if (!allowed) {
+      authLogger.debug(`Admin permission denied: ${permission} for ${req.account.email}`);
+      return res.status(403).json({ errors: [ERROR.forbidden] });
+    }
+
     next();
   };
 }

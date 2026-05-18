@@ -33,6 +33,103 @@ export interface MemberWithRole {
 export { getPlayerWithTeam, getPlayerTeam } from '@services/player.service';
 
 // ============================================
+// Admin view (read-only)
+// ============================================
+
+export interface TeamAdminMember {
+  id: string;
+  playerId: string;
+  email: string;
+  name: string;
+  isLeader: boolean;
+}
+
+export interface TeamAdminSummary {
+  id: string;
+  name: string;
+  logo: string | null;
+  venue: { id: string; name: string; city: string } | null;
+  leader: { id: string; name: string; email: string } | null;
+  memberCount: number;
+  createdAt: Date;
+}
+
+export interface TeamAdminDetail extends TeamAdminSummary {
+  members: TeamAdminMember[];
+}
+
+/**
+ * List all teams with summary information (admin view).
+ */
+export async function listAllTeams(): Promise<TeamAdminSummary[]> {
+  const teams = await prisma.team.findMany({
+    include: {
+      venue: { select: { id: true, name: true, city: true } },
+      leader: {
+        include: { user: { select: { id: true, name: true, email: true } } },
+      },
+      _count: { select: { members: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return teams.map(t => ({
+    id: t.id,
+    name: t.name,
+    logo: t.logo,
+    venue: t.venue,
+    leader: t.leader?.user
+      ? { id: t.leader.user.id, name: t.leader.user.name, email: t.leader.user.email }
+      : null,
+    memberCount: t._count.members,
+    createdAt: t.createdAt,
+  }));
+}
+
+/**
+ * Get a team with full member list (admin view).
+ */
+export async function getTeamAdminDetail(teamId: string): Promise<TeamAdminDetail | null> {
+  const team = await prisma.team.findUnique({
+    where: { id: teamId },
+    include: {
+      venue: { select: { id: true, name: true, city: true } },
+      leader: {
+        include: { user: { select: { id: true, name: true, email: true } } },
+      },
+      members: {
+        include: { user: { select: { id: true, name: true, email: true } } },
+      },
+    },
+  });
+
+  if (!team) return null;
+
+  const members: TeamAdminMember[] = team.members
+    .filter(p => p.user !== null)
+    .map(p => ({
+      id: p.user!.id,
+      playerId: p.id,
+      email: p.user!.email,
+      name: p.user!.name,
+      isLeader: p.id === team.leaderId,
+    }));
+
+  return {
+    id: team.id,
+    name: team.name,
+    logo: team.logo,
+    venue: team.venue,
+    leader: team.leader?.user
+      ? { id: team.leader.user.id, name: team.leader.user.name, email: team.leader.user.email }
+      : null,
+    memberCount: members.length,
+    createdAt: team.createdAt,
+    members,
+  };
+}
+
+// ============================================
 // Team operations
 // ============================================
 

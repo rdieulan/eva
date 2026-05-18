@@ -121,3 +121,39 @@ export async function createUserWithTeam(options: CreateUserOptions = {}): Promi
     team,
   };
 }
+
+/**
+ * Create an admin account and return a valid token (login via API).
+ */
+export async function createAuthenticatedAdmin(options: CreateUserOptions & {
+  permissions?: Record<string, Record<string, boolean>>;
+} = {}): Promise<{ user: User; token: string; adminId: string }> {
+  const bcrypt = await import('bcryptjs');
+  const email = options.email || `admin-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`;
+  const password = options.password || DEFAULT_TEST_PASSWORD;
+  const name = options.name || DEFAULT_TEST_NAME;
+  const permissions = options.permissions ?? {
+    system: {
+      canManageVenues: true,
+      canManageManagers: true,
+      canManageAdmins: true,
+      canViewAllData: true,
+    },
+  };
+
+  const hashedPassword = await bcrypt.default.hash(password, 10);
+  const admin = await prisma.admin.create({ data: { permissions } });
+  const user = await prisma.user.create({
+    data: { email, password: hashedPassword, name, adminId: admin.id },
+  });
+
+  const loginRes = await request(app)
+    .post('/api/auth/login')
+    .send({ email, password });
+
+  if (loginRes.status !== 200) {
+    throw new Error(`Failed to login admin: ${JSON.stringify(loginRes.body)}`);
+  }
+
+  return { user, token: loginRes.body.token, adminId: admin.id };
+}

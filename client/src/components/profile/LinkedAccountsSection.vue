@@ -6,6 +6,7 @@ import { getLinkedAccounts, linkAccount, switchAccount } from '@/api/auth.api';
 import { validateEmail } from '@shared/utils';
 import { ERROR } from '@shared/constants';
 import type { LinkedAccount } from '@shared/types';
+import { landingPathForAccount } from '@/router';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import Modal from '@/components/common/Modal.vue';
 
@@ -99,8 +100,9 @@ async function handleSwitchAccount(targetAccountId: string) {
   try {
     const response = await switchAccount(targetAccountId);
     setAuth(response.token, response.account);
-    // Refresh the page to update all components
-    window.location.reload();
+    // Hard-navigate to the new account's landing page so all component state is
+    // dropped and the global guards re-run against the fresh account.
+    window.location.href = landingPathForAccount(response.account);
   } catch (err) {
     if (err && typeof err === 'object' && 'errors' in err) {
       setErrors((err as { errors: string[] }).errors);

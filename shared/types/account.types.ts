@@ -1,6 +1,6 @@
 // Account types
 
-import type { AccountPermissions } from './permissions.types';
+import type { AccountPermissions, AdminPermissions } from './permissions.types';
 
 /**
  * Account type (Player, Manager, or Admin)
@@ -24,6 +24,8 @@ export interface Account {
   isLeader: boolean;
   // Manager-specific data (null if not a manager)
   managedVenueIds: string[] | null;
+  // Admin-specific permissions (null if not an admin)
+  adminPermissions: AdminPermissions | null;
 }
 
 /**

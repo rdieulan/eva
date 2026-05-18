@@ -13,6 +13,7 @@
     "test:integration": "vitest run --config vitest.integration.config.mts",
     "script": "tsx scripts/run.ts",
     "script:dry": "tsx scripts/run.ts --dry-run",
+    "create-admin": "tsx --tsconfig scripts/tsconfig.json scripts/create-admin.ts",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",

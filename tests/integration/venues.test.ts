@@ -1,6 +1,6 @@
 // Integration tests - Venues routes
 
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import { app } from '../../server/src/app';
 import { createAuthenticatedUser, createUserWithTeam } from './helpers/auth';
@@ -17,13 +17,9 @@ const TEST_VENUE = {
 };
 
 describe('Venues API', () => {
-  // Seed a test venue before tests
-  beforeAll(async () => {
-    // Check if venue exists, create if not
-    const existing = await prisma.venue.findUnique({ where: { id: TEST_VENUE.id } });
-    if (!existing) {
-      await prisma.venue.create({ data: TEST_VENUE });
-    }
+  // Seed the test venue before each test (cleanDatabase wipes venues between tests)
+  beforeEach(async () => {
+    await prisma.venue.create({ data: TEST_VENUE });
   });
 
   describe('GET /api/venues', () => {

@@ -71,9 +71,15 @@ export async function cleanDatabase(): Promise<void> {
   await prisma.balanceRule.deleteMany();
   await prisma.teamInvite.deleteMany();
   await prisma.session.deleteMany();
-  // Team must be deleted before User because Team.leaderId references User
+  await prisma.venueManager.deleteMany();
+  // Team has FK to Player (leaderId) — must be deleted before Player.
   await prisma.team.deleteMany();
+  await prisma.player.deleteMany();
+  await prisma.manager.deleteMany();
+  await prisma.admin.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.venue.deleteMany();
+  await prisma.linkedAccountGroup.deleteMany();
 }
 
 /**

@@ -20,8 +20,8 @@ import {
   validateEmail,
   validatePassword,
   validateName,
-  findManagerByActivationToken,
-  activateManagerAccount,
+  findAccountByActivationToken,
+  activateAccount,
   linkAccounts,
   getLinkedAccounts,
   isAccountInSameGroup,
@@ -226,16 +226,16 @@ router.post('/activate', async (req: Request, res: Response) => {
   }
 
   try {
-    const manager = await findManagerByActivationToken(token);
+    const lookup = await findAccountByActivationToken(token);
 
-    if (!manager || !manager.user) {
+    if (!lookup) {
       return res.status(400).json({ errors: [ERROR.activationTokenInvalid] });
     }
 
     const hashedPassword = await hashPassword(password);
-    await activateManagerAccount(manager.id, manager.user.id, hashedPassword);
+    await activateAccount(lookup, hashedPassword);
 
-    authLogger.debug('Account activated successfully for:', manager.user.email);
+    authLogger.debug('Account activated successfully:', lookup.kind, lookup.userId);
     res.json({ message: 'Compte activé avec succès' });
   } catch (error) {
     authLogger.error('Activation error:', error);

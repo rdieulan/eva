@@ -143,3 +143,43 @@ export async function verifyPlayerBelongsToTeam(playerId: string, teamId: string
   });
   return player?.teamId === teamId ? player : null;
 }
+
+// ============================================
+// Admin view (read-only)
+// ============================================
+
+export interface PlayerAdminSummary {
+  id: string;
+  userId: string | null;
+  email: string | null;
+  name: string | null;
+  teamId: string | null;
+  teamName: string | null;
+  isLeader: boolean;
+  createdAt: Date;
+}
+
+/**
+ * List all players with their user + team information (admin view).
+ */
+export async function listAllPlayers(): Promise<PlayerAdminSummary[]> {
+  const players = await prisma.player.findMany({
+    include: {
+      user: { select: { id: true, email: true, name: true } },
+      team: { select: { id: true, name: true } },
+      ledTeam: { select: { id: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return players.map(p => ({
+    id: p.id,
+    userId: p.user?.id ?? null,
+    email: p.user?.email ?? null,
+    name: p.user?.name ?? null,
+    teamId: p.team?.id ?? null,
+    teamName: p.team?.name ?? null,
+    isLeader: !!p.ledTeam,
+    createdAt: p.createdAt,
+  }));
+}

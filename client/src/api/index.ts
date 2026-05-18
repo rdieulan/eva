@@ -52,3 +52,34 @@ export {
   joinTeamWithCode,
 } from '@/api/teams.api';
 export type { TeamMember, TeamWithMembers, TeamInvite, InviteValidation, JoinResult } from '@/api/teams.api';
+
+// Admin API
+export {
+  fetchAdminVenues,
+  createVenue as createAdminVenue,
+  updateVenue as updateAdminVenue,
+  deleteVenue as deleteAdminVenue,
+  fetchAdminManagers,
+  createManager as createAdminManager,
+  updateManagerVenues as updateAdminManagerVenues,
+  deleteManager as deleteAdminManager,
+  fetchAdminAdmins,
+  createAdmin as createAdminAdmin,
+  updateAdminPermissions as updateAdminAdminPermissions,
+  deleteAdmin as deleteAdminAdmin,
+  fetchAdminPlayers,
+  fetchAdminTeams,
+  fetchAdminTeamDetail,
+  buildActivationUrl,
+} from '@/api/admin.api';
+export type {
+  ManagerSummary,
+  CreatedManager,
+  VenueInput,
+  AdminSummary,
+  CreatedAdmin,
+  PlayerAdminSummary,
+  TeamAdminSummary,
+  TeamAdminDetail,
+  TeamAdminMember,
+} from '@/api/admin.api';
