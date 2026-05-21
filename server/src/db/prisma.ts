@@ -24,11 +24,16 @@ const pool = new pg.Pool({
   min: 2, // Minimum connections to keep alive
   idleTimeoutMillis: 30000, // Close idle connections after 30s
   connectionTimeoutMillis: 10000, // Timeout for new connections: 10s
+  // Bound any single query so a hung query can't tie up a connection forever
+  // and starve the rest of the pool.
+  query_timeout: 30000,
+  // Same idea at the postgres protocol level.
+  statement_timeout: 30000,
   keepAlive: true, // Keep connections alive
   keepAliveInitialDelayMillis: 10000, // Start keepalive after 10s
 });
 
-// Pool event listeners for debugging
+// Pool event listeners
 pool.on('connect', () => {
   dbLogger.debug('New client connected to pool');
 });
@@ -41,8 +46,11 @@ pool.on('remove', () => {
   dbLogger.debug('Client removed from pool');
 });
 
+// Errors emitted on idle clients in the pool. pg.Pool already discards the
+// broken client; we just want a clear log so we can correlate with Railway
+// healthcheck failures.
 pool.on('error', (err) => {
-  dbLogger.error('Pool error:', err.message);
+  dbLogger.error('Pool error (idle client):', err.message);
 });
 
 // Test connection on startup
@@ -111,11 +119,22 @@ async function gracefulShutdown(signal: string) {
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
-// Handle uncaught errors related to database
-process.on('unhandledRejection', (reason, promise) => {
-  dbLogger.error('Unhandled Rejection:', reason);
+// Unhandled rejection: log, do not crash. Bad route handlers shouldn't kill
+// the whole process — the Railway healthcheck on /api/health is the safety
+// net for "the app is alive but the DB pool is broken" scenarios.
+process.on('unhandledRejection', (reason) => {
+  const message = reason instanceof Error ? `${reason.message}\n${reason.stack ?? ''}` : String(reason);
+  dbLogger.error('Unhandled Rejection:', message);
+});
+
+// Uncaught exception: log, then exit so the platform restarts us with a
+// clean process. Recovering from an uncaught exception in-process is unsafe
+// (state can be arbitrarily corrupted).
+process.on('uncaughtException', (err) => {
+  dbLogger.error('Uncaught Exception:', err.message, err.stack);
+  // Give the logger a tick to flush before exiting.
+  setTimeout(() => process.exit(1), 100);
 });
 
 // Export pool for direct access if needed
 export { pool };
-
