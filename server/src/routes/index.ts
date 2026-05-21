@@ -19,6 +19,8 @@ import { logger } from '@utils/logger';
 const router = Router();
 
 // Health check endpoint for monitoring
+const HEALTHCHECK_DB_TIMEOUT_MS = 5000;
+
 router.get('/health', async (_req: Request, res: Response) => {
   const healthcheck = {
     status: 'ok',
@@ -32,10 +34,17 @@ router.get('/health', async (_req: Request, res: Response) => {
     },
   };
 
+  // Bound the DB probe so that a stuck pool can't make Railway's healthcheck
+  // hang past its own timeout window — we'd rather fail fast and let Railway
+  // restart us than tie up the request indefinitely.
+  const dbProbe = prisma.$queryRaw`SELECT 1`;
+  const timeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error(`Healthcheck DB probe exceeded ${HEALTHCHECK_DB_TIMEOUT_MS}ms`)), HEALTHCHECK_DB_TIMEOUT_MS),
+  );
+
   try {
-    // Test database connection
     const startTime = Date.now();
-    await prisma.$queryRaw`SELECT 1`;
+    await Promise.race([dbProbe, timeout]);
     const responseTime = Date.now() - startTime;
 
     healthcheck.database = {
@@ -52,7 +61,12 @@ router.get('/health', async (_req: Request, res: Response) => {
     logger.error('[HEALTH] Database health check failed:', err.message);
 
     healthcheck.status = 'degraded';
-    healthcheck.database.status = 'disconnected';
+    healthcheck.database = {
+      status: 'disconnected',
+      poolTotal: pool.totalCount,
+      poolIdle: pool.idleCount,
+      poolWaiting: pool.waitingCount,
+    };
 
     res.status(503).json({
       ...healthcheck,
