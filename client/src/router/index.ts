@@ -13,6 +13,7 @@ const ALLOWED_WITHOUT_TEAM = [
   'login',
   'register',
   'activate',
+  'reset-password',
   'admin',
   'admin-venues',
   'admin-managers',
@@ -55,6 +56,7 @@ const JoinTeamPage = () => import('@/pages/JoinTeamPage.vue');
 const LoginPage = () => import('@/pages/LoginPage.vue');
 const RegisterPage = () => import('@/pages/RegisterPage.vue');
 const ActivatePage = () => import('@/pages/ActivatePage.vue');
+const ResetPasswordPage = () => import('@/pages/ResetPasswordPage.vue');
 const AdminLayout = () => import('@/pages/AdminLayout.vue');
 const AdminVenuesPage = () => import('@/pages/AdminVenuesPage.vue');
 const AdminManagersPage = () => import('@/pages/AdminManagersPage.vue');
@@ -122,6 +124,12 @@ const routes: RouteRecordRaw[] = [
     name: 'activate',
     component: ActivatePage,
     meta: { title: 'Activer le compte', requiresAuth: false }
+  },
+  {
+    path: '/reset-password/:token',
+    name: 'reset-password',
+    component: ResetPasswordPage,
+    meta: { title: 'Réinitialiser le mot de passe', requiresAuth: false }
   },
   {
     path: '/admin',

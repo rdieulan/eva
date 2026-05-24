@@ -365,6 +365,37 @@ router.get('/players', async (_req: AuthRequest, res: Response) => {
   }
 });
 
+// POST /api/admin/players/:id/reset-password - Generate a reset link
+router.post('/players/:id/reset-password', async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await playerService.generatePasswordResetTokenForPlayer(req.params.id);
+    if (result === 'notFound') return res.status(404).json({ errors: [ERROR.playerNotFound] });
+    if (result === 'noUserLinked') return res.status(409).json({ errors: [ERROR.playerCannotDeleteNoUser] });
+    res.json({
+      token: result.token,
+      expiresAt: result.expiresAt,
+      userEmail: result.userEmail,
+    });
+  } catch (error) {
+    apiLogger.error('Admin: error generating password reset:', error);
+    res.status(500).json({ errors: [ERROR.passwordResetFailed] });
+  }
+});
+
+// DELETE /api/admin/players/:id - Delete a player + linked user
+router.delete('/players/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await playerService.deletePlayer(req.params.id);
+    if (result === 'notFound') return res.status(404).json({ errors: [ERROR.playerNotFound] });
+    if (result === 'isTeamLeader') return res.status(409).json({ errors: [ERROR.playerCannotDeleteLeader] });
+    if (result === 'noUserLinked') return res.status(409).json({ errors: [ERROR.playerCannotDeleteNoUser] });
+    res.json({ message: 'Joueur supprimé' });
+  } catch (error) {
+    apiLogger.error('Admin: error deleting player:', error);
+    res.status(500).json({ errors: [ERROR.playerDeleteFailed] });
+  }
+});
+
 // ============================================
 // Teams (read-only admin view)
 // ============================================

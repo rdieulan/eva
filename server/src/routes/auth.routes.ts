@@ -22,6 +22,8 @@ import {
   validateName,
   findAccountByActivationToken,
   activateAccount,
+  findUserByPasswordResetToken,
+  applyPasswordReset,
   linkAccounts,
   getLinkedAccounts,
   isAccountInSameGroup,
@@ -240,6 +242,42 @@ router.post('/activate', async (req: Request, res: Response) => {
   } catch (error) {
     authLogger.error('Activation error:', error);
     res.status(500).json({ errors: [ERROR.activationFailed] });
+  }
+});
+
+// POST /api/auth/reset-password - Use an admin-issued reset token to set a new password
+router.post('/reset-password', async (req: Request, res: Response) => {
+  authLogger.debug('POST /api/auth/reset-password');
+  const { token, password } = req.body;
+
+  if (!token) {
+    return res.status(400).json({ errors: [ERROR.passwordResetTokenRequired] });
+  }
+
+  if (!password) {
+    return res.status(400).json({ errors: [ERROR.passwordRequired] });
+  }
+
+  const passwordValid = validatePassword(password);
+  if (passwordValid !== true) {
+    return res.status(400).json({ errors: passwordValid });
+  }
+
+  try {
+    const user = await findUserByPasswordResetToken(token);
+
+    if (!user) {
+      return res.status(400).json({ errors: [ERROR.passwordResetTokenInvalid] });
+    }
+
+    const hashedPassword = await hashPassword(password);
+    await applyPasswordReset(user.id, hashedPassword);
+
+    authLogger.debug('Password reset successfully for:', user.email);
+    res.json({ message: 'Mot de passe réinitialisé avec succès' });
+  } catch (error) {
+    authLogger.error('Password reset error:', error);
+    res.status(500).json({ errors: [ERROR.passwordResetFailed] });
   }
 });
 

@@ -738,6 +738,175 @@ describe('Admin API', () => {
     });
   });
 
+  describe('POST /api/admin/players/:id/reset-password', () => {
+    it('issues a reset token that lets the user set a new password', async () => {
+      const { token: adminToken } = await createAuthenticatedAdmin();
+      const { user, token: initialToken } = await createAuthenticatedUser();
+      const player = await prisma.player.findFirst({ where: { user: { id: user.id } } });
+      expect(player).not.toBeNull();
+
+      const res = await request(app)
+        .post(`/api/admin/players/${player!.id}/reset-password`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.token).toBeDefined();
+      expect(res.body.userEmail).toBe(user.email);
+      expect(new Date(res.body.expiresAt).getTime()).toBeGreaterThan(Date.now());
+
+      // The reset token is persisted on the User row
+      const reloaded = await prisma.user.findUnique({ where: { id: user.id } });
+      expect(reloaded!.passwordResetToken).toBe(res.body.token);
+
+      // Existing sessions are wiped when the reset is consumed
+      const NEW_PASSWORD = 'B2' + 'b'.repeat(PASSWORD_MIN_LENGTH - 2);
+      const apply = await request(app)
+        .post('/api/auth/reset-password')
+        .send({ token: res.body.token, password: NEW_PASSWORD });
+      expect(apply.status).toBe(200);
+
+      const sessions = await prisma.session.count({ where: { userId: user.id } });
+      expect(sessions).toBe(0);
+
+      // The old JWT no longer references a session — using it on a session-aware
+      // endpoint (logout) would fail, but /me only checks JWT validity so it still
+      // returns the account. The key invariant is: new password works for login.
+      void initialToken;
+
+      const login = await request(app)
+        .post('/api/auth/login')
+        .send({ email: user.email, password: NEW_PASSWORD });
+      expect(login.status).toBe(200);
+    });
+
+    it('returns 404 for an unknown player', async () => {
+      const { token } = await createAuthenticatedAdmin();
+
+      const res = await request(app)
+        .post('/api/admin/players/non-existent/reset-password')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(404);
+    });
+
+    it('rejects a non-admin account', async () => {
+      const { token } = await createAuthenticatedUser();
+
+      const res = await request(app)
+        .post('/api/admin/players/anything/reset-password')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(403);
+    });
+  });
+
+  describe('POST /api/auth/reset-password', () => {
+    it('rejects missing token', async () => {
+      const res = await request(app)
+        .post('/api/auth/reset-password')
+        .send({ password: VALID_PASSWORD });
+      expect(res.status).toBe(400);
+      expect(res.body.errors).toContain(ERROR.passwordResetTokenRequired);
+    });
+
+    it('rejects invalid token', async () => {
+      const res = await request(app)
+        .post('/api/auth/reset-password')
+        .send({ token: 'nope', password: VALID_PASSWORD });
+      expect(res.status).toBe(400);
+      expect(res.body.errors).toContain(ERROR.passwordResetTokenInvalid);
+    });
+
+    it('rejects weak password', async () => {
+      const { token: adminToken } = await createAuthenticatedAdmin();
+      const { user } = await createAuthenticatedUser();
+      const player = await prisma.player.findFirst({ where: { user: { id: user.id } } });
+      const issue = await request(app)
+        .post(`/api/admin/players/${player!.id}/reset-password`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      const res = await request(app)
+        .post('/api/auth/reset-password')
+        .send({ token: issue.body.token, password: 'weak' });
+      expect(res.status).toBe(400);
+
+      // Token must still be valid because the reset wasn't applied
+      const reloaded = await prisma.user.findUnique({ where: { id: user.id } });
+      expect(reloaded!.passwordResetToken).toBe(issue.body.token);
+    });
+
+    it('refuses to reuse the same token after success', async () => {
+      const { token: adminToken } = await createAuthenticatedAdmin();
+      const { user } = await createAuthenticatedUser();
+      const player = await prisma.player.findFirst({ where: { user: { id: user.id } } });
+      const issue = await request(app)
+        .post(`/api/admin/players/${player!.id}/reset-password`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      const first = await request(app)
+        .post('/api/auth/reset-password')
+        .send({ token: issue.body.token, password: VALID_PASSWORD });
+      expect(first.status).toBe(200);
+
+      const second = await request(app)
+        .post('/api/auth/reset-password')
+        .send({ token: issue.body.token, password: VALID_PASSWORD });
+      expect(second.status).toBe(400);
+      expect(second.body.errors).toContain(ERROR.passwordResetTokenInvalid);
+    });
+  });
+
+  describe('DELETE /api/admin/players/:id', () => {
+    it('deletes a player and their user account', async () => {
+      const { token: adminToken } = await createAuthenticatedAdmin();
+      const { user } = await createAuthenticatedUser();
+      const player = await prisma.player.findFirst({ where: { user: { id: user.id } } });
+
+      const res = await request(app)
+        .delete(`/api/admin/players/${player!.id}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+
+      const reloadedPlayer = await prisma.player.findUnique({ where: { id: player!.id } });
+      expect(reloadedPlayer).toBeNull();
+      const reloadedUser = await prisma.user.findUnique({ where: { id: user.id } });
+      expect(reloadedUser).toBeNull();
+    });
+
+    it('refuses to delete a team leader', async () => {
+      const { token: adminToken } = await createAuthenticatedAdmin();
+      const { team, user } = await createUserWithTeam();
+      const leader = await prisma.player.findFirst({ where: { user: { id: user.id } } });
+
+      const res = await request(app)
+        .delete(`/api/admin/players/${leader!.id}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(409);
+      expect(res.body.errors).toContain(ERROR.playerCannotDeleteLeader);
+
+      const stillThere = await prisma.team.findUnique({ where: { id: team.id } });
+      expect(stillThere).not.toBeNull();
+    });
+
+    it('returns 404 for an unknown player', async () => {
+      const { token } = await createAuthenticatedAdmin();
+      const res = await request(app)
+        .delete('/api/admin/players/non-existent')
+        .set('Authorization', `Bearer ${token}`);
+      expect(res.status).toBe(404);
+    });
+
+    it('rejects a non-admin account', async () => {
+      const { token } = await createAuthenticatedUser();
+      const res = await request(app)
+        .delete('/api/admin/players/anything')
+        .set('Authorization', `Bearer ${token}`);
+      expect(res.status).toBe(403);
+    });
+  });
+
   // ============================================
   // Teams (read-only)
   // ============================================

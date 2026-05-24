@@ -177,6 +177,35 @@ export function fetchAdminPlayers(): Promise<PlayerAdminSummary[]> {
   return authFetch<PlayerAdminSummary[]>(PLAYERS_BASE, undefined, ERROR.playersAdminFetchFailed);
 }
 
+export interface PasswordResetPayload {
+  token: string;
+  expiresAt: string;
+  userEmail: string;
+}
+
+export function resetPlayerPassword(id: string): Promise<PasswordResetPayload> {
+  return authFetch<PasswordResetPayload>(
+    `${PLAYERS_BASE}/${id}/reset-password`,
+    { method: 'POST' },
+    ERROR.passwordResetFailed,
+  );
+}
+
+export function deletePlayer(id: string): Promise<void> {
+  return authFetch<void>(
+    `${PLAYERS_BASE}/${id}`,
+    { method: 'DELETE' },
+    ERROR.playerDeleteFailed,
+  );
+}
+
+/**
+ * Build the reset URL a player can use to set a new password.
+ */
+export function buildPasswordResetUrl(token: string): string {
+  return `${window.location.origin}/reset-password/${token}`;
+}
+
 // ============================================
 // Teams (read-only)
 // ============================================

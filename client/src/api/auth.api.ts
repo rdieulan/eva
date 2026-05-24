@@ -71,6 +71,23 @@ export async function activateAccount(activationToken: string, password: string)
 }
 
 /**
+ * Reset a password using an admin-issued reset token.
+ * Note: Does not use authFetch because the user is not logged in (yet).
+ */
+export async function resetPasswordWithToken(resetToken: string, password: string): Promise<void> {
+  const response = await fetch('/api/auth/reset-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: resetToken, password }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw ApiError.fromResponse(errorData, ERROR.passwordResetFailed);
+  }
+}
+
+/**
  * Link current account to another account
  */
 export async function linkAccount(email: string, password: string): Promise<{ groupId: string }> {
