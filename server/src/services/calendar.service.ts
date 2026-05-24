@@ -66,9 +66,8 @@ export async function getMonthAvailability(
   const days: Record<string, DayData> = {};
 
   // Initialize all days of the month
-  for (let day = 1; day <= endDate.getDate(); day++) {
-    const date = new Date(year, monthNum - 1, day);
-    const dateStr = formatDateStr(date);
+  for (let day = 1; day <= endDate.getUTCDate(); day++) {
+    const dateStr = formatDateStr(new Date(Date.UTC(year, monthNum - 1, day)));
 
     const playerAvailabilities: PlayerAvailability[] = players.map(player => ({
       playerId: player.id,
@@ -123,9 +122,8 @@ export function buildEmptyCalendar(month: string): { month: string; days: Record
   const { endDate, year, monthNum } = parseMonthRange(month);
   const days: Record<string, DayData> = {};
 
-  for (let day = 1; day <= endDate.getDate(); day++) {
-    const date = new Date(year, monthNum - 1, day);
-    const dateStr = formatDateStr(date);
+  for (let day = 1; day <= endDate.getUTCDate(); day++) {
+    const dateStr = formatDateStr(new Date(Date.UTC(year, monthNum - 1, day)));
     days[dateStr] = {
       date: dateStr,
       currentPlayerStatus: null,

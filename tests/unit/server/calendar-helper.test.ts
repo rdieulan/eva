@@ -7,7 +7,7 @@ describe('formatEventForFrontend', () => {
   it('should format event with all fields', () => {
     const event = {
       id: 'event-1',
-      date: new Date(2026, 0, 15),
+      date: new Date(Date.UTC(2026, 0, 15)),
       startTime: '19:00',
       endTime: '21:00',
       type: 'MATCH' as const,
@@ -35,7 +35,7 @@ describe('formatEventForFrontend', () => {
   it('should handle null description and gamePlan', () => {
     const event = {
       id: 'event-2',
-      date: new Date(2026, 0, 15),
+      date: new Date(Date.UTC(2026, 0, 15)),
       startTime: '19:00',
       endTime: '21:00',
       type: 'EVENT' as const,
