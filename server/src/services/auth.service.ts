@@ -214,6 +214,42 @@ export async function updateAccountPassword(userId: string, hashedPassword: stri
 }
 
 // ============================================
+// Password reset (admin-issued)
+// ============================================
+
+/**
+ * Find a User by its passwordResetToken iff the token is not expired.
+ */
+export async function findUserByPasswordResetToken(token: string) {
+  return prisma.user.findFirst({
+    where: {
+      passwordResetToken: token,
+      passwordResetTokenExpiresAt: { gte: new Date() },
+    },
+    select: { id: true, email: true },
+  });
+}
+
+/**
+ * Apply a password reset: set the new hashed password, clear the reset token,
+ * and invalidate every existing session for that User so old tokens cannot be
+ * reused after the password change.
+ */
+export async function applyPasswordReset(userId: string, hashedPassword: string): Promise<void> {
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: userId },
+      data: {
+        password: hashedPassword,
+        passwordResetToken: null,
+        passwordResetTokenExpiresAt: null,
+      },
+    }),
+    prisma.session.deleteMany({ where: { userId } }),
+  ]);
+}
+
+// ============================================
 // Activation (for Manager + Admin accounts)
 // ============================================
 

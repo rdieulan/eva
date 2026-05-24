@@ -115,6 +115,13 @@ export const ERROR = {
   adminCannotDemoteLastSuperAdmin: 'Impossible de dégrader le dernier super administrateur',
   playersAdminFetchFailed: 'Erreur lors de la récupération des joueurs',
   teamsAdminFetchFailed: 'Erreur lors de la récupération des équipes',
+  playerNotFound: 'Joueur non trouvé',
+  playerDeleteFailed: 'Erreur lors de la suppression du joueur',
+  playerCannotDeleteLeader: 'Impossible de supprimer un joueur qui est leader d\'une équipe. Supprimez l\'équipe ou transférez la direction d\'abord.',
+  playerCannotDeleteNoUser: 'Aucun compte utilisateur lié à ce joueur',
+  passwordResetFailed: 'Erreur lors de la réinitialisation du mot de passe',
+  passwordResetTokenRequired: 'Token de réinitialisation requis',
+  passwordResetTokenInvalid: 'Token de réinitialisation invalide ou expiré',
 
   // Invitations
   inviteNotFound: 'Invitation non trouvée',

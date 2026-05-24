@@ -11,21 +11,23 @@ datasource db {
 // ============================================
 
 model User {
-  id                        String              @id @default(cuid())
-  email                     String              @unique
-  password                  String
-  name                      String
-  playerId                  String?             @unique
-  managerId                 String?             @unique
-  adminId                   String?             @unique
-  linkedAccountGroupId      String?
-  createdAt                 DateTime            @default(now())
-  updatedAt                 DateTime            @updatedAt
-  player                    Player?             @relation(fields: [playerId], references: [id], onDelete: SetNull)
-  manager                   Manager?            @relation(fields: [managerId], references: [id], onDelete: SetNull)
-  admin                     Admin?              @relation(fields: [adminId], references: [id], onDelete: SetNull)
-  linkedAccountGroup        LinkedAccountGroup? @relation(fields: [linkedAccountGroupId], references: [id])
-  sessions                  Session[]
+  id                          String              @id @default(cuid())
+  email                       String              @unique
+  password                    String
+  name                        String
+  playerId                    String?             @unique
+  managerId                   String?             @unique
+  adminId                     String?             @unique
+  linkedAccountGroupId        String?
+  passwordResetToken          String?             @unique
+  passwordResetTokenExpiresAt DateTime?
+  createdAt                   DateTime            @default(now())
+  updatedAt                   DateTime            @updatedAt
+  player                      Player?             @relation(fields: [playerId], references: [id], onDelete: SetNull)
+  manager                     Manager?            @relation(fields: [managerId], references: [id], onDelete: SetNull)
+  admin                       Admin?              @relation(fields: [adminId], references: [id], onDelete: SetNull)
+  linkedAccountGroup          LinkedAccountGroup? @relation(fields: [linkedAccountGroupId], references: [id])
+  sessions                    Session[]
 
   @@index([linkedAccountGroupId])
 }
