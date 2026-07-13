@@ -2,6 +2,7 @@
 
 import { prisma } from '@db/prisma';
 import { DEFAULT_GAME_PLAN_NOTES, ERROR } from '@shared/constants';
+import { dbLogger } from '@utils/logger';
 import { mapPlayersForFrontend } from './helpers/player.helper';
 import { migrateAssignmentsToPhases, type Assignment } from './helpers/migration.helper';
 import type { PlayerAssignment } from '@shared/types';
@@ -102,30 +103,77 @@ export async function updatePlan(
     updateData.notes = JSON.parse(JSON.stringify(data.notes));
   }
 
-  const plan = await prisma.gamePlan.update({
-    where: { id: planId },
-    data: updateData,
-  });
+  // The frontend identifies players by their User.id, but GamePlanPlayer.playerId
+  // is a foreign key to Player.id. Translate User.id -> Player.id, scoped to the
+  // plan's team so only real team members can be assigned. Ids that don't resolve
+  // to a team player are skipped rather than crashing the whole save on a foreign
+  // key violation.
+  let playerRows:
+    | { gamePlanId: string; playerId: string; assignmentIds: number[]; mainAssignmentId: number | null }[]
+    | null = null;
 
-  // Update player assignments if provided
   if (data.players !== undefined && Array.isArray(data.players)) {
-    await prisma.gamePlanPlayer.deleteMany({
-      where: { gamePlanId: planId },
-    });
+    const requestedUserIds = [
+      ...new Set(data.players.map(p => p.playerId).filter((id): id is string => Boolean(id))),
+    ];
 
-    for (const playerAssignment of data.players) {
-      if (playerAssignment.playerId && playerAssignment.assignmentIds?.length > 0) {
-        await prisma.gamePlanPlayer.create({
-          data: {
-            gamePlanId: planId,
-            playerId: playerAssignment.playerId,
-            assignmentIds: playerAssignment.assignmentIds,
-            mainAssignmentId: playerAssignment.mainAssignmentId ?? null,
+    const teamPlayers = requestedUserIds.length
+      ? await prisma.player.findMany({
+          where: {
+            teamId: existingPlan.teamId ?? undefined,
+            user: { id: { in: requestedUserIds } },
           },
-        });
+          select: { id: true, user: { select: { id: true } } },
+        })
+      : [];
+
+    const userIdToPlayerId = new Map(
+      teamPlayers.filter(p => p.user).map(p => [p.user!.id, p.id] as const)
+    );
+
+    playerRows = [];
+    const skippedUserIds: string[] = [];
+    for (const playerAssignment of data.players) {
+      if (!playerAssignment.playerId || !(playerAssignment.assignmentIds?.length > 0)) {
+        continue;
       }
+      const resolvedPlayerId = userIdToPlayerId.get(playerAssignment.playerId);
+      if (!resolvedPlayerId) {
+        skippedUserIds.push(playerAssignment.playerId);
+        continue;
+      }
+      playerRows.push({
+        gamePlanId: planId,
+        playerId: resolvedPlayerId,
+        assignmentIds: playerAssignment.assignmentIds,
+        mainAssignmentId: playerAssignment.mainAssignmentId ?? null,
+      });
+    }
+
+    if (skippedUserIds.length > 0) {
+      dbLogger.warn(
+        `updatePlan(${planId}): skipped ${skippedUserIds.length} assignment(s) for user id(s) not in team ${existingPlan.teamId ?? 'none'}: ${skippedUserIds.join(', ')}`
+      );
     }
   }
+
+  // Persist plan fields and player assignments atomically: a failure must never
+  // leave the plan with its assignments wiped (deleteMany) but not rewritten.
+  const plan = await prisma.$transaction(async tx => {
+    const updated = await tx.gamePlan.update({
+      where: { id: planId },
+      data: updateData,
+    });
+
+    if (playerRows !== null) {
+      await tx.gamePlanPlayer.deleteMany({ where: { gamePlanId: planId } });
+      if (playerRows.length > 0) {
+        await tx.gamePlanPlayer.createMany({ data: playerRows, skipDuplicates: true });
+      }
+    }
+
+    return updated;
+  });
 
   return { success: true, plan };
 }
