@@ -19,11 +19,13 @@ interface Props {
   events: CalendarEvent[];
   showDayNumber?: boolean;
   editMode?: boolean; // Availability edit mode
+  playerLabels?: Record<string, string>; // playerId -> roster-unique badge label
 }
 
 const props = withDefaults(defineProps<Props>(), {
   showDayNumber: true,
   editMode: false,
+  playerLabels: () => ({}),
 });
 
 const emit = defineEmits<{
@@ -66,9 +68,10 @@ function getPlayerStatusClass(status: AvailabilityStatus | null): string {
   return 'player-unknown';
 }
 
-// Get initials from player name (wrapper for template)
-function getInitials(name: string): string {
-  return getPlayerInitials(name);
+// Badge label for a player: the roster-unique label when available, otherwise
+// fall back to plain initials (e.g. when the component is used standalone).
+function getPlayerLabel(player: PlayerAvailability): string {
+  return props.playerLabels[player.playerId] ?? getPlayerInitials(player.playerName);
 }
 
 // Click on cell
@@ -165,8 +168,9 @@ function cycleAvailability() {
         :key="player.playerId"
         class="player-avatar"
         :class="getPlayerStatusClass(player.status)"
+        :title="player.playerName"
       >
-        {{ getInitials(player.playerName) }}
+        {{ getPlayerLabel(player) }}
       </div>
     </div>
 

@@ -9,6 +9,7 @@ const props = defineProps<{
   month: number; // 1-12
   days: Record<string, DayData>;
   editMode?: boolean;
+  playerLabels?: Record<string, string>;
 }>();
 
 const emit = defineEmits<{
@@ -116,6 +117,7 @@ function handleSetAvailability(date: string, status: AvailabilityStatus | null) 
         :player-availabilities="cell.data?.playerAvailabilities ?? []"
         :events="cell.data?.events ?? []"
         :edit-mode="props.editMode"
+        :player-labels="props.playerLabels"
         @set-availability="(status) => handleSetAvailability(cell.date, status)"
         @open-event-viewer="(events, index) => emit('open-event-viewer', events, index)"
         @open-create-event="(date) => emit('open-create-event', date)"
