@@ -10,6 +10,7 @@ const props = defineProps<{
   weekStart: Date; // Start of the week to display
   days: Record<string, DayData>;
   editMode?: boolean;
+  playerLabels?: Record<string, string>;
 }>();
 
 const emit = defineEmits<{
@@ -124,6 +125,7 @@ watch(() => props.weekStart, () => {
           class="week-day-cell"
           :show-day-number="false"
           :edit-mode="props.editMode"
+          :player-labels="props.playerLabels"
           @set-availability="(status) => handleSetAvailability(cell.date, status)"
           @open-event-viewer="(events, index) => emit('open-event-viewer', events, index)"
           @open-create-event="(date) => emit('open-create-event', date)"

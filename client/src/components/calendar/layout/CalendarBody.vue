@@ -15,6 +15,7 @@ defineProps<{
   weekStart: Date;
   days: Record<string, DayData>;
   editMode: boolean;
+  playerLabels?: Record<string, string>;
 }>();
 
 defineEmits<{
@@ -37,6 +38,7 @@ defineEmits<{
       :month="month"
       :days="days"
       :edit-mode="editMode"
+      :player-labels="playerLabels"
       @prev-month="$emit('prev-month')"
       @next-month="$emit('next-month')"
       @set-availability="(date, status) => $emit('set-availability', date, status)"
@@ -52,6 +54,7 @@ defineEmits<{
       :week-start="weekStart"
       :days="days"
       :edit-mode="editMode"
+      :player-labels="playerLabels"
       @prev-week="$emit('prev-week')"
       @next-week="$emit('next-week')"
       @set-availability="(date, status) => $emit('set-availability', date, status)"

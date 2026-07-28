@@ -13,6 +13,7 @@ import { useCalendar } from '@/composables/useCalendar';
 import { useCalendarEvents } from '@/composables/useCalendarEvents';
 import { useErrors } from '@/composables/useErrors';
 import { fetchAllMaps, fetchPlayers } from '@/api';
+import { computePlayerInitials } from '@/utils/players';
 import { ERROR } from '@shared/constants';
 import type { MapConfig, Player } from '@shared/types';
 
@@ -89,6 +90,21 @@ const {
 provide('calendarEditMode', editMode);
 provide('toggleCalendarEditMode', toggleEditMode);
 
+// Stable, roster-unique badge labels so players who share a first letter stay
+// distinguishable in the availability pastilles. Derived from the loaded days
+// (keyed by playerId) so it matches the ids the pastilles render with.
+const playerLabels = computed<Record<string, string>>(() => {
+  const roster = new Map<string, string>(); // playerId -> playerName
+  for (const day of Object.values(days.value)) {
+    for (const p of day?.playerAvailabilities ?? []) {
+      if (!roster.has(p.playerId)) roster.set(p.playerId, p.playerName);
+    }
+  }
+  return computePlayerInitials(
+    [...roster].map(([playerId, playerName]) => ({ playerId, playerName }))
+  );
+});
+
 // Maps and players for RotationCalculator
 const maps = ref<MapConfig[]>([]);
 const players = ref<Player[]>([]);
@@ -158,6 +174,7 @@ onMounted(async () => {
           :week-start="currentWeekStart"
           :days="days"
           :edit-mode="editMode"
+          :player-labels="playerLabels"
           @prev-month="goToPrevMonth"
           @next-month="goToNextMonth"
           @prev-week="goToPrevWeek"
