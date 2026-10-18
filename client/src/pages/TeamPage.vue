@@ -54,7 +54,7 @@ const canManageTeam = computed(() => permissions.value.team.canManageTeam);
 const canManagePermissions = computed(() => permissions.value.team.canManagePermissions);
 const canRemoveMembers = computed(() => permissions.value.team.canRemoveMembers);
 const canInviteMembers = computed(() => permissions.value.team.canInviteMembers);
-const isLeader = computed(() => team.value?.leader.id === account.value?.id);
+const isLeader = computed(() => team.value?.isLeader ?? false);
 
 // Delete/Leave team modals
 const showDeleteTeamModal = ref(false);

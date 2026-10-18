@@ -7,6 +7,7 @@ import { prisma } from './helpers/db';
 import { createAuthenticatedUser, createAuthenticatedAdmin, createUserWithTeam } from './helpers/auth';
 import { ERROR } from '@shared/constants/error.constants';
 import { PASSWORD_MIN_LENGTH } from '@shared/constants/validation.constants';
+import { DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
 
 const VALID_PASSWORD = 'A' + '1' + 'a'.repeat(PASSWORD_MIN_LENGTH - 2);
 
@@ -908,7 +909,7 @@ describe('Admin API', () => {
   });
 
   // ============================================
-  // Teams (read-only)
+  // Teams
   // ============================================
   describe('GET /api/admin/teams', () => {
     it('lists all teams with summary data', async () => {
@@ -952,6 +953,99 @@ describe('Admin API', () => {
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(res.status).toBe(404);
+    });
+  });
+
+  describe('DELETE /api/admin/teams/:id', () => {
+    it('deletes a team, frees its members and cascades its data', async () => {
+      const { token: adminToken } = await createAuthenticatedAdmin();
+      const { team, user: leader } = await createUserWithTeam();
+
+      const gamePlanCount = await prisma.gamePlan.count({ where: { teamId: team.id } });
+      expect(gamePlanCount).toBeGreaterThan(0);
+
+      const res = await request(app)
+        .delete(`/api/admin/teams/${team.id}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+
+      expect(await prisma.team.findUnique({ where: { id: team.id } })).toBeNull();
+      expect(await prisma.gamePlan.count({ where: { teamId: team.id } })).toBe(0);
+
+      // The leader keeps their account, without a team and with default permissions
+      const freedLeader = await prisma.player.findUnique({ where: { id: leader.playerId! } });
+      expect(freedLeader).not.toBeNull();
+      expect(freedLeader!.teamId).toBeNull();
+      expect(freedLeader!.permissions).toEqual(DEFAULT_PLAYER_PERMISSIONS);
+    });
+
+    it('frees non-leader members too', async () => {
+      const { token: adminToken } = await createAuthenticatedAdmin();
+      const { token: leaderToken, team } = await createUserWithTeam();
+      const { user: member, token: memberToken } = await createAuthenticatedUser();
+
+      const invite = await request(app)
+        .post(`/api/teams/${team.id}/invites`)
+        .set('Authorization', `Bearer ${leaderToken}`)
+        .send({ expiresInHours: 24, maxUses: 1 });
+      expect(invite.status).toBe(201);
+
+      const joined = await request(app)
+        .post(`/api/invites/${invite.body.code}/join`)
+        .set('Authorization', `Bearer ${memberToken}`);
+      expect(joined.status).toBe(200);
+
+      const res = await request(app)
+        .delete(`/api/admin/teams/${team.id}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+
+      const freedMember = await prisma.player.findUnique({ where: { id: member.playerId! } });
+      expect(freedMember!.teamId).toBeNull();
+    });
+
+    it('lets the admin delete a leader once their team is gone', async () => {
+      const { token: adminToken } = await createAuthenticatedAdmin();
+      const { team, user: leader } = await createUserWithTeam();
+
+      const blocked = await request(app)
+        .delete(`/api/admin/players/${leader.playerId}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(blocked.status).toBe(409);
+
+      await request(app)
+        .delete(`/api/admin/teams/${team.id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      const deleted = await request(app)
+        .delete(`/api/admin/players/${leader.playerId}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(deleted.status).toBe(200);
+    });
+
+    it('returns 404 for a non-existent team', async () => {
+      const { token: adminToken } = await createAuthenticatedAdmin();
+
+      const res = await request(app)
+        .delete('/api/admin/teams/non-existent')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(404);
+      expect(res.body.errors).toContain(ERROR.teamNotFound);
+    });
+
+    it('rejects a non-admin account', async () => {
+      const { token } = await createUserWithTeam();
+
+      const res = await request(app)
+        .delete('/api/admin/teams/anything')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(403);
+      expect(res.body.errors).toContain(ERROR.adminRequired);
     });
   });
 

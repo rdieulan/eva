@@ -46,16 +46,13 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
 // GET /api/teams/current - Get current user's team
 router.get('/current', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const playerData = await teamsService.getPlayerWithTeam(req.account!.playerId!);
+    const team = await teamsService.getTeamViewForPlayer(req.account!.playerId!);
 
-    if (!playerData?.team) {
+    if (!team) {
       return res.status(404).json({ errors: [ERROR.teamNotFound] });
     }
 
-    res.json({
-      ...playerData.team,
-      isLeader: !!playerData.ledTeam,
-    });
+    res.json(team);
   } catch (error) {
     apiLogger.error('Error fetching team:', error);
     res.status(500).json({ errors: [ERROR.serverError] });

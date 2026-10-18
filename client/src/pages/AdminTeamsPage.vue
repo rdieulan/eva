@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
-import { fetchAdminTeams, fetchAdminTeamDetail } from '@/api';
+import { fetchAdminTeams, fetchAdminTeamDetail, deleteAdminTeam } from '@/api';
 import type { TeamAdminSummary, TeamAdminDetail } from '@/api/admin.api';
 import { ERROR } from '@shared/constants';
 import { useErrors } from '@/composables/useErrors';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import Modal from '@/components/common/Modal.vue';
+import ConfirmModal from '@/components/common/ConfirmModal.vue';
 
 const teams = ref<TeamAdminSummary[]>([]);
 const isLoading = ref(true);
 const { errors, setErrorFromException, clearErrors } = useErrors();
+const successMessage = ref<string | null>(null);
 
 const search = ref('');
 
@@ -27,6 +29,25 @@ const filteredTeams = computed(() => {
 const showDetailModal = ref(false);
 const detail = ref<TeamAdminDetail | null>(null);
 const isLoadingDetail = ref(false);
+
+// Delete modal
+const showDeleteModal = ref(false);
+const teamToDelete = ref<TeamAdminSummary | null>(null);
+
+const deleteMessage = computed(() => {
+  const team = teamToDelete.value;
+  if (!team) return '';
+
+  const freed = team.memberCount === 1
+    ? 'Son membre redeviendra sans équipe, et '
+    : team.memberCount > 1
+      ? `Ses ${team.memberCount} membres redeviendront sans équipe, et `
+      : '';
+
+  return `Êtes-vous sûr de vouloir supprimer l'équipe '${team.name}' ? ${freed}`
+    + 'ses plans de jeu, événements de calendrier, invitations et règles d\'équilibrage '
+    + 'seront supprimés.';
+});
 
 async function loadTeams() {
   isLoading.value = true;
@@ -54,6 +75,31 @@ async function openDetail(team: TeamAdminSummary) {
   }
 }
 
+function showSuccess(message: string) {
+  successMessage.value = message;
+  setTimeout(() => { successMessage.value = null; }, 3000);
+}
+
+function openDelete(team: TeamAdminSummary) {
+  clearErrors();
+  teamToDelete.value = team;
+  showDeleteModal.value = true;
+}
+
+async function confirmDelete() {
+  if (!teamToDelete.value) return;
+  try {
+    await deleteAdminTeam(teamToDelete.value.id);
+    teams.value = teams.value.filter(t => t.id !== teamToDelete.value!.id);
+    showSuccess('Équipe supprimée');
+  } catch (e) {
+    setErrorFromException(e, ERROR.teamDeleteFailed);
+  } finally {
+    showDeleteModal.value = false;
+    teamToDelete.value = null;
+  }
+}
+
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
@@ -74,6 +120,7 @@ onMounted(loadTeams);
     </header>
 
     <ErrorDisplay :errors="errors" />
+    <div v-if="successMessage" class="message success">{{ successMessage }}</div>
 
     <div v-if="isLoading" class="loading">Chargement...</div>
 
@@ -108,6 +155,7 @@ onMounted(loadTeams);
           <td>{{ formatDate(t.createdAt) }}</td>
           <td class="col-actions">
             <button class="btn-link" @click="openDetail(t)">Détails</button>
+            <button class="btn-link btn-link--danger" @click="openDelete(t)">Supprimer</button>
           </td>
         </tr>
       </tbody>
@@ -144,6 +192,17 @@ onMounted(loadTeams);
         <button class="btn-primary" @click="showDetailModal = false">Fermer</button>
       </template>
     </Modal>
+
+    <ConfirmModal
+      :open="showDeleteModal"
+      title="Supprimer l'équipe"
+      :message="deleteMessage"
+      confirm-text="Supprimer"
+      require-input="supprimer"
+      :danger="true"
+      @confirm="confirmDelete"
+      @cancel="showDeleteModal = false; teamToDelete = null"
+    />
   </section>
 </template>
 
@@ -188,6 +247,14 @@ onMounted(loadTeams);
     outline: none;
     border-color: $color-accent;
   }
+}
+
+.message.success {
+  padding: $spacing-md;
+  background: rgba($color-success, 0.1);
+  border: 1px solid rgba($color-success, 0.3);
+  color: $color-success;
+  border-radius: $radius-md;
 }
 
 .loading,
@@ -237,6 +304,10 @@ onMounted(loadTeams);
   width: 1%;
   white-space: nowrap;
   text-align: right;
+
+  .btn-link + .btn-link {
+    margin-left: $spacing-sm;
+  }
 }
 
 .muted {
@@ -255,6 +326,10 @@ onMounted(loadTeams);
 
   &:hover {
     background: $color-bg-tertiary;
+  }
+
+  &--danger {
+    color: $color-danger;
   }
 }
 

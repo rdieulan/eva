@@ -4,6 +4,7 @@ import { prisma } from '@db/prisma';
 import type { AccountPermissions } from '@shared/types';
 import { LEADER_PERMISSIONS, DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
 import { DEFAULT_ASSIGNMENTS, DEFAULT_GAME_PLAN_NOTES, ERROR } from '@shared/constants';
+import { getPlayerWithTeam } from '@services/player.service';
 
 // ============================================
 // Types
@@ -31,6 +32,60 @@ export interface MemberWithRole {
 
 // Re-export player helpers for convenience
 export { getPlayerWithTeam, getPlayerTeam } from '@services/player.service';
+
+// ============================================
+// Member-facing team view
+// ============================================
+
+export interface TeamView {
+  id: string;
+  name: string;
+  logo: string | null;
+  venueId: string | null;
+  leaderId: string;
+  createdAt: Date;
+  updatedAt: Date;
+  leader: { id: string; name: string; email: string } | null;
+  members: MemberWithRole[];
+  isLeader: boolean;
+}
+
+/**
+ * Team payload for the team page of one of its members.
+ * Leader and members are identified by their User id — that is what the client
+ * session holds — while the database relations are keyed by Player id.
+ */
+export async function getTeamViewForPlayer(playerId: string): Promise<TeamView | null> {
+  const playerData = await getPlayerWithTeam(playerId);
+  const team = playerData?.team;
+
+  if (!team) return null;
+
+  const leaderUser = team.leader?.user ?? null;
+
+  return {
+    id: team.id,
+    name: team.name,
+    logo: team.logo,
+    venueId: team.venueId,
+    leaderId: team.leaderId,
+    createdAt: team.createdAt,
+    updatedAt: team.updatedAt,
+    leader: leaderUser
+      ? { id: leaderUser.id, name: leaderUser.name, email: leaderUser.email }
+      : null,
+    members: team.members
+      .filter(member => member.user !== null)
+      .map(member => ({
+        id: member.user!.id,
+        name: member.user!.name,
+        email: member.user!.email,
+        permissions: member.permissions,
+        isLeader: member.id === team.leaderId,
+      })),
+    isLeader: !!playerData!.ledTeam,
+  };
+}
 
 // ============================================
 // Admin view (read-only)
@@ -324,6 +379,25 @@ export async function removeMember(
 }
 
 /**
+ * Free every player of the team (membership + permissions) and drop the team.
+ * The leader is covered even if the leader relation ever drifts from the member
+ * list. Game plans, calendar events, invites and balance rules go away with the
+ * team through their cascading foreign keys (see prisma/schema.prisma).
+ */
+async function purgeTeam(teamId: string, leaderId: string): Promise<void> {
+  await prisma.$transaction([
+    prisma.player.updateMany({
+      where: { OR: [{ teamId }, { id: leaderId }] },
+      data: {
+        teamId: null,
+        permissions: DEFAULT_PLAYER_PERMISSIONS as unknown as object,
+      },
+    }),
+    prisma.team.delete({ where: { id: teamId } }),
+  ]);
+}
+
+/**
  * Delete a team (leader only)
  */
 export async function deleteTeam(playerId: string): Promise<{ success: boolean; error?: string }> {
@@ -340,23 +414,26 @@ export async function deleteTeam(playerId: string): Promise<{ success: boolean; 
     return { success: false, error: ERROR.onlyLeaderCanDelete };
   }
 
-  const teamId = player.team.id;
-
-  // Reset permissions and remove teamId from all players in the team
-  await prisma.player.updateMany({
-    where: { teamId },
-    data: {
-      teamId: null,
-      permissions: DEFAULT_PLAYER_PERMISSIONS as unknown as object,
-    },
-  });
-
-  // Delete the team
-  await prisma.team.delete({
-    where: { id: teamId },
-  });
+  await purgeTeam(player.team.id, player.team.leaderId);
 
   return { success: true };
+}
+
+/**
+ * Delete a team by id, regardless of who leads it (admin action).
+ * Returns false when no such team exists.
+ */
+export async function deleteTeamById(teamId: string): Promise<boolean> {
+  const team = await prisma.team.findUnique({
+    where: { id: teamId },
+    select: { id: true, leaderId: true },
+  });
+
+  if (!team) return false;
+
+  await purgeTeam(team.id, team.leaderId);
+
+  return true;
 }
 
 /**

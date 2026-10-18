@@ -7,6 +7,7 @@ import { createAuthenticatedUser, createUserWithTeam } from './helpers/auth';
 import { prisma, expectNoRecordCreated } from './helpers/db';
 import { TEAM_NAME_MIN_LENGTH } from '@shared/constants/validation.constants';
 import { ERROR } from '@shared/constants/error.constants';
+import { DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
 
 // Valid test data based on validation rules
 const VALID_TEAM_NAME = 'T'.repeat(TEAM_NAME_MIN_LENGTH);
@@ -81,11 +82,119 @@ describe('Teams API', () => {
       expect(res.body.id).toBe(team.id);
     });
 
+    it('should identify the leader and key members by user id', async () => {
+      const { token, user } = await createUserWithTeam();
+
+      const res = await request(app)
+        .get('/api/teams/current')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.isLeader).toBe(true);
+      // User id, not Player id: that is what the client session carries
+      expect(res.body.leader).toMatchObject({ id: user.id, name: user.name, email: user.email });
+      expect(res.body.leaderId).toBe(user.playerId);
+      expect(res.body.members).toHaveLength(1);
+      expect(res.body.members[0]).toMatchObject({ id: user.id, isLeader: true });
+      expect(res.body.members[0].name).toBe(user.name);
+    });
+
+    it('should not flag a regular member as leader', async () => {
+      const { token: leaderToken, team } = await createUserWithTeam();
+
+      const inviteRes = await request(app)
+        .post(`/api/teams/${team.id}/invites`)
+        .set('Authorization', `Bearer ${leaderToken}`)
+        .send({ expiresInHours: 24, maxUses: 1 });
+      expect(inviteRes.status).toBe(201);
+
+      const { token: memberToken } = await createAuthenticatedUser();
+      await request(app)
+        .post(`/api/invites/${inviteRes.body.code}/join`)
+        .set('Authorization', `Bearer ${memberToken}`)
+        .expect(200);
+
+      const res = await request(app)
+        .get('/api/teams/current')
+        .set('Authorization', `Bearer ${memberToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.isLeader).toBe(false);
+      expect(res.body.members).toHaveLength(2);
+    });
+
     it('should return 404 if user has no team', async () => {
       const { token } = await createAuthenticatedUser();
 
       const res = await request(app)
         .get('/api/teams/current')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(404);
+      expect(res.body.errors).toContain(ERROR.teamNotFound);
+    });
+  });
+
+  describe('DELETE /api/teams/current', () => {
+    it('should let the leader delete their team and free its members', async () => {
+      const { token: leaderToken, user: leader, team } = await createUserWithTeam();
+
+      const inviteRes = await request(app)
+        .post(`/api/teams/${team.id}/invites`)
+        .set('Authorization', `Bearer ${leaderToken}`)
+        .send({ expiresInHours: 24, maxUses: 1 });
+      expect(inviteRes.status).toBe(201);
+
+      const { user: member, token: memberToken } = await createAuthenticatedUser();
+      await request(app)
+        .post(`/api/invites/${inviteRes.body.code}/join`)
+        .set('Authorization', `Bearer ${memberToken}`)
+        .expect(200);
+
+      const res = await request(app)
+        .delete('/api/teams/current')
+        .set('Authorization', `Bearer ${leaderToken}`);
+
+      expect(res.status).toBe(200);
+      expect(await prisma.team.findUnique({ where: { id: team.id } })).toBeNull();
+      expect(await prisma.gamePlan.count({ where: { teamId: team.id } })).toBe(0);
+
+      for (const playerId of [leader.playerId!, member.playerId!]) {
+        const freed = await prisma.player.findUnique({ where: { id: playerId } });
+        expect(freed!.teamId).toBeNull();
+        expect(freed!.permissions).toEqual(DEFAULT_PLAYER_PERMISSIONS);
+      }
+    });
+
+    it('should reject a member who is not the leader', async () => {
+      const { token: leaderToken, team } = await createUserWithTeam();
+
+      const inviteRes = await request(app)
+        .post(`/api/teams/${team.id}/invites`)
+        .set('Authorization', `Bearer ${leaderToken}`)
+        .send({ expiresInHours: 24, maxUses: 1 });
+      expect(inviteRes.status).toBe(201);
+
+      const { token: memberToken } = await createAuthenticatedUser();
+      await request(app)
+        .post(`/api/invites/${inviteRes.body.code}/join`)
+        .set('Authorization', `Bearer ${memberToken}`)
+        .expect(200);
+
+      const res = await request(app)
+        .delete('/api/teams/current')
+        .set('Authorization', `Bearer ${memberToken}`);
+
+      expect(res.status).toBe(403);
+      expect(res.body.errors).toContain(ERROR.onlyLeaderCanDelete);
+      expect(await prisma.team.findUnique({ where: { id: team.id } })).not.toBeNull();
+    });
+
+    it('should return 404 when the user has no team', async () => {
+      const { token } = await createAuthenticatedUser();
+
+      const res = await request(app)
+        .delete('/api/teams/current')
         .set('Authorization', `Bearer ${token}`);
 
       expect(res.status).toBe(404);

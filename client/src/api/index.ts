@@ -72,6 +72,7 @@ export {
   deletePlayer as deleteAdminPlayer,
   fetchAdminTeams,
   fetchAdminTeamDetail,
+  deleteTeam as deleteAdminTeam,
   buildActivationUrl,
   buildPasswordResetUrl,
 } from '@/api/admin.api';
