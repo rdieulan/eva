@@ -16,7 +16,8 @@ export interface TeamMember {
 }
 
 export interface TeamWithMembers extends Team {
-  leader: { id: string; name: string; email: string };
+  // null when the leader Player has no linked User account
+  leader: { id: string; name: string; email: string } | null;
   members: TeamMember[];
   isLeader: boolean;
 }
@@ -45,8 +46,8 @@ export async function fetchCurrentTeam(): Promise<TeamWithMembers | null> {
  */
 export async function createTeam(
   teamData: { name: string; logo?: string | null; venueId?: string | null }
-): Promise<TeamWithMembers> {
-  return authFetch<TeamWithMembers>(
+): Promise<Team & { isLeader: boolean }> {
+  return authFetch<Team & { isLeader: boolean }>(
     API_BASE,
     { method: 'POST', body: JSON.stringify(teamData) },
     ERROR.teamCreationFailed

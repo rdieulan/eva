@@ -207,7 +207,7 @@ export function buildPasswordResetUrl(token: string): string {
 }
 
 // ============================================
-// Teams (read-only)
+// Teams
 // ============================================
 
 export interface TeamAdminSummary {
@@ -238,4 +238,12 @@ export function fetchAdminTeams(): Promise<TeamAdminSummary[]> {
 
 export function fetchAdminTeamDetail(id: string): Promise<TeamAdminDetail> {
   return authFetch<TeamAdminDetail>(`${TEAMS_BASE}/${id}`, undefined, ERROR.teamsAdminFetchFailed);
+}
+
+export function deleteTeam(id: string): Promise<void> {
+  return authFetch<void>(
+    `${TEAMS_BASE}/${id}`,
+    { method: 'DELETE' },
+    ERROR.teamDeleteFailed,
+  );
 }

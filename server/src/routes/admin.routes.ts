@@ -397,7 +397,7 @@ router.delete('/players/:id', async (req: AuthRequest, res: Response) => {
 });
 
 // ============================================
-// Teams (read-only admin view)
+// Teams (admin view)
 // ============================================
 
 // GET /api/admin/teams - List all teams
@@ -420,6 +420,18 @@ router.get('/teams/:id', async (req: AuthRequest, res: Response) => {
   } catch (error) {
     apiLogger.error('Admin: error fetching team detail:', error);
     res.status(500).json({ errors: [ERROR.teamsAdminFetchFailed] });
+  }
+});
+
+// DELETE /api/admin/teams/:id - Delete a team (members are freed, team data cascades)
+router.delete('/teams/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const deleted = await teamsService.deleteTeamById(req.params.id);
+    if (!deleted) return res.status(404).json({ errors: [ERROR.teamNotFound] });
+    res.json({ message: 'Équipe supprimée' });
+  } catch (error) {
+    apiLogger.error('Admin: error deleting team:', error);
+    res.status(500).json({ errors: [ERROR.teamDeleteFailed] });
   }
 });
 

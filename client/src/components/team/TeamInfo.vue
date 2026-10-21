@@ -7,7 +7,7 @@ interface TeamData {
   id: string;
   name: string;
   venueId?: string;
-  leader: { id: string; name: string };
+  leader: { id: string; name: string } | null;
 }
 
 const props = defineProps<{
@@ -98,7 +98,7 @@ function saveChanges() {
       </div>
       <div class="info-item">
         <label>Leader</label>
-        <span>{{ team.leader.name }}</span>
+        <span>{{ team.leader?.name ?? '—' }}</span>
       </div>
 
       <!-- Delete team button (Leader only) -->
