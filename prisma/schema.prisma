@@ -54,18 +54,20 @@ model Session {
 // ============================================
 
 model Player {
-  id              String           @id @default(cuid())
-  permissions     Json?            // Granular permissions JSON
-  teamId          String?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  user            User?
-  team            Team?            @relation("TeamMembers", fields: [teamId], references: [id])
-  ledTeam         Team?            @relation("TeamLeader")
-  availabilities  Availability[]
-  createdEvents   CalendarEvent[]
-  gamePlanPlayers GamePlanPlayer[]
-  createdInvites  TeamInvite[]
+  id                      String            @id @default(cuid())
+  permissions             Json?             // Granular permissions JSON
+  teamId                  String?
+  subscriptionTier        SubscriptionTier?
+  subscriptionRenewalDate DateTime?         @db.Date // Renews every 30 days from this date
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+  user                    User?
+  team                    Team?             @relation("TeamMembers", fields: [teamId], references: [id])
+  ledTeam                 Team?             @relation("TeamLeader")
+  availabilities          Availability[]
+  createdEvents           CalendarEvent[]
+  gamePlanPlayers         GamePlanPlayer[]
+  createdInvites          TeamInvite[]
 
   @@index([teamId])
 }
@@ -277,6 +279,13 @@ enum AvailabilityStatus {
 enum EventType {
   MATCH
   EVENT
+  DISCORD
+}
+
+enum SubscriptionTier {
+  BRONZE
+  SILVER
+  GOLD
 }
 
 enum BalanceSeverity {

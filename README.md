@@ -5,7 +5,8 @@ Outil web de gestion d'équipe FPS 4v4 : planification de postes par map, calend
 ## Fonctionnalités
 
 - **Planificateur** : assignation des joueurs aux 4 postes de chaque map, avec règles d'équilibrage configurables et export PNG.
-- **Calendrier** : disponibilités joueurs, événements (match / entraînement), rattachement d'un plan de jeu à un match.
+- **Calendrier** : disponibilités joueurs, événements (match, événement, session de strat Discord), rattachement d'un plan de jeu à un match, jours de renouvellement d'abonnement des joueurs.
+- **Profil** : niveau d'abonnement (bronze, argent, or) et date de renouvellement, l'abonnement se renouvelant tous les 30 jours à partir de cette date.
 - **Équipes** : création d'équipe, invitations par lien, permissions granulaires par membre (leader, gestion calendrier, planificateur, etc.).
 - **Comptes multi-rôles** : Player, Manager (gérant de salle), Admin. Liaison de comptes + switch sans re-login.
 - **Administration** (`/admin`) : CRUD des salles et des managers, génération de liens d'activation.

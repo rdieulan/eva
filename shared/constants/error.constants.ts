@@ -6,6 +6,8 @@ import {
   NAME_MIN_LENGTH,
   TEAM_NAME_MIN_LENGTH,
 } from '@shared/constants/validation.constants';
+import { EVENT_TYPES } from '@shared/types/calendar.types';
+import { SUBSCRIPTION_TIERS } from '@shared/types/subscription.types';
 
 // ============================================
 // Error Messages
@@ -116,6 +118,11 @@ export const ERROR = {
   playersAdminFetchFailed: 'Erreur lors de la récupération des joueurs',
   teamsAdminFetchFailed: 'Erreur lors de la récupération des équipes',
   playerNotFound: 'Joueur non trouvé',
+  playerAccountRequired: 'Réservé aux comptes joueur',
+  subscriptionTierInvalid: `Niveau d'abonnement invalide (valeurs acceptées : ${SUBSCRIPTION_TIERS.join(', ')})`,
+  subscriptionRenewalDateInvalid: 'Date de renouvellement invalide (format AAAA-MM-JJ requis)',
+  subscriptionFetchFailed: 'Erreur lors de la récupération de l\'abonnement',
+  subscriptionUpdateFailed: 'Erreur lors de la mise à jour de l\'abonnement',
   playerDeleteFailed: 'Erreur lors de la suppression du joueur',
   playerCannotDeleteLeader: 'Impossible de supprimer un joueur qui est leader d\'une équipe. Supprimez l\'équipe ou transférez la direction d\'abord.',
   playerCannotDeleteNoUser: 'Aucun compte utilisateur lié à ce joueur',
@@ -157,7 +164,7 @@ export const ERROR = {
   startTimeInvalid: 'Heure de début invalide (format HH:mm requis)',
   endTimeInvalid: 'Heure de fin invalide (format HH:mm requis)',
   titleRequired: 'Titre requis',
-  eventTypeInvalid: 'Type invalide (MATCH ou EVENT requis)',
+  eventTypeInvalid: `Type d'événement invalide (valeurs acceptées : ${EVENT_TYPES.join(', ')})`,
   statusInvalid: 'Status invalide',
   matchOnlyGamePlan: 'Seuls les MATCH peuvent avoir un plan de jeu',
 

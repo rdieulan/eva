@@ -39,6 +39,14 @@ export type {
   SetAvailabilityRequest,
   CreateEventRequest,
 } from './calendar.types';
+export { EVENT_TYPES } from './calendar.types';
+
+export type {
+  SubscriptionTier,
+  PlayerSubscription,
+  SubscriptionRenewal,
+} from './subscription.types';
+export { SUBSCRIPTION_TIERS } from './subscription.types';
 
 export type {
   MapAssignment,

@@ -6,7 +6,9 @@ export {
   getPlayers,
   getPlayerById,
   getPlayerName,
-  clearPlayersCache
+  clearPlayersCache,
+  fetchMySubscription,
+  updateMySubscription,
 } from '@/api/players.api';
 
 // Maps API

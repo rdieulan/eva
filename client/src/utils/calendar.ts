@@ -16,30 +16,45 @@ export function getMonday(date: Date): Date {
   return d;
 }
 
+export interface EventTypeDisplay {
+  label: string;
+  icon: string;
+}
+
+// Keyed by EventType: a new event type does not compile until it says how it is displayed.
+// Colours live alongside in $event-type-colors (styles/_variables.scss).
+const EVENT_TYPE_DISPLAY: Record<EventType, EventTypeDisplay> = {
+  MATCH: { label: 'Match', icon: '🎮' },
+  EVENT: { label: 'Événement', icon: '📅' },
+  DISCORD: { label: 'Discord', icon: '🎧' },
+};
+
 /**
- * Get a human-readable label for an event type
+ * Get the icon and French label of an event type
  * @param type - The event type
- * @returns The label in French
+ * @returns e.g. { icon: '🎮', label: 'Match' }
  */
-export function getEventTypeLabel(type: EventType | string): string {
-  switch (type) {
-    case 'MATCH': return 'Match';
-    case 'EVENT': return 'Événement';
-    default: return type;
-  }
+export function getEventTypeDisplay(type: EventType): EventTypeDisplay {
+  return EVENT_TYPE_DISPLAY[type];
+}
+
+/**
+ * Get the French label of an event type prefixed with its icon
+ * @param type - The event type
+ * @returns e.g. "🎮 Match"
+ */
+export function getEventTypeTitle(type: EventType): string {
+  const { icon, label } = EVENT_TYPE_DISPLAY[type];
+  return `${icon} ${label}`;
 }
 
 /**
  * Get CSS class for an event type
  * @param type - The event type
- * @returns The CSS class name
+ * @returns The CSS modifier class, matching the keys of $event-type-colors
  */
-export function getEventTypeClass(type: EventType | string): string {
-  switch (type) {
-    case 'MATCH': return 'event-match';
-    case 'EVENT': return 'event-event';
-    default: return '';
-  }
+export function getEventTypeClass(type: EventType): string {
+  return `event-type--${type.toLowerCase()}`;
 }
 
 /**
@@ -62,6 +77,22 @@ export function formatDateStr(date: Date): string {
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
   const day = date.getDate().toString().padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+/**
+ * Format a YYYY-MM-DD date as a long French date, e.g. "mercredi 28 octobre 2026".
+ * Built from the date parts in local time, so the day never shifts with the timezone.
+ * @param dateStr - The date string (YYYY-MM-DD)
+ * @returns The formatted date
+ */
+export function formatLongDate(dateStr: string): string {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year!, month! - 1, day!).toLocaleDateString('fr-FR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
 }
 
 /**

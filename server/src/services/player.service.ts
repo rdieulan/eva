@@ -3,6 +3,8 @@
 import { randomUUID } from 'crypto';
 import { prisma } from '@db/prisma';
 import { DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
+import type { PlayerSubscription } from '@shared/types';
+import { formatDateStr } from './helpers/date.helper';
 
 // Password reset tokens live 24h
 const PASSWORD_RESET_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
@@ -135,6 +137,52 @@ export async function resetPlayerPermissions(playerId: string) {
     where: { id: playerId },
     data: { permissions: DEFAULT_PLAYER_PERMISSIONS as unknown as object },
   });
+}
+
+// ============================================
+// Subscription
+// ============================================
+
+const SUBSCRIPTION_SELECT = { subscriptionTier: true, subscriptionRenewalDate: true } as const;
+
+function toPlayerSubscription(row: {
+  subscriptionTier: PlayerSubscription['tier'];
+  subscriptionRenewalDate: Date | null;
+}): PlayerSubscription {
+  return {
+    tier: row.subscriptionTier,
+    renewalDate: row.subscriptionRenewalDate ? formatDateStr(row.subscriptionRenewalDate) : null,
+  };
+}
+
+/**
+ * Get the subscription a player entered in their profile (null if no such player)
+ */
+export async function getPlayerSubscription(playerId: string): Promise<PlayerSubscription | null> {
+  const player = await prisma.player.findUnique({
+    where: { id: playerId },
+    select: SUBSCRIPTION_SELECT,
+  });
+  return player ? toPlayerSubscription(player) : null;
+}
+
+/**
+ * Replace a player's subscription. Expects validated input; null clears a field.
+ */
+export async function updatePlayerSubscription(
+  playerId: string,
+  subscription: PlayerSubscription,
+): Promise<PlayerSubscription> {
+  const player = await prisma.player.update({
+    where: { id: playerId },
+    data: {
+      subscriptionTier: subscription.tier,
+      // A YYYY-MM-DD string parses as UTC midnight, which is how @db.Date columns are stored
+      subscriptionRenewalDate: subscription.renewalDate ? new Date(subscription.renewalDate) : null,
+    },
+    select: SUBSCRIPTION_SELECT,
+  });
+  return toPlayerSubscription(player);
 }
 
 /**

@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { AvailabilityStatus, PlayerAvailability, CalendarEvent } from '@shared/types';
+import type { AvailabilityStatus, PlayerAvailability, CalendarEvent, SubscriptionRenewal } from '@shared/types';
 import {
   getPlayerInitials,
   getPlayerStatusClass as getPlayerStatusClassUtil,
   sortPlayersByAvailability,
 } from '@/utils/players';
 import { getEventTypeClass } from '@/utils/calendar';
+import { SUBSCRIPTION_TIER_LABELS } from '@/utils/subscription';
 
 interface Props {
   date: string; // YYYY-MM-DD
@@ -17,12 +18,14 @@ interface Props {
   currentPlayerStatus: AvailabilityStatus | null;
   playerAvailabilities: PlayerAvailability[];
   events: CalendarEvent[];
+  renewals?: SubscriptionRenewal[]; // Players whose subscription renews that day
   showDayNumber?: boolean;
   editMode?: boolean; // Availability edit mode
   playerLabels?: Record<string, string>; // playerId -> roster-unique badge label
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  renewals: () => [],
   showDayNumber: true,
   editMode: false,
   playerLabels: () => ({}),
@@ -48,6 +51,18 @@ const sortedPlayers = computed(() => {
 
 // Check if there are events
 const hasEvents = computed(() => props.events.length > 0);
+
+// Subscription renewals: full names on wide cells, roster labels on narrow ones
+const renewalNames = computed(() => props.renewals.map(renewal => renewal.playerName).join(', '));
+const renewalLabels = computed(() => props.renewals
+  .map(renewal => props.playerLabels[renewal.playerId] ?? getPlayerInitials(renewal.playerName))
+  .join(' '));
+const renewalTooltip = computed(() => {
+  const players = props.renewals.map(renewal =>
+    renewal.tier ? `${renewal.playerName} (${SUBSCRIPTION_TIER_LABELS[renewal.tier]})` : renewal.playerName,
+  );
+  return `Renouvellement d'abonnement : ${players.join(', ')}`;
+});
 
 // Cell background class based on current user's availability
 const cellStatusClass = computed(() => {
@@ -145,6 +160,13 @@ function cycleAvailability() {
       <span class="day-number">
         {{ dayNumber }}
       </span>
+    </div>
+
+    <!-- Subscription renewals -->
+    <div v-if="renewals.length" class="renewal-strip" :title="renewalTooltip">
+      <span class="renewal-icon">↻</span>
+      <span class="renewal-names">{{ renewalNames }}</span>
+      <span class="renewal-labels">{{ renewalLabels }}</span>
     </div>
 
     <!-- Events list -->
@@ -464,16 +486,56 @@ function cycleAvailability() {
   }
 }
 
-.event-match {
-  background: rgba($color-warning, 0.3);
-  border-left: 2px solid $color-warning;
-  color: $color-warning;
+.renewal-strip {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: 2px 6px;
+  border: 1px dashed rgba($color-renewal, 0.7);
+  border-radius: $radius-sm;
+  background: rgba($color-renewal, 0.15);
+  color: $color-renewal;
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+
+  @include mobile-lg {
+    padding: 1px 3px;
+    font-size: 0.55rem;
+  }
 }
 
-.event-event {
-  background: rgba($color-info, 0.3);
-  border-left: 2px solid $color-info;
-  color: $color-info;
+.renewal-icon {
+  flex-shrink: 0;
+}
+
+.renewal-names,
+.renewal-labels {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.renewal-labels {
+  display: none;
+}
+
+@include mobile-lg {
+  .renewal-names {
+    display: none;
+  }
+
+  .renewal-labels {
+    display: inline;
+  }
+}
+
+@each $type, $color in $event-type-colors {
+  .event-type--#{$type} {
+    background: rgba($color, 0.3);
+    border-left: 2px solid $color;
+    color: $color;
+  }
 }
 
 .event-time {

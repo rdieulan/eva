@@ -197,3 +197,41 @@ describe('DayCell Component - Future Days Behavior', () => {
     expect(wrapper.emitted('open-create-event')![0]).toEqual(['2026-12-15']);
   });
 });
+
+describe('DayCell Component - Subscription renewals', () => {
+  const baseProps = {
+    date: '2026-11-04',
+    dayNumber: 4,
+    isCurrentMonth: true,
+    isToday: false,
+    isPast: false,
+    currentPlayerStatus: null,
+    playerAvailabilities: [],
+    events: [],
+  };
+
+  it('should not show a renewal strip on days without renewals', () => {
+    const wrapper = mount(DayCell, { props: baseProps });
+
+    expect(wrapper.find('.renewal-strip').exists()).toBe(false);
+  });
+
+  it('should list the players renewing that day, with their tier in the tooltip', () => {
+    const wrapper = mount(DayCell, {
+      props: {
+        ...baseProps,
+        renewals: [
+          { playerId: 'player-1', playerName: 'Nova', tier: 'GOLD' as const },
+          { playerId: 'player-2', playerName: 'Orion', tier: null },
+        ],
+        playerLabels: { 'player-1': 'No', 'player-2': 'Or' },
+      },
+    });
+
+    const strip = wrapper.find('.renewal-strip');
+    expect(strip.exists()).toBe(true);
+    expect(strip.find('.renewal-names').text()).toBe('Nova, Orion');
+    expect(strip.find('.renewal-labels').text()).toBe('No Or');
+    expect(strip.attributes('title')).toBe("Renouvellement d'abonnement : Nova (Or), Orion");
+  });
+});
