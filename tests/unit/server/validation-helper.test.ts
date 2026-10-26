@@ -7,7 +7,10 @@ import {
   isValidTime,
   isValidEventType,
   isValidAvailabilityStatus,
+  isValidSubscriptionTier,
+  parseSubscriptionInput,
 } from '@services/helpers/validation.helper';
+import { ERROR } from '@shared/constants';
 
 describe('isValidMonth', () => {
   it('should accept valid month format', () => {
@@ -45,6 +48,13 @@ describe('isValidDate', () => {
     expect(isValidDate('26-01-15')).toBe(false);
     expect(isValidDate('2026/01/15')).toBe(false);
     expect(isValidDate('15-01-2026')).toBe(false);
+  });
+
+  it('should reject dates that do not exist', () => {
+    expect(isValidDate('2026-02-31')).toBe(false);
+    expect(isValidDate('2026-13-01')).toBe(false);
+    expect(isValidDate('2026-02-29')).toBe(false);
+    expect(isValidDate('2028-02-29')).toBe(true);
   });
 
   it('should reject non-string types', () => {
@@ -108,5 +118,45 @@ describe('isValidAvailabilityStatus', () => {
     expect(isValidAvailabilityStatus('MAYBE')).toBe(false);
     expect(isValidAvailabilityStatus('')).toBe(false);
     expect(isValidAvailabilityStatus(undefined)).toBe(false);
+  });
+});
+
+describe('isValidSubscriptionTier', () => {
+  it('should accept the subscription tiers', () => {
+    expect(isValidSubscriptionTier('BRONZE')).toBe(true);
+    expect(isValidSubscriptionTier('SILVER')).toBe(true);
+    expect(isValidSubscriptionTier('GOLD')).toBe(true);
+  });
+
+  it('should reject anything else', () => {
+    expect(isValidSubscriptionTier('gold')).toBe(false);
+    expect(isValidSubscriptionTier('PLATINUM')).toBe(false);
+    expect(isValidSubscriptionTier(null)).toBe(false);
+  });
+});
+
+describe('parseSubscriptionInput', () => {
+  it('should accept a full subscription', () => {
+    expect(parseSubscriptionInput({ tier: 'GOLD', renewalDate: '2026-10-05' }))
+      .toEqual({ subscription: { tier: 'GOLD', renewalDate: '2026-10-05' } });
+  });
+
+  it('should accept null to clear either field', () => {
+    expect(parseSubscriptionInput({ tier: null, renewalDate: null }))
+      .toEqual({ subscription: { tier: null, renewalDate: null } });
+  });
+
+  it('should report every invalid field', () => {
+    expect(parseSubscriptionInput({ tier: 'PLATINUM', renewalDate: '2026-02-31' }))
+      .toEqual({ errors: [ERROR.subscriptionTierInvalid, ERROR.subscriptionRenewalDateInvalid] });
+  });
+
+  it('should require both fields to be sent', () => {
+    expect(parseSubscriptionInput({})).toEqual({
+      errors: [ERROR.subscriptionTierInvalid, ERROR.subscriptionRenewalDateInvalid],
+    });
+    expect(parseSubscriptionInput(undefined)).toEqual({
+      errors: [ERROR.subscriptionTierInvalid, ERROR.subscriptionRenewalDateInvalid],
+    });
   });
 });

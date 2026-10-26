@@ -1,6 +1,7 @@
 // Calendar types for availability and events
 
 import type { MatchGamePlan } from './map.types';
+import type { SubscriptionRenewal } from './subscription.types';
 
 export type AvailabilityStatus = 'AVAILABLE' | 'CONDITIONAL' | 'UNAVAILABLE';
 
@@ -48,6 +49,7 @@ export interface DayData {
   currentPlayerStatus: AvailabilityStatus | null;
   playerAvailabilities: PlayerAvailability[];
   events: CalendarEvent[];
+  renewals: SubscriptionRenewal[]; // Team players whose subscription renews that day
 }
 
 // Monthly calendar data response

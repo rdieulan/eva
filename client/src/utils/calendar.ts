@@ -80,6 +80,22 @@ export function formatDateStr(date: Date): string {
 }
 
 /**
+ * Format a YYYY-MM-DD date as a long French date, e.g. "mercredi 28 octobre 2026".
+ * Built from the date parts in local time, so the day never shifts with the timezone.
+ * @param dateStr - The date string (YYYY-MM-DD)
+ * @returns The formatted date
+ */
+export function formatLongDate(dateStr: string): string {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year!, month! - 1, day!).toLocaleDateString('fr-FR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
+/**
  * Check if a date string is in the past (before today)
  * @param dateStr - The date string (YYYY-MM-DD) to check
  * @returns True if the date is before today

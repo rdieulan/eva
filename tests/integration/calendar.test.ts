@@ -40,6 +40,47 @@ describe('Calendar API', () => {
       expect(typeof res.body.days).toBe('object');
     });
 
+    it('should mark the days a team player renews their subscription', async () => {
+      const { token, user } = await createUserWithTeam();
+
+      await request(app)
+        .put('/api/players/me/subscription')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ tier: 'GOLD', renewalDate: '2026-10-05' })
+        .expect(200);
+
+      const res = await request(app)
+        .get('/api/calendar/availability?month=2026-11')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      const renewalDays = Object.values(res.body.days as Record<string, { date: string; renewals: unknown[] }>)
+        .filter(day => day.renewals.length)
+        .map(day => day.date);
+      // 2026-10-05 + 30 days = 2026-11-04; the next one (2026-12-04) is outside November
+      expect(renewalDays).toEqual(['2026-11-04']);
+      expect(res.body.days['2026-11-04'].renewals).toEqual([
+        { playerId: user.playerId, playerName: user.name, tier: 'GOLD' },
+      ]);
+    });
+
+    it('should not mark renewals before the entered date', async () => {
+      const { token } = await createUserWithTeam();
+
+      await request(app)
+        .put('/api/players/me/subscription')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ tier: null, renewalDate: '2026-12-10' })
+        .expect(200);
+
+      const res = await request(app)
+        .get('/api/calendar/availability?month=2026-11')
+        .set('Authorization', `Bearer ${token}`);
+
+      const days = Object.values(res.body.days as Record<string, { renewals: unknown[] }>);
+      expect(days.every(day => day.renewals.length === 0)).toBe(true);
+    });
+
     it('should reject without authentication', async () => {
       const month = getCurrentMonth();
 

@@ -5,7 +5,7 @@ import GamePlanViewer from '@/components/common/GamePlanViewer.vue';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import { useErrors } from '@/composables/useErrors';
 import type { CalendarEvent } from '@shared/types';
-import { getEventTypeClass, getEventTypeTitle, isPastDateStr } from '@/utils/calendar';
+import { formatLongDate, getEventTypeClass, getEventTypeTitle, isPastDateStr } from '@/utils/calendar';
 
 const props = defineProps<{
   events: CalendarEvent[];
@@ -63,16 +63,6 @@ function goToNext() {
   }
 }
 
-// Format date for display
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('fr-FR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric'
-  });
-}
 
 
 // Show modal when events are provided
@@ -140,7 +130,7 @@ function handleCreateEvent() {
         <div class="event-details">
           <div class="detail-row">
             <span class="detail-label">📅 Date</span>
-            <span class="detail-value">{{ formatDate(currentEvent.date) }}</span>
+            <span class="detail-value">{{ formatLongDate(currentEvent.date) }}</span>
           </div>
           <div class="detail-row">
             <span class="detail-label">🕐 Horaire</span>

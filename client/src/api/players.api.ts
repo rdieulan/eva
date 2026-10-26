@@ -1,6 +1,6 @@
 // Players API client
 
-import type { Player } from '@shared/types';
+import type { Player, PlayerSubscription } from '@shared/types';
 import { ERROR } from '@shared/constants';
 import { authFetch } from '@/api/utils';
 
@@ -60,4 +60,22 @@ export function getPlayerById(id: string): Player | undefined {
  */
 export function getPlayerName(id: string): string {
   return getPlayerById(id)?.name || id;
+}
+
+/**
+ * Get the subscription the current player entered in their profile
+ */
+export function fetchMySubscription(): Promise<PlayerSubscription> {
+  return authFetch<PlayerSubscription>('/api/players/me/subscription', undefined, ERROR.subscriptionFetchFailed);
+}
+
+/**
+ * Replace the current player's subscription (null clears a field)
+ */
+export function updateMySubscription(subscription: PlayerSubscription): Promise<PlayerSubscription> {
+  return authFetch<PlayerSubscription>(
+    '/api/players/me/subscription',
+    { method: 'PUT', body: JSON.stringify(subscription) },
+    ERROR.subscriptionUpdateFailed,
+  );
 }

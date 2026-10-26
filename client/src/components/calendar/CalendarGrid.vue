@@ -116,6 +116,7 @@ function handleSetAvailability(date: string, status: AvailabilityStatus | null) 
         :current-player-status="cell.data?.currentPlayerStatus ?? null"
         :player-availabilities="cell.data?.playerAvailabilities ?? []"
         :events="cell.data?.events ?? []"
+        :renewals="cell.data?.renewals ?? []"
         :edit-mode="props.editMode"
         :player-labels="props.playerLabels"
         @set-availability="(status) => handleSetAvailability(cell.date, status)"

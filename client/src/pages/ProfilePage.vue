@@ -1,11 +1,15 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
 import { useErrors } from '@/composables/useErrors';
+import { useSubscription } from '@/composables/useSubscription';
 import { clearPlayersCache } from '@/api';
 import { validatePassword, validatePasswordsMatch } from '@shared/utils';
-import { ERROR } from '@shared/constants';
+import { ERROR, SUBSCRIPTION_RENEWAL_PERIOD_DAYS } from '@shared/constants';
+import { SUBSCRIPTION_TIERS } from '@shared/types';
+import { SUBSCRIPTION_TIER_LABELS } from '@/utils/subscription';
+import { formatLongDate } from '@/utils/calendar';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import SvgIcon from '@/components/common/SvgIcon.vue';
 import LinkedAccountsSection from '@/components/profile/LinkedAccountsSection.vue';
@@ -20,6 +24,24 @@ const confirmPassword = ref('');
 const { errors: passwordErrors, setError: setPasswordError, setErrors: setPasswordErrors, clearErrors: clearPasswordErrors } = useErrors();
 const passwordSuccess = ref('');
 const isChangingPassword = ref(false);
+
+// Subscription (player accounts only)
+const {
+  tier: subscriptionTier,
+  renewalDate: subscriptionRenewalDate,
+  nextRenewalDate,
+  isLoading: isLoadingSubscription,
+  isSaving: isSavingSubscription,
+  successMessage: subscriptionSuccess,
+  errors: subscriptionErrors,
+  load: loadSubscription,
+  save: saveSubscription,
+} = useSubscription();
+const isSubscriptionBusy = computed(() => isLoadingSubscription.value || isSavingSubscription.value);
+
+onMounted(() => {
+  if (account.value?.playerId) loadSubscription();
+});
 
 // Change password
 async function handleChangePassword() {
@@ -122,10 +144,52 @@ async function handleLogout() {
         </div>
       </section>
 
+      <!-- Subscription (player accounts only) -->
+      <section v-if="account?.playerId" class="profile-section">
+        <h2>Abonnement</h2>
+        <form @submit.prevent="saveSubscription" class="profile-form">
+          <div class="form-group">
+            <label for="subscriptionTier">Niveau</label>
+            <select id="subscriptionTier" v-model="subscriptionTier" :disabled="isSubscriptionBusy">
+              <option :value="null">Non renseigné</option>
+              <option v-for="subscriptionTierOption in SUBSCRIPTION_TIERS" :key="subscriptionTierOption" :value="subscriptionTierOption">
+                {{ SUBSCRIPTION_TIER_LABELS[subscriptionTierOption] }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="subscriptionRenewalDate">Date de renouvellement</label>
+            <input
+              id="subscriptionRenewalDate"
+              v-model="subscriptionRenewalDate"
+              type="date"
+              :disabled="isSubscriptionBusy"
+            />
+            <p class="form-hint">
+              Renouvelé tous les {{ SUBSCRIPTION_RENEWAL_PERIOD_DAYS }} jours à partir de cette date.
+              <template v-if="nextRenewalDate">
+                <br />Prochain renouvellement : <strong>{{ formatLongDate(nextRenewalDate) }}</strong>
+              </template>
+            </p>
+          </div>
+
+          <ErrorDisplay :errors="subscriptionErrors" />
+
+          <div v-if="subscriptionSuccess" class="message success">
+            {{ subscriptionSuccess }}
+          </div>
+
+          <button type="submit" class="btn-primary" :disabled="isSubscriptionBusy">
+            {{ isSavingSubscription ? 'Enregistrement...' : 'Enregistrer' }}
+          </button>
+        </form>
+      </section>
+
       <!-- Password change -->
       <section class="profile-section">
         <h2>Changer le mot de passe</h2>
-        <form @submit.prevent="handleChangePassword" class="password-form">
+        <form @submit.prevent="handleChangePassword" class="profile-form">
           <div class="form-group">
             <label for="currentPassword">Mot de passe actuel</label>
             <input
@@ -325,7 +389,7 @@ h1 {
   }
 }
 
-.password-form {
+.profile-form {
   display: flex;
   flex-direction: column;
   gap: $spacing-md;
@@ -345,7 +409,8 @@ h1 {
     }
   }
 
-  input {
+  input,
+  select {
     padding: 0.75rem $spacing-md;
     background: $color-bg-secondary;
     border: 2px solid $color-border-light;
@@ -366,6 +431,18 @@ h1 {
     @include mobile-lg {
       font-size: 16px; // Prevents zoom on iOS
     }
+  }
+}
+
+.form-hint {
+  margin: 0;
+  color: $color-text-secondary;
+  font-size: 0.85rem;
+  line-height: 1.5;
+
+  strong {
+    color: $color-white;
+    font-weight: 600;
   }
 }
 

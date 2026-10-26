@@ -117,6 +117,9 @@ $color-handle: #4ecdc4;
 // text stays legible on the dark background
 $color-discord: #8891f2;
 
+// Subscription renewal days in the calendar
+$color-renewal: #f87171;
+
 // Calendar event types — keys are the lowercase EventType values, used as
 // `.event-type--<key>` modifiers (see getEventTypeClass in utils/calendar.ts)
 $event-type-colors: (

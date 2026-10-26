@@ -7,6 +7,7 @@ import type {
   AvailabilityStatus,
   EventType,
 } from '@shared/types';
+import { isSubscriptionRenewalDay } from '@shared/utils';
 import { formatDateStr, parseMonthRange } from './helpers/date.helper';
 import { formatEventForFrontend } from './helpers/calendar.helper';
 
@@ -62,6 +63,14 @@ export async function getMonthAvailability(
     orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
   });
 
+  // Subscription renewal anchors of the players who entered one
+  const renewalAnchors = players
+    .filter(player => player.subscriptionRenewalDate)
+    .map(player => ({
+      anchorDate: formatDateStr(player.subscriptionRenewalDate!),
+      renewal: { playerId: player.id, playerName: player.user!.name, tier: player.subscriptionTier },
+    }));
+
   // Build response: group by date
   const days: Record<string, DayData> = {};
 
@@ -80,6 +89,9 @@ export async function getMonthAvailability(
       currentPlayerStatus: null,
       playerAvailabilities,
       events: [],
+      renewals: renewalAnchors
+        .filter(({ anchorDate }) => isSubscriptionRenewalDay(anchorDate, dateStr))
+        .map(({ renewal }) => renewal),
     };
   }
 
@@ -129,6 +141,7 @@ export function buildEmptyCalendar(month: string): { month: string; days: Record
       currentPlayerStatus: null,
       playerAvailabilities: [],
       events: [],
+      renewals: [],
     };
   }
 

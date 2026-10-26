@@ -122,6 +122,7 @@ watch(() => props.weekStart, () => {
           :current-player-status="cell.data?.currentPlayerStatus ?? null"
           :player-availabilities="cell.data?.playerAvailabilities ?? []"
           :events="cell.data?.events ?? []"
+          :renewals="cell.data?.renewals ?? []"
           class="week-day-cell"
           :show-day-number="false"
           :edit-mode="props.editMode"
