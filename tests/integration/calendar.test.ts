@@ -138,6 +138,28 @@ describe('Calendar API', () => {
       expect(availability!.status).toBe('AVAILABLE');
     });
 
+    it('should accept voice-only availability and return it with the month', async () => {
+      const { token, user } = await createUserWithTeam();
+      const date = getFutureDate();
+
+      const res = await request(app)
+        .post('/api/calendar/availability')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ date, status: 'VOICE_ONLY' });
+
+      expect(res.status).toBe(200);
+
+      const month = await request(app)
+        .get(`/api/calendar/availability?month=${date.substring(0, 7)}`)
+        .set('Authorization', `Bearer ${token}`);
+      expect(month.body.days[date].currentPlayerStatus).toBe('VOICE_ONLY');
+      expect(month.body.days[date].playerAvailabilities).toContainEqual({
+        playerId: user.playerId,
+        playerName: user.name,
+        status: 'VOICE_ONLY',
+      });
+    });
+
     it('should reject without authentication', async () => {
       const date = getFutureDate();
 

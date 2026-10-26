@@ -120,6 +120,20 @@ $color-discord: #8891f2;
 // Subscription renewal days in the calendar
 $color-renewal: #f87171;
 
+// Voice-only availability: can join voice chat, not play
+$color-voice: #c084fc;
+
+// Availability statuses — keys are the kebab-case AvailabilityStatus values, used as
+// `.availability--<key>` modifiers (see getAvailabilityClass in utils/availability.ts).
+// avatar-bg / avatar-border: lightness shifts of the player badges, calibrated per colour
+// so the initials stay readable.
+$availability-styles: (
+  available: (color: $color-success, avatar-bg: -43%, avatar-border: 0%),
+  conditional: (color: $color-conditional, avatar-bg: -28%, avatar-border: 0%),
+  voice-only: (color: $color-voice, avatar-bg: -40%, avatar-border: 0%),
+  unavailable: (color: $color-danger, avatar-bg: -36%, avatar-border: 34%),
+);
+
 // Calendar event types — keys are the lowercase EventType values, used as
 // `.event-type--<key>` modifiers (see getEventTypeClass in utils/calendar.ts)
 $event-type-colors: (

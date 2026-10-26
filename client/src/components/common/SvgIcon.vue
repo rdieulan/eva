@@ -17,6 +17,7 @@ import notesIcon from '@/assets/icons/notes.svg?raw';
 import settingsIcon from '@/assets/icons/settings.svg?raw';
 import editIcon from '@/assets/icons/edit.svg?raw';
 import trashIcon from '@/assets/icons/trash.svg?raw';
+import micIcon from '@/assets/icons/mic.svg?raw';
 
 const icons: Record<string, string> = {
   home: homeIcon,
@@ -34,6 +35,7 @@ const icons: Record<string, string> = {
   settings: settingsIcon,
   edit: editIcon,
   trash: trashIcon,
+  mic: micIcon,
 };
 
 const props = defineProps<{

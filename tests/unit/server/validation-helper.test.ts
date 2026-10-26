@@ -109,6 +109,7 @@ describe('isValidAvailabilityStatus', () => {
   it('should accept valid availability statuses', () => {
     expect(isValidAvailabilityStatus('AVAILABLE')).toBe(true);
     expect(isValidAvailabilityStatus('CONDITIONAL')).toBe(true);
+    expect(isValidAvailabilityStatus('VOICE_ONLY')).toBe(true);
     expect(isValidAvailabilityStatus('UNAVAILABLE')).toBe(true);
     expect(isValidAvailabilityStatus(null)).toBe(true);
   });
@@ -116,6 +117,7 @@ describe('isValidAvailabilityStatus', () => {
   it('should reject invalid values', () => {
     expect(isValidAvailabilityStatus('available')).toBe(false);
     expect(isValidAvailabilityStatus('MAYBE')).toBe(false);
+    expect(isValidAvailabilityStatus('voice_only')).toBe(false);
     expect(isValidAvailabilityStatus('')).toBe(false);
     expect(isValidAvailabilityStatus(undefined)).toBe(false);
   });

@@ -1,7 +1,7 @@
 // Validation helper functions
 
 import type { EventType, AvailabilityStatus, SubscriptionTier, PlayerSubscription } from '@shared/types';
-import { EVENT_TYPES, SUBSCRIPTION_TIERS } from '@shared/types';
+import { AVAILABILITY_STATUSES, EVENT_TYPES, SUBSCRIPTION_TIERS } from '@shared/types';
 import { ERROR } from '@shared/constants';
 
 /**
@@ -65,5 +65,5 @@ export function parseSubscriptionInput(
  * Validate availability status
  */
 export function isValidAvailabilityStatus(status: unknown): status is AvailabilityStatus | null {
-  return status === null || status === 'AVAILABLE' || status === 'CONDITIONAL' || status === 'UNAVAILABLE';
+  return status === null || (typeof status === 'string' && (AVAILABILITY_STATUSES as readonly string[]).includes(status));
 }
