@@ -27,7 +27,7 @@ export async function fetchMonthData(month: string): Promise<MonthData> {
 /**
  * Set availability for a specific date
  * @param date Format YYYY-MM-DD
- * @param status AVAILABLE, UNAVAILABLE, or null to remove
+ * @param status The availability status, or null to remove it
  */
 export async function setAvailability(
   date: string,

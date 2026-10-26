@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { AvailabilityStatus, PlayerAvailability, CalendarEvent, SubscriptionRenewal } from '@shared/types';
+import { getPlayerInitials } from '@/utils/players';
 import {
-  getPlayerInitials,
-  getPlayerStatusClass as getPlayerStatusClassUtil,
+  getAvailabilityClass,
+  getAvailabilityDisplay,
+  getNextAvailabilityStatus,
   sortPlayersByAvailability,
-} from '@/utils/players';
+} from '@/utils/availability';
 import { getEventTypeClass } from '@/utils/calendar';
 import { SUBSCRIPTION_TIER_LABELS } from '@/utils/subscription';
+import SvgIcon from '@/components/common/SvgIcon.vue';
 
 interface Props {
   date: string; // YYYY-MM-DD
@@ -65,23 +68,12 @@ const renewalTooltip = computed(() => {
 });
 
 // Cell background class based on current user's availability
-const cellStatusClass = computed(() => {
-  if (props.isPast) return 'status-past';
-  if (props.currentPlayerStatus === 'AVAILABLE') return 'status-available';
-  if (props.currentPlayerStatus === 'CONDITIONAL') return 'status-conditional';
-  if (props.currentPlayerStatus === 'UNAVAILABLE') return 'status-unavailable';
-  return 'status-unknown';
-});
+const cellStatusClass = computed(() =>
+  props.isPast ? 'status-past' : getAvailabilityClass(props.currentPlayerStatus),
+);
 
-// Get player avatar color based on their availability (wrapper for template)
-function getPlayerStatusClass(status: AvailabilityStatus | null): string {
-  const baseClass = getPlayerStatusClassUtil(status);
-  // Map to component-specific class names
-  if (baseClass === 'status-available') return 'player-available';
-  if (baseClass === 'status-maybe') return 'player-conditional';
-  if (baseClass === 'status-unavailable') return 'player-unavailable';
-  return 'player-unknown';
-}
+// Symbol shown behind the day in edit mode
+const currentStatusSymbol = computed(() => getAvailabilityDisplay(props.currentPlayerStatus).symbol);
 
 // Badge label for a player: the roster-unique label when available, otherwise
 // fall back to plain initials (e.g. when the component is used standalone).
@@ -120,23 +112,10 @@ function handleEventClick(e: MouseEvent, index: number) {
   }
 }
 
-// Cycle availability: AVAILABLE -> CONDITIONAL -> UNAVAILABLE -> null -> AVAILABLE...
+// Cycle availability through the statuses, then back to not set
 function cycleAvailability() {
   if (props.isPast) return;
-
-  let newStatus: AvailabilityStatus | null;
-  if (props.currentPlayerStatus === null || props.currentPlayerStatus === undefined) {
-    newStatus = 'AVAILABLE';
-  } else if (props.currentPlayerStatus === 'AVAILABLE') {
-    newStatus = 'CONDITIONAL';
-  } else if (props.currentPlayerStatus === 'CONDITIONAL') {
-    newStatus = 'UNAVAILABLE';
-  } else {
-    // UNAVAILABLE -> back to null (grey)
-    newStatus = null;
-  }
-
-  emit('set-availability', newStatus);
+  emit('set-availability', getNextAvailabilityStatus(props.currentPlayerStatus ?? null));
 }
 </script>
 
@@ -189,8 +168,8 @@ function cycleAvailability() {
         v-for="player in sortedPlayers"
         :key="player.playerId"
         class="player-avatar"
-        :class="getPlayerStatusClass(player.status)"
-        :title="player.playerName"
+        :class="getAvailabilityClass(player.status)"
+        :title="`${player.playerName} : ${getAvailabilityDisplay(player.status).title}`"
       >
         {{ getPlayerLabel(player) }}
       </div>
@@ -198,10 +177,8 @@ function cycleAvailability() {
 
     <!-- Background status icon (only in edit mode) -->
     <div v-if="!isPast && editMode" class="status-bg-icon">
-      <template v-if="currentPlayerStatus === 'AVAILABLE'">✓</template>
-      <template v-else-if="currentPlayerStatus === 'CONDITIONAL'">~</template>
-      <template v-else-if="currentPlayerStatus === 'UNAVAILABLE'">✗</template>
-      <template v-else>?</template>
+      <SvgIcon v-if="'icon' in currentStatusSymbol" :name="currentStatusSymbol.icon" />
+      <template v-else>{{ currentStatusSymbol.text }}</template>
     </div>
   </div>
 </template>
@@ -209,6 +186,7 @@ function cycleAvailability() {
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
 @use 'sass:color';
+@use 'sass:map';
 
 .day-cell {
   position: relative;
@@ -226,7 +204,7 @@ function cycleAvailability() {
   -webkit-user-select: none;
   overflow: hidden;
 
-  &.status-unknown {
+  &.availability--unset {
     background: $color-bg-secondary;
     border-color: $color-bg-tertiary;
 
@@ -236,33 +214,17 @@ function cycleAvailability() {
     }
   }
 
-  &.status-available {
-    background: rgba($color-success, 0.15);
-    border-color: rgba($color-success, 0.4);
+  @each $status, $style in $availability-styles {
+    $color: map.get($style, color);
 
-    &:hover {
-      background: rgba($color-success, 0.25);
-      border-color: rgba($color-success, 0.6);
-    }
-  }
+    &.availability--#{$status} {
+      background: rgba($color, 0.15);
+      border-color: rgba($color, 0.4);
 
-  &.status-conditional {
-    background: rgba($color-conditional, 0.15);
-    border-color: rgba($color-conditional, 0.4);
-
-    &:hover {
-      background: rgba($color-conditional, 0.25);
-      border-color: rgba($color-conditional, 0.6);
-    }
-  }
-
-  &.status-unavailable {
-    background: rgba($color-danger, 0.15);
-    border-color: rgba($color-danger, 0.4);
-
-    &:hover {
-      background: rgba($color-danger, 0.25);
-      border-color: rgba($color-danger, 0.6);
+      &:hover {
+        background: rgba($color, 0.25);
+        border-color: rgba($color, 0.6);
+      }
     }
   }
 
@@ -411,20 +373,19 @@ function cycleAvailability() {
   z-index: 0;
   text-shadow: 0 0 10px currentColor;
 
-  .status-available & {
-    color: $color-success;
+  @each $status, $style in $availability-styles {
+    .availability--#{$status} & {
+      color: map.get($style, color);
+    }
   }
 
-  .status-conditional & {
-    color: $color-conditional;
-  }
-
-  .status-unavailable & {
-    color: $color-danger;
-  }
-
-  .status-unknown & {
+  .availability--unset & {
     color: $color-text-secondary;
+  }
+
+  // Icons do not take text-shadow: give them the same glow
+  .svg-icon {
+    filter: drop-shadow(0 0 10px currentColor);
   }
 
   @include tablet {
@@ -615,24 +576,18 @@ function cycleAvailability() {
   }
 }
 
-.player-unknown {
+.player-avatar.availability--unset {
   background: $color-border;
   color: $color-text-secondary;
 }
 
-.player-available {
-  background: color.scale($color-success, $lightness: -43%);
-  border: 1px solid $color-success;
-}
+@each $status, $style in $availability-styles {
+  $color: map.get($style, color);
 
-.player-conditional {
-  background: color.scale($color-conditional, $lightness: -28%);
-  border: 1px solid $color-conditional;
-}
-
-.player-unavailable {
-  background: color.scale($color-danger, $lightness: -36%);
-  border: 1px solid color.scale($color-danger, $lightness: 34%);
+  .player-avatar.availability--#{$status} {
+    background: color.scale($color, $lightness: map.get($style, avatar-bg));
+    border: 1px solid color.scale($color, $lightness: map.get($style, avatar-border));
+  }
 }
 </style>
 

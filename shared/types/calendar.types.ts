@@ -3,7 +3,14 @@
 import type { MatchGamePlan } from './map.types';
 import type { SubscriptionRenewal } from './subscription.types';
 
-export type AvailabilityStatus = 'AVAILABLE' | 'CONDITIONAL' | 'UNAVAILABLE';
+/**
+ * Availability statuses, from most to least available to play. This order is
+ * the click cycle in the calendar (then back to "not set") and the order of the
+ * player badges. Mirrors the AvailabilityStatus enum in prisma/schema.prisma.
+ */
+export const AVAILABILITY_STATUSES = ['AVAILABLE', 'CONDITIONAL', 'VOICE_ONLY', 'UNAVAILABLE'] as const;
+
+export type AvailabilityStatus = typeof AVAILABILITY_STATUSES[number];
 
 /**
  * Calendar event types — single source of truth for validation and the

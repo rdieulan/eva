@@ -274,6 +274,7 @@ enum AvailabilityStatus {
   AVAILABLE
   UNAVAILABLE
   CONDITIONAL
+  VOICE_ONLY
 }
 
 enum EventType {

@@ -235,3 +235,48 @@ describe('DayCell Component - Subscription renewals', () => {
     expect(strip.attributes('title')).toBe("Renouvellement d'abonnement : Nova (Or), Orion");
   });
 });
+
+describe('DayCell Component - Voice only availability', () => {
+  const baseProps = {
+    date: '2026-12-15',
+    dayNumber: 15,
+    isCurrentMonth: true,
+    isToday: false,
+    isPast: false,
+    playerAvailabilities: [],
+    events: [],
+    editMode: true,
+  };
+
+  it('should move from possible to voice only, then to unavailable', async () => {
+    const fromConditional = mount(DayCell, { props: { ...baseProps, currentPlayerStatus: 'CONDITIONAL' as const } });
+    await fromConditional.trigger('click');
+    expect(fromConditional.emitted('set-availability')![0]).toEqual(['VOICE_ONLY']);
+
+    const fromVoiceOnly = mount(DayCell, { props: { ...baseProps, currentPlayerStatus: 'VOICE_ONLY' as const } });
+    await fromVoiceOnly.trigger('click');
+    expect(fromVoiceOnly.emitted('set-availability')![0]).toEqual(['UNAVAILABLE']);
+  });
+
+  it('should colour the day and show a microphone behind it in edit mode', () => {
+    const wrapper = mount(DayCell, { props: { ...baseProps, currentPlayerStatus: 'VOICE_ONLY' as const } });
+
+    expect(wrapper.classes()).toContain('availability--voice-only');
+    expect(wrapper.find('.status-bg-icon .svg-icon').exists()).toBe(true);
+  });
+
+  it('should colour a voice-only player badge and explain it in its tooltip', () => {
+    const wrapper = mount(DayCell, {
+      props: {
+        ...baseProps,
+        editMode: false,
+        currentPlayerStatus: null,
+        playerAvailabilities: [{ playerId: 'player-1', playerName: 'Nova', status: 'VOICE_ONLY' as const }],
+      },
+    });
+
+    const badge = wrapper.find('.player-avatar');
+    expect(badge.classes()).toContain('availability--voice-only');
+    expect(badge.attributes('title')).toBe('Nova : Dispo pour le vocal uniquement');
+  });
+});

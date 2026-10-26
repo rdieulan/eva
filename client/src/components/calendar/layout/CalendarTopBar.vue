@@ -1,4 +1,10 @@
 <script setup lang="ts">
+import { AVAILABILITY_STATUSES } from '@shared/types';
+import { getAvailabilityClass, getAvailabilityDisplay } from '@/utils/availability';
+
+// Every status, then "not set"
+const legendStatuses = [...AVAILABILITY_STATUSES, null];
+
 defineProps<{
   editMode: boolean;
 }>();
@@ -12,21 +18,15 @@ defineEmits<{
   <div class="calendar-toolbar">
     <!-- Availability legend -->
     <div class="availability-legend">
-      <span class="legend-item available">
+      <span
+        v-for="status in legendStatuses"
+        :key="status ?? 'unset'"
+        class="legend-item"
+        :class="getAvailabilityClass(status)"
+        :title="getAvailabilityDisplay(status).title"
+      >
         <span class="legend-dot"></span>
-        <span class="legend-label">Dispo</span>
-      </span>
-      <span class="legend-item conditional">
-        <span class="legend-dot"></span>
-        <span class="legend-label">Possible</span>
-      </span>
-      <span class="legend-item unavailable">
-        <span class="legend-dot"></span>
-        <span class="legend-label">Indispo</span>
-      </span>
-      <span class="legend-item unknown">
-        <span class="legend-dot"></span>
-        <span class="legend-label">?</span>
+        <span class="legend-label">{{ getAvailabilityDisplay(status).label }}</span>
       </span>
     </div>
 
@@ -45,6 +45,7 @@ defineEmits<{
 
 <style lang="scss">
 @use '@/styles/variables' as *;
+@use 'sass:map';
 
 .calendar-toolbar {
   display: flex;
@@ -104,22 +105,14 @@ defineEmits<{
   border-radius: 50%;
   border: 1px solid;
 
-  .available & {
-    background: $color-success;
-    border-color: $color-success;
+  @each $status, $style in $availability-styles {
+    .availability--#{$status} & {
+      background: map.get($style, color);
+      border-color: map.get($style, color);
+    }
   }
 
-  .conditional & {
-    background: $color-warning;
-    border-color: $color-conditional;
-  }
-
-  .unavailable & {
-    background: $color-danger;
-    border-color: $color-danger;
-  }
-
-  .unknown & {
+  .availability--unset & {
     background: $color-border;
     border-color: $color-text-secondary;
   }
@@ -138,16 +131,10 @@ defineEmits<{
 .legend-label {
   color: $color-text-secondary;
 
-  .available & {
-    color: $color-success;
-  }
-
-  .conditional & {
-    color: $color-conditional;
-  }
-
-  .unavailable & {
-    color: $color-danger;
+  @each $status, $style in $availability-styles {
+    .availability--#{$status} & {
+      color: map.get($style, color);
+    }
   }
 }
 
