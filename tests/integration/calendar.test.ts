@@ -290,6 +290,29 @@ describe('Calendar API', () => {
       expect(event!.teamId).toBe(team.id);
     });
 
+    it('should create a Discord strategy session', async () => {
+      const { token, team } = await createUserWithTeam();
+      const date = getFutureDate();
+
+      const res = await request(app)
+        .post('/api/calendar/events')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          date,
+          startTime: '21:00',
+          endTime: '22:30',
+          type: 'DISCORD',
+          title: 'Strat Polaris',
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.type).toBe('DISCORD');
+
+      const event = await prisma.calendarEvent.findUnique({ where: { id: res.body.id } });
+      expect(event!.type).toBe('DISCORD');
+      expect(event!.teamId).toBe(team.id);
+    });
+
     it('should reject without authentication', async () => {
       const date = getFutureDate();
 
@@ -603,11 +626,11 @@ describe('Calendar API', () => {
       expect(event!.gamePlan).not.toBeNull();
     });
 
-    it('should reject attaching gameplan to EVENT type', async () => {
+    it.each(['EVENT', 'DISCORD'])('should reject attaching gameplan to %s type', async (type) => {
       const { token } = await createUserWithTeam();
       const date = getFutureDate();
 
-      // Create EVENT (not MATCH)
+      // Create a non-MATCH event
       const createRes = await request(app)
         .post('/api/calendar/events')
         .set('Authorization', `Bearer ${token}`)
@@ -615,7 +638,7 @@ describe('Calendar API', () => {
           date,
           startTime: '20:00',
           endTime: '22:00',
-          type: 'EVENT',
+          type,
           title: 'Not a Match',
         });
 

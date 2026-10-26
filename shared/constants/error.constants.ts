@@ -6,6 +6,7 @@ import {
   NAME_MIN_LENGTH,
   TEAM_NAME_MIN_LENGTH,
 } from '@shared/constants/validation.constants';
+import { EVENT_TYPES } from '@shared/types/calendar.types';
 
 // ============================================
 // Error Messages
@@ -157,7 +158,7 @@ export const ERROR = {
   startTimeInvalid: 'Heure de début invalide (format HH:mm requis)',
   endTimeInvalid: 'Heure de fin invalide (format HH:mm requis)',
   titleRequired: 'Titre requis',
-  eventTypeInvalid: 'Type invalide (MATCH ou EVENT requis)',
+  eventTypeInvalid: `Type d'événement invalide (valeurs acceptées : ${EVENT_TYPES.join(', ')})`,
   statusInvalid: 'Status invalide',
   matchOnlyGamePlan: 'Seuls les MATCH peuvent avoir un plan de jeu',
 

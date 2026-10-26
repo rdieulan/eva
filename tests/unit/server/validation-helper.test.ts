@@ -81,11 +81,13 @@ describe('isValidEventType', () => {
   it('should accept valid event types', () => {
     expect(isValidEventType('MATCH')).toBe(true);
     expect(isValidEventType('EVENT')).toBe(true);
+    expect(isValidEventType('DISCORD')).toBe(true);
   });
 
   it('should reject invalid values', () => {
     expect(isValidEventType('match')).toBe(false);
     expect(isValidEventType('Match')).toBe(false);
+    expect(isValidEventType('discord')).toBe(false);
     expect(isValidEventType('GAME')).toBe(false);
     expect(isValidEventType('')).toBe(false);
     expect(isValidEventType(null)).toBe(false);

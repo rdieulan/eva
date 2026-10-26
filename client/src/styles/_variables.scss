@@ -113,6 +113,18 @@ $color-edit: #fbbf24;
 // Interactive handles (resize, drag, manipulation)
 $color-handle: #4ecdc4;
 
+// Discord calendar events: the brand blurple (#5865f2) lightened so badge
+// text stays legible on the dark background
+$color-discord: #8891f2;
+
+// Calendar event types — keys are the lowercase EventType values, used as
+// `.event-type--<key>` modifiers (see getEventTypeClass in utils/calendar.ts)
+$event-type-colors: (
+  match: $color-warning,
+  event: $color-info,
+  discord: $color-discord,
+);
+
 // ===========================================
 // DERIVED COLORS (computed from base colors)
 // Use rgba() or color.adjust() in components

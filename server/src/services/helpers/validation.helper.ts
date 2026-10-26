@@ -1,6 +1,7 @@
 // Validation helper functions
 
 import type { EventType, AvailabilityStatus } from '@shared/types';
+import { EVENT_TYPES } from '@shared/types';
 
 /**
  * Validate month format (YYYY-MM)
@@ -27,7 +28,7 @@ export function isValidTime(time: unknown): time is string {
  * Validate event type
  */
 export function isValidEventType(type: unknown): type is EventType {
-  return type === 'MATCH' || type === 'EVENT';
+  return typeof type === 'string' && (EVENT_TYPES as readonly string[]).includes(type);
 }
 
 /**

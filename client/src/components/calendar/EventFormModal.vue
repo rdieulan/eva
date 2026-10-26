@@ -7,6 +7,8 @@ import GamePlanViewer from '@/components/common/GamePlanViewer.vue';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import { useErrors } from '@/composables/useErrors';
 import { ERROR } from '@shared/constants';
+import { EVENT_TYPES } from '@shared/types';
+import { getEventTypeClass, getEventTypeDisplay, getEventTypeTitle } from '@/utils/calendar';
 import type {
   EventType,
   CreateEventRequest,
@@ -95,7 +97,7 @@ watch(
 // Modal title
 const modalTitle = computed(() => {
   if (isViewOnly.value && props.editEvent) {
-    return props.editEvent.type === 'MATCH' ? '🎮 Match' : '📅 Événement';
+    return getEventTypeTitle(props.editEvent.type);
   }
   return props.editEvent ? 'Modifier l\'événement' : 'Créer un événement';
 });
@@ -197,8 +199,8 @@ const modalSize = computed(() => {
   <Modal :open="open && !showRotationCalculator" :title="modalTitle" :size="modalSize" @close="emit('close')">
     <!-- Read-only view for non-admin users -->
     <div v-if="isViewOnly && editEvent" class="event-view">
-      <div class="event-view-header" :class="editEvent.type === 'MATCH' ? 'type-match' : 'type-event'">
-        <span class="event-view-type">{{ editEvent.type === 'MATCH' ? '🎮 Match' : '📅 Événement' }}</span>
+      <div class="event-view-header" :class="getEventTypeClass(editEvent.type)">
+        <span class="event-view-type">{{ getEventTypeTitle(editEvent.type) }}</span>
       </div>
 
       <h3 class="event-view-title">{{ title }}</h3>
@@ -237,20 +239,15 @@ const modalSize = computed(() => {
         <label class="form-label">Type</label>
         <div class="type-selector">
           <button
+            v-for="eventType in EVENT_TYPES"
+            :key="eventType"
             type="button"
             class="type-btn"
-            :class="{ active: type === 'MATCH', 'type-match': type === 'MATCH' }"
-            @click="type = 'MATCH'"
+            :class="[getEventTypeClass(eventType), { active: type === eventType }]"
+            @click="type = eventType"
           >
-            🎮 Match
-          </button>
-          <button
-            type="button"
-            class="type-btn"
-            :class="{ active: type === 'EVENT', 'type-event': type === 'EVENT' }"
-            @click="type = 'EVENT'"
-          >
-            📅 Événement
+            <span class="type-btn-icon">{{ getEventTypeDisplay(eventType).icon }}</span>
+            <span class="type-btn-label">{{ getEventTypeDisplay(eventType).label }}</span>
           </button>
         </div>
       </div>
@@ -478,6 +475,10 @@ const modalSize = computed(() => {
 
 .type-btn {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-xs;
   padding: 0.75rem;
   background: $color-bg-tertiary;
   border: 2px solid $color-border-light;
@@ -491,16 +492,12 @@ const modalSize = computed(() => {
     background: $color-border-light;
   }
 
-  &.active.type-match {
-    background: rgba($color-warning, 0.2);
-    border-color: $color-warning;
-    color: $color-warning;
-  }
-
-  &.active.type-event {
-    background: rgba($color-info, 0.2);
-    border-color: $color-info;
-    color: $color-info;
+  @each $type, $color in $event-type-colors {
+    &.active.event-type--#{$type} {
+      background: rgba($color, 0.2);
+      border-color: $color;
+      color: $color;
+    }
   }
 
   @include mobile-lg {
@@ -512,6 +509,11 @@ const modalSize = computed(() => {
     padding: 0.4rem;
     font-size: 0.8rem;
   }
+}
+
+.type-btn-icon {
+  font-size: 1.1rem;
+  line-height: 1;
 }
 
 .btn {
@@ -578,14 +580,11 @@ const modalSize = computed(() => {
   font-weight: 600;
   text-align: center;
 
-  &.type-match {
-    background: rgba($color-warning, 0.2);
-    color: $color-warning;
-  }
-
-  &.type-event {
-    background: rgba($color-info, 0.2);
-    color: $color-info;
+  @each $type, $color in $event-type-colors {
+    &.event-type--#{$type} {
+      background: rgba($color, 0.2);
+      color: $color;
+    }
   }
 }
 

@@ -5,7 +5,7 @@ import GamePlanViewer from '@/components/common/GamePlanViewer.vue';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import { useErrors } from '@/composables/useErrors';
 import type { CalendarEvent } from '@shared/types';
-import { getEventTypeLabel as getEventTypeLabelUtil, isPastDateStr } from '@/utils/calendar';
+import { getEventTypeClass, getEventTypeTitle, isPastDateStr } from '@/utils/calendar';
 
 const props = defineProps<{
   events: CalendarEvent[];
@@ -74,12 +74,6 @@ function formatDate(dateStr: string): string {
   });
 }
 
-// Get event type label (with emoji)
-function getEventTypeLabel(type: string): string {
-  const baseLabel = getEventTypeLabelUtil(type);
-  return type === 'MATCH' ? `⚔️ ${baseLabel}` : `📅 ${baseLabel}`;
-}
-
 
 // Show modal when events are provided
 const showModal = computed(() => props.events.length > 0);
@@ -119,8 +113,8 @@ function handleCreateEvent() {
           <span class="event-counter" v-if="events.length > 1">
             {{ currentIndex + 1 }} / {{ events.length }}
           </span>
-          <span class="event-type" :class="currentEvent?.type?.toLowerCase()">
-            {{ currentEvent ? getEventTypeLabel(currentEvent.type) : '' }}
+          <span v-if="currentEvent" class="event-type" :class="getEventTypeClass(currentEvent.type)">
+            {{ getEventTypeTitle(currentEvent.type) }}
           </span>
         </div>
 
@@ -216,12 +210,10 @@ function handleCreateEvent() {
   font-size: 1rem;
   font-weight: 600;
 
-  &.match {
-    color: $color-warning;
-  }
-
-  &.event {
-    color: $color-info;
+  @each $type, $color in $event-type-colors {
+    &.event-type--#{$type} {
+      color: $color;
+    }
   }
 }
 

@@ -464,16 +464,12 @@ function cycleAvailability() {
   }
 }
 
-.event-match {
-  background: rgba($color-warning, 0.3);
-  border-left: 2px solid $color-warning;
-  color: $color-warning;
-}
-
-.event-event {
-  background: rgba($color-info, 0.3);
-  border-left: 2px solid $color-info;
-  color: $color-info;
+@each $type, $color in $event-type-colors {
+  .event-type--#{$type} {
+    background: rgba($color, 0.3);
+    border-left: 2px solid $color;
+    color: $color;
+  }
 }
 
 .event-time {

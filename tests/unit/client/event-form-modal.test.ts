@@ -53,6 +53,36 @@ describe('EventFormModal Component', () => {
     expect(wrapper.props('open')).toBe(false);
   });
 
+  it('should offer every event type, Discord included, and submit the chosen one', async () => {
+    const wrapper = mount(EventFormModal, {
+      props: {
+        open: false,
+        canCreate: true,
+        selectedDate: '2026-11-03',
+        maps: mockMaps,
+        players: mockPlayers,
+      },
+      global: { stubs: { Teleport: true } },
+    });
+    // The form resets from props when the modal opens
+    await wrapper.setProps({ open: true });
+
+    const typeButtons = wrapper.findAll('.type-btn');
+    expect(typeButtons.map(b => b.find('.type-btn-label').text())).toEqual(['Match', 'Événement', 'Discord']);
+
+    await typeButtons[2]!.trigger('click');
+    expect(typeButtons[2]!.classes()).toContain('active');
+
+    await wrapper.find('#event-title').setValue('Strat Polaris');
+    await wrapper.findAll('button').find(b => b.text() === 'Créer')!.trigger('click');
+
+    expect(wrapper.emitted('submit')?.[0]?.[0]).toMatchObject({
+      date: '2026-11-03',
+      type: 'DISCORD',
+      title: 'Strat Polaris',
+    });
+  });
+
   it('should emit close event when close is triggered', async () => {
     const wrapper = mount(EventFormModal, {
       props: {

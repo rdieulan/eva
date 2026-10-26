@@ -39,6 +39,7 @@ export type {
   SetAvailabilityRequest,
   CreateEventRequest,
 } from './calendar.types';
+export { EVENT_TYPES } from './calendar.types';
 
 export type {
   MapAssignment,

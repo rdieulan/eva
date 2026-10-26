@@ -4,7 +4,13 @@ import type { MatchGamePlan } from './map.types';
 
 export type AvailabilityStatus = 'AVAILABLE' | 'CONDITIONAL' | 'UNAVAILABLE';
 
-export type EventType = 'MATCH' | 'EVENT';
+/**
+ * Calendar event types — single source of truth for validation and the
+ * creation form. Mirrors the EventType enum in prisma/schema.prisma.
+ */
+export const EVENT_TYPES = ['MATCH', 'EVENT', 'DISCORD'] as const;
+
+export type EventType = typeof EVENT_TYPES[number];
 
 
 // Availability record for a player on a specific date
