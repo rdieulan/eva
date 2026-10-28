@@ -50,10 +50,13 @@ npx prisma migrate deploy
 # 5. Seeder les maps (référence indispensable)
 npm run db:seed
 
-# 6. (Optionnel) créer un super admin pour accéder à /admin
+# 6. Remplir la liste des salles depuis l'API publique eva.gg
+npm run db:sync-venues
+
+# 7. (Optionnel) créer un super admin pour accéder à /admin
 npm run create-admin
 
-# 7. Lancer le backend (port 3001) — laisser tourner
+# 8. Lancer le backend (port 3001) — laisser tourner
 npm run server
 
 # 8. Dans un autre terminal, lancer le frontend (port 5173 par défaut)
@@ -91,6 +94,7 @@ L'app est disponible sur **http://localhost:5173**. Le backend tourne sur **http
 | Script | Effet |
 |---|---|
 | `npm run db:seed` | Seed des maps (référence) |
+| `npm run db:sync-venues [-- <pays>]` | Remplit / met à jour les salles depuis l'API eva.gg (FR par défaut) |
 | `npm run db:studio` | Ouvre Prisma Studio (UI d'inspection) |
 | `npm run db:generate` | Régénère le client Prisma après modif du schéma |
 | `npm run db:push` | Sync rapide schéma → DB sans créer de migration (dev only) |
@@ -175,6 +179,7 @@ Pour bootstrapper la prod :
 ```bash
 # Après le déploiement, sur Railway shell (ou local en pointant DATABASE_URL prod)
 npm run db:seed         # seed des maps
+npm run db:sync-venues  # salles eva.gg
 npm run create-admin    # créer le premier super admin
 ```
 

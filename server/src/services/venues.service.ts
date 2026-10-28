@@ -28,9 +28,11 @@ export interface VenueInput {
 export async function getAllVenues(): Promise<Venue[]> {
   return prisma.venue.findMany({
     select: PUBLIC_VENUE_SELECT,
+    // By name: that is what the venue pickers display, so any other order
+    // reads as random once the list is long.
     orderBy: [
-      { city: 'asc' },
       { name: 'asc' },
+      { city: 'asc' },
     ],
   });
 }

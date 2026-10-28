@@ -125,16 +125,17 @@ model Team {
 }
 
 model Venue {
-  id        String         @id @default(cuid())
-  name      String
-  city      String
-  address   String
-  phone     String?
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-  teams     Team[]
-  managers  VenueManager[]
-  matches   CalendarEvent[]
+  id         String          @id @default(cuid())
+  externalId Int?            @unique // Location id on eva.gg, for venues filled by scripts/sync-venues.ts
+  name       String
+  city       String
+  address    String
+  phone      String?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  teams      Team[]
+  managers   VenueManager[]
+  matches    CalendarEvent[]
 }
 
 model VenueManager {
