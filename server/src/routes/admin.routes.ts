@@ -13,6 +13,11 @@ import * as adminService from '@services/admin.service';
 import * as playerService from '@services/player.service';
 import * as teamsService from '@services/teams.service';
 
+// Arenas are numbered 1 upwards, so a venue runs at least one
+function isValidArenaCount(value: unknown): value is number {
+  return Number.isInteger(value) && (value as number) >= 1;
+}
+
 function normalizeAdminPermissions(input: unknown): AdminPermissions | null {
   if (!input || typeof input !== 'object') return null;
   const root = input as Record<string, unknown>;
@@ -62,17 +67,18 @@ router.post(
   '/venues',
   requireAdminPermission('canManageVenues'),
   async (req: AuthRequest, res: Response) => {
-    const { name, city, address, phone } = req.body ?? {};
+    const { name, city, address, phone, arenaCount } = req.body ?? {};
 
     const errors: string[] = [];
     if (!name || typeof name !== 'string' || !name.trim()) errors.push(ERROR.venueNameRequired);
     if (!city || typeof city !== 'string' || !city.trim()) errors.push(ERROR.venueCityRequired);
     if (!address || typeof address !== 'string' || !address.trim()) errors.push(ERROR.venueAddressRequired);
+    if (arenaCount !== undefined && !isValidArenaCount(arenaCount)) errors.push(ERROR.venueArenaCountInvalid);
 
     if (errors.length) return res.status(400).json({ errors });
 
     try {
-      const venue = await venuesService.createVenue({ name, city, address, phone });
+      const venue = await venuesService.createVenue({ name, city, address, phone, arenaCount });
       res.status(201).json(venue);
     } catch (error) {
       apiLogger.error('Admin: error creating venue:', error);
@@ -86,10 +92,11 @@ router.put(
   '/venues/:id',
   requireAdminPermission('canManageVenues'),
   async (req: AuthRequest, res: Response) => {
-    const { name, city, address, phone } = req.body ?? {};
+    const { name, city, address, phone, arenaCount } = req.body ?? {};
 
     // At least one field must be provided
-    if (name === undefined && city === undefined && address === undefined && phone === undefined) {
+    if (name === undefined && city === undefined && address === undefined && phone === undefined
+      && arenaCount === undefined) {
       return res.status(400).json({ errors: [ERROR.requiredFieldsMissing] });
     }
 
@@ -97,11 +104,12 @@ router.put(
     if (name !== undefined && (typeof name !== 'string' || !name.trim())) errors.push(ERROR.venueNameRequired);
     if (city !== undefined && (typeof city !== 'string' || !city.trim())) errors.push(ERROR.venueCityRequired);
     if (address !== undefined && (typeof address !== 'string' || !address.trim())) errors.push(ERROR.venueAddressRequired);
+    if (arenaCount !== undefined && !isValidArenaCount(arenaCount)) errors.push(ERROR.venueArenaCountInvalid);
 
     if (errors.length) return res.status(400).json({ errors });
 
     try {
-      const venue = await venuesService.updateVenue(req.params.id, { name, city, address, phone });
+      const venue = await venuesService.updateVenue(req.params.id, { name, city, address, phone, arenaCount });
       if (!venue) return res.status(404).json({ errors: [ERROR.venueNotFound] });
       res.json(venue);
     } catch (error) {

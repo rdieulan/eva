@@ -125,15 +125,18 @@ model Team {
 }
 
 model Venue {
-  id        String         @id @default(cuid())
-  name      String
-  city      String
-  address   String
-  phone     String?
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-  teams     Team[]
-  managers  VenueManager[]
+  id         String          @id @default(cuid())
+  externalId Int?            @unique // Location id on eva.gg, for venues filled by scripts/sync-venues.ts
+  name       String
+  city       String
+  address    String
+  phone      String?
+  arenaCount Int             @default(1) // Arenas the venue runs for the competitive game
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  teams      Team[]
+  managers   VenueManager[]
+  matches    CalendarEvent[]
 }
 
 model VenueManager {
@@ -218,15 +221,19 @@ model CalendarEvent {
   title       String
   description String?
   teamId      String?
+  venueId     String? // Where a MATCH is played; other event types have none
+  arenaNumber Int? // Which arena of that venue, when the team knows it
   createdById String
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   gamePlan    Json?
   team        Team?     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  venue       Venue?    @relation(fields: [venueId], references: [id], onDelete: SetNull)
   createdBy   Player    @relation(fields: [createdById], references: [id])
 
   @@index([date])
   @@index([teamId])
+  @@index([venueId])
 }
 
 model TeamInvite {

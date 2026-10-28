@@ -12,10 +12,10 @@ import { useAuth } from '@/composables/useAuth';
 import { useCalendar } from '@/composables/useCalendar';
 import { useCalendarEvents } from '@/composables/useCalendarEvents';
 import { useErrors } from '@/composables/useErrors';
-import { fetchAllMaps, fetchPlayers } from '@/api';
+import { fetchAllMaps, fetchPlayers, fetchVenues, fetchCurrentTeam } from '@/api';
 import { computePlayerInitials } from '@/utils/players';
 import { ERROR } from '@shared/constants';
-import type { MapConfig, Player } from '@shared/types';
+import type { MapConfig, Player, Venue } from '@shared/types';
 
 const { permissions, account } = useAuth();
 
@@ -109,18 +109,26 @@ const playerLabels = computed<Record<string, string>>(() => {
 const maps = ref<MapConfig[]>([]);
 const players = ref<Player[]>([]);
 
+// Venues a match can be played in, and the one a new match defaults to
+const venues = ref<Venue[]>([]);
+const teamVenueId = ref<string | null>(null);
+
 // Initial load
 onMounted(async () => {
-  // Load maps and players for RotationCalculator (in parallel with calendar)
+  // Load what the event form and the RotationCalculator need (in parallel with calendar)
   try {
-    const [loadedMaps, loadedPlayers] = await Promise.all([
+    const [loadedMaps, loadedPlayers, loadedVenues, team] = await Promise.all([
       fetchAllMaps(),
       fetchPlayers(),
+      fetchVenues(),
+      fetchCurrentTeam(),
     ]);
     maps.value = loadedMaps;
     players.value = loadedPlayers;
+    venues.value = loadedVenues;
+    teamVenueId.value = team?.venueId ?? null;
   } catch (err) {
-    console.error('Error loading maps/players:', err);
+    console.error('Error loading maps/players/venues:', err);
     setErrorFromException(err, ERROR.serverError);
     showErrorModal.value = true;
   }
@@ -210,6 +218,8 @@ onMounted(async () => {
       :can-attach-game-plan="permissions.calendar.canAttachGamePlan"
       :maps="maps"
       :players="players"
+      :venues="venues"
+      :team-venue-id="teamVenueId"
       @close="showEventModal = false"
       @submit="submitEvent"
       @delete="removeEvent"

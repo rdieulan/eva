@@ -65,6 +65,16 @@ function goToNext() {
 
 
 
+// Where the match is played, once the event is a match
+const venueLabel = computed(() => {
+  if (currentEvent.value?.type !== 'MATCH') return null;
+  const venue = currentEvent.value.venue;
+  if (!venue) return 'Non définie';
+
+  const arena = currentEvent.value.arenaNumber;
+  return arena ? `${venue.name} - ${venue.city} — arène ${arena}` : `${venue.name} - ${venue.city}`;
+});
+
 // Show modal when events are provided
 const showModal = computed(() => props.events.length > 0);
 
@@ -135,6 +145,10 @@ function handleCreateEvent() {
           <div class="detail-row">
             <span class="detail-label">🕐 Horaire</span>
             <span class="detail-value">{{ currentEvent.startTime }} - {{ currentEvent.endTime }}</span>
+          </div>
+          <div v-if="venueLabel" class="detail-row">
+            <span class="detail-label">📍 Salle</span>
+            <span class="detail-value">{{ venueLabel }}</span>
           </div>
         </div>
 

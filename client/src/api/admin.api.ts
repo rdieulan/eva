@@ -15,6 +15,7 @@ export interface VenueInput {
   city: string;
   address: string;
   phone?: string | null;
+  arenaCount: number;
 }
 
 export interface ManagerSummary {

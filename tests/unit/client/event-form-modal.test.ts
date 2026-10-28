@@ -231,3 +231,130 @@ describe('EventFormModal Component', () => {
   });
 });
 
+describe('EventFormModal Component - Match venue', () => {
+  const venues = [
+    { id: 'venue-1', name: 'VR Arena', city: 'Lyon', address: '12 rue des Lasers', phone: null },
+    { id: 'venue-2', name: 'Laser Dome', city: 'Paris', address: '3 avenue du Tir', phone: null },
+  ];
+
+  function mountForm(props: Record<string, unknown> = {}) {
+    return mount(EventFormModal, {
+      props: {
+        open: false,
+        canCreate: true,
+        selectedDate: '2026-11-03',
+        venues,
+        teamVenueId: 'venue-1',
+        maps: [],
+        players: [],
+        ...props,
+      },
+      global: { stubs: { Teleport: true } },
+    });
+  }
+
+  it('should default a new match to the team venue and submit it', async () => {
+    const wrapper = mountForm();
+    await wrapper.setProps({ open: true });
+
+    const select = wrapper.find('#event-venue');
+    expect(select.exists()).toBe(true);
+    expect((select.element as HTMLSelectElement).value).toBe('venue-1');
+    expect(select.findAll('option').map(o => o.text()))
+      .toEqual(['Non définie', 'VR Arena - Lyon', 'Laser Dome - Paris']);
+
+    await wrapper.find('#event-title').setValue('Match vs TeamX');
+    await wrapper.findAll('button').find(b => b.text() === 'Créer')!.trigger('click');
+
+    expect(wrapper.emitted('submit')?.[0]?.[0]).toMatchObject({ type: 'MATCH', venueId: 'venue-1' });
+  });
+
+  it('should let the match be played elsewhere', async () => {
+    const wrapper = mountForm();
+    await wrapper.setProps({ open: true });
+
+    await wrapper.find('#event-venue').setValue('venue-2');
+    await wrapper.find('#event-title').setValue('Away game');
+    await wrapper.findAll('button').find(b => b.text() === 'Créer')!.trigger('click');
+
+    expect(wrapper.emitted('submit')?.[0]?.[0]).toMatchObject({ venueId: 'venue-2' });
+  });
+
+  it('should hide the venue on other event types and submit none', async () => {
+    const wrapper = mountForm();
+    await wrapper.setProps({ open: true });
+
+    await wrapper.findAll('.type-btn').find(b => b.text().includes('Discord'))!.trigger('click');
+    expect(wrapper.find('#event-venue').exists()).toBe(false);
+
+    await wrapper.find('#event-title').setValue('Strat Polaris');
+    await wrapper.findAll('button').find(b => b.text() === 'Créer')!.trigger('click');
+
+    expect(wrapper.emitted('submit')?.[0]?.[0]).toMatchObject({ type: 'DISCORD', venueId: null });
+  });
+
+  it('should keep the venue the match is already played in when editing', async () => {
+    const wrapper = mountForm({
+      editEvent: {
+        id: 'event-1',
+        date: '2026-11-03',
+        startTime: '20:00',
+        endTime: '22:00',
+        type: 'MATCH' as const,
+        title: 'Away game',
+        venue: { id: 'venue-2', name: 'Laser Dome', city: 'Paris' },
+        createdById: 'player-1',
+        createdAt: '2026-10-01T00:00:00Z',
+      },
+      canEdit: true,
+    });
+    await wrapper.setProps({ open: true });
+
+    expect((wrapper.find('#event-venue').element as HTMLSelectElement).value).toBe('venue-2');
+  });
+
+  it('should show the venue to someone who can only read the match', async () => {
+    const wrapper = mountForm({
+      canCreate: false,
+      canEdit: false,
+      editEvent: {
+        id: 'event-1',
+        date: '2026-11-03',
+        startTime: '20:00',
+        endTime: '22:00',
+        type: 'MATCH' as const,
+        title: 'Away game',
+        venue: { id: 'venue-2', name: 'Laser Dome', city: 'Paris' },
+        createdById: 'player-1',
+        createdAt: '2026-10-01T00:00:00Z',
+      },
+    });
+    await wrapper.setProps({ open: true });
+
+    const rows = wrapper.findAll('.event-view-row').map(r => r.text().replace(/\s+/g, ' '));
+    expect(rows.some(row => row.includes('Salle') && row.includes('Laser Dome - Paris'))).toBe(true);
+    expect(wrapper.find('#event-venue').exists()).toBe(false);
+  });
+
+  it('should fall back to the team venue when an event becomes a match', async () => {
+    const wrapper = mountForm({
+      editEvent: {
+        id: 'event-1',
+        date: '2026-11-03',
+        startTime: '20:00',
+        endTime: '22:00',
+        type: 'DISCORD' as const,
+        title: 'Strat Polaris',
+        createdById: 'player-1',
+        createdAt: '2026-10-01T00:00:00Z',
+      },
+      canEdit: true,
+    });
+    await wrapper.setProps({ open: true });
+    expect(wrapper.find('#event-venue').exists()).toBe(false);
+
+    await wrapper.findAll('.type-btn').find(b => b.text().includes('Match'))!.trigger('click');
+
+    expect((wrapper.find('#event-venue').element as HTMLSelectElement).value).toBe('venue-1');
+  });
+});
