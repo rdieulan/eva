@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue';
 import type { Venue } from '@shared/types';
 import SvgIcon from '@/components/common/SvgIcon.vue';
+import { formatVenueLabel } from '@/utils/venues';
 
 interface TeamData {
   id: string;
@@ -27,7 +28,7 @@ const emit = defineEmits<{
 const venueName = computed(() => {
   if (!props.team.venueId) return 'Non affiliée';
   const venue = props.venues.find(v => v.id === props.team.venueId);
-  return venue ? `${venue.name} - ${venue.city}` : 'Inconnue';
+  return venue ? formatVenueLabel(venue) : 'Inconnue';
 });
 
 // Edit mode state
@@ -77,7 +78,7 @@ function saveChanges() {
         <select v-model="editVenueId">
           <option :value="null">Non affiliée</option>
           <option v-for="venue in venues" :key="venue.id" :value="venue.id">
-            {{ venue.name }} - {{ venue.city }}
+            {{ formatVenueLabel(venue) }}
           </option>
         </select>
       </div>

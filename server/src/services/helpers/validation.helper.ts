@@ -36,6 +36,13 @@ export function isValidEventType(type: unknown): type is EventType {
 }
 
 /**
+ * An event ends after it starts (times already validated as HH:mm, so they compare as text)
+ */
+export function isValidTimeRange(startTime: string, endTime: string): boolean {
+  return startTime < endTime;
+}
+
+/**
  * Validate subscription tier
  */
 export function isValidSubscriptionTier(tier: unknown): tier is SubscriptionTier {

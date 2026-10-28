@@ -17,6 +17,7 @@ export {
   isValidMonth,
   isValidDate,
   isValidTime,
+  isValidTimeRange,
   isValidEventType,
   isValidAvailabilityStatus,
 } from './helpers/validation.helper';
@@ -365,7 +366,8 @@ export async function createEvent(data: CreateEventData) {
 export async function getEventWithTeamCheck(eventId: string, teamId?: string): Promise<
   | { notFound: true }
   | { accessDenied: true }
-  | { event: { id: string; type: EventType; teamId: string | null; venueId: string | null } }
+  | { event: { id: string; type: EventType; teamId: string | null; venueId: string | null;
+      startTime: string; endTime: string } }
 > {
   const event = await prisma.calendarEvent.findUnique({ where: { id: eventId } });
 

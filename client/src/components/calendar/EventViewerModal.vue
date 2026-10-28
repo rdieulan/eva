@@ -6,6 +6,7 @@ import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import { useErrors } from '@/composables/useErrors';
 import type { CalendarEvent } from '@shared/types';
 import { formatLongDate, getEventTypeClass, getEventTypeTitle, isPastDateStr } from '@/utils/calendar';
+import { formatVenueLabel } from '@/utils/venues';
 
 const props = defineProps<{
   events: CalendarEvent[];
@@ -72,7 +73,7 @@ const venueLabel = computed(() => {
   if (!venue) return 'Non définie';
 
   const arena = currentEvent.value.arenaNumber;
-  return arena ? `${venue.name} - ${venue.city} — arène ${arena}` : `${venue.name} - ${venue.city}`;
+  return arena ? `${formatVenueLabel(venue)} — arène ${arena}` : formatVenueLabel(venue);
 });
 
 // Show modal when events are provided

@@ -674,6 +674,123 @@ describe('Calendar API', () => {
   });
 
   // ============================================
+  // Event edit
+  // ============================================
+  describe('Event edit', () => {
+    async function createEvent(token: string, body: Record<string, unknown> = {}) {
+      return request(app)
+        .post('/api/calendar/events')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          date: getFutureDate(),
+          startTime: '20:00',
+          endTime: '22:00',
+          type: 'EVENT',
+          title: 'Soirée LAN',
+          description: 'On se retrouve 30 min avant',
+          ...body,
+        });
+    }
+
+    it('should clear the description when it is emptied', async () => {
+      const { token } = await createUserWithTeam();
+      const created = await createEvent(token);
+
+      const res = await request(app)
+        .put(`/api/calendar/events/${created.body.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ description: '' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.description).toBeUndefined();
+
+      const event = await prisma.calendarEvent.findUnique({ where: { id: created.body.id } });
+      expect(event!.description).toBeNull();
+    });
+
+    it.each(['', '   '])('should refuse %p as a new title instead of ignoring it', async (title) => {
+      const { token } = await createUserWithTeam();
+      const created = await createEvent(token);
+
+      const res = await request(app)
+        .put(`/api/calendar/events/${created.body.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ title });
+
+      expect(res.status).toBe(400);
+      expect(res.body.errors).toContain(ERROR.titleRequired);
+
+      const event = await prisma.calendarEvent.findUnique({ where: { id: created.body.id } });
+      expect(event!.title).toBe('Soirée LAN');
+    });
+
+    it('should refuse an empty date instead of ignoring it', async () => {
+      const { token } = await createUserWithTeam();
+      const created = await createEvent(token);
+
+      const res = await request(app)
+        .put(`/api/calendar/events/${created.body.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ date: '' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.errors).toContain(ERROR.dateInvalid);
+    });
+
+    it('should refuse an end time that is not after the start time', async () => {
+      const { token } = await createUserWithTeam();
+      const created = await createEvent(token);
+
+      const res = await request(app)
+        .put(`/api/calendar/events/${created.body.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ startTime: '22:00', endTime: '20:00' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.errors).toContain(ERROR.eventTimeInvalid);
+    });
+
+    it('should refuse an end time before the start time on creation too', async () => {
+      const { token } = await createUserWithTeam();
+
+      const res = await expectNoRecordCreated(
+        () => prisma.calendarEvent.count(),
+        () => createEvent(token, { startTime: '22:00', endTime: '22:00' }),
+      );
+
+      expect(res.status).toBe(400);
+      expect(res.body.errors).toContain(ERROR.eventTimeInvalid);
+    });
+
+    it('should refuse an end time moved before the start time already stored', async () => {
+      const { token } = await createUserWithTeam();
+      const created = await createEvent(token);
+
+      const res = await request(app)
+        .put(`/api/calendar/events/${created.body.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ endTime: '19:00' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.errors).toContain(ERROR.eventTimeInvalid);
+    });
+
+    it('should still move the end time on its own when it stays valid', async () => {
+      const { token } = await createUserWithTeam();
+      const created = await createEvent(token);
+
+      const res = await request(app)
+        .put(`/api/calendar/events/${created.body.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ endTime: '23:30' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.endTime).toBe('23:30');
+      expect(res.body.startTime).toBe('20:00');
+    });
+  });
+
+  // ============================================
   // Match venue
   // ============================================
   describe('Match venue', () => {

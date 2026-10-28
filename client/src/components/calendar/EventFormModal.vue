@@ -9,6 +9,7 @@ import { useErrors } from '@/composables/useErrors';
 import { ERROR } from '@shared/constants';
 import { EVENT_TYPES } from '@shared/types';
 import { getEventTypeClass, getEventTypeDisplay, getEventTypeTitle } from '@/utils/calendar';
+import { formatVenueLabel } from '@/utils/venues';
 import type {
   EventType,
   CreateEventRequest,
@@ -121,10 +122,6 @@ watch(type, (newType) => {
   }
 });
 
-function formatVenue(venue: Pick<Venue, 'name' | 'city'>): string {
-  return `${venue.name} - ${venue.city}`;
-}
-
 // Arenas of the chosen venue, numbered 1 upwards. Only worth asking about when
 // the venue runs several of them.
 const arenaNumbers = computed(() => {
@@ -133,15 +130,19 @@ const arenaNumbers = computed(() => {
   return count > 1 ? Array.from({ length: count }, (_, index) => index + 1) : [];
 });
 
-// An arena number only means something in the venue it was picked in
-watch(venueId, () => { arenaNumber.value = null; });
+// An arena number only means something in the venue it was picked in. Bound to
+// the field rather than to venueId, which also changes when the form opens on
+// an event and would then wipe the arena that event is played on.
+function handleVenueChange() {
+  arenaNumber.value = null;
+}
 
 // Venue of the event being viewed, for the read-only display
 const eventVenueLabel = computed(() => {
   const venue = props.editEvent?.venue;
   if (!venue) return null;
   const arena = props.editEvent?.arenaNumber;
-  return arena ? `${formatVenue(venue)} — arène ${arena}` : formatVenue(venue);
+  return arena ? `${formatVenueLabel(venue)} — arène ${arena}` : formatVenueLabel(venue);
 });
 
 // Format date for display (DD/MM/YYYY)
@@ -177,7 +178,8 @@ function handleSubmit() {
     endTime: endTime.value,
     type: type.value,
     title: title.value.trim(),
-    description: description.value.trim() || undefined,
+    // Always sent, empty included: that is how clearing it reaches the server
+    description: description.value.trim(),
     venueId: showVenue.value ? venueId.value : null,
     arenaNumber: showVenue.value ? arenaNumber.value : null,
   };
@@ -352,10 +354,10 @@ const modalSize = computed(() => {
       <!-- Venue (only for MATCH type) -->
       <div v-if="showVenue" class="form-group">
         <label class="form-label" for="event-venue">📍 Salle</label>
-        <select id="event-venue" v-model="venueId" class="form-input form-select">
+        <select id="event-venue" v-model="venueId" class="form-input form-select" @change="handleVenueChange">
           <option :value="null">Non définie</option>
           <option v-for="venue in venues" :key="venue.id" :value="venue.id">
-            {{ formatVenue(venue) }}
+            {{ formatVenueLabel(venue) }}
           </option>
         </select>
       </div>
