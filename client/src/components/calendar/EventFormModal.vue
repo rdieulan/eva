@@ -9,6 +9,7 @@ import { useErrors } from '@/composables/useErrors';
 import { ERROR } from '@shared/constants';
 import { EVENT_TYPES } from '@shared/types';
 import { getEventTypeClass, getEventTypeDisplay, getEventTypeTitle } from '@/utils/calendar';
+import { formatVenueLabel } from '@/utils/venues';
 import type {
   EventType,
   CreateEventRequest,
@@ -121,10 +122,6 @@ watch(type, (newType) => {
   }
 });
 
-function formatVenue(venue: Pick<Venue, 'name' | 'city'>): string {
-  return `${venue.name} - ${venue.city}`;
-}
-
 // Arenas of the chosen venue, numbered 1 upwards. Only worth asking about when
 // the venue runs several of them.
 const arenaNumbers = computed(() => {
@@ -141,7 +138,7 @@ const eventVenueLabel = computed(() => {
   const venue = props.editEvent?.venue;
   if (!venue) return null;
   const arena = props.editEvent?.arenaNumber;
-  return arena ? `${formatVenue(venue)} — arène ${arena}` : formatVenue(venue);
+  return arena ? `${formatVenueLabel(venue)} — arène ${arena}` : formatVenueLabel(venue);
 });
 
 // Format date for display (DD/MM/YYYY)
@@ -355,7 +352,7 @@ const modalSize = computed(() => {
         <select id="event-venue" v-model="venueId" class="form-input form-select">
           <option :value="null">Non définie</option>
           <option v-for="venue in venues" :key="venue.id" :value="venue.id">
-            {{ formatVenue(venue) }}
+            {{ formatVenueLabel(venue) }}
           </option>
         </select>
       </div>

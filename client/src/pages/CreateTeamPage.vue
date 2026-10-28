@@ -7,6 +7,7 @@ import { createTeam, fetchVenues } from '@/api';
 import { validateTeamName } from '@shared/utils';
 import { ERROR } from '@shared/constants';
 import type { Venue } from '@shared/types';
+import { formatVenueLabel } from '@/utils/venues';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 
 const router = useRouter();
@@ -108,7 +109,7 @@ function goBack() {
           <select id="team-venue" v-model="selectedVenueId" :disabled="isSubmitting">
             <option :value="null">Non spécifiée</option>
             <option v-for="venue in venues" :key="venue.id" :value="venue.id">
-              {{ venue.name }} - {{ venue.city }}
+              {{ formatVenueLabel(venue) }}
             </option>
           </select>
         </div>

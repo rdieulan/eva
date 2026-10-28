@@ -12,6 +12,7 @@ import type { ManagerSummary } from '@/api/admin.api';
 import type { Venue } from '@shared/types';
 import { ERROR } from '@shared/constants';
 import { useErrors } from '@/composables/useErrors';
+import { formatVenueLabel } from '@/utils/venues';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import Modal from '@/components/common/Modal.vue';
 import ConfirmModal from '@/components/common/ConfirmModal.vue';
@@ -228,7 +229,7 @@ onMounted(loadData);
               :checked="createForm.venueIds.includes(venue.id)"
               @change="toggleCreateVenue(venue.id)"
             />
-            <span>{{ venue.name }} <em>· {{ venue.city }}</em></span>
+            <span>{{ formatVenueLabel(venue) }}</span>
           </label>
         </fieldset>
       </form>
@@ -273,7 +274,7 @@ onMounted(loadData);
               :checked="editVenueIds.includes(venue.id)"
               @change="toggleEditVenue(venue.id)"
             />
-            <span>{{ venue.name }} <em>· {{ venue.city }}</em></span>
+            <span>{{ formatVenueLabel(venue) }}</span>
           </label>
         </fieldset>
       </form>
