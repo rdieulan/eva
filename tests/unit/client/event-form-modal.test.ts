@@ -358,3 +358,91 @@ describe('EventFormModal Component - Match venue', () => {
     expect((wrapper.find('#event-venue').element as HTMLSelectElement).value).toBe('venue-1');
   });
 });
+
+describe('EventFormModal Component - Editing an existing event', () => {
+  const venues = [
+    { id: 'venue-1', name: 'VR Arena', city: 'Lyon', address: '12 rue des Lasers', phone: null, arenaCount: 2 },
+  ];
+
+  const match = {
+    id: 'event-1',
+    date: '2026-11-03',
+    startTime: '20:00',
+    endTime: '22:00',
+    type: 'MATCH' as const,
+    title: 'Match vs TeamX',
+    description: 'On se retrouve 30 min avant',
+    venue: { id: 'venue-1', name: 'VR Arena', city: 'Lyon' },
+    arenaNumber: 2,
+    createdById: 'player-1',
+    createdAt: '2026-10-01T00:00:00Z',
+  };
+
+  function mountForm(editEvent: Record<string, unknown> = match) {
+    return mount(EventFormModal, {
+      props: {
+        open: false,
+        canCreate: true,
+        canEdit: true,
+        editEvent,
+        venues,
+        teamVenueId: 'venue-1',
+        maps: [],
+        players: [],
+      },
+      global: { stubs: { Teleport: true } },
+    });
+  }
+
+  async function submit(wrapper: ReturnType<typeof mountForm>) {
+    await wrapper.findAll('button').find(b => b.text() === 'Enregistrer')!.trigger('click');
+    return wrapper.emitted('submit')?.[0]?.[0] as Record<string, unknown>;
+  }
+
+  it('should clear the description when it is emptied', async () => {
+    const wrapper = mountForm();
+    await wrapper.setProps({ open: true });
+    expect((wrapper.find('#event-desc').element as HTMLTextAreaElement).value)
+      .toBe('On se retrouve 30 min avant');
+
+    await wrapper.find('#event-desc').setValue('');
+
+    expect(await submit(wrapper)).toMatchObject({ description: '' });
+  });
+
+  it('should open on the arena the match is already played on', async () => {
+    const wrapper = mountForm();
+    await wrapper.setProps({ open: true });
+
+    expect((wrapper.find('#event-arena').element as HTMLSelectElement).value).toBe('2');
+    expect(await submit(wrapper)).toMatchObject({ arenaNumber: 2 });
+  });
+
+  it('should drop the arena when the venue is changed by hand', async () => {
+    const wrapper = mountForm();
+    await wrapper.setProps({ open: true });
+
+    // The "no venue" option carries null, so it is picked by its label
+    await wrapper.find('#event-venue').setValue('Non définie');
+
+    expect(await submit(wrapper)).toMatchObject({ venueId: null, arenaNumber: null });
+  });
+
+  it('should keep every other field untouched when only the title changes', async () => {
+    const wrapper = mountForm();
+    await wrapper.setProps({ open: true });
+
+    await wrapper.find('#event-title').setValue('Match vs TeamY');
+
+    expect(await submit(wrapper)).toEqual({
+      date: '2026-11-03',
+      startTime: '20:00',
+      endTime: '22:00',
+      type: 'MATCH',
+      title: 'Match vs TeamY',
+      description: 'On se retrouve 30 min avant',
+      venueId: 'venue-1',
+      arenaNumber: 2,
+    });
+  });
+});

@@ -121,6 +121,10 @@ router.post('/events', authMiddleware, requirePermission('calendar', 'canCreateE
     res.status(400).json({ errors: [ERROR.endTimeInvalid] });
     return;
   }
+  if (!calendarService.isValidTimeRange(startTime, endTime)) {
+    res.status(400).json({ errors: [ERROR.eventTimeInvalid] });
+    return;
+  }
   if (!calendarService.isValidEventType(type)) {
     res.status(400).json({ errors: [ERROR.eventTypeInvalid] });
     return;
@@ -189,21 +193,25 @@ router.put('/events/:id', authMiddleware, requirePermission('calendar', 'canEdit
   const { date, startTime, endTime, type, title, description, venueId, arenaNumber } = req.body as CreateEventRequest;
   const teamId = req.account?.teamId;
 
-  // Validation
-  if (date && !calendarService.isValidDate(date)) {
+  // Validation: a field that is sent is checked, so nothing is silently dropped
+  if (date !== undefined && !calendarService.isValidDate(date)) {
     res.status(400).json({ errors: [ERROR.dateInvalid] });
     return;
   }
-  if (startTime && !calendarService.isValidTime(startTime)) {
+  if (startTime !== undefined && !calendarService.isValidTime(startTime)) {
     res.status(400).json({ errors: [ERROR.startTimeInvalid] });
     return;
   }
-  if (endTime && !calendarService.isValidTime(endTime)) {
+  if (endTime !== undefined && !calendarService.isValidTime(endTime)) {
     res.status(400).json({ errors: [ERROR.endTimeInvalid] });
     return;
   }
-  if (type && !calendarService.isValidEventType(type)) {
+  if (type !== undefined && !calendarService.isValidEventType(type)) {
     res.status(400).json({ errors: [ERROR.eventTypeInvalid] });
+    return;
+  }
+  if (title !== undefined && !title.trim()) {
+    res.status(400).json({ errors: [ERROR.titleRequired] });
     return;
   }
 
@@ -217,6 +225,14 @@ router.put('/events/:id', authMiddleware, requirePermission('calendar', 'canEdit
 
     if ('accessDenied' in result) {
       res.status(403).json({ errors: [ERROR.accessDenied] });
+      return;
+    }
+
+    // Checked on the times the event ends up with, not only on those sent
+    const effectiveStart = startTime ?? result.event.startTime;
+    const effectiveEnd = endTime ?? result.event.endTime;
+    if (!calendarService.isValidTimeRange(effectiveStart, effectiveEnd)) {
+      res.status(400).json({ errors: [ERROR.eventTimeInvalid] });
       return;
     }
 
