@@ -9,6 +9,7 @@ function location(overrides: Partial<EvaLocation> = {}): EvaLocation {
     isClosed: false,
     telephone: '+33323043668',
     address: { street: '191 rue Georges Pompidou', city: 'Saint-Quentin' },
+    details: { terrains: [{ id: 124, games: [{ gameId: 1 }] }] },
     ...overrides,
   };
 }
@@ -21,6 +22,7 @@ describe('toVenues', () => {
       city: 'Saint-Quentin',
       address: '191 rue Georges Pompidou',
       phone: '+33323043668',
+      arenaCount: 1,
     }]);
   });
 
@@ -68,5 +70,35 @@ describe('toVenues', () => {
       { name: 'Sans adresse', reason: 'adresse absente' },
       { name: 'Sans rien', reason: 'adresse absente' },
     ]);
+  });
+});
+
+describe('toVenues — arènes', () => {
+  it('counts the arenas open to the competitive game', () => {
+    const venues = toVenues([location({
+      details: { terrains: [
+        { id: 69, games: [{ gameId: 1 }, { gameId: 5 }] },
+        { id: 70, games: [{ gameId: 1 }] },
+      ] },
+    })]).venues;
+
+    expect(venues[0]!.arenaCount).toBe(2);
+  });
+
+  it('ignores the arenas reserved for their other games', () => {
+    const venues = toVenues([location({
+      details: { terrains: [
+        { id: 63, games: [{ gameId: 1 }] },
+        { id: 191, games: [{ gameId: 6 }] },
+      ] },
+    })]).venues;
+
+    expect(venues[0]!.arenaCount).toBe(1);
+  });
+
+  it('counts one arena when eva.gg lists none', () => {
+    expect(toVenues([location({ details: { terrains: [] } })]).venues[0]!.arenaCount).toBe(1);
+    expect(toVenues([location({ details: { terrains: [{ id: 1, games: [{ gameId: 6 }] }] } })]).venues[0]!.arenaCount)
+      .toBe(1);
   });
 });

@@ -21,6 +21,7 @@ export function formatEventForFrontend(event: {
   description: string | null;
   gamePlan: unknown;
   venue?: EventVenue | null;
+  arenaNumber?: number | null;
   createdById: string;
   createdAt: Date;
 }): CalendarEvent {
@@ -34,6 +35,7 @@ export function formatEventForFrontend(event: {
     description: event.description || undefined,
     gamePlan: (event.gamePlan || undefined) as MatchGamePlan | undefined,
     venue: event.venue ?? undefined,
+    arenaNumber: event.arenaNumber ?? undefined,
     createdById: event.createdById,
     createdAt: event.createdAt.toISOString(),
   };

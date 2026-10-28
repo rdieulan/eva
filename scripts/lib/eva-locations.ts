@@ -9,6 +9,10 @@ const EVA_GRAPHQL_URL = 'https://api.eva.gg/graphql';
 // without this header is turned away with a 403.
 const EVA_APP_ORIGIN = 'https://app.eva.gg';
 
+// "EVA BATTLE ARENA" (AFTER_H_BATTLE_ARENA), the competitive game our teams
+// play. A venue also runs arenas for their other games, which we ignore.
+const COMPETITIVE_GAME_ID = 1;
+
 const LIST_LOCATIONS_QUERY = `
   query ListLocations($country: CountryEnum!) {
     listLocations(country: $country, sortOrder: { by: DEPARTMENT }) {
@@ -20,6 +24,12 @@ const LIST_LOCATIONS_QUERY = `
         street
         city
       }
+      details {
+        terrains {
+          id
+          games { gameId }
+        }
+      }
     }
   }
 `;
@@ -30,6 +40,7 @@ export interface EvaLocation {
   isClosed: boolean;
   telephone: string | null;
   address: { street: string | null; city: string | null } | null;
+  details: { terrains: { id: number; games: { gameId: number }[] }[] };
 }
 
 export interface VenueInput {
@@ -38,11 +49,23 @@ export interface VenueInput {
   city: string;
   address: string;
   phone: string | null;
+  arenaCount: number;
 }
 
 export interface MappingResult {
   venues: VenueInput[];
   skipped: { name: string; reason: string }[];
+}
+
+/**
+ * How many arenas a location runs for the competitive game. Venues always have
+ * at least one, so a location that somehow lists none still counts as one.
+ */
+function countCompetitiveArenas(location: EvaLocation): number {
+  const arenas = location.details.terrains.filter(
+    terrain => terrain.games.some(game => game.gameId === COMPETITIVE_GAME_ID),
+  );
+  return Math.max(arenas.length, 1);
 }
 
 /**
@@ -73,6 +96,7 @@ export function toVenues(locations: EvaLocation[]): MappingResult {
       city: location.address?.city?.trim() || name,
       address: street,
       phone: location.telephone?.trim() || null,
+      arenaCount: countCompetitiveArenas(location),
     });
   }
 

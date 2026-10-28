@@ -9,4 +9,5 @@ export interface Venue {
   city: string;
   address: string;
   phone: string | null;
+  arenaCount: number; // Arenas available for play, numbered 1 to arenaCount
 }

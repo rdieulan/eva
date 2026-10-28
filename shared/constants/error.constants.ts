@@ -168,6 +168,9 @@ export const ERROR = {
   statusInvalid: 'Status invalide',
   matchOnlyGamePlan: 'Seuls les MATCH peuvent avoir un plan de jeu',
   matchOnlyVenue: 'Seuls les matchs peuvent avoir une salle',
+  arenaRequiresVenue: 'Le numéro d\'arène demande une salle',
+  arenaNumberInvalid: 'Numéro d\'arène invalide pour cette salle',
+  venueArenaCountInvalid: 'Le nombre d\'arènes doit être un entier supérieur ou égal à 1',
 
   // Planner / Maps
   mapsLoadFailed: 'Erreur lors du chargement des cartes',

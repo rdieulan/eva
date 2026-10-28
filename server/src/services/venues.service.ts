@@ -9,6 +9,7 @@ const PUBLIC_VENUE_SELECT = {
   city: true,
   address: true,
   phone: true,
+  arenaCount: true,
 } as const;
 
 export interface VenueInput {
@@ -16,6 +17,7 @@ export interface VenueInput {
   city: string;
   address: string;
   phone?: string | null;
+  arenaCount?: number;
 }
 
 // ============================================
@@ -61,6 +63,7 @@ export async function createVenue(input: VenueInput): Promise<Venue> {
       city: input.city.trim(),
       address: input.address.trim(),
       phone: input.phone?.trim() || null,
+      ...(input.arenaCount !== undefined && { arenaCount: input.arenaCount }),
     },
     select: PUBLIC_VENUE_SELECT,
   });
@@ -80,6 +83,7 @@ export async function updateVenue(venueId: string, input: Partial<VenueInput>): 
       ...(input.city !== undefined && { city: input.city.trim() }),
       ...(input.address !== undefined && { address: input.address.trim() }),
       ...(input.phone !== undefined && { phone: input.phone?.trim() || null }),
+      ...(input.arenaCount !== undefined && { arenaCount: input.arenaCount }),
     },
     select: PUBLIC_VENUE_SELECT,
   });

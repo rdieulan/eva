@@ -22,7 +22,7 @@ const successMessage = ref<string | null>(null);
 // Form state (create + edit)
 const showFormModal = ref(false);
 const editingVenueId = ref<string | null>(null);
-const form = reactive<VenueInput>({ name: '', city: '', address: '', phone: '' });
+const form = reactive<VenueInput>({ name: '', city: '', address: '', phone: '', arenaCount: 1 });
 const isSaving = ref(false);
 
 // Delete state
@@ -52,6 +52,7 @@ function openCreate() {
   form.city = '';
   form.address = '';
   form.phone = '';
+  form.arenaCount = 1;
   clearErrors();
   showFormModal.value = true;
 }
@@ -62,6 +63,7 @@ function openEdit(venue: Venue) {
   form.city = venue.city;
   form.address = venue.address;
   form.phone = venue.phone ?? '';
+  form.arenaCount = venue.arenaCount;
   clearErrors();
   showFormModal.value = true;
 }
@@ -75,6 +77,7 @@ async function saveVenue() {
       city: form.city,
       address: form.address,
       phone: form.phone || null,
+      arenaCount: Number(form.arenaCount),
     };
     if (editingVenueId.value) {
       const updated = await updateAdminVenue(editingVenueId.value, payload);
@@ -141,6 +144,7 @@ onMounted(loadVenues);
           <th>Ville</th>
           <th>Adresse</th>
           <th>Téléphone</th>
+          <th>Arènes</th>
           <th class="col-actions"></th>
         </tr>
       </thead>
@@ -150,6 +154,7 @@ onMounted(loadVenues);
           <td>{{ venue.city }}</td>
           <td>{{ venue.address }}</td>
           <td>{{ venue.phone || '—' }}</td>
+          <td>{{ venue.arenaCount }}</td>
           <td class="col-actions">
             <button class="btn-link" @click="openEdit(venue)">Modifier</button>
             <button class="btn-link btn-link--danger" @click="openDelete(venue)">Supprimer</button>
@@ -177,6 +182,10 @@ onMounted(loadVenues);
         <label>
           Téléphone (optionnel)
           <input v-model="form.phone" type="text" maxlength="40" />
+        </label>
+        <label>
+          Nombre d'arènes
+          <input v-model.number="form.arenaCount" type="number" min="1" max="20" required />
         </label>
       </form>
 

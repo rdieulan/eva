@@ -47,6 +47,7 @@ export interface CalendarEvent {
   description?: string;
   gamePlan?: MatchGamePlan; // Plan de jeu pour les MATCH
   venue?: EventVenue; // Salle pour les MATCH
+  arenaNumber?: number; // Arène de cette salle, quand elle est connue
   createdById: string;
   createdAt: string;
 }
@@ -90,5 +91,7 @@ export interface CreateEventRequest {
   description?: string;
   // Venue of a MATCH. Omitted on creation means the team's own venue; null means none.
   venueId?: string | null;
+  // Arena of that venue, between 1 and its arenaCount; null means not decided.
+  arenaNumber?: number | null;
 }
 

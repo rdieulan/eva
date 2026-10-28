@@ -48,6 +48,7 @@ const type = ref<EventType>('MATCH');
 const title = ref('');
 const description = ref('');
 const venueId = ref<string | null>(null);
+const arenaNumber = ref<number | null>(null);
 const gamePlan = ref<MatchGamePlan | null>(null);
 
 // UI state
@@ -84,6 +85,7 @@ watch(
         title.value = props.editEvent.title;
         description.value = props.editEvent.description || '';
         venueId.value = props.editEvent.venue?.id ?? null;
+        arenaNumber.value = props.editEvent.arenaNumber ?? null;
         gamePlan.value = props.editEvent.gamePlan || null;
       } else {
         // Create mode: reset with defaults
@@ -94,6 +96,7 @@ watch(
         title.value = '';
         description.value = '';
         venueId.value = props.teamVenueId ?? null;
+        arenaNumber.value = null;
         gamePlan.value = null;
       }
     }
@@ -122,10 +125,23 @@ function formatVenue(venue: Pick<Venue, 'name' | 'city'>): string {
   return `${venue.name} - ${venue.city}`;
 }
 
+// Arenas of the chosen venue, numbered 1 upwards. Only worth asking about when
+// the venue runs several of them.
+const arenaNumbers = computed(() => {
+  const venue = props.venues?.find(v => v.id === venueId.value);
+  const count = venue?.arenaCount ?? 1;
+  return count > 1 ? Array.from({ length: count }, (_, index) => index + 1) : [];
+});
+
+// An arena number only means something in the venue it was picked in
+watch(venueId, () => { arenaNumber.value = null; });
+
 // Venue of the event being viewed, for the read-only display
 const eventVenueLabel = computed(() => {
   const venue = props.editEvent?.venue;
-  return venue ? formatVenue(venue) : null;
+  if (!venue) return null;
+  const arena = props.editEvent?.arenaNumber;
+  return arena ? `${formatVenue(venue)} — arène ${arena}` : formatVenue(venue);
 });
 
 // Format date for display (DD/MM/YYYY)
@@ -163,6 +179,7 @@ function handleSubmit() {
     title: title.value.trim(),
     description: description.value.trim() || undefined,
     venueId: showVenue.value ? venueId.value : null,
+    arenaNumber: showVenue.value ? arenaNumber.value : null,
   };
 
   emit('submit', eventData);
@@ -339,6 +356,17 @@ const modalSize = computed(() => {
           <option :value="null">Non définie</option>
           <option v-for="venue in venues" :key="venue.id" :value="venue.id">
             {{ formatVenue(venue) }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Arena (only when the venue runs several) -->
+      <div v-if="showVenue && arenaNumbers.length" class="form-group">
+        <label class="form-label" for="event-arena">🏟️ Arène</label>
+        <select id="event-arena" v-model="arenaNumber" class="form-input form-select">
+          <option :value="null">Non définie</option>
+          <option v-for="number in arenaNumbers" :key="number" :value="number">
+            Arène {{ number }}
           </option>
         </select>
       </div>

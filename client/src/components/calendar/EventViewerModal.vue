@@ -69,7 +69,10 @@ function goToNext() {
 const venueLabel = computed(() => {
   if (currentEvent.value?.type !== 'MATCH') return null;
   const venue = currentEvent.value.venue;
-  return venue ? `${venue.name} - ${venue.city}` : 'Non définie';
+  if (!venue) return 'Non définie';
+
+  const arena = currentEvent.value.arenaNumber;
+  return arena ? `${venue.name} - ${venue.city} — arène ${arena}` : `${venue.name} - ${venue.city}`;
 });
 
 // Show modal when events are provided

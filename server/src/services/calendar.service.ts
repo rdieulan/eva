@@ -209,55 +209,108 @@ export async function getMonthEvents(month: string, teamId: string) {
   return events.map(formatEventForFrontend);
 }
 
-// Resolved venue to write, or the error to answer with
-export type VenueResolution = { venueId?: string | null } | { error: string };
+// Where a match is played: the venue and the arena of that venue, or the error
+// to answer with. A field left out keeps its current value.
+export type MatchPlace = { venueId?: string | null; arenaNumber?: number | null };
+export type MatchPlaceResolution = MatchPlace | { error: string };
 
-async function resolveKnownVenue(venueId: string | null): Promise<VenueResolution> {
-  if (venueId === null) return { venueId: null };
+/**
+ * Check the arena against the venue it is supposed to belong to.
+ * Arenas are numbered 1 to arenaCount, and none is valid without a venue.
+ */
+async function resolveArena(
+  venueId: string | null,
+  arenaNumber: number | null,
+): Promise<{ arenaNumber: number | null } | { error: string }> {
+  if (arenaNumber === null) return { arenaNumber: null };
+  if (venueId === null) return { error: ERROR.arenaRequiresVenue };
 
+  const venue = await prisma.venue.findUnique({
+    where: { id: venueId },
+    select: { arenaCount: true },
+  });
+  if (!venue) return { error: ERROR.venueNotFound };
+
+  const isKnownArena = Number.isInteger(arenaNumber) && arenaNumber >= 1 && arenaNumber <= venue.arenaCount;
+  return isKnownArena ? { arenaNumber } : { error: ERROR.arenaNumberInvalid };
+}
+
+async function venueExists(venueId: string): Promise<boolean> {
   const venue = await prisma.venue.findUnique({ where: { id: venueId }, select: { id: true } });
-  return venue ? { venueId } : { error: ERROR.venueNotFound };
+  return venue !== null;
 }
 
 /**
- * Venue of an event being created: only a match has one, and a match created
- * without an explicit venue is played in the venue its team is affiliated with.
+ * Where a match being created is played: only a match has a venue, and a match
+ * created without an explicit one is played in the venue its team is affiliated
+ * with. The arena is only kept when it exists in that venue.
  */
-export async function resolveVenueForCreate(input: {
+export async function resolvePlaceForCreate(input: {
   type: EventType;
   venueId?: string | null;
+  arenaNumber?: number | null;
   teamId: string;
-}): Promise<VenueResolution> {
+}): Promise<MatchPlaceResolution> {
   if (input.type !== 'MATCH') {
-    return input.venueId ? { error: ERROR.matchOnlyVenue } : { venueId: null };
+    if (input.venueId) return { error: ERROR.matchOnlyVenue };
+    if (input.arenaNumber) return { error: ERROR.arenaRequiresVenue };
+    return { venueId: null, arenaNumber: null };
   }
 
+  let venueId: string | null;
   if (input.venueId === undefined) {
     const team = await prisma.team.findUnique({
       where: { id: input.teamId },
       select: { venueId: true },
     });
-    return { venueId: team?.venueId ?? null };
+    venueId = team?.venueId ?? null;
+  } else {
+    if (input.venueId !== null && !await venueExists(input.venueId)) {
+      return { error: ERROR.venueNotFound };
+    }
+    venueId = input.venueId;
   }
 
-  return resolveKnownVenue(input.venueId);
+  const arena = await resolveArena(venueId, input.arenaNumber ?? null);
+  if ('error' in arena) return arena;
+
+  return { venueId, arenaNumber: arena.arenaNumber };
 }
 
 /**
- * Venue of an event being updated, given the type it ends up with: leaving the
- * venue out keeps the current one, and an event that stops being a match loses it.
+ * Where a match being updated is played, given the type it ends up with.
+ * Leaving the venue out keeps the current one; moving the match to another
+ * venue drops an arena that was not re-stated, since numbers differ per venue.
  */
-export async function resolveVenueForUpdate(input: {
+export async function resolvePlaceForUpdate(input: {
   type: EventType;
   venueId?: string | null;
-}): Promise<VenueResolution> {
+  arenaNumber?: number | null;
+  currentVenueId: string | null;
+}): Promise<MatchPlaceResolution> {
   if (input.type !== 'MATCH') {
-    return input.venueId ? { error: ERROR.matchOnlyVenue } : { venueId: null };
+    if (input.venueId) return { error: ERROR.matchOnlyVenue };
+    if (input.arenaNumber) return { error: ERROR.arenaRequiresVenue };
+    return { venueId: null, arenaNumber: null };
   }
 
-  if (input.venueId === undefined) return {};
+  const venueChanges = input.venueId !== undefined && input.venueId !== input.currentVenueId;
+  if (input.venueId !== undefined && input.venueId !== null && !await venueExists(input.venueId)) {
+    return { error: ERROR.venueNotFound };
+  }
+  const venueId = input.venueId === undefined ? input.currentVenueId : input.venueId;
 
-  return resolveKnownVenue(input.venueId);
+  // Nothing to say about the arena, and the venue it belonged to has not moved
+  if (input.arenaNumber === undefined && !venueChanges) {
+    return input.venueId === undefined ? {} : { venueId };
+  }
+
+  const arena = await resolveArena(venueId, input.arenaNumber ?? null);
+  if ('error' in arena) return arena;
+
+  return input.venueId === undefined
+    ? { arenaNumber: arena.arenaNumber }
+    : { venueId, arenaNumber: arena.arenaNumber };
 }
 
 export interface CreateEventData {
@@ -268,6 +321,7 @@ export interface CreateEventData {
   title: string;
   description?: string;
   venueId?: string | null;
+  arenaNumber?: number | null;
   teamId: string;
   createdByUserId: string;
 }
@@ -295,6 +349,7 @@ export async function createEvent(data: CreateEventData) {
       title: data.title.trim(),
       description: data.description?.trim() || null,
       venueId: data.venueId ?? null,
+      arenaNumber: data.arenaNumber ?? null,
       createdById: user.player.id,
       teamId: data.teamId,
     },
@@ -310,7 +365,7 @@ export async function createEvent(data: CreateEventData) {
 export async function getEventWithTeamCheck(eventId: string, teamId?: string): Promise<
   | { notFound: true }
   | { accessDenied: true }
-  | { event: { id: string; type: EventType; teamId: string | null } }
+  | { event: { id: string; type: EventType; teamId: string | null; venueId: string | null } }
 > {
   const event = await prisma.calendarEvent.findUnique({ where: { id: eventId } });
 
@@ -340,6 +395,7 @@ export interface UpdateEventData {
   title?: string;
   description?: string;
   venueId?: string | null;
+  arenaNumber?: number | null;
 }
 
 /**
@@ -356,6 +412,7 @@ export async function updateEvent(eventId: string, data: UpdateEventData) {
       ...(data.title && { title: data.title.trim() }),
       ...(data.description !== undefined && { description: data.description?.trim() || null }),
       ...(data.venueId !== undefined && { venueId: data.venueId }),
+      ...(data.arenaNumber !== undefined && { arenaNumber: data.arenaNumber }),
     },
     include: EVENT_VENUE_INCLUDE,
   });

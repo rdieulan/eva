@@ -21,12 +21,15 @@ const getFutureDate = () => {
 };
 
 // Create a venue, and optionally affiliate a team with it
-async function createVenue(overrides: { name?: string; city?: string; teamId?: string } = {}) {
+async function createVenue(
+  overrides: { name?: string; city?: string; teamId?: string; arenaCount?: number } = {},
+) {
   const venue = await prisma.venue.create({
     data: {
       name: overrides.name ?? `Venue ${Date.now()}`,
       city: overrides.city ?? 'Lyon',
       address: '12 rue des Lasers',
+      ...(overrides.arenaCount !== undefined && { arenaCount: overrides.arenaCount }),
     },
   });
 
@@ -891,6 +894,163 @@ describe('Calendar API', () => {
 
       expect(month.body.days[date].events[0].venue)
         .toEqual({ id: venue.id, name: 'VR Arena', city: 'Lyon' });
+    });
+  });
+
+  // ============================================
+  // Match arena
+  // ============================================
+  describe('Match arena', () => {
+    async function createMatch(token: string, body: Record<string, unknown> = {}) {
+      return request(app)
+        .post('/api/calendar/events')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          date: getFutureDate(),
+          startTime: '20:00',
+          endTime: '22:00',
+          type: 'MATCH',
+          title: 'Match vs TeamX',
+          ...body,
+        });
+    }
+
+    it('should play the match on the chosen arena of the venue', async () => {
+      const { token, team } = await createUserWithTeam();
+      await createVenue({ teamId: team.id, arenaCount: 2 });
+
+      const res = await createMatch(token, { arenaNumber: 2 });
+
+      expect(res.status).toBe(201);
+      expect(res.body.arenaNumber).toBe(2);
+    });
+
+    it('should leave the arena undecided when none is given', async () => {
+      const { token, team } = await createUserWithTeam();
+      await createVenue({ teamId: team.id, arenaCount: 2 });
+
+      const res = await createMatch(token);
+
+      expect(res.status).toBe(201);
+      expect(res.body.arenaNumber).toBeUndefined();
+    });
+
+    it('should refuse an arena the venue does not have', async () => {
+      const { token, team } = await createUserWithTeam();
+      await createVenue({ teamId: team.id, arenaCount: 2 });
+
+      const res = await expectNoRecordCreated(
+        () => prisma.calendarEvent.count(),
+        () => createMatch(token, { arenaNumber: 3 }),
+      );
+
+      expect(res.status).toBe(400);
+      expect(res.body.errors).toContain(ERROR.arenaNumberInvalid);
+    });
+
+    it.each([0, -1, 1.5])('should refuse %s as an arena number', async (arenaNumber) => {
+      const { token, team } = await createUserWithTeam();
+      await createVenue({ teamId: team.id, arenaCount: 2 });
+
+      const res = await createMatch(token, { arenaNumber });
+
+      expect(res.status).toBe(400);
+      expect(res.body.errors).toContain(ERROR.arenaNumberInvalid);
+    });
+
+    it('should refuse an arena on a match played nowhere', async () => {
+      const { token } = await createUserWithTeam();
+
+      const res = await createMatch(token, { venueId: null, arenaNumber: 1 });
+
+      expect(res.status).toBe(400);
+      expect(res.body.errors).toContain(ERROR.arenaRequiresVenue);
+    });
+
+    it('should refuse an arena on an event that is not a match', async () => {
+      const { token, team } = await createUserWithTeam();
+      await createVenue({ teamId: team.id, arenaCount: 2 });
+
+      const res = await createMatch(token, { type: 'DISCORD', arenaNumber: 1 });
+
+      expect(res.status).toBe(400);
+      expect(res.body.errors).toContain(ERROR.arenaRequiresVenue);
+    });
+
+    it('should move the match to another arena of the same venue', async () => {
+      const { token, team } = await createUserWithTeam();
+      await createVenue({ teamId: team.id, arenaCount: 3 });
+      const created = await createMatch(token, { arenaNumber: 1 });
+
+      const res = await request(app)
+        .put(`/api/calendar/events/${created.body.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ arenaNumber: 3 });
+
+      expect(res.status).toBe(200);
+      expect(res.body.arenaNumber).toBe(3);
+    });
+
+    it('should keep the arena when the update is about something else', async () => {
+      const { token, team } = await createUserWithTeam();
+      await createVenue({ teamId: team.id, arenaCount: 2 });
+      const created = await createMatch(token, { arenaNumber: 2 });
+
+      const res = await request(app)
+        .put(`/api/calendar/events/${created.body.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ title: 'Match vs TeamY' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.arenaNumber).toBe(2);
+    });
+
+    it('should drop the arena when the match moves to another venue', async () => {
+      const { token, team } = await createUserWithTeam();
+      await createVenue({ teamId: team.id, arenaCount: 2 });
+      const away = await createVenue({ name: 'Away', arenaCount: 2 });
+      const created = await createMatch(token, { arenaNumber: 2 });
+
+      const res = await request(app)
+        .put(`/api/calendar/events/${created.body.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ venueId: away.id });
+
+      expect(res.status).toBe(200);
+      expect(res.body.venue.id).toBe(away.id);
+      expect(res.body.arenaNumber).toBeUndefined();
+    });
+
+    it('should drop the arena when the match stops being a match', async () => {
+      const { token, team } = await createUserWithTeam();
+      await createVenue({ teamId: team.id, arenaCount: 2 });
+      const created = await createMatch(token, { arenaNumber: 2 });
+
+      const res = await request(app)
+        .put(`/api/calendar/events/${created.body.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ type: 'EVENT' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.arenaNumber).toBeUndefined();
+
+      const event = await prisma.calendarEvent.findUnique({ where: { id: created.body.id } });
+      expect(event!.arenaNumber).toBeNull();
+    });
+
+    it('should return the arena with the month data', async () => {
+      const { token, team } = await createUserWithTeam();
+      await createVenue({ teamId: team.id, arenaCount: 2 });
+      const date = getFutureDate();
+
+      const created = await createMatch(token, { date, arenaNumber: 2 });
+      expect(created.status).toBe(201);
+
+      const month = await request(app)
+        .get(`/api/calendar/availability?month=${date.substring(0, 7)}`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(month.body.days[date].events[0].arenaNumber).toBe(2);
     });
   });
 

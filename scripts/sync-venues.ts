@@ -18,10 +18,10 @@ const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 const DEFAULT_COUNTRY = 'FR';
 
 // Fields the sync owns: a difference on any of them is worth reporting
-const SYNCED_FIELDS = ['name', 'city', 'address', 'phone'] as const;
+const SYNCED_FIELDS = ['name', 'city', 'address', 'phone', 'arenaCount'] as const;
 
 function changedFields(
-  current: { name: string; city: string; address: string; phone: string | null },
+  current: { name: string; city: string; address: string; phone: string | null; arenaCount: number },
   next: VenueInput,
 ): string[] {
   return SYNCED_FIELDS.filter(field => current[field] !== next[field]);
@@ -37,7 +37,7 @@ async function main() {
 
   const known = await prisma.venue.findMany({
     where: { externalId: { not: null } },
-    select: { externalId: true, name: true, city: true, address: true, phone: true },
+    select: { externalId: true, name: true, city: true, address: true, phone: true, arenaCount: true },
   });
   const byExternalId = new Map(known.map(venue => [venue.externalId!, venue]));
 
@@ -50,7 +50,7 @@ async function main() {
     if (!current) {
       await prisma.venue.create({ data: venue });
       created++;
-      console.log(`  + ${venue.name} — ${venue.city}`);
+      console.log(`  + ${venue.name} — ${venue.city} (${venue.arenaCount} arène${venue.arenaCount > 1 ? 's' : ''})`);
       continue;
     }
 
