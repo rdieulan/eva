@@ -16,6 +16,7 @@ import type {
   MatchGamePlan,
   MapConfig,
   Player,
+  Venue,
 } from '@shared/types';
 
 const props = defineProps<{
@@ -28,6 +29,8 @@ const props = defineProps<{
   canAttachGamePlan?: boolean; // Can attach game plan to match
   maps?: MapConfig[]; // Maps for RotationCalculator
   players?: Player[]; // Players for RotationCalculator
+  venues?: Venue[]; // Venues a match can be played in
+  teamVenueId?: string | null; // Venue the team is affiliated with: default for a new match
 }>();
 
 const emit = defineEmits<{
@@ -44,6 +47,7 @@ const endTime = ref('22:00');
 const type = ref<EventType>('MATCH');
 const title = ref('');
 const description = ref('');
+const venueId = ref<string | null>(null);
 const gamePlan = ref<MatchGamePlan | null>(null);
 
 // UI state
@@ -79,6 +83,7 @@ watch(
         type.value = props.editEvent.type;
         title.value = props.editEvent.title;
         description.value = props.editEvent.description || '';
+        venueId.value = props.editEvent.venue?.id ?? null;
         gamePlan.value = props.editEvent.gamePlan || null;
       } else {
         // Create mode: reset with defaults
@@ -88,6 +93,7 @@ watch(
         type.value = 'MATCH';
         title.value = '';
         description.value = '';
+        venueId.value = props.teamVenueId ?? null;
         gamePlan.value = null;
       }
     }
@@ -100,6 +106,26 @@ const modalTitle = computed(() => {
     return getEventTypeTitle(props.editEvent.type);
   }
   return props.editEvent ? 'Modifier l\'événement' : 'Créer un événement';
+});
+
+// Only a match is played somewhere
+const showVenue = computed(() => type.value === 'MATCH');
+
+// An event turned into a match starts from the team's venue, like a new match does
+watch(type, (newType) => {
+  if (newType === 'MATCH' && venueId.value === null) {
+    venueId.value = props.teamVenueId ?? null;
+  }
+});
+
+function formatVenue(venue: Pick<Venue, 'name' | 'city'>): string {
+  return `${venue.name} - ${venue.city}`;
+}
+
+// Venue of the event being viewed, for the read-only display
+const eventVenueLabel = computed(() => {
+  const venue = props.editEvent?.venue;
+  return venue ? formatVenue(venue) : null;
 });
 
 // Format date for display (DD/MM/YYYY)
@@ -136,6 +162,7 @@ function handleSubmit() {
     type: type.value,
     title: title.value.trim(),
     description: description.value.trim() || undefined,
+    venueId: showVenue.value ? venueId.value : null,
   };
 
   emit('submit', eventData);
@@ -213,6 +240,10 @@ const modalSize = computed(() => {
         <div class="event-view-row">
           <span class="event-view-label">🕐 Horaire</span>
           <span class="event-view-value">{{ startTime }} - {{ endTime }}</span>
+        </div>
+        <div v-if="showVenue" class="event-view-row">
+          <span class="event-view-label">📍 Salle</span>
+          <span class="event-view-value">{{ eventVenueLabel ?? 'Non définie' }}</span>
         </div>
       </div>
 
@@ -299,6 +330,17 @@ const modalSize = computed(() => {
           placeholder="Ex: Match vs TeamX"
           required
         />
+      </div>
+
+      <!-- Venue (only for MATCH type) -->
+      <div v-if="showVenue" class="form-group">
+        <label class="form-label" for="event-venue">📍 Salle</label>
+        <select id="event-venue" v-model="venueId" class="form-input form-select">
+          <option :value="null">Non définie</option>
+          <option v-for="venue in venues" :key="venue.id" :value="venue.id">
+            {{ formatVenue(venue) }}
+          </option>
+        </select>
       </div>
 
       <!-- Description -->

@@ -99,7 +99,7 @@ router.get('/events', authMiddleware, async (req: AuthRequest, res: Response) =>
 
 // POST /api/calendar/events
 router.post('/events', authMiddleware, requirePermission('calendar', 'canCreateEvents'), async (req: AuthRequest, res: Response) => {
-  const { date, startTime, endTime, type, title, description } = req.body as CreateEventRequest;
+  const { date, startTime, endTime, type, title, description, venueId } = req.body as CreateEventRequest;
   const createdByAccountId = req.account!.userId;
   const teamId = req.account?.teamId;
 
@@ -131,6 +131,12 @@ router.post('/events', authMiddleware, requirePermission('calendar', 'canCreateE
   }
 
   try {
+    const venue = await calendarService.resolveVenueForCreate({ type, venueId, teamId });
+    if ('error' in venue) {
+      res.status(400).json({ errors: [venue.error] });
+      return;
+    }
+
     const event = await calendarService.createEvent({
       date,
       startTime,
@@ -138,6 +144,7 @@ router.post('/events', authMiddleware, requirePermission('calendar', 'canCreateE
       type,
       title,
       description,
+      venueId: venue.venueId,
       teamId,
       createdByUserId: createdByAccountId,
     });
@@ -178,7 +185,7 @@ router.delete('/events/:id', authMiddleware, requirePermission('calendar', 'canD
 // PUT /api/calendar/events/:id
 router.put('/events/:id', authMiddleware, requirePermission('calendar', 'canEditEvents'), async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
-  const { date, startTime, endTime, type, title, description } = req.body as CreateEventRequest;
+  const { date, startTime, endTime, type, title, description, venueId } = req.body as CreateEventRequest;
   const teamId = req.account?.teamId;
 
   // Validation
@@ -212,6 +219,15 @@ router.put('/events/:id', authMiddleware, requirePermission('calendar', 'canEdit
       return;
     }
 
+    const venue = await calendarService.resolveVenueForUpdate({
+      type: type ?? result.event.type,
+      venueId,
+    });
+    if ('error' in venue) {
+      res.status(400).json({ errors: [venue.error] });
+      return;
+    }
+
     const event = await calendarService.updateEvent(id, {
       date,
       startTime,
@@ -219,6 +235,7 @@ router.put('/events/:id', authMiddleware, requirePermission('calendar', 'canEdit
       type,
       title,
       description,
+      venueId: venue.venueId,
     });
 
     res.json(event);

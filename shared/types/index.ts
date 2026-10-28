@@ -33,6 +33,7 @@ export type {
   EventType,
   Availability,
   CalendarEvent,
+  EventVenue,
   PlayerAvailability,
   DayData,
   MonthData,

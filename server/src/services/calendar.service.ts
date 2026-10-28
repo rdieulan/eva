@@ -7,9 +7,10 @@ import type {
   AvailabilityStatus,
   EventType,
 } from '@shared/types';
+import { ERROR } from '@shared/constants';
 import { isSubscriptionRenewalDay } from '@shared/utils';
 import { formatDateStr, parseMonthRange } from './helpers/date.helper';
-import { formatEventForFrontend } from './helpers/calendar.helper';
+import { EVENT_VENUE_INCLUDE, formatEventForFrontend } from './helpers/calendar.helper';
 
 // Re-export validation helpers for routes
 export {
@@ -60,6 +61,7 @@ export async function getMonthAvailability(
       date: { gte: startDate, lte: endDate },
       teamId,
     },
+    include: EVENT_VENUE_INCLUDE,
     orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
   });
 
@@ -200,10 +202,62 @@ export async function getMonthEvents(month: string, teamId: string) {
       date: { gte: startDate, lte: endDate },
       teamId,
     },
+    include: EVENT_VENUE_INCLUDE,
     orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
   });
 
   return events.map(formatEventForFrontend);
+}
+
+// Resolved venue to write, or the error to answer with
+export type VenueResolution = { venueId?: string | null } | { error: string };
+
+async function resolveKnownVenue(venueId: string | null): Promise<VenueResolution> {
+  if (venueId === null) return { venueId: null };
+
+  const venue = await prisma.venue.findUnique({ where: { id: venueId }, select: { id: true } });
+  return venue ? { venueId } : { error: ERROR.venueNotFound };
+}
+
+/**
+ * Venue of an event being created: only a match has one, and a match created
+ * without an explicit venue is played in the venue its team is affiliated with.
+ */
+export async function resolveVenueForCreate(input: {
+  type: EventType;
+  venueId?: string | null;
+  teamId: string;
+}): Promise<VenueResolution> {
+  if (input.type !== 'MATCH') {
+    return input.venueId ? { error: ERROR.matchOnlyVenue } : { venueId: null };
+  }
+
+  if (input.venueId === undefined) {
+    const team = await prisma.team.findUnique({
+      where: { id: input.teamId },
+      select: { venueId: true },
+    });
+    return { venueId: team?.venueId ?? null };
+  }
+
+  return resolveKnownVenue(input.venueId);
+}
+
+/**
+ * Venue of an event being updated, given the type it ends up with: leaving the
+ * venue out keeps the current one, and an event that stops being a match loses it.
+ */
+export async function resolveVenueForUpdate(input: {
+  type: EventType;
+  venueId?: string | null;
+}): Promise<VenueResolution> {
+  if (input.type !== 'MATCH') {
+    return input.venueId ? { error: ERROR.matchOnlyVenue } : { venueId: null };
+  }
+
+  if (input.venueId === undefined) return {};
+
+  return resolveKnownVenue(input.venueId);
 }
 
 export interface CreateEventData {
@@ -213,6 +267,7 @@ export interface CreateEventData {
   type: EventType;
   title: string;
   description?: string;
+  venueId?: string | null;
   teamId: string;
   createdByUserId: string;
 }
@@ -239,9 +294,11 @@ export async function createEvent(data: CreateEventData) {
       type: data.type,
       title: data.title.trim(),
       description: data.description?.trim() || null,
+      venueId: data.venueId ?? null,
       createdById: user.player.id,
       teamId: data.teamId,
     },
+    include: EVENT_VENUE_INCLUDE,
   });
 
   return formatEventForFrontend(event);
@@ -253,7 +310,7 @@ export async function createEvent(data: CreateEventData) {
 export async function getEventWithTeamCheck(eventId: string, teamId?: string): Promise<
   | { notFound: true }
   | { accessDenied: true }
-  | { event: { id: string; type: string; teamId: string | null } }
+  | { event: { id: string; type: EventType; teamId: string | null } }
 > {
   const event = await prisma.calendarEvent.findUnique({ where: { id: eventId } });
 
@@ -282,6 +339,7 @@ export interface UpdateEventData {
   type?: EventType;
   title?: string;
   description?: string;
+  venueId?: string | null;
 }
 
 /**
@@ -297,7 +355,9 @@ export async function updateEvent(eventId: string, data: UpdateEventData) {
       ...(data.type && { type: data.type }),
       ...(data.title && { title: data.title.trim() }),
       ...(data.description !== undefined && { description: data.description?.trim() || null }),
+      ...(data.venueId !== undefined && { venueId: data.venueId }),
     },
+    include: EVENT_VENUE_INCLUDE,
   });
 
   return formatEventForFrontend(event);
@@ -310,6 +370,7 @@ export async function updateEventGamePlan(eventId: string, gamePlan: unknown) {
   const event = await prisma.calendarEvent.update({
     where: { id: eventId },
     data: { gamePlan: gamePlan === null || gamePlan === undefined ? undefined : gamePlan as object },
+    include: EVENT_VENUE_INCLUDE,
   });
 
   return formatEventForFrontend(event);

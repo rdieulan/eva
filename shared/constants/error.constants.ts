@@ -167,6 +167,7 @@ export const ERROR = {
   eventTypeInvalid: `Type d'événement invalide (valeurs acceptées : ${EVENT_TYPES.join(', ')})`,
   statusInvalid: 'Status invalide',
   matchOnlyGamePlan: 'Seuls les MATCH peuvent avoir un plan de jeu',
+  matchOnlyVenue: 'Seuls les matchs peuvent avoir une salle',
 
   // Planner / Maps
   mapsLoadFailed: 'Erreur lors du chargement des cartes',

@@ -206,6 +206,38 @@ describe('Admin API', () => {
       expect(refreshedTeam!.venueId).toBeNull();
     });
 
+    it('keeps the matches played there, without a venue', async () => {
+      const { token } = await createAuthenticatedAdmin();
+      const venue = await createTestVenue();
+
+      const player = await prisma.player.create({ data: {} });
+      const team = await prisma.team.create({
+        data: { name: 'Team X', leaderId: player.id, venueId: venue.id },
+      });
+      const match = await prisma.calendarEvent.create({
+        data: {
+          date: new Date('2026-12-15T00:00:00.000Z'),
+          startTime: '20:00',
+          endTime: '22:00',
+          type: 'MATCH',
+          title: 'Match vs TeamY',
+          teamId: team.id,
+          venueId: venue.id,
+          createdById: player.id,
+        },
+      });
+
+      const res = await request(app)
+        .delete(`/api/admin/venues/${venue.id}`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+
+      const refreshedMatch = await prisma.calendarEvent.findUnique({ where: { id: match.id } });
+      expect(refreshedMatch).not.toBeNull();
+      expect(refreshedMatch!.venueId).toBeNull();
+    });
+
     it('returns 404 when the venue does not exist', async () => {
       const { token } = await createAuthenticatedAdmin();
 

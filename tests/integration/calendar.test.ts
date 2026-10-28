@@ -20,6 +20,23 @@ const getFutureDate = () => {
   return date.toISOString().split('T')[0];
 };
 
+// Create a venue, and optionally affiliate a team with it
+async function createVenue(overrides: { name?: string; city?: string; teamId?: string } = {}) {
+  const venue = await prisma.venue.create({
+    data: {
+      name: overrides.name ?? `Venue ${Date.now()}`,
+      city: overrides.city ?? 'Lyon',
+      address: '12 rue des Lasers',
+    },
+  });
+
+  if (overrides.teamId) {
+    await prisma.team.update({ where: { id: overrides.teamId }, data: { venueId: venue.id } });
+  }
+
+  return venue;
+}
+
 describe('Calendar API', () => {
   // ============================================
   // GET /api/calendar/availability
@@ -650,6 +667,230 @@ describe('Calendar API', () => {
       // Verify NOT updated
       const event = await prisma.calendarEvent.findUnique({ where: { id: eventId } });
       expect(event!.title).toBe('Team1 Event');
+    });
+  });
+
+  // ============================================
+  // Match venue
+  // ============================================
+  describe('Match venue', () => {
+    it('should play a new match in the team venue by default', async () => {
+      const { token, team } = await createUserWithTeam();
+      const venue = await createVenue({ name: 'VR Arena', city: 'Lyon', teamId: team.id });
+
+      const res = await request(app)
+        .post('/api/calendar/events')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          date: getFutureDate(),
+          startTime: '20:00',
+          endTime: '22:00',
+          type: 'MATCH',
+          title: 'Match vs TeamX',
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.venue).toEqual({ id: venue.id, name: 'VR Arena', city: 'Lyon' });
+    });
+
+    it('should play the match in the chosen venue, team venue or not', async () => {
+      const { token, team } = await createUserWithTeam();
+      await createVenue({ name: 'Home', teamId: team.id });
+      const away = await createVenue({ name: 'Away', city: 'Paris' });
+
+      const res = await request(app)
+        .post('/api/calendar/events')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          date: getFutureDate(),
+          startTime: '20:00',
+          endTime: '22:00',
+          type: 'MATCH',
+          title: 'Away game',
+          venueId: away.id,
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.venue).toEqual({ id: away.id, name: 'Away', city: 'Paris' });
+    });
+
+    it('should accept a match with no venue even when the team has one', async () => {
+      const { token, team } = await createUserWithTeam();
+      await createVenue({ teamId: team.id });
+
+      const res = await request(app)
+        .post('/api/calendar/events')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          date: getFutureDate(),
+          startTime: '20:00',
+          endTime: '22:00',
+          type: 'MATCH',
+          title: 'Venue to be decided',
+          venueId: null,
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.venue).toBeUndefined();
+    });
+
+    it('should leave a match without venue when the team has none', async () => {
+      const { token } = await createUserWithTeam();
+
+      const res = await request(app)
+        .post('/api/calendar/events')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          date: getFutureDate(),
+          startTime: '20:00',
+          endTime: '22:00',
+          type: 'MATCH',
+          title: 'No affiliation',
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.venue).toBeUndefined();
+    });
+
+    it('should reject an unknown venue without creating the event', async () => {
+      const { token } = await createUserWithTeam();
+
+      const res = await expectNoRecordCreated(
+        () => prisma.calendarEvent.count(),
+        () => request(app)
+          .post('/api/calendar/events')
+          .set('Authorization', `Bearer ${token}`)
+          .send({
+            date: getFutureDate(),
+            startTime: '20:00',
+            endTime: '22:00',
+            type: 'MATCH',
+            title: 'Nowhere',
+            venueId: 'non-existent',
+          }),
+      );
+
+      expect(res.status).toBe(400);
+      expect(res.body.errors).toContain(ERROR.venueNotFound);
+    });
+
+    it.each(['EVENT', 'DISCORD'])('should reject a venue on a %s', async (type) => {
+      const { token, team } = await createUserWithTeam();
+      const venue = await createVenue({ teamId: team.id });
+
+      const res = await request(app)
+        .post('/api/calendar/events')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          date: getFutureDate(),
+          startTime: '20:00',
+          endTime: '22:00',
+          type,
+          title: 'Not a match',
+          venueId: venue.id,
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.errors).toContain(ERROR.matchOnlyVenue);
+    });
+
+    it('should not give the team venue to a non-match', async () => {
+      const { token, team } = await createUserWithTeam();
+      await createVenue({ teamId: team.id });
+
+      const res = await request(app)
+        .post('/api/calendar/events')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          date: getFutureDate(),
+          startTime: '21:00',
+          endTime: '22:00',
+          type: 'DISCORD',
+          title: 'Strat session',
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.venue).toBeUndefined();
+    });
+
+    it('should move a match to another venue and keep it when left out', async () => {
+      const { token, team } = await createUserWithTeam();
+      await createVenue({ name: 'Home', teamId: team.id });
+      const away = await createVenue({ name: 'Away', city: 'Paris' });
+
+      const created = await request(app)
+        .post('/api/calendar/events')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          date: getFutureDate(),
+          startTime: '20:00',
+          endTime: '22:00',
+          type: 'MATCH',
+          title: 'Match vs TeamX',
+        });
+
+      const moved = await request(app)
+        .put(`/api/calendar/events/${created.body.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ venueId: away.id });
+
+      expect(moved.status).toBe(200);
+      expect(moved.body.venue.id).toBe(away.id);
+
+      // Updating something else leaves the venue alone
+      const renamed = await request(app)
+        .put(`/api/calendar/events/${created.body.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ title: 'Match vs TeamY' });
+
+      expect(renamed.body.venue.id).toBe(away.id);
+    });
+
+    it('should drop the venue when a match stops being a match', async () => {
+      const { token, team } = await createUserWithTeam();
+      await createVenue({ teamId: team.id });
+
+      const created = await request(app)
+        .post('/api/calendar/events')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          date: getFutureDate(),
+          startTime: '20:00',
+          endTime: '22:00',
+          type: 'MATCH',
+          title: 'Match vs TeamX',
+        });
+      expect(created.body.venue).toBeDefined();
+
+      const res = await request(app)
+        .put(`/api/calendar/events/${created.body.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ type: 'DISCORD' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.venue).toBeUndefined();
+
+      const event = await prisma.calendarEvent.findUnique({ where: { id: created.body.id } });
+      expect(event!.venueId).toBeNull();
+    });
+
+    it('should return the venue with the month data', async () => {
+      const { token, team } = await createUserWithTeam();
+      const venue = await createVenue({ name: 'VR Arena', city: 'Lyon', teamId: team.id });
+      const date = getFutureDate();
+
+      await request(app)
+        .post('/api/calendar/events')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ date, startTime: '20:00', endTime: '22:00', type: 'MATCH', title: 'Match vs TeamX' })
+        .expect(201);
+
+      const month = await request(app)
+        .get(`/api/calendar/availability?month=${date.substring(0, 7)}`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(month.body.days[date].events[0].venue)
+        .toEqual({ id: venue.id, name: 'VR Arena', city: 'Lyon' });
     });
   });
 
