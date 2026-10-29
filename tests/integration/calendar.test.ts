@@ -373,7 +373,7 @@ describe('Calendar API', () => {
       expect(event!.teamId).toBe(team.id);
     });
 
-    it('should create a Discord strategy session', async () => {
+    it('should create a voice meeting on the platform it is held on', async () => {
       const { token, team } = await createUserWithTeam();
       const date = getFutureDate();
 
@@ -384,16 +384,93 @@ describe('Calendar API', () => {
           date,
           startTime: '21:00',
           endTime: '22:30',
+          type: 'VOICE_MEETING',
+          title: 'Strat Polaris',
+          voiceMedium: 'TEAMSPEAK',
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.type).toBe('VOICE_MEETING');
+      expect(res.body.voiceMedium).toBe('TEAMSPEAK');
+
+      const event = await prisma.calendarEvent.findUnique({ where: { id: res.body.id } });
+      expect(event!.type).toBe('VOICE_MEETING');
+      expect(event!.voiceMedium).toBe('TEAMSPEAK');
+      expect(event!.teamId).toBe(team.id);
+    });
+
+    it('should reject a voice meeting with no platform', async () => {
+      const { token } = await createUserWithTeam();
+
+      const res = await request(app)
+        .post('/api/calendar/events')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          date: getFutureDate(),
+          startTime: '21:00',
+          endTime: '22:30',
+          type: 'VOICE_MEETING',
+          title: 'Strat Polaris',
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.errors).toContain(ERROR.voiceMediumRequired);
+    });
+
+    it('should reject a platform it does not know', async () => {
+      const { token } = await createUserWithTeam();
+
+      const res = await request(app)
+        .post('/api/calendar/events')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          date: getFutureDate(),
+          startTime: '21:00',
+          endTime: '22:30',
+          type: 'VOICE_MEETING',
+          title: 'Strat Polaris',
+          voiceMedium: 'SKYPE',
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.errors).toContain(ERROR.voiceMediumInvalid);
+    });
+
+    it('should reject a platform on an event that is not held on one', async () => {
+      const { token } = await createUserWithTeam();
+
+      const res = await request(app)
+        .post('/api/calendar/events')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          date: getFutureDate(),
+          startTime: '21:00',
+          endTime: '22:30',
+          type: 'EVENT',
+          title: 'Tournoi',
+          voiceMedium: 'DISCORD',
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.errors).toContain(ERROR.voiceMeetingOnlyMedium);
+    });
+
+    it('should reject the event type a voice meeting used to have', async () => {
+      const { token } = await createUserWithTeam();
+
+      const res = await request(app)
+        .post('/api/calendar/events')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          date: getFutureDate(),
+          startTime: '21:00',
+          endTime: '22:30',
           type: 'DISCORD',
           title: 'Strat Polaris',
         });
 
-      expect(res.status).toBe(201);
-      expect(res.body.type).toBe('DISCORD');
-
-      const event = await prisma.calendarEvent.findUnique({ where: { id: res.body.id } });
-      expect(event!.type).toBe('DISCORD');
-      expect(event!.teamId).toBe(team.id);
+      expect(res.status).toBe(400);
+      expect(res.body.errors).toContain(ERROR.eventTypeInvalid);
     });
 
     it('should reject without authentication', async () => {
@@ -894,7 +971,7 @@ describe('Calendar API', () => {
       expect(res.body.errors).toContain(ERROR.venueNotFound);
     });
 
-    it.each(['EVENT', 'DISCORD'])('should reject a venue on a %s', async (type) => {
+    it.each(['EVENT', 'VOICE_MEETING'])('should reject a venue on a %s', async (type) => {
       const { token, team } = await createUserWithTeam();
       const venue = await createVenue({ teamId: team.id });
 
@@ -925,8 +1002,9 @@ describe('Calendar API', () => {
           date: getFutureDate(),
           startTime: '21:00',
           endTime: '22:00',
-          type: 'DISCORD',
+          type: 'VOICE_MEETING',
           title: 'Strat session',
+          voiceMedium: 'DISCORD',
         });
 
       expect(res.status).toBe(201);
@@ -985,7 +1063,7 @@ describe('Calendar API', () => {
       const res = await request(app)
         .put(`/api/calendar/events/${created.body.id}`)
         .set('Authorization', `Bearer ${token}`)
-        .send({ type: 'DISCORD' });
+        .send({ type: 'VOICE_MEETING', voiceMedium: 'DISCORD' });
 
       expect(res.status).toBe(200);
       expect(res.body.venue).toBeUndefined();
@@ -1088,7 +1166,7 @@ describe('Calendar API', () => {
       const { token, team } = await createUserWithTeam();
       await createVenue({ teamId: team.id, arenaCount: 2 });
 
-      const res = await createMatch(token, { type: 'DISCORD', arenaNumber: 1 });
+      const res = await createMatch(token, { type: 'VOICE_MEETING', arenaNumber: 1 });
 
       expect(res.status).toBe(400);
       expect(res.body.errors).toContain(ERROR.arenaRequiresVenue);
@@ -1207,7 +1285,10 @@ describe('Calendar API', () => {
       expect(event!.gamePlan).not.toBeNull();
     });
 
-    it.each(['EVENT', 'DISCORD'])('should reject attaching gameplan to %s type', async (type) => {
+    it.each([
+      { type: 'EVENT' },
+      { type: 'VOICE_MEETING', voiceMedium: 'DISCORD' },
+    ])('should reject attaching gameplan to $type type', async (eventBody) => {
       const { token } = await createUserWithTeam();
       const date = getFutureDate();
 
@@ -1219,8 +1300,8 @@ describe('Calendar API', () => {
           date,
           startTime: '20:00',
           endTime: '22:00',
-          type,
           title: 'Not a Match',
+          ...eventBody,
         });
 
       const eventId = createRes.body.id;

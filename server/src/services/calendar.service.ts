@@ -6,6 +6,7 @@ import type {
   PlayerAvailability,
   AvailabilityStatus,
   EventType,
+  VoiceMedium,
 } from '@shared/types';
 import { ERROR } from '@shared/constants';
 import { isSubscriptionRenewalDay } from '@shared/utils';
@@ -19,8 +20,12 @@ export {
   isValidTime,
   isValidTimeRange,
   isValidEventType,
+  isValidVoiceMedium,
   isValidAvailabilityStatus,
 } from './helpers/validation.helper';
+
+// Resolving the platform of a voice meeting needs no database lookup
+export { resolveMediumForCreate, resolveMediumForUpdate } from './helpers/calendar.helper';
 
 // ============================================
 // Availability operations
@@ -323,6 +328,7 @@ export interface CreateEventData {
   description?: string;
   venueId?: string | null;
   arenaNumber?: number | null;
+  voiceMedium?: VoiceMedium | null;
   teamId: string;
   createdByUserId: string;
 }
@@ -351,6 +357,7 @@ export async function createEvent(data: CreateEventData) {
       description: data.description?.trim() || null,
       venueId: data.venueId ?? null,
       arenaNumber: data.arenaNumber ?? null,
+      voiceMedium: data.voiceMedium ?? null,
       createdById: user.player.id,
       teamId: data.teamId,
     },
@@ -367,7 +374,7 @@ export async function getEventWithTeamCheck(eventId: string, teamId?: string): P
   | { notFound: true }
   | { accessDenied: true }
   | { event: { id: string; type: EventType; teamId: string | null; venueId: string | null;
-      startTime: string; endTime: string } }
+      voiceMedium: VoiceMedium | null; startTime: string; endTime: string } }
 > {
   const event = await prisma.calendarEvent.findUnique({ where: { id: eventId } });
 
@@ -398,6 +405,7 @@ export interface UpdateEventData {
   description?: string;
   venueId?: string | null;
   arenaNumber?: number | null;
+  voiceMedium?: VoiceMedium | null;
 }
 
 /**
@@ -415,6 +423,7 @@ export async function updateEvent(eventId: string, data: UpdateEventData) {
       ...(data.description !== undefined && { description: data.description?.trim() || null }),
       ...(data.venueId !== undefined && { venueId: data.venueId }),
       ...(data.arenaNumber !== undefined && { arenaNumber: data.arenaNumber }),
+      ...(data.voiceMedium !== undefined && { voiceMedium: data.voiceMedium }),
     },
     include: EVENT_VENUE_INCLUDE,
   });

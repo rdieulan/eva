@@ -31,6 +31,7 @@ export {
 export type {
   AvailabilityStatus,
   EventType,
+  VoiceMedium,
   Availability,
   CalendarEvent,
   EventVenue,
@@ -40,7 +41,7 @@ export type {
   SetAvailabilityRequest,
   CreateEventRequest,
 } from './calendar.types';
-export { AVAILABILITY_STATUSES, EVENT_TYPES } from './calendar.types';
+export { AVAILABILITY_STATUSES, EVENT_TYPES, VOICE_MEDIUMS } from './calendar.types';
 
 export type {
   SubscriptionTier,

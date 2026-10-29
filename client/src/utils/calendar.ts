@@ -1,6 +1,6 @@
 // Calendar utility functions
 
-import type { EventType } from '@shared/types';
+import type { EventType, VoiceMedium } from '@shared/types';
 
 /**
  * Get the Monday of the week for a given date
@@ -26,8 +26,29 @@ export interface EventTypeDisplay {
 const EVENT_TYPE_DISPLAY: Record<EventType, EventTypeDisplay> = {
   MATCH: { label: 'Match', icon: '🎮' },
   EVENT: { label: 'Événement', icon: '📅' },
-  DISCORD: { label: 'Discord', icon: '🎧' },
+  VOICE_MEETING: { label: 'Réunion vocale', icon: '🎧' },
 };
+
+// Keyed by VoiceMedium: a new platform does not compile until it says how it is written.
+const VOICE_MEDIUM_LABELS: Record<VoiceMedium, string> = {
+  DISCORD: 'Discord',
+  TEAMSPEAK: 'TeamSpeak',
+  MUMBLE: 'Mumble',
+  WHATSAPP: 'WhatsApp',
+  MESSENGER: 'Messenger',
+  TELEGRAM: 'Telegram',
+  GOOGLE_MEET: 'Google Meet',
+  OTHER: 'Autre',
+};
+
+/**
+ * Get the name of the platform a voice meeting is held on
+ * @param medium - The platform
+ * @returns e.g. "Google Meet"
+ */
+export function getVoiceMediumLabel(medium: VoiceMedium): string {
+  return VOICE_MEDIUM_LABELS[medium];
+}
 
 /**
  * Get the icon and French label of an event type
@@ -54,7 +75,7 @@ export function getEventTypeTitle(type: EventType): string {
  * @returns The CSS modifier class, matching the keys of $event-type-colors
  */
 export function getEventTypeClass(type: EventType): string {
-  return `event-type--${type.toLowerCase()}`;
+  return `event-type--${type.toLowerCase().replace(/_/g, '-')}`;
 }
 
 /**

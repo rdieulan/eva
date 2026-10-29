@@ -7,8 +7,8 @@ import GamePlanViewer from '@/components/common/GamePlanViewer.vue';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import { useErrors } from '@/composables/useErrors';
 import { ERROR } from '@shared/constants';
-import { EVENT_TYPES } from '@shared/types';
-import { getEventTypeClass, getEventTypeDisplay, getEventTypeTitle } from '@/utils/calendar';
+import { EVENT_TYPES, VOICE_MEDIUMS } from '@shared/types';
+import { getEventTypeClass, getEventTypeDisplay, getEventTypeTitle, getVoiceMediumLabel } from '@/utils/calendar';
 import { formatVenueLabel } from '@/utils/venues';
 import type {
   EventType,
@@ -18,6 +18,7 @@ import type {
   MapConfig,
   Player,
   Venue,
+  VoiceMedium,
 } from '@shared/types';
 
 const props = defineProps<{
@@ -41,6 +42,10 @@ const emit = defineEmits<{
   'update-gameplan': [eventId: string, gamePlan: MatchGamePlan];
 }>();
 
+// Teams meet on Discord far more than on anything else, so that is where a
+// new voice meeting starts
+const DEFAULT_VOICE_MEDIUM: VoiceMedium = 'DISCORD';
+
 // Form state
 const date = ref('');
 const startTime = ref('20:00');
@@ -50,6 +55,7 @@ const title = ref('');
 const description = ref('');
 const venueId = ref<string | null>(null);
 const arenaNumber = ref<number | null>(null);
+const voiceMedium = ref<VoiceMedium>(DEFAULT_VOICE_MEDIUM);
 const gamePlan = ref<MatchGamePlan | null>(null);
 
 // UI state
@@ -87,6 +93,7 @@ watch(
         description.value = props.editEvent.description || '';
         venueId.value = props.editEvent.venue?.id ?? null;
         arenaNumber.value = props.editEvent.arenaNumber ?? null;
+        voiceMedium.value = props.editEvent.voiceMedium ?? DEFAULT_VOICE_MEDIUM;
         gamePlan.value = props.editEvent.gamePlan || null;
       } else {
         // Create mode: reset with defaults
@@ -98,6 +105,7 @@ watch(
         description.value = '';
         venueId.value = props.teamVenueId ?? null;
         arenaNumber.value = null;
+        voiceMedium.value = DEFAULT_VOICE_MEDIUM;
         gamePlan.value = null;
       }
     }
@@ -114,6 +122,9 @@ const modalTitle = computed(() => {
 
 // Only a match is played somewhere
 const showVenue = computed(() => type.value === 'MATCH');
+
+// Only a voice meeting is held on a platform
+const showMedium = computed(() => type.value === 'VOICE_MEETING');
 
 // An event turned into a match starts from the team's venue, like a new match does
 watch(type, (newType) => {
@@ -182,6 +193,7 @@ function handleSubmit() {
     description: description.value.trim(),
     venueId: showVenue.value ? venueId.value : null,
     arenaNumber: showVenue.value ? arenaNumber.value : null,
+    voiceMedium: showMedium.value ? voiceMedium.value : null,
   };
 
   emit('submit', eventData);
@@ -263,6 +275,10 @@ const modalSize = computed(() => {
         <div v-if="showVenue" class="event-view-row">
           <span class="event-view-label">📍 Salle</span>
           <span class="event-view-value">{{ eventVenueLabel ?? 'Non définie' }}</span>
+        </div>
+        <div v-if="showMedium" class="event-view-row">
+          <span class="event-view-label">🎙️ Plateforme</span>
+          <span class="event-view-value">{{ getVoiceMediumLabel(voiceMedium) }}</span>
         </div>
       </div>
 
@@ -369,6 +385,16 @@ const modalSize = computed(() => {
           <option :value="null">Non définie</option>
           <option v-for="number in arenaNumbers" :key="number" :value="number">
             Arène {{ number }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Platform (only for VOICE_MEETING type) -->
+      <div v-if="showMedium" class="form-group">
+        <label class="form-label" for="event-medium">🎙️ Plateforme</label>
+        <select id="event-medium" v-model="voiceMedium" class="form-input form-select">
+          <option v-for="medium in VOICE_MEDIUMS" :key="medium" :value="medium">
+            {{ getVoiceMediumLabel(medium) }}
           </option>
         </select>
       </div>

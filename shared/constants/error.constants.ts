@@ -6,7 +6,7 @@ import {
   NAME_MIN_LENGTH,
   TEAM_NAME_MIN_LENGTH,
 } from '@shared/constants/validation.constants';
-import { EVENT_TYPES } from '@shared/types/calendar.types';
+import { EVENT_TYPES, VOICE_MEDIUMS } from '@shared/types/calendar.types';
 import { SUBSCRIPTION_TIERS } from '@shared/types/subscription.types';
 
 // ============================================
@@ -171,6 +171,9 @@ export const ERROR = {
   arenaRequiresVenue: 'Le numéro d\'arène demande une salle',
   arenaNumberInvalid: 'Numéro d\'arène invalide pour cette salle',
   venueArenaCountInvalid: 'Le nombre d\'arènes doit être un entier supérieur ou égal à 1',
+  voiceMeetingOnlyMedium: 'Seules les réunions vocales ont une plateforme',
+  voiceMediumRequired: 'Une réunion vocale demande une plateforme',
+  voiceMediumInvalid: `Plateforme invalide (valeurs acceptées : ${VOICE_MEDIUMS.join(', ')})`,
 
   // Planner / Maps
   mapsLoadFailed: 'Erreur lors du chargement des cartes',

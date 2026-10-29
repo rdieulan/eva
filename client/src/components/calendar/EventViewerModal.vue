@@ -5,7 +5,13 @@ import GamePlanViewer from '@/components/common/GamePlanViewer.vue';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import { useErrors } from '@/composables/useErrors';
 import type { CalendarEvent } from '@shared/types';
-import { formatLongDate, getEventTypeClass, getEventTypeTitle, isPastDateStr } from '@/utils/calendar';
+import {
+  formatLongDate,
+  getEventTypeClass,
+  getEventTypeTitle,
+  getVoiceMediumLabel,
+  isPastDateStr,
+} from '@/utils/calendar';
 import { formatVenueLabel } from '@/utils/venues';
 
 const props = defineProps<{
@@ -74,6 +80,12 @@ const venueLabel = computed(() => {
 
   const arena = currentEvent.value.arenaNumber;
   return arena ? `${formatVenueLabel(venue)} — arène ${arena}` : formatVenueLabel(venue);
+});
+
+// Platform the meeting is held on, once the event is a voice meeting
+const mediumLabel = computed(() => {
+  const medium = currentEvent.value?.voiceMedium;
+  return medium ? getVoiceMediumLabel(medium) : null;
 });
 
 // Show modal when events are provided
@@ -150,6 +162,10 @@ function handleCreateEvent() {
           <div v-if="venueLabel" class="detail-row">
             <span class="detail-label">📍 Salle</span>
             <span class="detail-value">{{ venueLabel }}</span>
+          </div>
+          <div v-if="mediumLabel" class="detail-row">
+            <span class="detail-label">🎙️ Plateforme</span>
+            <span class="detail-value">{{ mediumLabel }}</span>
           </div>
         </div>
 

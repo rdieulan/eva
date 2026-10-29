@@ -53,7 +53,7 @@ describe('EventFormModal Component', () => {
     expect(wrapper.props('open')).toBe(false);
   });
 
-  it('should offer every event type, Discord included, and submit the chosen one', async () => {
+  it('should offer every event type, the voice meeting included, and submit the chosen one', async () => {
     const wrapper = mount(EventFormModal, {
       props: {
         open: false,
@@ -68,7 +68,8 @@ describe('EventFormModal Component', () => {
     await wrapper.setProps({ open: true });
 
     const typeButtons = wrapper.findAll('.type-btn');
-    expect(typeButtons.map(b => b.find('.type-btn-label').text())).toEqual(['Match', 'Événement', 'Discord']);
+    expect(typeButtons.map(b => b.find('.type-btn-label').text()))
+      .toEqual(['Match', 'Événement', 'Réunion vocale']);
 
     await typeButtons[2]!.trigger('click');
     expect(typeButtons[2]!.classes()).toContain('active');
@@ -78,7 +79,7 @@ describe('EventFormModal Component', () => {
 
     expect(wrapper.emitted('submit')?.[0]?.[0]).toMatchObject({
       date: '2026-11-03',
-      type: 'DISCORD',
+      type: 'VOICE_MEETING',
       title: 'Strat Polaris',
     });
   });
@@ -284,13 +285,13 @@ describe('EventFormModal Component - Match venue', () => {
     const wrapper = mountForm();
     await wrapper.setProps({ open: true });
 
-    await wrapper.findAll('.type-btn').find(b => b.text().includes('Discord'))!.trigger('click');
+    await wrapper.findAll('.type-btn').find(b => b.text().includes('Réunion vocale'))!.trigger('click');
     expect(wrapper.find('#event-venue').exists()).toBe(false);
 
     await wrapper.find('#event-title').setValue('Strat Polaris');
     await wrapper.findAll('button').find(b => b.text() === 'Créer')!.trigger('click');
 
-    expect(wrapper.emitted('submit')?.[0]?.[0]).toMatchObject({ type: 'DISCORD', venueId: null });
+    expect(wrapper.emitted('submit')?.[0]?.[0]).toMatchObject({ type: 'VOICE_MEETING', venueId: null });
   });
 
   it('should keep the venue the match is already played in when editing', async () => {
@@ -343,8 +344,9 @@ describe('EventFormModal Component - Match venue', () => {
         date: '2026-11-03',
         startTime: '20:00',
         endTime: '22:00',
-        type: 'DISCORD' as const,
+        type: 'VOICE_MEETING' as const,
         title: 'Strat Polaris',
+        voiceMedium: 'DISCORD' as const,
         createdById: 'player-1',
         createdAt: '2026-10-01T00:00:00Z',
       },
@@ -443,6 +445,115 @@ describe('EventFormModal Component - Editing an existing event', () => {
       description: 'On se retrouve 30 min avant',
       venueId: 'venue-1',
       arenaNumber: 2,
+      voiceMedium: null,
     });
+  });
+});
+
+describe('EventFormModal Component - Voice meeting platform', () => {
+  function mountForm(props: Record<string, unknown> = {}) {
+    return mount(EventFormModal, {
+      props: {
+        open: false,
+        canCreate: true,
+        canEdit: true,
+        selectedDate: '2026-11-03',
+        maps: [],
+        players: [],
+        ...props,
+      },
+      global: { stubs: { Teleport: true } },
+    });
+  }
+
+  async function pickVoiceMeeting(wrapper: ReturnType<typeof mountForm>) {
+    await wrapper.findAll('.type-btn').find(b => b.text().includes('Réunion vocale'))!.trigger('click');
+  }
+
+  it('should offer every platform and start on Discord', async () => {
+    const wrapper = mountForm();
+    await wrapper.setProps({ open: true });
+    expect(wrapper.find('#event-medium').exists()).toBe(false);
+
+    await pickVoiceMeeting(wrapper);
+
+    const select = wrapper.find('#event-medium');
+    expect((select.element as HTMLSelectElement).value).toBe('DISCORD');
+    expect(select.findAll('option').map(o => o.text())).toEqual([
+      'Discord', 'TeamSpeak', 'Mumble', 'WhatsApp', 'Messenger', 'Telegram', 'Google Meet', 'Autre',
+    ]);
+  });
+
+  it('should submit the platform the meeting is held on', async () => {
+    const wrapper = mountForm();
+    await wrapper.setProps({ open: true });
+    await pickVoiceMeeting(wrapper);
+
+    await wrapper.find('#event-medium').setValue('TEAMSPEAK');
+    await wrapper.find('#event-title').setValue('Débrief');
+    await wrapper.findAll('button').find(b => b.text() === 'Créer')!.trigger('click');
+
+    expect(wrapper.emitted('submit')?.[0]?.[0])
+      .toMatchObject({ type: 'VOICE_MEETING', voiceMedium: 'TEAMSPEAK' });
+  });
+
+  it('should send no platform on a type that is not held on one', async () => {
+    const wrapper = mountForm();
+    await wrapper.setProps({ open: true });
+    await pickVoiceMeeting(wrapper);
+    await wrapper.find('#event-medium').setValue('MUMBLE');
+
+    await wrapper.findAll('.type-btn').find(b => b.text().includes('Match'))!.trigger('click');
+    expect(wrapper.find('#event-medium').exists()).toBe(false);
+
+    await wrapper.find('#event-title').setValue('Match vs TeamX');
+    await wrapper.findAll('button').find(b => b.text() === 'Créer')!.trigger('click');
+
+    expect(wrapper.emitted('submit')?.[0]?.[0]).toMatchObject({ type: 'MATCH', voiceMedium: null });
+  });
+
+  it('should open on the platform the meeting is already held on', async () => {
+    const wrapper = mountForm({
+      editEvent: {
+        id: 'event-1',
+        date: '2026-11-03',
+        startTime: '20:00',
+        endTime: '22:00',
+        type: 'VOICE_MEETING' as const,
+        title: 'Strat Polaris',
+        voiceMedium: 'GOOGLE_MEET' as const,
+        createdById: 'player-1',
+        createdAt: '2026-10-01T00:00:00Z',
+      },
+    });
+    await wrapper.setProps({ open: true });
+
+    expect((wrapper.find('#event-medium').element as HTMLSelectElement).value).toBe('GOOGLE_MEET');
+
+    await wrapper.findAll('button').find(b => b.text() === 'Enregistrer')!.trigger('click');
+    expect(wrapper.emitted('submit')?.[0]?.[0]).toMatchObject({ voiceMedium: 'GOOGLE_MEET' });
+  });
+
+  it('should show the platform to someone who can only read the meeting', async () => {
+    const wrapper = mountForm({
+      canCreate: false,
+      canEdit: false,
+      editEvent: {
+        id: 'event-1',
+        date: '2026-11-03',
+        startTime: '20:00',
+        endTime: '22:00',
+        type: 'VOICE_MEETING' as const,
+        title: 'Strat Polaris',
+        voiceMedium: 'WHATSAPP' as const,
+        createdById: 'player-1',
+        createdAt: '2026-10-01T00:00:00Z',
+      },
+    });
+    await wrapper.setProps({ open: true });
+
+    const rows = wrapper.findAll('.event-view-row').map(r => r.text().replace(/\s+/g, ' '));
+    expect(rows.some(row => row.includes('Plateforme') && row.includes('WhatsApp'))).toBe(true);
+    expect(rows.some(row => row.includes('Salle'))).toBe(false);
   });
 });

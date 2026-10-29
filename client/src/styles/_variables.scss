@@ -113,9 +113,9 @@ $color-edit: #fbbf24;
 // Interactive handles (resize, drag, manipulation)
 $color-handle: #4ecdc4;
 
-// Discord calendar events: the brand blurple (#5865f2) lightened so badge
-// text stays legible on the dark background
-$color-discord: #8891f2;
+// Voice meeting events: a blue-violet, kept distinct from $color-voice so a
+// meeting is not read as a voice-only availability
+$color-voice-meeting: #8891f2;
 
 // Subscription renewal days in the calendar
 $color-renewal: #f87171;
@@ -134,12 +134,12 @@ $availability-styles: (
   unavailable: (color: $color-danger, avatar-bg: -36%, avatar-border: 34%),
 );
 
-// Calendar event types — keys are the lowercase EventType values, used as
+// Calendar event types — keys are the kebab-case EventType values, used as
 // `.event-type--<key>` modifiers (see getEventTypeClass in utils/calendar.ts)
 $event-type-colors: (
   match: $color-warning,
   event: $color-info,
-  discord: $color-discord,
+  voice-meeting: $color-voice-meeting,
 );
 
 // ===========================================
