@@ -1,7 +1,7 @@
 // Validation helper functions
 
-import type { EventType, AvailabilityStatus, SubscriptionTier, PlayerSubscription } from '@shared/types';
-import { AVAILABILITY_STATUSES, EVENT_TYPES, SUBSCRIPTION_TIERS } from '@shared/types';
+import type { EventType, AvailabilityStatus, SubscriptionTier, PlayerSubscription, VoiceMedium } from '@shared/types';
+import { AVAILABILITY_STATUSES, EVENT_TYPES, SUBSCRIPTION_TIERS, VOICE_MEDIUMS } from '@shared/types';
 import { ERROR } from '@shared/constants';
 
 /**
@@ -33,6 +33,13 @@ export function isValidTime(time: unknown): time is string {
  */
 export function isValidEventType(type: unknown): type is EventType {
   return typeof type === 'string' && (EVENT_TYPES as readonly string[]).includes(type);
+}
+
+/**
+ * Validate the platform a voice meeting is held on
+ */
+export function isValidVoiceMedium(medium: unknown): medium is VoiceMedium {
+  return typeof medium === 'string' && (VOICE_MEDIUMS as readonly string[]).includes(medium);
 }
 
 /**

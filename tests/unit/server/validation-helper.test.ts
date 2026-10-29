@@ -6,6 +6,7 @@ import {
   isValidDate,
   isValidTime,
   isValidEventType,
+  isValidVoiceMedium,
   isValidAvailabilityStatus,
   isValidSubscriptionTier,
   parseSubscriptionInput,
@@ -91,17 +92,38 @@ describe('isValidEventType', () => {
   it('should accept valid event types', () => {
     expect(isValidEventType('MATCH')).toBe(true);
     expect(isValidEventType('EVENT')).toBe(true);
-    expect(isValidEventType('DISCORD')).toBe(true);
+    expect(isValidEventType('VOICE_MEETING')).toBe(true);
   });
 
   it('should reject invalid values', () => {
     expect(isValidEventType('match')).toBe(false);
     expect(isValidEventType('Match')).toBe(false);
-    expect(isValidEventType('discord')).toBe(false);
+    expect(isValidEventType('voice_meeting')).toBe(false);
     expect(isValidEventType('GAME')).toBe(false);
     expect(isValidEventType('')).toBe(false);
     expect(isValidEventType(null)).toBe(false);
     expect(isValidEventType(undefined)).toBe(false);
+  });
+
+  it('should reject the type a voice meeting used to have', () => {
+    expect(isValidEventType('DISCORD')).toBe(false);
+  });
+});
+
+describe('isValidVoiceMedium', () => {
+  it('should accept every platform a meeting can be held on', () => {
+    expect(isValidVoiceMedium('DISCORD')).toBe(true);
+    expect(isValidVoiceMedium('TEAMSPEAK')).toBe(true);
+    expect(isValidVoiceMedium('GOOGLE_MEET')).toBe(true);
+    expect(isValidVoiceMedium('OTHER')).toBe(true);
+  });
+
+  it('should reject invalid values', () => {
+    expect(isValidVoiceMedium('discord')).toBe(false);
+    expect(isValidVoiceMedium('SKYPE')).toBe(false);
+    expect(isValidVoiceMedium('')).toBe(false);
+    expect(isValidVoiceMedium(null)).toBe(false);
+    expect(isValidVoiceMedium(undefined)).toBe(false);
   });
 });
 

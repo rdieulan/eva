@@ -213,8 +213,8 @@ model Availability {
 }
 
 model CalendarEvent {
-  id          String    @id @default(cuid())
-  date        DateTime  @db.Date
+  id          String       @id @default(cuid())
+  date        DateTime     @db.Date
   startTime   String
   endTime     String
   type        EventType
@@ -223,13 +223,14 @@ model CalendarEvent {
   teamId      String?
   venueId     String? // Where a MATCH is played; other event types have none
   arenaNumber Int? // Which arena of that venue, when the team knows it
+  voiceMedium VoiceMedium? // Where a VOICE_MEETING is held; other event types have none
   createdById String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
   gamePlan    Json?
-  team        Team?     @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  venue       Venue?    @relation(fields: [venueId], references: [id], onDelete: SetNull)
-  createdBy   Player    @relation(fields: [createdById], references: [id])
+  team        Team?        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  venue       Venue?       @relation(fields: [venueId], references: [id], onDelete: SetNull)
+  createdBy   Player       @relation(fields: [createdById], references: [id])
 
   @@index([date])
   @@index([teamId])
@@ -287,7 +288,18 @@ enum AvailabilityStatus {
 enum EventType {
   MATCH
   EVENT
+  VOICE_MEETING
+}
+
+enum VoiceMedium {
   DISCORD
+  TEAMSPEAK
+  MUMBLE
+  WHATSAPP
+  MESSENGER
+  TELEGRAM
+  GOOGLE_MEET
+  OTHER
 }
 
 enum SubscriptionTier {

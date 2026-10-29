@@ -16,9 +16,27 @@ export type AvailabilityStatus = typeof AVAILABILITY_STATUSES[number];
  * Calendar event types — single source of truth for validation and the
  * creation form. Mirrors the EventType enum in prisma/schema.prisma.
  */
-export const EVENT_TYPES = ['MATCH', 'EVENT', 'DISCORD'] as const;
+export const EVENT_TYPES = ['MATCH', 'EVENT', 'VOICE_MEETING'] as const;
 
 export type EventType = typeof EVENT_TYPES[number];
+
+/**
+ * Platforms a voice meeting can be held on, most used first. Mirrors the
+ * VoiceMedium enum in prisma/schema.prisma. OTHER covers the rest: the title
+ * or the description of the event says which one.
+ */
+export const VOICE_MEDIUMS = [
+  'DISCORD',
+  'TEAMSPEAK',
+  'MUMBLE',
+  'WHATSAPP',
+  'MESSENGER',
+  'TELEGRAM',
+  'GOOGLE_MEET',
+  'OTHER',
+] as const;
+
+export type VoiceMedium = typeof VOICE_MEDIUMS[number];
 
 
 // Availability record for a player on a specific date
@@ -48,6 +66,7 @@ export interface CalendarEvent {
   gamePlan?: MatchGamePlan; // Plan de jeu pour les MATCH
   venue?: EventVenue; // Salle pour les MATCH
   arenaNumber?: number; // Arène de cette salle, quand elle est connue
+  voiceMedium?: VoiceMedium; // Plateforme pour les VOICE_MEETING
   createdById: string;
   createdAt: string;
 }
@@ -93,5 +112,7 @@ export interface CreateEventRequest {
   venueId?: string | null;
   // Arena of that venue, between 1 and its arenaCount; null means not decided.
   arenaNumber?: number | null;
+  // Platform of a VOICE_MEETING. Required on creation, kept as is when left out on update.
+  voiceMedium?: VoiceMedium | null;
 }
 
