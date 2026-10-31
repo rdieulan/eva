@@ -1,8 +1,9 @@
 // Players API client
 
-import type { Player, PlayerSubscription } from '@shared/types';
+import type { Player, PlayerSubscription, EvaAccountLink, LinkEvaAccountRequest } from '@shared/types';
 import { ERROR } from '@shared/constants';
 import { authFetch } from '@/api/utils';
+import { ApiError } from '@/api/error';
 
 // Cache for players - keyed by token to invalidate on account change
 let cachedPlayers: Player[] | null = null;
@@ -78,4 +79,34 @@ export function updateMySubscription(subscription: PlayerSubscription): Promise<
     { method: 'PUT', body: JSON.stringify(subscription) },
     ERROR.subscriptionUpdateFailed,
   );
+}
+
+/**
+ * The eva.gg account the current player linked (null if none)
+ */
+export function fetchMyEvaAccount(): Promise<EvaAccountLink | null> {
+  return authFetch<EvaAccountLink | null>('/api/players/me/eva-account', undefined, ERROR.evaAccountFetchFailed);
+}
+
+/**
+ * Link the current player to the eva.gg account behind a tag (Pseudo#123456)
+ */
+export function linkMyEvaAccount(username: string): Promise<EvaAccountLink> {
+  const body: LinkEvaAccountRequest = { username };
+  return authFetch<EvaAccountLink>(
+    '/api/players/me/eva-account',
+    { method: 'PUT', body: JSON.stringify(body) },
+    ERROR.evaAccountLinkFailed,
+  );
+}
+
+/**
+ * Forget the current player's eva.gg account
+ */
+export async function unlinkMyEvaAccount(): Promise<void> {
+  // Answers 204 with no body, so the JSON-parsing form of authFetch does not apply
+  const response = await authFetch('/api/players/me/eva-account', { method: 'DELETE' });
+  if (!response.ok) {
+    throw ApiError.fromResponse(await response.json(), ERROR.evaAccountUnlinkFailed);
+  }
 }

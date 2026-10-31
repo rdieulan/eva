@@ -9,7 +9,7 @@
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
-import { fetchEvaLocations, toVenues, type VenueInput } from './lib/eva-locations';
+import { fetchEvaLocations, toVenues, type VenueInput } from '../server/src/integrations/eva/eva-locations';
 
 const databaseUrl = process.env.DATABASE_URL || 'postgresql://eva_user:eva_secret_password@localhost:5432/eva_db';
 const pool = new pg.Pool({ connectionString: databaseUrl });

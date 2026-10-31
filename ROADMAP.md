@@ -8,6 +8,15 @@ _(rien — prêt pour un merge `dev` → `main`)_
 
 ## ✅ Terminé
 
+### Feature : Compte eva.gg lié au profil
+
+**Périmètre livré** :
+- Le joueur saisit son tag eva.gg (`Pseudo#123456`) dans son profil ; le serveur le résout via l'opération publique `getPublicPlayerByUsername` et stocke l'identifiant stable d'eva.gg (`Player.evaUserId`, unique) avec le tag du moment.
+- Routes `GET` / `PUT` / `DELETE /api/players/me/eva-account` ; refus distincts : tag inconnu (404), profil eva.gg privé (422), compte déjà lié à un autre joueur (409), eva.gg injoignable (502).
+- Client eva.gg partagé déplacé dans `server/src/integrations/eva/` (salles + joueurs), erreurs typées avec les codes d'eva.gg.
+- Tests d'intégration avec eva.gg mocké (aucun appel réseau), tests unitaires du client GraphQL et du composable.
+- Connaissance de l'API consignée dans [docs/EVA_API.md](docs/EVA_API.md).
+
 ### Feature : Interface Admin
 
 **Périmètre livré** :
@@ -100,6 +109,14 @@ _(rien — prêt pour un merge `dev` → `main`)_
 |-------|--------|-------|
 | Pipeline CI avec tests d'intégration | ⬜ | GitHub Actions / Railway |
 | DB de test automatique | ⬜ | Container PostgreSQL pour CI |
+
+### Intégration eva.gg — suite ⬜
+
+| Tâche | Statut | Notes |
+|-------|--------|-------|
+| Compte eva.gg dédié | ⬜ | Jeton en variable d'environnement ; ouvre `bookings(userId)` sur les joueurs liés. Jamais de jeton perso de joueur. |
+| Vérifier l'inscription d'un joueur au créneau posé dans le calendrier | ⬜ | Croiser `bookings(userId)` avec les matchs de l'équipe ; rappel sur le tableau de bord d'accueil. |
+| Dispos de créneaux pour organiser des scrims | ⬜ | `listLocationGameSessionsByDate` (public d'après le bundle, à confirmer par un seul appel ciblé). |
 
 ### TopBar côté admin ⬜
 

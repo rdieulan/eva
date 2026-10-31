@@ -9,6 +9,9 @@ export {
   clearPlayersCache,
   fetchMySubscription,
   updateMySubscription,
+  fetchMyEvaAccount,
+  linkMyEvaAccount,
+  unlinkMyEvaAccount,
 } from '@/api/players.api';
 
 // Maps API

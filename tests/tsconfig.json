@@ -21,7 +21,8 @@
     "../client/src/**/*.ts",
     "../client/src/**/*.vue",
     "../shared/**/*.ts",
-    "../server/src/services/helpers/**/*.ts"
+    "../server/src/services/helpers/**/*.ts",
+    "../server/src/integrations/**/*.ts"
   ]
 }
 

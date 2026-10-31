@@ -6,7 +6,7 @@ Outil web de gestion d'équipe FPS 4v4 : planification de postes par map, calend
 
 - **Planificateur** : assignation des joueurs aux 4 postes de chaque map, avec règles d'équilibrage configurables et export PNG.
 - **Calendrier** : disponibilités joueurs (dispo, possible, vocal uniquement, indispo), événements (match, événement, réunion vocale avec sa plateforme : Discord, TeamSpeak, WhatsApp…), salle et arène où se joue un match (salle de l'équipe par défaut), rattachement d'un plan de jeu à un match, jours de renouvellement d'abonnement des joueurs.
-- **Profil** : niveau d'abonnement (bronze, argent, or) et date de renouvellement, l'abonnement se renouvelant tous les 30 jours à partir de cette date.
+- **Profil** : niveau d'abonnement (bronze, argent, or) et date de renouvellement, l'abonnement se renouvelant tous les 30 jours à partir de cette date. Liaison du compte eva.gg par son tag (`Pseudo#123456`), résolu vers l'identifiant stable d'eva.gg pour suivre le joueur même s'il change de pseudo (voir [docs/EVA_API.md](docs/EVA_API.md)).
 - **Équipes** : création d'équipe, invitations par lien, permissions granulaires par membre (leader, gestion calendrier, planificateur, etc.).
 - **Comptes multi-rôles** : Player, Manager (gérant de salle), Admin. Liaison de comptes + switch sans re-login.
 - **Administration** (`/admin`) : CRUD des salles et des managers, génération de liens d'activation.
@@ -100,6 +100,11 @@ L'app est disponible sur **http://localhost:5173**. Le backend tourne sur **http
 | `npm run db:push` | Sync rapide schéma → DB sans créer de migration (dev only) |
 | `npm run create-admin` | Crée un super admin interactivement |
 
+### eva.gg
+| Script | Effet |
+|---|---|
+| `npm run eva:probe-me` | En réserve : affiche les données privées du compte eva.gg dont on fournit le jeton (`EVA_TOKEN`), pour préparer la vérification des inscriptions aux créneaux avec le compte dédié. Voir [docs/EVA_API.md](docs/EVA_API.md). |
+
 ### Tests
 | Script | Effet |
 |---|---|
@@ -124,6 +129,7 @@ eva/
 │   └── src/
 │       ├── routes/      # Routes HTTP (auth, teams, admin, calendar, ...)
 │       ├── services/    # Logique métier (auth.service, venues.service, ...)
+│       ├── integrations/ # Clients d'API tierces (eva.gg)
 │       ├── middleware/  # authMiddleware, requirePermission, requireAdmin
 │       ├── db/          # Singleton Prisma + pool pg
 │       └── utils/       # Logger, helpers

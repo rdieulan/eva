@@ -10,8 +10,9 @@ import {
   isValidAvailabilityStatus,
   isValidSubscriptionTier,
   parseSubscriptionInput,
+  parseEvaUsernameInput,
 } from '@services/helpers/validation.helper';
-import { ERROR } from '@shared/constants';
+import { ERROR, EVA_USERNAME_MAX_LENGTH } from '@shared/constants';
 
 describe('isValidMonth', () => {
   it('should accept valid month format', () => {
@@ -182,5 +183,24 @@ describe('parseSubscriptionInput', () => {
     expect(parseSubscriptionInput(undefined)).toEqual({
       errors: [ERROR.subscriptionTierInvalid, ERROR.subscriptionRenewalDateInvalid],
     });
+  });
+});
+
+describe('parseEvaUsernameInput', () => {
+  it('should keep the tag trimmed, as eva.gg will be asked for it', () => {
+    expect(parseEvaUsernameInput({ username: '  Sib#202617 ' })).toEqual({ username: 'Sib#202617' });
+  });
+
+  it('should require a tag', () => {
+    expect(parseEvaUsernameInput({})).toEqual({ errors: [ERROR.evaUsernameRequired] });
+    expect(parseEvaUsernameInput(undefined)).toEqual({ errors: [ERROR.evaUsernameRequired] });
+    expect(parseEvaUsernameInput({ username: '   ' })).toEqual({ errors: [ERROR.evaUsernameRequired] });
+    expect(parseEvaUsernameInput({ username: 42 })).toEqual({ errors: [ERROR.evaUsernameRequired] });
+  });
+
+  it('should bound what is forwarded to eva.gg', () => {
+    expect(parseEvaUsernameInput({ username: 'x'.repeat(EVA_USERNAME_MAX_LENGTH) })).toHaveProperty('username');
+    expect(parseEvaUsernameInput({ username: 'x'.repeat(EVA_USERNAME_MAX_LENGTH + 1) }))
+      .toEqual({ errors: [ERROR.evaUsernameTooLong] });
   });
 });

@@ -35,3 +35,9 @@ dist-server
 # Docker
 docker-compose.override.yml
 
+
+# Offline copy of the eva.gg web bundle, kept locally as the reference for their API shapes
+tmp-eva-probe/
+
+# Browser automation artefacts (screenshots, snapshots) from local verification runs
+.playwright-mcp/

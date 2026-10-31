@@ -5,6 +5,7 @@ import {
   PASSWORD_MIN_LENGTH,
   NAME_MIN_LENGTH,
   TEAM_NAME_MIN_LENGTH,
+  EVA_USERNAME_MAX_LENGTH,
 } from '@shared/constants/validation.constants';
 import { EVENT_TYPES, VOICE_MEDIUMS } from '@shared/types/calendar.types';
 import { SUBSCRIPTION_TIERS } from '@shared/types/subscription.types';
@@ -129,6 +130,17 @@ export const ERROR = {
   passwordResetFailed: 'Erreur lors de la réinitialisation du mot de passe',
   passwordResetTokenRequired: 'Token de réinitialisation requis',
   passwordResetTokenInvalid: 'Token de réinitialisation invalide ou expiré',
+
+  // eva.gg account
+  evaUsernameRequired: 'Indique ton tag eva.gg complet, avec le suffixe #123456',
+  evaUsernameTooLong: `Le tag eva.gg ne peut pas dépasser ${EVA_USERNAME_MAX_LENGTH} caractères`,
+  evaPlayerNotFound: 'Aucun joueur eva.gg avec ce tag. Vérifie le suffixe #123456 affiché sur ta page compte eva.gg',
+  evaProfilePrivate: 'Ce profil eva.gg est privé. Passe-le en public dans tes informations eva.gg, puis réessaie',
+  evaAccountAlreadyLinked: 'Ce compte eva.gg est déjà lié à un autre joueur',
+  evaUnavailable: 'eva.gg est injoignable pour le moment, réessaie plus tard',
+  evaAccountFetchFailed: 'Erreur lors de la récupération du compte eva.gg',
+  evaAccountLinkFailed: 'Erreur lors de la liaison du compte eva.gg',
+  evaAccountUnlinkFailed: 'Erreur lors de la suppression du lien eva.gg',
 
   // Invitations
   inviteNotFound: 'Invitation non trouvée',

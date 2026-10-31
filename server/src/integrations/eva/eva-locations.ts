@@ -3,11 +3,7 @@
 // eva.gg is the operator that runs the arenas our teams play in, and its API
 // is the source of truth for their names, addresses and phone numbers.
 
-const EVA_GRAPHQL_URL = 'https://api.eva.gg/graphql';
-
-// Their edge only answers calls coming from their own web app, so a request
-// without this header is turned away with a 403.
-const EVA_APP_ORIGIN = 'https://app.eva.gg';
+import { evaGraphql } from './eva-graphql';
 
 // "EVA BATTLE ARENA" (AFTER_H_BATTLE_ARENA), the competitive game our teams
 // play. A venue also runs arenas for their other games, which we ignore.
@@ -107,27 +103,11 @@ export function toVenues(locations: EvaLocation[]): MappingResult {
  * Fetch the locations eva.gg runs in a country (ISO code, e.g. FR)
  */
 export async function fetchEvaLocations(country: string): Promise<EvaLocation[]> {
-  const response = await fetch(EVA_GRAPHQL_URL, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', origin: EVA_APP_ORIGIN },
-    body: JSON.stringify({ query: LIST_LOCATIONS_QUERY, variables: { country } }),
-  });
+  const data = await evaGraphql<{ listLocations?: EvaLocation[] }>(LIST_LOCATIONS_QUERY, { country });
 
-  if (!response.ok) {
-    throw new Error(`eva.gg a répondu ${response.status} ${response.statusText}`);
-  }
-
-  const body = await response.json() as {
-    data?: { listLocations?: EvaLocation[] };
-    errors?: { message: string }[];
-  };
-
-  if (body.errors?.length) {
-    throw new Error(`eva.gg a renvoyé une erreur : ${body.errors.map(e => e.message).join(', ')}`);
-  }
-  if (!body.data?.listLocations) {
+  if (!data.listLocations) {
     throw new Error('Réponse inattendue de eva.gg : pas de liste de salles');
   }
 
-  return body.data.listLocations;
+  return data.listLocations;
 }

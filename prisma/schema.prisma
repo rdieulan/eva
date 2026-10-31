@@ -59,6 +59,9 @@ model Player {
   teamId                  String?
   subscriptionTier        SubscriptionTier?
   subscriptionRenewalDate DateTime?         @db.Date // Renews every 30 days from this date
+  evaUserId               Int?              @unique // User id on eva.gg, stable across renames; one eva.gg account per player
+  evaUsername             String?           // eva.gg tag (Pseudo#123456) as it was when the player linked it; display only
+  evaLinkedAt             DateTime?
   createdAt               DateTime          @default(now())
   updatedAt               DateTime          @updatedAt
   user                    User?

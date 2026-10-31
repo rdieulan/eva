@@ -2,7 +2,7 @@
 
 import type { EventType, AvailabilityStatus, SubscriptionTier, PlayerSubscription, VoiceMedium } from '@shared/types';
 import { AVAILABILITY_STATUSES, EVENT_TYPES, SUBSCRIPTION_TIERS, VOICE_MEDIUMS } from '@shared/types';
-import { ERROR } from '@shared/constants';
+import { ERROR, EVA_USERNAME_MAX_LENGTH } from '@shared/constants';
 
 /**
  * Validate month format (YYYY-MM)
@@ -73,6 +73,18 @@ export function parseSubscriptionInput(
   if (tier !== null && !isValidSubscriptionTier(tier)) errors.push(ERROR.subscriptionTierInvalid);
   if (renewalDate !== null && !isValidDate(renewalDate)) errors.push(ERROR.subscriptionRenewalDateInvalid);
   return { errors };
+}
+
+/**
+ * Validate an eva.gg link payload: { username }, the player's eva.gg tag
+ */
+export function parseEvaUsernameInput(body: unknown): { username: string } | { errors: string[] } {
+  const { username } = (body ?? {}) as Record<string, unknown>;
+  const trimmed = typeof username === 'string' ? username.trim() : '';
+
+  if (!trimmed) return { errors: [ERROR.evaUsernameRequired] };
+  if (trimmed.length > EVA_USERNAME_MAX_LENGTH) return { errors: [ERROR.evaUsernameTooLong] };
+  return { username: trimmed };
 }
 
 /**

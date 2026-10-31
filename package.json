@@ -18,6 +18,7 @@
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "db:sync-venues": "tsx --tsconfig scripts/tsconfig.json scripts/sync-venues.ts",
+    "eva:probe-me": "tsx --tsconfig scripts/tsconfig.json scripts/eva-probe-me.ts",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate",
     "docker:up": "docker-compose up -d",

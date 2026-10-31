@@ -31,9 +31,11 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/public ./public
-# scripts/ + shared/ are needed by `npm run create-admin` (tsx loads the TS sources directly)
+# scripts/, shared/ and server/ are needed by `npm run create-admin` and
+# `npm run db:sync-venues` (tsx loads the TS sources directly)
 COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/shared ./shared
+COPY --from=builder /app/server ./server
 
 USER appuser
 

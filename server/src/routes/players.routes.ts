@@ -8,7 +8,10 @@ import type { AuthRequest } from '@middleware/auth.middleware';
 import { ERROR } from '@shared/constants';
 import { apiLogger } from '@utils/logger';
 import * as playerService from '@services/player.service';
-import { parseSubscriptionInput } from '@services/helpers/validation.helper';
+import * as evaAccountService from '@services/eva-account.service';
+import type { LinkEvaAccountRefusal } from '@services/eva-account.service';
+import { parseSubscriptionInput, parseEvaUsernameInput } from '@services/helpers/validation.helper';
+import { EvaApiError } from '../integrations/eva/eva-graphql';
 
 const router = Router();
 
@@ -82,6 +85,83 @@ router.put('/me/subscription', authMiddleware, async (req: AuthRequest, res: Res
   } catch (error) {
     apiLogger.error('Error updating subscription:', error);
     res.status(500).json({ errors: [ERROR.subscriptionUpdateFailed] });
+  }
+});
+
+// ============================================
+// eva.gg account
+// ============================================
+
+// How each refused link is answered
+const EVA_LINK_REFUSALS: Record<LinkEvaAccountRefusal, { status: number; error: string }> = {
+  notFound: { status: 404, error: ERROR.evaPlayerNotFound },
+  privateProfile: { status: 422, error: ERROR.evaProfilePrivate },
+  alreadyLinked: { status: 409, error: ERROR.evaAccountAlreadyLinked },
+};
+
+// GET /api/players/me/eva-account - The eva.gg account the current player linked (null if none)
+router.get('/me/eva-account', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const playerId = req.account?.playerId;
+  if (!playerId) {
+    res.status(403).json({ errors: [ERROR.playerAccountRequired] });
+    return;
+  }
+
+  try {
+    res.json(await evaAccountService.getEvaAccountLink(playerId));
+  } catch (error) {
+    apiLogger.error('Error fetching eva.gg account:', error);
+    res.status(500).json({ errors: [ERROR.evaAccountFetchFailed] });
+  }
+});
+
+// PUT /api/players/me/eva-account - Resolve an eva.gg tag and link that account to the current player
+router.put('/me/eva-account', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const playerId = req.account?.playerId;
+  if (!playerId) {
+    res.status(403).json({ errors: [ERROR.playerAccountRequired] });
+    return;
+  }
+
+  const input = parseEvaUsernameInput(req.body);
+  if ('errors' in input) {
+    res.status(400).json({ errors: input.errors });
+    return;
+  }
+
+  let result;
+  try {
+    result = await evaAccountService.linkEvaAccount(playerId, input.username);
+  } catch (error) {
+    apiLogger.error('Error linking eva.gg account:', error);
+    // eva.gg refused or never answered (fetch itself fails with a TypeError); anything else is ours
+    const isUpstream = error instanceof EvaApiError || error instanceof TypeError;
+    res.status(isUpstream ? 502 : 500).json({ errors: [isUpstream ? ERROR.evaUnavailable : ERROR.evaAccountLinkFailed] });
+    return;
+  }
+
+  if ('refusal' in result) {
+    const { status, error } = EVA_LINK_REFUSALS[result.refusal];
+    res.status(status).json({ errors: [error] });
+    return;
+  }
+  res.json(result.link);
+});
+
+// DELETE /api/players/me/eva-account - Forget the current player's eva.gg account
+router.delete('/me/eva-account', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const playerId = req.account?.playerId;
+  if (!playerId) {
+    res.status(403).json({ errors: [ERROR.playerAccountRequired] });
+    return;
+  }
+
+  try {
+    await evaAccountService.unlinkEvaAccount(playerId);
+    res.status(204).end();
+  } catch (error) {
+    apiLogger.error('Error unlinking eva.gg account:', error);
+    res.status(500).json({ errors: [ERROR.evaAccountUnlinkFailed] });
   }
 });
 

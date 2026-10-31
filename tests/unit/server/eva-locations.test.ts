@@ -1,6 +1,6 @@
 // Tests for turning eva.gg locations into venues
 import { describe, it, expect } from 'vitest';
-import { toVenues, type EvaLocation } from '../../../scripts/lib/eva-locations';
+import { toVenues, type EvaLocation } from '../../../server/src/integrations/eva/eva-locations';
 
 function location(overrides: Partial<EvaLocation> = {}): EvaLocation {
   return {

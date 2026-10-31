@@ -101,3 +101,5 @@ export type {
 } from './auth.types';
 
 export type { Venue } from './venue.types';
+
+export type { EvaAccountLink, LinkEvaAccountRequest } from './eva.types';

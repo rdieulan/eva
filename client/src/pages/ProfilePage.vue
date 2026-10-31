@@ -13,6 +13,7 @@ import { formatLongDate } from '@/utils/calendar';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import SvgIcon from '@/components/common/SvgIcon.vue';
 import LinkedAccountsSection from '@/components/profile/LinkedAccountsSection.vue';
+import EvaAccountSection from '@/components/profile/EvaAccountSection.vue';
 
 const router = useRouter();
 const { account, token, clearAuth } = useAuth();
@@ -185,6 +186,9 @@ async function handleLogout() {
           </button>
         </form>
       </section>
+
+      <!-- eva.gg account (player accounts only) -->
+      <EvaAccountSection v-if="account?.playerId" />
 
       <!-- Password change -->
       <section class="profile-section">

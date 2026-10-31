@@ -11,6 +11,7 @@ Ce document définit les règles de fonctionnement de l'agent de code pour le pr
 | [CODE_RULES.md](CODE_RULES.md) | Conventions de code, nommage, structure des fichiers |
 | [REVIEW_CRITERIA.md](REVIEW_CRITERIA.md) | Critères de review pour l'analyse des fichiers |
 | [SCRIPTS.md](SCRIPTS.md) | Scripts d'automatisation disponibles |
+| [EVA_API.md](EVA_API.md) | Ce qu'on sait de l'API eva.gg et la règle « pas de sonde en live » |
 | [ROADMAP.md](../ROADMAP.md) | État d'avancement et tâches en cours |
 
 ---

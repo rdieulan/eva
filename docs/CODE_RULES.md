@@ -65,7 +65,8 @@ server/src/
 ├── db/            # Prisma et accès base de données
 ├── middleware/    # Middlewares Express
 ├── routes/        # Routes API
-└── services/      # Logique métier serveur
+├── services/      # Logique métier serveur
+└── integrations/  # Clients d'API tierces (eva.gg), sans alias d'import : les scripts les chargent aussi
 ```
 
 ---
