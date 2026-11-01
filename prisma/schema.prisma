@@ -126,7 +126,21 @@ model Team {
   gamePlans      GamePlan[]
   calendarEvents CalendarEvent[]
   invites        TeamInvite[]
+  favoriteVenues TeamFavoriteVenue[]
 
+  @@index([venueId])
+}
+
+// The venues a team plays at most often, in the order the team listed them.
+// Quick access in the venue pickers; distinct from the affiliated venue.
+model TeamFavoriteVenue {
+  teamId   String
+  venueId  String
+  position Int
+  team     Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  venue    Venue  @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@id([teamId, venueId])
   @@index([venueId])
 }
 
@@ -152,6 +166,7 @@ model Venue {
   teams      Team[]
   managers   VenueManager[]
   matches    CalendarEvent[]
+  favoredBy  TeamFavoriteVenue[]
 }
 
 model VenueManager {

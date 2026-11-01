@@ -110,13 +110,14 @@ function showSuccess(message: string) {
 }
 
 // Team info handlers
-async function handleSaveTeam(data: { name: string; venueId: string | null }) {
+async function handleSaveTeam(data: { name: string; venueId: string | null; favoriteVenueIds: string[] }) {
   if (!token.value || !team.value) return;
 
   try {
-    await updateTeam(data);
-    team.value.name = data.name;
-    team.value.venueId = data.venueId ?? undefined;
+    const saved = await updateTeam(data);
+    team.value.name = saved.name;
+    team.value.venueId = saved.venueId ?? undefined;
+    team.value.favoriteVenueIds = saved.favoriteVenueIds;
     showSuccess('Équipe mise à jour');
   } catch (e) {
     setErrorFromException(e, ERROR.serverError);

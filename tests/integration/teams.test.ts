@@ -6,7 +6,7 @@ import { app } from '../../server/src/app';
 import { createAuthenticatedUser, createUserWithTeam } from './helpers/auth';
 import { prisma, expectNoRecordCreated } from './helpers/db';
 import { TEAM_NAME_MIN_LENGTH } from '@shared/constants/validation.constants';
-import { TEAM_LOGO_MAX_BYTES } from '@shared/constants/team.constants';
+import { TEAM_LOGO_MAX_BYTES, TEAM_FAVORITE_VENUES_MAX } from '@shared/constants/team.constants';
 import { ERROR } from '@shared/constants/error.constants';
 import { DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
 
@@ -133,6 +133,159 @@ describe('Teams API', () => {
 
       expect(res.status).toBe(404);
       expect(res.body.errors).toContain(ERROR.teamNotFound);
+    });
+  });
+
+  describe('PUT /api/teams/current (favorite venues)', () => {
+    async function createVenues(count: number): Promise<string[]> {
+      const ids: string[] = [];
+      for (let index = 0; index < count; index++) {
+        const venue = await prisma.venue.create({
+          data: { name: `Salle ${index} ${Date.now()}`, city: 'Lyon', address: '12 rue des Lasers' },
+        });
+        ids.push(venue.id);
+      }
+      return ids;
+    }
+
+    it('should start with no favorite venue', async () => {
+      const { token } = await createUserWithTeam();
+
+      const res = await request(app)
+        .get('/api/teams/current')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.favoriteVenueIds).toEqual([]);
+    });
+
+    it('should save the favorite venues in the order given and read them back', async () => {
+      const { token } = await createUserWithTeam();
+      const [first, second, third] = await createVenues(3);
+
+      const res = await request(app)
+        .put('/api/teams/current')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ favoriteVenueIds: [third, first] });
+
+      expect(res.status).toBe(200);
+      expect(res.body.favoriteVenueIds).toEqual([third, first]);
+
+      const read = await request(app)
+        .get('/api/teams/current')
+        .set('Authorization', `Bearer ${token}`);
+      expect(read.body.favoriteVenueIds).toEqual([third, first]);
+      expect(read.body.favoriteVenueIds).not.toContain(second);
+    });
+
+    it('should replace the whole list on each save', async () => {
+      const { token } = await createUserWithTeam();
+      const [first, second] = await createVenues(2);
+
+      await request(app)
+        .put('/api/teams/current')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ favoriteVenueIds: [first, second] })
+        .expect(200);
+
+      const res = await request(app)
+        .put('/api/teams/current')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ favoriteVenueIds: [second] });
+
+      expect(res.status).toBe(200);
+      expect(res.body.favoriteVenueIds).toEqual([second]);
+    });
+
+    it('should leave the favorites alone when the request does not mention them', async () => {
+      const { token } = await createUserWithTeam();
+      const [venueId] = await createVenues(1);
+
+      await request(app)
+        .put('/api/teams/current')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ favoriteVenueIds: [venueId] })
+        .expect(200);
+
+      const res = await request(app)
+        .put('/api/teams/current')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ name: VALID_TEAM_NAME });
+
+      expect(res.status).toBe(200);
+      expect(res.body.favoriteVenueIds).toEqual([venueId]);
+    });
+
+    it('should drop a venue named twice', async () => {
+      const { token } = await createUserWithTeam();
+      const [venueId] = await createVenues(1);
+
+      const res = await request(app)
+        .put('/api/teams/current')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ favoriteVenueIds: [venueId, venueId] });
+
+      expect(res.status).toBe(200);
+      expect(res.body.favoriteVenueIds).toEqual([venueId]);
+    });
+
+    it('should refuse more favorites than the limit', async () => {
+      const { token } = await createUserWithTeam();
+      const venueIds = await createVenues(TEAM_FAVORITE_VENUES_MAX + 1);
+
+      const res = await request(app)
+        .put('/api/teams/current')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ favoriteVenueIds: venueIds });
+
+      expect(res.status).toBe(400);
+      expect(res.body.errors).toContain(ERROR.teamFavoriteVenuesTooMany);
+    });
+
+    it('should refuse a venue that does not exist', async () => {
+      const { token } = await createUserWithTeam();
+      const [venueId] = await createVenues(1);
+
+      const res = await request(app)
+        .put('/api/teams/current')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ favoriteVenueIds: [venueId, 'no-such-venue'] });
+
+      expect(res.status).toBe(400);
+      expect(res.body.errors).toContain(ERROR.venueNotFound);
+    });
+
+    it('should refuse anything but a list of ids', async () => {
+      const { token } = await createUserWithTeam();
+
+      for (const favoriteVenueIds of ['abc', [42], [''], { id: 'x' }]) {
+        const res = await request(app)
+          .put('/api/teams/current')
+          .set('Authorization', `Bearer ${token}`)
+          .send({ favoriteVenueIds });
+
+        expect(res.status).toBe(400);
+        expect(res.body.errors).toContain(ERROR.teamFavoriteVenuesInvalid);
+      }
+    });
+
+    it('should go away with the team', async () => {
+      const { token, team } = await createUserWithTeam();
+      const [venueId] = await createVenues(1);
+
+      await request(app)
+        .put('/api/teams/current')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ favoriteVenueIds: [venueId] })
+        .expect(200);
+
+      await request(app)
+        .delete('/api/teams/current')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+
+      expect(await prisma.teamFavoriteVenue.count({ where: { teamId: team.id } })).toBe(0);
+      expect(await prisma.venue.findUnique({ where: { id: venueId } })).not.toBeNull();
     });
   });
 

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import type { Venue } from '@shared/types';
-import { TEAM_LOGO_MIME_TYPES } from '@shared/constants';
+import { TEAM_LOGO_MIME_TYPES, TEAM_FAVORITE_VENUES_MAX } from '@shared/constants';
 import SvgIcon from '@/components/common/SvgIcon.vue';
+import VenueChecklist from '@/components/common/VenueChecklist.vue';
 import { formatVenueLabel } from '@/utils/venues';
 
 interface TeamData {
@@ -10,6 +11,7 @@ interface TeamData {
   name: string;
   logoUrl: string | null;
   venueId?: string;
+  favoriteVenueIds: string[];
   leader: { id: string; name: string } | null;
 }
 
@@ -21,7 +23,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  save: [data: { name: string; venueId: string | null }];
+  save: [data: { name: string; venueId: string | null; favoriteVenueIds: string[] }];
   uploadLogo: [file: File];
   removeLogo: [];
   deleteTeam: [];
@@ -64,15 +66,25 @@ const venueName = computed(() => {
   return teamVenue.value ? formatVenueLabel(teamVenue.value) : 'Inconnue';
 });
 
+// The favorite venues as named in the display, in the team's order
+const favoriteVenueNames = computed(() =>
+  props.team.favoriteVenueIds
+    .map(id => props.venues.find(v => v.id === id))
+    .filter((venue): venue is Venue => venue !== undefined)
+    .map(formatVenueLabel),
+);
+
 // Edit mode state
 const isEditing = ref(false);
 const editName = ref('');
 const editVenueId = ref<string | null>(null);
+const editFavoriteVenueIds = ref<string[]>([]);
 
 // Start editing
 function startEdit() {
   editName.value = props.team.name;
   editVenueId.value = props.team.venueId ?? null;
+  editFavoriteVenueIds.value = [...props.team.favoriteVenueIds];
   isEditing.value = true;
 }
 
@@ -86,6 +98,7 @@ function saveChanges() {
   emit('save', {
     name: editName.value,
     venueId: editVenueId.value,
+    favoriteVenueIds: editFavoriteVenueIds.value,
   });
   isEditing.value = false;
 }
@@ -137,6 +150,12 @@ function saveChanges() {
           </option>
         </select>
       </div>
+      <VenueChecklist
+        v-model="editFavoriteVenueIds"
+        :venues="venues"
+        :max="TEAM_FAVORITE_VENUES_MAX"
+        :legend="`Salles favorites (${TEAM_FAVORITE_VENUES_MAX} au plus)`"
+      />
       <div class="form-actions">
         <button class="btn-cancel" @click="cancelEdit">Annuler</button>
         <button class="btn-save" @click="saveChanges">Enregistrer</button>
@@ -160,6 +179,11 @@ function saveChanges() {
             rel="noopener noreferrer"
           >Discord</a>
         </span>
+      </div>
+      <div class="info-item">
+        <label>Salles favorites</label>
+        <span v-if="favoriteVenueNames.length === 0" class="info-empty">Aucune</span>
+        <span v-else>{{ favoriteVenueNames.join(', ') }}</span>
       </div>
       <div class="info-item">
         <label>Leader</label>
@@ -351,6 +375,11 @@ function saveChanges() {
   span {
     font-size: $font-size-base;
     color: $color-white;
+  }
+
+  .info-empty {
+    color: $color-text-secondary;
+    font-style: italic;
   }
 }
 

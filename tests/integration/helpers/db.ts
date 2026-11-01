@@ -72,6 +72,7 @@ export async function cleanDatabase(): Promise<void> {
   await prisma.teamInvite.deleteMany();
   await prisma.session.deleteMany();
   await prisma.venueManager.deleteMany();
+  await prisma.teamFavoriteVenue.deleteMany();
   // Team has FK to Player (leaderId) — must be deleted before Player.
   await prisma.team.deleteMany();
   await prisma.player.deleteMany();

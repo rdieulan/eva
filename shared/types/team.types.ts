@@ -8,6 +8,7 @@ export interface Team {
   name: string;
   logoUrl: string | null; // Where to load the team's logo from, null when it has none
   venueId?: string;
+  favoriteVenueIds: string[]; // The venues the team plays at most often, in the team's order
   leaderId: string;
   createdAt: string;
   updatedAt: string;

@@ -80,7 +80,7 @@ export async function fetchVenueSlots(venueId: string, date: string): Promise<Ve
  * Update team info
  */
 export async function updateTeam(
-  teamData: { name?: string; venueId?: string | null }
+  teamData: { name?: string; venueId?: string | null; favoriteVenueIds?: string[] }
 ): Promise<Team> {
   return authFetch<Team>(
     `${API_BASE}/current`,

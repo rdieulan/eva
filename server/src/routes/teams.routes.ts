@@ -6,7 +6,7 @@ import { authMiddleware, requirePermission } from '@middleware/auth.middleware';
 import type { AuthRequest } from '@middleware/auth.middleware';
 import type { AccountPermissions } from '@shared/types';
 import { validateTeamName, detectImageType } from '@shared/utils';
-import { ERROR, TEAM_LOGO_MAX_BYTES, TEAM_LOGO_MIME_TYPES } from '@shared/constants';
+import { ERROR, TEAM_LOGO_MAX_BYTES, TEAM_LOGO_MIME_TYPES, TEAM_FAVORITE_VENUES_MAX } from '@shared/constants';
 import { apiLogger } from '@utils/logger';
 import * as teamsService from '@services/teams.service';
 
@@ -34,6 +34,7 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
 
     res.status(201).json({
       ...result.team,
+      favoriteVenueIds: [],
       isLeader: result.isLeader,
     });
   } catch (error) {
@@ -58,7 +59,19 @@ router.get('/current', authMiddleware, async (req: AuthRequest, res: Response) =
   }
 });
 
-// GET /api/teams/current - Get current user's team
+// A favorite venues list as the client may send it: distinct ids, a handful at most
+function readFavoriteVenueIds(input: unknown): { venueIds: string[] } | { error: string } {
+  if (!Array.isArray(input) || input.some(id => typeof id !== 'string' || !id)) {
+    return { error: ERROR.teamFavoriteVenuesInvalid };
+  }
+  const venueIds = [...new Set(input as string[])];
+  if (venueIds.length > TEAM_FAVORITE_VENUES_MAX) {
+    return { error: ERROR.teamFavoriteVenuesTooMany };
+  }
+  return { venueIds };
+}
+
+// PUT /api/teams/current - Update the current user's team (name, venue, favorite venues)
 router.put('/current', authMiddleware, requirePermission('team', 'canManageTeam'), async (req: AuthRequest, res: Response) => {
   try {
     const team = await teamsService.getPlayerTeam(req.account!.playerId!);
@@ -67,7 +80,7 @@ router.put('/current', authMiddleware, requirePermission('team', 'canManageTeam'
       return res.status(404).json({ errors: [ERROR.teamNotFound] });
     }
 
-    const { name, venueId } = req.body;
+    const { name, venueId, favoriteVenueIds } = req.body;
 
     if (name !== undefined) {
       const nameValid = validateTeamName(name);
@@ -76,7 +89,16 @@ router.put('/current', authMiddleware, requirePermission('team', 'canManageTeam'
       }
     }
 
-    const result = await teamsService.updateTeam(team.id, { name, venueId });
+    let favorites: string[] | undefined;
+    if (favoriteVenueIds !== undefined) {
+      const read = readFavoriteVenueIds(favoriteVenueIds);
+      if ('error' in read) {
+        return res.status(400).json({ errors: [read.error] });
+      }
+      favorites = read.venueIds;
+    }
+
+    const result = await teamsService.updateTeam(team.id, { name, venueId, favoriteVenueIds: favorites });
 
     if (result.error) {
       return res.status(400).json({ errors: [result.error] });

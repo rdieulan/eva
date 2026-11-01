@@ -18,6 +18,7 @@ export interface TeamCreateData {
 export interface TeamUpdateData {
   name?: string;
   venueId?: string | null;
+  favoriteVenueIds?: string[]; // Distinct, bounded by the caller; replaces the whole list
 }
 
 // What identifies a team's logo without loading its bytes
@@ -52,6 +53,7 @@ export interface TeamView {
   name: string;
   logoUrl: string | null;
   venueId: string | null;
+  favoriteVenueIds: string[];
   leaderId: string;
   createdAt: Date;
   updatedAt: Date;
@@ -78,6 +80,7 @@ export async function getTeamViewForPlayer(playerId: string): Promise<TeamView |
     name: team.name,
     logoUrl: logoUrlOf(team),
     venueId: team.venueId,
+    favoriteVenueIds: team.favoriteVenues.map(favorite => favorite.venueId),
     leaderId: team.leaderId,
     createdAt: team.createdAt,
     updatedAt: team.updatedAt,
@@ -250,26 +253,37 @@ export async function createTeam(data: TeamCreateData) {
 }
 
 /**
- * Update team info
+ * Update team info. The favorite venues, when given, replace the current list
+ * in the order received.
  */
 export async function updateTeam(teamId: string, data: TeamUpdateData) {
-  // Validate venue exists if provided
-  if (data.venueId) {
-    const venue = await prisma.venue.findUnique({ where: { id: data.venueId } });
-    if (!venue) {
+  // Every venue named has to exist
+  const venueIds = [...(data.venueId ? [data.venueId] : []), ...(data.favoriteVenueIds ?? [])];
+  if (venueIds.length) {
+    const known = await prisma.venue.count({ where: { id: { in: venueIds } } });
+    if (known !== new Set(venueIds).size) {
       return { error: ERROR.venueNotFound };
     }
   }
 
+  const favoriteVenueIds = data.favoriteVenueIds;
   const team = await prisma.team.update({
     where: { id: teamId },
     data: {
       ...(data.name && { name: data.name.trim() }),
       ...(data.venueId !== undefined && { venueId: data.venueId }),
+      ...(favoriteVenueIds && {
+        favoriteVenues: {
+          deleteMany: {},
+          create: favoriteVenueIds.map((venueId, position) => ({ venueId, position })),
+        },
+      }),
     },
+    include: { favoriteVenues: { select: { venueId: true }, orderBy: { position: 'asc' } } },
   });
 
-  return { team };
+  const { favoriteVenues, ...rest } = team;
+  return { team: { ...rest, favoriteVenueIds: favoriteVenues.map(favorite => favorite.venueId) } };
 }
 
 // ============================================

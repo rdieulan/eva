@@ -9,7 +9,7 @@ import {
   EVA_SLOT_ID_MAX_LENGTH,
   EVA_SLOTS_PER_MATCH_MAX,
 } from '@shared/constants/validation.constants';
-import { TEAM_LOGO_MAX_BYTES } from '@shared/constants/team.constants';
+import { TEAM_LOGO_MAX_BYTES, TEAM_FAVORITE_VENUES_MAX } from '@shared/constants/team.constants';
 import { EVENT_TYPES, VOICE_MEDIUMS } from '@shared/types/calendar.types';
 import { SUBSCRIPTION_TIERS } from '@shared/types/subscription.types';
 
@@ -84,6 +84,8 @@ export const ERROR = {
   teamLogoNotFound: 'Cette équipe n\'a pas de logo',
   teamLogoUploadFailed: 'Erreur lors de l\'envoi du logo',
   teamLogoDeleteFailed: 'Erreur lors du retrait du logo',
+  teamFavoriteVenuesInvalid: 'La liste des salles favorites est invalide',
+  teamFavoriteVenuesTooMany: `Au plus ${TEAM_FAVORITE_VENUES_MAX} salles favorites`,
   teamRequiredForMaps: 'Vous devez appartenir à une équipe pour accéder aux cartes',
   teamRequiredForPlans: 'Vous devez appartenir à une équipe pour accéder aux plans',
   teamRequiredForEvents: 'Vous devez appartenir à une équipe pour créer des événements',

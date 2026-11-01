@@ -12,10 +12,10 @@ import type { ManagerSummary } from '@/api/admin.api';
 import type { Venue } from '@shared/types';
 import { ERROR } from '@shared/constants';
 import { useErrors } from '@/composables/useErrors';
-import { formatVenueLabel } from '@/utils/venues';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import Modal from '@/components/common/Modal.vue';
 import ConfirmModal from '@/components/common/ConfirmModal.vue';
+import VenueChecklist from '@/components/common/VenueChecklist.vue';
 
 const managers = ref<ManagerSummary[]>([]);
 const venues = ref<Venue[]>([]);
@@ -63,10 +63,6 @@ async function loadData() {
   }
 }
 
-function toggleVenueInList(list: string[], venueId: string): string[] {
-  return list.includes(venueId) ? list.filter(id => id !== venueId) : [...list, venueId];
-}
-
 function openCreate() {
   createForm.email = '';
   createForm.name = '';
@@ -110,14 +106,6 @@ function openEdit(manager: ManagerSummary) {
   editVenueIds.value = manager.venues.map(v => v.id);
   clearErrors();
   showEditModal.value = true;
-}
-
-function toggleEditVenue(venueId: string) {
-  editVenueIds.value = toggleVenueInList(editVenueIds.value, venueId);
-}
-
-function toggleCreateVenue(venueId: string) {
-  createForm.venueIds = toggleVenueInList(createForm.venueIds, venueId);
 }
 
 async function submitEdit() {
@@ -220,18 +208,12 @@ onMounted(loadData);
           <input v-model="createForm.name" type="text" required maxlength="50" />
         </label>
 
-        <fieldset class="venues-pick">
-          <legend>Salles associées</legend>
-          <p v-if="venues.length === 0" class="muted">Aucune salle disponible. Créez une salle d'abord.</p>
-          <label v-for="venue in venues" :key="venue.id" class="venue-check">
-            <input
-              type="checkbox"
-              :checked="createForm.venueIds.includes(venue.id)"
-              @change="toggleCreateVenue(venue.id)"
-            />
-            <span>{{ formatVenueLabel(venue) }}</span>
-          </label>
-        </fieldset>
+        <VenueChecklist
+          v-model="createForm.venueIds"
+          :venues="venues"
+          legend="Salles associées"
+          empty-text="Aucune salle disponible. Créez une salle d'abord."
+        />
       </form>
 
       <template #footer>
@@ -266,17 +248,7 @@ onMounted(loadData);
       <form class="manager-form" @submit.prevent="submitEdit">
         <ErrorDisplay :errors="errors" />
 
-        <fieldset class="venues-pick">
-          <legend>Salles associées</legend>
-          <label v-for="venue in venues" :key="venue.id" class="venue-check">
-            <input
-              type="checkbox"
-              :checked="editVenueIds.includes(venue.id)"
-              @change="toggleEditVenue(venue.id)"
-            />
-            <span>{{ formatVenueLabel(venue) }}</span>
-          </label>
-        </fieldset>
+        <VenueChecklist v-model="editVenueIds" :venues="venues" legend="Salles associées" />
       </form>
 
       <template #footer>
@@ -453,36 +425,6 @@ onMounted(loadData);
       outline: none;
       border-color: $color-accent;
     }
-  }
-}
-
-.venues-pick {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-xs;
-  border: 1px solid $color-border;
-  border-radius: $radius-md;
-  padding: $spacing-md;
-
-  legend {
-    color: $color-text-secondary;
-    font-size: $font-size-sm;
-    padding: 0 $spacing-xs;
-  }
-}
-
-.venue-check {
-  display: flex;
-  flex-direction: row !important;
-  align-items: center;
-  gap: $spacing-sm;
-  color: $color-text-primary;
-  cursor: pointer;
-
-  em {
-    color: $color-text-secondary;
-    font-style: normal;
-    font-size: $font-size-sm;
   }
 }
 

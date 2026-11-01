@@ -83,6 +83,7 @@ export async function getPlayerWithTeam(playerId: string) {
           members: {
             include: { user: { select: { id: true, name: true, email: true } } }
           },
+          favoriteVenues: { select: { venueId: true }, orderBy: { position: 'asc' } },
         },
       },
       ledTeam: true,

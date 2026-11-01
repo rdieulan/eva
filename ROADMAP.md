@@ -12,13 +12,48 @@ Le planificateur de postes est **parqué** (`PLANNER_ENABLED`, `shared/constants
 
 | Sujet | État | Notes |
 |-------|------|-------|
-| Matchmaking de scrims | ⬜ vision à poser | À détailler avec le capitaine : à partir du créneau libre d'une salle, pas d'une annonce flottante. Dépend de la connexion eva.gg pour vérifier les inscriptions des deux équipes. |
+| Matchmaking de scrims | 🟢 cadré le 2026-11-01, découpe ci-dessous | Construction en cours, ticket par ticket. |
 | Rappel mensuel au capitaine d'une équipe de ligue locale | ⬜ à préciser | Validation d'inscription à faire chaque mois sur competitive.eva.gg. À établir : quoi valider exactement, quand (date butoir), où sur le site, et si c'est lisible publiquement pour savoir si c'est déjà fait. Affiché sur le tableau de bord d'accueil. |
 | Nom de domaine | ⬜ | Sans « eva » dans le nom (demande OAuth à venir, deux concurrents l'ont déjà pris). `.fr` ou `.gg` ouverts là où les `.com` sont pris. Conditionne la demande de client OAuth2. |
+
+### Cadrage : matchmaking de scrims
+
+**Vision (capitaine, 2026-11-01).** Le calendrier a deux modes, « Équipe » et « Matchmaking ». En mode Matchmaking :
+
+- Chaque jour est coloré d'après les disponibilités cumulées de l'équipe (et non celle du joueur connecté) : la question posée par la couleur est « peut-on aligner quatre joueurs ce jour-là ? ».
+- Un sélecteur de salle en haut du calendrier, avec en accès rapide les salles favorites de l'équipe (réglées dans l'espace équipe). Les jours montrent les créneaux de cette salle sur lesquels une autre équipe cherche un adversaire : heure, nom et logo de l'équipe. Un clic ouvre la proposition de match, qui prévient l'autre équipe.
+- Pour se déclarer : le capitaine sélectionne autant de jours qu'il veut (un jour rouge s'accepte avec un avertissement), puis une fenêtre liste pour chaque jour les créneaux de la salle, et il coche ceux qu'il met en recherche.
+
+**Décisions prises (révisables).**
+
+- *Créneau proposable* : réservable en mode compétitif (After-H Battle Arena, drapeau `competitiveMode.isAvailable` de la session) **et personne d'inscrit**. Un créneau où un inconnu est déjà réservé n'accueille pas un match : la règle des 8 le marquerait aussitôt « de trop ».
+- *Unité de recherche* : une suite de créneaux consécutifs sur une arène, comme `evaSlotIds` d'un match (un scrim en prend deux). Une proposition porte sur la suite entière.
+- *Couleur d'un jour* : on compte les joueurs disponibles (vert) et sous condition (jaune) ; non renseigné, vocal seul et rouge ne comptent pas. Quatre verts ou plus : vert. Quatre comptés ou plus dont au moins un jaune : jaune. Moins de quatre : rouge.
+- *Cycle de vie* : recherche → proposition d'une autre équipe → acceptation ou refus par l'équipe qui cherche, sans fil de discussion (la salle a un Discord pour ça). L'acceptation crée le match (salle, arène, créneaux) dans les deux calendriers, ferme la recherche et refuse les autres propositions. Un créneau accepté sur eva.gg se réserve ensuite comme aujourd'hui, et la vérification des 8 s'applique.
+- *Qui agit* : la permission de créer des événements du calendrier (`canCreateEvents`), puisqu'une recherche finit en match.
+- *Portée* : toutes les équipes de l'application, filtrées par salle. La recherche d'une équipe apparaît aussi dans son propre calendrier en mode Équipe, comme un marqueur « en recherche » sur le jour.
+- *Prévenir* : notification dans l'application et courriel au départ ; Discord et WhatsApp après, quand l'intégration existe.
+
+- *Page publique par salle* : le tableau des recherches d'une salle se lit sans compte (nom et logo de l'équipe, jour, créneaux), pour être partagé sur le Discord de la salle et amorcer le marché. Proposer demande un compte et une équipe.
+
+**Découpe (ordre de construction, ce qui reste).**
+
+1. Mode « Matchmaking » du calendrier : bascule Équipe / Matchmaking, jours colorés par la disponibilité cumulée de l'équipe, sélecteur de salle (salle affiliée et favorites en accès rapide).
+2. Recherches de scrim, données et API : déclarer une suite de créneaux, annuler, lister par salle et par mois.
+3. Déclarer des recherches depuis le calendrier : sélection de plusieurs jours, fenêtre des créneaux proposables par jour.
+4. Voir et proposer : recherches des autres équipes dans les jours, proposition, acceptation ou refus qui crée le match des deux côtés, notification in-app et courriel.
+5. Page publique du tableau d'une salle.
 
 ---
 
 ## ✅ Terminé
+
+### Feature : Salles favorites de l'équipe
+
+**Périmètre livré** :
+- L'équipe liste jusqu'à 6 salles favorites (`TEAM_FAVORITE_VENUES_MAX`), distinctes de la salle affiliée, dans l'ordre qu'elle choisit (table `TeamFavoriteVenue`, migration 0021, supprimée avec l'équipe ou la salle). Elles alimenteront l'accès rapide du sélecteur de salle du matchmaking.
+- Réglées dans le formulaire d'édition de la page équipe (permission `canManageTeam`), par le même `PUT /api/teams/current` que le nom et la salle affiliée ; la liste envoyée remplace la précédente, une requête qui ne la mentionne pas la laisse intacte. Refus : liste mal formée, plus de 6, salle inconnue.
+- Case à cocher de salles extraite en composant partagé `VenueChecklist` (liste défilante, plafond optionnel), branché sur la page équipe et sur l'écran d'administration des managers qui avait la sienne.
 
 ### Feature : Logo d'équipe
 
