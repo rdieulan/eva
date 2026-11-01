@@ -91,7 +91,10 @@ const selectionSummary = computed(() => {
   <div class="form-group">
     <span class="form-label">⏱️ Créneaux</span>
 
-    <p v-if="status === 'loading'" class="form-hint">Chargement des créneaux…</p>
+    <p v-if="status === 'loading'" class="form-hint slot-loading" role="status">
+      <span class="spinner" aria-hidden="true"></span>
+      Chargement des créneaux…
+    </p>
     <p v-else-if="status === 'unavailable'" class="form-hint">
       Les créneaux de la salle ne peuvent pas être lus pour le moment : saisis l'horaire à la main.
     </p>
@@ -233,6 +236,27 @@ const selectionSummary = computed(() => {
   strong {
     color: $color-white;
     font-weight: 600;
+  }
+}
+
+.slot-loading {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid $color-border;
+  border-top-color: $color-accent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 </style>

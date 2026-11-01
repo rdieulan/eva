@@ -152,6 +152,15 @@ describe('VenueSlotPicker', () => {
     expect(wrapper.text()).toContain('plus proposés');
   });
 
+  it('shows a spinner while the slots load', async () => {
+    vi.mocked(fetchVenueSlots).mockImplementation(() => new Promise(() => {}));
+    const wrapper = mountPicker();
+    await flushPromises();
+
+    expect(wrapper.find('.spinner').exists()).toBe(true);
+    expect(wrapper.text()).toContain('Chargement des créneaux');
+  });
+
   it('tells the form whether slots can be listed', async () => {
     vi.mocked(fetchVenueSlots).mockResolvedValue(DAY);
     const wrapper = mountPicker();
