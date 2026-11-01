@@ -27,6 +27,26 @@ export function formatVenueLabel(venue: Pick<Venue, 'name' | 'city'>): string {
   return normalize(name).includes(normalize(city)) ? name : `${name} - ${city}`;
 }
 
+/**
+ * The venues the matchmaking calendar can show, split between the team's own
+ * (affiliated venue first, then favorites in the team's order) and the rest of
+ * the network. Only venues linked to eva.gg have slots to show.
+ */
+export function splitMatchmakingVenues(
+  venues: Venue[],
+  team: { venueId?: string | null; favoriteVenueIds: string[] } | null,
+): { quick: Venue[]; others: Venue[] } {
+  const linked = venues.filter(venue => venue.hasEvaSlots);
+  const quickIds = [...(team?.venueId ? [team.venueId] : []), ...(team?.favoriteVenueIds ?? [])];
+  const quick = [...new Set(quickIds)]
+    .map(id => linked.find(venue => venue.id === id))
+    .filter((venue): venue is Venue => venue !== undefined);
+  const others = linked
+    .filter(venue => !quick.includes(venue))
+    .sort((a, b) => formatVenueLabel(a).localeCompare(formatVenueLabel(b), 'fr'));
+  return { quick, others };
+}
+
 // Keyed by VenueLinkKey: a new network does not compile until it has a label
 export const VENUE_LINK_LABELS: Record<VenueLinkKey, string> = {
   website: 'Site web',

@@ -1,40 +1,77 @@
 <script setup lang="ts">
 import SvgIcon from '@/components/common/SvgIcon.vue';
-import type { ViewMode } from '@/composables/useCalendar';
+import MatchmakingVenuePicker from '@/components/calendar/MatchmakingVenuePicker.vue';
+import type { ViewMode, CalendarMode } from '@/composables/useCalendar';
+import type { Venue } from '@shared/types';
 
 defineProps<{
   viewMode: ViewMode;
+  calendarMode: CalendarMode;
   navigationTitle: string;
+  quickVenues: Venue[]; // Matchmaking: the team's own venues
+  otherVenues: Venue[]; // Matchmaking: the rest of the network
 }>();
 
 const emit = defineEmits<{
   'update:viewMode': [mode: ViewMode];
+  'update:calendarMode': [mode: CalendarMode];
   prev: [];
   next: [];
 }>();
+
+// Matchmaking: the venue whose slots the calendar shows
+const venueId = defineModel<string | null>('venueId', { required: true });
 
 const weekdays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 </script>
 
 <template>
   <div class="calendar-controls">
-    <!-- View mode switch -->
-    <div class="view-switch">
-      <button
-        class="view-btn"
-        :class="{ active: viewMode === 'month' }"
-        @click="$emit('update:viewMode', 'month')"
-      >
-        📅 Mois
-      </button>
-      <button
-        class="view-btn"
-        :class="{ active: viewMode === 'week' }"
-        @click="$emit('update:viewMode', 'week')"
-      >
-        📆 Semaine
-      </button>
+    <div class="switches">
+      <!-- Team calendar, or the matchmaking view of the same days -->
+      <div class="view-switch" role="group" aria-label="Mode">
+        <button
+          class="view-btn"
+          :class="{ active: calendarMode === 'team' }"
+          @click="$emit('update:calendarMode', 'team')"
+        >
+          👥 Équipe
+        </button>
+        <button
+          class="view-btn"
+          :class="{ active: calendarMode === 'matchmaking' }"
+          @click="$emit('update:calendarMode', 'matchmaking')"
+        >
+          🎯 Matchmaking
+        </button>
+      </div>
+
+      <!-- View mode switch -->
+      <div class="view-switch" role="group" aria-label="Affichage">
+        <button
+          class="view-btn"
+          :class="{ active: viewMode === 'month' }"
+          @click="$emit('update:viewMode', 'month')"
+        >
+          📅 Mois
+        </button>
+        <button
+          class="view-btn"
+          :class="{ active: viewMode === 'week' }"
+          @click="$emit('update:viewMode', 'week')"
+        >
+          📆 Semaine
+        </button>
+      </div>
     </div>
+
+    <!-- Matchmaking: which venue's slots the days show -->
+    <MatchmakingVenuePicker
+      v-if="calendarMode === 'matchmaking'"
+      v-model="venueId"
+      :quick-venues="quickVenues"
+      :other-venues="otherVenues"
+    />
 
     <!-- Navigation header -->
     <div class="nav-header">
@@ -89,6 +126,17 @@ const weekdays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 
   @include mobile {
     padding: $spacing-xs $spacing-sm;
+  }
+}
+
+.switches {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: $spacing-md;
+
+  @include mobile-lg {
+    gap: $spacing-sm;
   }
 }
 

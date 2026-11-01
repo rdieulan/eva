@@ -2,6 +2,8 @@
 
 import type { AvailabilityStatus, PlayerAvailability } from '@shared/types';
 import { AVAILABILITY_STATUSES } from '@shared/types';
+import { TEAM_PLAYER_COUNT } from '@shared/constants';
+import type { TeamAvailabilityStatus } from '@shared/utils';
 
 // Shown behind a day in edit mode: a text glyph, or an icon of SvgIcon
 export type AvailabilitySymbol = { text: string } | { icon: string };
@@ -36,6 +38,33 @@ export function getAvailabilityDisplay(status: AvailabilityStatus | null): Avail
  */
 export function getAvailabilityClass(status: AvailabilityStatus | null): string {
   return `availability--${status ? status.toLowerCase().replace(/_/g, '-') : 'unset'}`;
+}
+
+// Keyed by TeamAvailabilityStatus, what a day's colour means in matchmaking mode.
+// Colours live alongside in $team-availability-colors (styles/_variables.scss).
+const TEAM_AVAILABILITY_DISPLAY: Record<TeamAvailabilityStatus, Pick<AvailabilityDisplay, 'label' | 'title'>> = {
+  ready: { label: `${TEAM_PLAYER_COUNT} dispos`, title: `Au moins ${TEAM_PLAYER_COUNT} joueurs disponibles` },
+  shaky: { label: `${TEAM_PLAYER_COUNT} possibles`, title: `${TEAM_PLAYER_COUNT} joueurs en comptant les disponibilités possibles` },
+  short: { label: `Moins de ${TEAM_PLAYER_COUNT}`, title: `Moins de ${TEAM_PLAYER_COUNT} joueurs mobilisables` },
+  unknown: { label: '?', title: 'Personne n\'a encore renseigné sa disponibilité' },
+};
+
+export const TEAM_AVAILABILITY_STATUSES: readonly TeamAvailabilityStatus[] = ['ready', 'shaky', 'short', 'unknown'];
+
+/**
+ * Get the label and meaning of a team-level availability
+ */
+export function getTeamAvailabilityDisplay(status: TeamAvailabilityStatus): Pick<AvailabilityDisplay, 'label' | 'title'> {
+  return TEAM_AVAILABILITY_DISPLAY[status];
+}
+
+/**
+ * Get the CSS modifier of a team-level availability, matching the keys of
+ * $team-availability-colors. A day nobody answered for looks like a day the
+ * player has not set: the same neutral style.
+ */
+export function getTeamAvailabilityClass(status: TeamAvailabilityStatus): string {
+  return status === 'unknown' ? getAvailabilityClass(null) : `team-availability--${status}`;
 }
 
 /**

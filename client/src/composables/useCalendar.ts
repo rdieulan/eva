@@ -14,6 +14,10 @@ import type { DayData, AvailabilityStatus } from '@shared/types';
 
 export type ViewMode = 'month' | 'week';
 
+// The team's own calendar, or the same days read for matchmaking: coloured by
+// the team's lineup, with the slots of a venue
+export type CalendarMode = 'team' | 'matchmaking';
+
 export interface UseCalendarOptions {
   playerId: Ref<string | undefined>;
   onError?: (errors: string[]) => void;
@@ -22,6 +26,7 @@ export interface UseCalendarOptions {
 export interface UseCalendarReturn {
   // View mode
   viewMode: Ref<ViewMode>;
+  calendarMode: Ref<CalendarMode>;
 
   // Month state
   currentYear: Ref<number>;
@@ -64,6 +69,7 @@ export function useCalendar(options: UseCalendarOptions): UseCalendarReturn {
 
   // View mode state
   const viewMode = ref<ViewMode>('month');
+  const calendarMode = ref<CalendarMode>('team');
 
   // Edit mode state
   const editMode = ref(false);
@@ -75,6 +81,11 @@ export function useCalendar(options: UseCalendarOptions): UseCalendarReturn {
     lastToggleTime = now;
     editMode.value = !editMode.value;
   }
+
+  // A player edits their own days; matchmaking reads the team's, so editing stops there
+  watch(calendarMode, mode => {
+    if (mode === 'matchmaking') editMode.value = false;
+  });
 
   // Current month state
   const currentYear = ref(new Date().getFullYear());
@@ -272,6 +283,7 @@ export function useCalendar(options: UseCalendarOptions): UseCalendarReturn {
   return {
     // View mode
     viewMode,
+    calendarMode,
 
     // Month state
     currentYear,

@@ -1,12 +1,19 @@
 <script setup lang="ts">
 import { AVAILABILITY_STATUSES } from '@shared/types';
-import { getAvailabilityClass, getAvailabilityDisplay } from '@/utils/availability';
+import {
+  getAvailabilityClass,
+  getAvailabilityDisplay,
+  getTeamAvailabilityClass,
+  getTeamAvailabilityDisplay,
+  TEAM_AVAILABILITY_STATUSES,
+} from '@/utils/availability';
 
 // Every status, then "not set"
 const legendStatuses = [...AVAILABILITY_STATUSES, null];
 
 defineProps<{
   editMode: boolean;
+  matchmaking?: boolean; // The days are coloured by the team's availability, not the player's
 }>();
 
 defineEmits<{
@@ -16,8 +23,20 @@ defineEmits<{
 
 <template>
   <div class="calendar-toolbar">
-    <!-- Availability legend -->
-    <div class="availability-legend">
+    <!-- What the day colours mean: the team's lineup in matchmaking, the player's own status otherwise -->
+    <div v-if="matchmaking" class="availability-legend">
+      <span
+        v-for="status in TEAM_AVAILABILITY_STATUSES"
+        :key="status"
+        class="legend-item"
+        :class="getTeamAvailabilityClass(status)"
+        :title="getTeamAvailabilityDisplay(status).title"
+      >
+        <span class="legend-dot"></span>
+        <span class="legend-label">{{ getTeamAvailabilityDisplay(status).label }}</span>
+      </span>
+    </div>
+    <div v-else class="availability-legend">
       <span
         v-for="status in legendStatuses"
         :key="status ?? 'unset'"
@@ -30,8 +49,9 @@ defineEmits<{
       </span>
     </div>
 
-    <!-- Edit mode button -->
+    <!-- Edit mode button: a player edits their own days, which has no place in matchmaking -->
     <button
+      v-if="!matchmaking"
       class="edit-mode-btn"
       :class="{ active: editMode }"
       @pointerdown.prevent="$emit('toggleEditMode')"
@@ -117,6 +137,13 @@ defineEmits<{
     border-color: $color-text-secondary;
   }
 
+  @each $status, $color in $team-availability-colors {
+    .team-availability--#{$status} & {
+      background: $color;
+      border-color: $color;
+    }
+  }
+
   @include mobile-lg {
     width: 10px;
     height: 10px;
@@ -134,6 +161,12 @@ defineEmits<{
   @each $status, $style in $availability-styles {
     .availability--#{$status} & {
       color: map.get($style, color);
+    }
+  }
+
+  @each $status, $color in $team-availability-colors {
+    .team-availability--#{$status} & {
+      color: $color;
     }
   }
 }

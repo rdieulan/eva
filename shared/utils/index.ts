@@ -32,3 +32,5 @@ export { buildEvaBookingUrl, assessSlotHeadcount, type SlotHeadcount, type SlotH
 export { normalizeLinkUrl, isAcceptableLinkInput } from './venue.utils';
 
 export { detectImageType } from './image.utils';
+
+export { assessTeamAvailability, type TeamAvailability, type TeamAvailabilityStatus } from './availability.utils';

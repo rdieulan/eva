@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, provide } from 'vue';
+import { ref, computed, onMounted, provide, watch } from 'vue';
 import CalendarTopBar from '@/components/calendar/layout/CalendarTopBar.vue';
 import CalendarHeader from '@/components/calendar/layout/CalendarHeader.vue';
 import CalendarBody from '@/components/calendar/layout/CalendarBody.vue';
@@ -14,6 +14,7 @@ import { useCalendarEvents } from '@/composables/useCalendarEvents';
 import { useErrors } from '@/composables/useErrors';
 import { fetchAllMaps, fetchPlayers, fetchVenues, fetchCurrentTeam } from '@/api';
 import { computePlayerInitials } from '@/utils/players';
+import { splitMatchmakingVenues } from '@/utils/venues';
 import { ERROR } from '@shared/constants';
 import type { MapConfig, Player, Venue } from '@shared/types';
 
@@ -37,6 +38,7 @@ onMounted(() => {
 // Use calendar composable
 const {
   viewMode,
+  calendarMode,
   currentYear,
   currentMonth,
   currentWeekStart,
@@ -112,6 +114,20 @@ const players = ref<Player[]>([]);
 // Venues a match can be played in, and the one a new match defaults to
 const venues = ref<Venue[]>([]);
 const teamVenueId = ref<string | null>(null);
+const teamFavoriteVenueIds = ref<string[]>([]);
+
+// Matchmaking: the team's venues first, the rest of the network behind, and the one shown
+const matchmakingVenues = computed(() =>
+  splitMatchmakingVenues(venues.value, { venueId: teamVenueId.value, favoriteVenueIds: teamFavoriteVenueIds.value }),
+);
+const matchmakingVenueId = ref<string | null>(null);
+const isMatchmaking = computed(() => calendarMode.value === 'matchmaking');
+
+// Entering matchmaking lands on the team's venue, or the first one it can show
+watch(isMatchmaking, entering => {
+  if (!entering || matchmakingVenueId.value) return;
+  matchmakingVenueId.value = matchmakingVenues.value.quick[0]?.id ?? matchmakingVenues.value.others[0]?.id ?? null;
+});
 
 // Initial load
 onMounted(async () => {
@@ -127,6 +143,7 @@ onMounted(async () => {
     players.value = loadedPlayers;
     venues.value = loadedVenues;
     teamVenueId.value = team?.venueId ?? null;
+    teamFavoriteVenueIds.value = team?.favoriteVenueIds ?? [];
   } catch (err) {
     console.error('Error loading maps/players/venues:', err);
     setErrorFromException(err, ERROR.serverError);
@@ -143,6 +160,7 @@ onMounted(async () => {
     <Teleport v-if="!teleportDisabled" to="#topbar-dynamic-content">
       <CalendarTopBar
         :edit-mode="editMode"
+        :matchmaking="isMatchmaking"
         @toggle-edit-mode="toggleEditMode"
       />
     </Teleport>
@@ -166,9 +184,14 @@ onMounted(async () => {
     <template v-else>
       <!-- Calendar controls -->
       <CalendarHeader
+        v-model:venue-id="matchmakingVenueId"
         :view-mode="viewMode"
+        :calendar-mode="calendarMode"
         :navigation-title="navigationTitle"
+        :quick-venues="matchmakingVenues.quick"
+        :other-venues="matchmakingVenues.others"
         @update:view-mode="viewMode = $event"
+        @update:calendar-mode="calendarMode = $event"
         @prev="goToPrev"
         @next="goToNext"
       />
@@ -182,6 +205,7 @@ onMounted(async () => {
           :week-start="currentWeekStart"
           :days="days"
           :edit-mode="editMode"
+          :matchmaking="isMatchmaking"
           :player-labels="playerLabels"
           @prev-month="goToPrevMonth"
           @next-month="goToNextMonth"

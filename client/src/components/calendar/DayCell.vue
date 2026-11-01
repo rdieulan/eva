@@ -6,9 +6,12 @@ import {
   getAvailabilityClass,
   getAvailabilityDisplay,
   getNextAvailabilityStatus,
+  getTeamAvailabilityClass,
+  getTeamAvailabilityDisplay,
   sortPlayersByAvailability,
 } from '@/utils/availability';
 import { getEventTypeClass } from '@/utils/calendar';
+import { assessTeamAvailability } from '@shared/utils';
 import { SUBSCRIPTION_TIER_LABELS } from '@/utils/subscription';
 import SvgIcon from '@/components/common/SvgIcon.vue';
 
@@ -24,6 +27,7 @@ interface Props {
   renewals?: SubscriptionRenewal[]; // Players whose subscription renews that day
   showDayNumber?: boolean;
   editMode?: boolean; // Availability edit mode
+  matchmaking?: boolean; // Colour the day by the team's lineup, not the player's own status
   playerLabels?: Record<string, string>; // playerId -> roster-unique badge label
 }
 
@@ -31,6 +35,7 @@ const props = withDefaults(defineProps<Props>(), {
   renewals: () => [],
   showDayNumber: true,
   editMode: false,
+  matchmaking: false,
   playerLabels: () => ({}),
 });
 
@@ -67,10 +72,19 @@ const renewalTooltip = computed(() => {
   return `Renouvellement d'abonnement : ${players.join(', ')}`;
 });
 
-// Cell background class based on current user's availability
-const cellStatusClass = computed(() =>
-  props.isPast ? 'status-past' : getAvailabilityClass(props.currentPlayerStatus),
+// Can the team line up that day? What matchmaking colours the cell with.
+const teamAvailability = computed(() =>
+  assessTeamAvailability(props.playerAvailabilities.map(player => player.status)),
 );
+
+// Cell background class: the team's lineup in matchmaking mode, the current user's status otherwise
+const cellStatusClass = computed(() => {
+  if (props.isPast) return 'status-past';
+  if (props.matchmaking) return getTeamAvailabilityClass(teamAvailability.value.status);
+  return getAvailabilityClass(props.currentPlayerStatus);
+});
+
+const teamAvailabilityTitle = computed(() => getTeamAvailabilityDisplay(teamAvailability.value.status).title);
 
 // Symbol shown behind the day in edit mode
 const currentStatusSymbol = computed(() => getAvailabilityDisplay(props.currentPlayerStatus).symbol);
@@ -89,10 +103,10 @@ function handleCellClick() {
       cycleAvailability();
     }
   } else if (hasEvents.value) {
-    // Normal mode with events: open event viewer (even for past days)
+    // With events: open event viewer (even for past days)
     emit('open-event-viewer', sortedEvents.value, 0);
-  } else if (!props.isPast) {
-    // Normal mode without events: emit to open create modal (for admins, not past)
+  } else if (!props.isPast && !props.matchmaking) {
+    // Team mode without events: emit to open create modal (for admins, not past)
     emit('open-create-event', props.date);
   }
 }
@@ -130,8 +144,10 @@ function cycleAvailability() {
         'is-past': isPast,
         'has-events': hasEvents,
         'edit-mode': editMode,
+        'matchmaking': matchmaking,
       }
     ]"
+    :title="matchmaking && !isPast ? teamAvailabilityTitle : undefined"
     @click="handleCellClick"
   >
     <!-- Day number -->
@@ -218,6 +234,18 @@ function cycleAvailability() {
     $color: map.get($style, color);
 
     &.availability--#{$status} {
+      background: rgba($color, 0.15);
+      border-color: rgba($color, 0.4);
+
+      &:hover {
+        background: rgba($color, 0.25);
+        border-color: rgba($color, 0.6);
+      }
+    }
+  }
+
+  @each $status, $color in $team-availability-colors {
+    &.team-availability--#{$status} {
       background: rgba($color, 0.15);
       border-color: rgba($color, 0.4);
 

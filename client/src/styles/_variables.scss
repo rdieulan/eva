@@ -134,6 +134,14 @@ $availability-styles: (
   unavailable: (color: $color-danger, avatar-bg: -36%, avatar-border: 34%),
 );
 
+// Team-level availability of a day in matchmaking mode — keys are the
+// TeamAvailabilityStatus values, used as `.team-availability--<key>` modifiers
+$team-availability-colors: (
+  ready: $color-success,
+  shaky: $color-conditional,
+  short: $color-danger,
+);
+
 // Calendar event types — keys are the kebab-case EventType values, used as
 // `.event-type--<key>` modifiers (see getEventTypeClass in utils/calendar.ts)
 $event-type-colors: (

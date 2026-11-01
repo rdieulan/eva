@@ -39,6 +39,8 @@ vi.mock('@/api', () => ({
     { id: 'player-1', name: 'Alice' },
     { id: 'player-2', name: 'Bob' },
   ])),
+  fetchVenues: vi.fn(() => Promise.resolve([])),
+  fetchCurrentTeam: vi.fn(() => Promise.resolve(null)),
 }));
 
 import * as calendarApi from '@/api/calendar.api';
