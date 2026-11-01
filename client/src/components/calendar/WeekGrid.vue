@@ -2,7 +2,7 @@
 import { computed, ref, onMounted, watch, nextTick } from 'vue';
 import DayCell from './DayCell.vue';
 import { formatDateStr, isPastDateStr } from '@/utils/calendar';
-import type { DayData, CalendarEvent, AvailabilityStatus } from '@shared/types';
+import type { DayData, CalendarEvent, AvailabilityStatus, ScrimSearch } from '@shared/types';
 
 const props = defineProps<{
   year: number;
@@ -11,6 +11,9 @@ const props = defineProps<{
   days: Record<string, DayData>;
   editMode?: boolean;
   matchmaking?: boolean;
+  scrimSearches?: Record<string, ScrimSearch[]>; // Searches of each day
+  selectable?: boolean; // Matchmaking: days can be picked for a search
+  selectedDates?: string[];
   playerLabels?: Record<string, string>;
 }>();
 
@@ -20,6 +23,8 @@ const emit = defineEmits<{
   'set-availability': [date: string, status: AvailabilityStatus | null];
   'open-event-viewer': [events: CalendarEvent[], initialIndex: number];
   'open-create-event': [date: string];
+  'toggle-select': [date: string];
+  'open-search': [search: ScrimSearch];
 }>();
 
 // Day names (full) - tuple type for type safety
@@ -128,10 +133,15 @@ watch(() => props.weekStart, () => {
           :show-day-number="false"
           :edit-mode="props.editMode"
           :matchmaking="props.matchmaking"
+          :scrim-searches="props.scrimSearches?.[cell.date] ?? []"
+          :selectable="props.selectable"
+          :selected="props.selectedDates?.includes(cell.date) ?? false"
           :player-labels="props.playerLabels"
           @set-availability="(status) => handleSetAvailability(cell.date, status)"
           @open-event-viewer="(events, index) => emit('open-event-viewer', events, index)"
           @open-create-event="(date) => emit('open-create-event', date)"
+          @toggle-select="(date) => emit('toggle-select', date)"
+          @open-search="(search) => emit('open-search', search)"
         />
       </div>
     </div>

@@ -38,13 +38,20 @@ Le planificateur de postes est **parqué** (`PLANNER_ENABLED`, `shared/constants
 
 **Découpe (ordre de construction, ce qui reste).**
 
-1. Déclarer des recherches depuis le calendrier : sélection de plusieurs jours, fenêtre des créneaux proposables par jour, retrait d'une recherche.
-2. Voir et proposer : recherches des autres équipes dans les jours, proposition, acceptation ou refus qui crée le match des deux côtés, notification in-app et courriel.
-3. Page publique du tableau d'une salle.
+1. Proposer un match : depuis la recherche d'une autre équipe, proposition, acceptation ou refus qui crée le match des deux côtés et ferme la recherche, notification in-app et courriel.
+2. Page publique du tableau d'une salle.
 
 ---
 
 ## ✅ Terminé
+
+### Feature : Déclarer et voir les recherches de scrim dans le calendrier
+
+**Périmètre livré** :
+- En mode Matchmaking, qui peut créer des événements clique sur autant de jours qu'il veut (un jour rouge ou neutre s'accepte) ; une barre flottante compte la sélection et ouvre la fenêtre « Chercher un adversaire ». La sélection se vide quand la salle, le mois ou le mode change.
+- La fenêtre liste, jour par jour, les créneaux de la salle qu'un match peut prendre (mode compétitif ouvert, personne d'inscrit, pas déjà en recherche par l'équipe), avec le rappel de l'état de l'équipe ce jour-là. Une recherche par jour coché ; un jour refusé par le serveur reste affiché avec la raison, les autres partent.
+- Les recherches apparaissent dans les jours : celles de toutes les équipes dans la salle affichée en Matchmaking, celles de l'équipe seule en mode Équipe. Un clic ouvre le détail (équipe, jour, horaire, convocation, salle et arène) ; une recherche de sa propre équipe s'y retire après confirmation.
+- `VenueSlotPicker` partagé avec le formulaire de match : filtre « jouable seulement » et créneaux exclus en options.
 
 ### Feature : Recherches de scrim (données et API)
 

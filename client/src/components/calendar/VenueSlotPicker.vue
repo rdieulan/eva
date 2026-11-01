@@ -4,14 +4,22 @@ import type { VenueSlot } from '@shared/types';
 import { useVenueSlots, type VenueSlotsStatus } from '@/composables/useVenueSlots';
 import { assessSlotHeadcount } from '@shared/utils';
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   venueId: string | null;
   date: string;
   modelValue: string[]; // Slot ids of the match, in order; empty while none is picked
-  currentStartTime: string; // Times of the match, shown when its slots are no longer listed
-  currentEndTime: string;
+  currentStartTime?: string; // Times of the match, shown when its slots are no longer listed
+  currentEndTime?: string;
   disabled?: boolean;
-}>();
+  onlyPlayable?: boolean; // Only slots a match can be booked on: competitive mode open, nobody in yet
+  excludedSlotIds?: string[]; // Slots not to offer (already up for an opponent, say)
+}>(), {
+  currentStartTime: '',
+  currentEndTime: '',
+  disabled: false,
+  onlyPlayable: false,
+  excludedSlotIds: () => [],
+});
 
 const emit = defineEmits<{
   select: [slots: VenueSlot[]];
@@ -27,10 +35,16 @@ const { slots, status } = useVenueSlots({
 // The form hides its own time fields while slots can be listed, so it needs to know
 watch(status, newStatus => emit('status', newStatus), { immediate: true });
 
+// The slots on offer: every one the venue runs, or only those a match can take
+const offeredSlots = computed(() => slots.value.filter(slot =>
+  !props.excludedSlotIds.includes(slot.slotId)
+  && (!props.onlyPlayable || (slot.isCompetitiveAvailable && slot.takenSeats === 0)),
+));
+
 // Slots grouped by arena, each group in start-time order: a match runs on one arena
 const arenas = computed(() => {
   const byArena = new Map<number, VenueSlot[]>();
-  for (const slot of slots.value) {
+  for (const slot of offeredSlots.value) {
     const group = byArena.get(slot.arenaNumber) ?? [];
     group.push(slot);
     byArena.set(slot.arenaNumber, group);
@@ -39,7 +53,7 @@ const arenas = computed(() => {
 });
 
 const selectedIds = computed(() => new Set(props.modelValue));
-const selectedSlots = computed(() => slots.value.filter(slot => selectedIds.value.has(slot.slotId)));
+const selectedSlots = computed(() => offeredSlots.value.filter(slot => selectedIds.value.has(slot.slotId)));
 
 // Slots the match was saved on that eva.gg no longer lists that day: kept until
 // the player picks others, so that opening the form never loses them
@@ -99,11 +113,11 @@ const selectionSummary = computed(() => {
     <p v-else-if="status === 'unavailable'" class="form-hint">
       Les créneaux de la salle ne peuvent pas être lus pour le moment : saisis l'horaire à la main.
     </p>
-    <p v-else-if="status === 'ready' && !slots.length" class="form-hint">
-      Aucun créneau dans cette salle ce jour-là.
+    <p v-else-if="status === 'ready' && !offeredSlots.length" class="form-hint">
+      {{ slots.length ? 'Aucun créneau libre pour un match dans cette salle ce jour-là.' : 'Aucun créneau dans cette salle ce jour-là.' }}
     </p>
 
-    <template v-if="status === 'ready' && slots.length">
+    <template v-if="status === 'ready' && offeredSlots.length">
       <div v-if="areStoredSlotsMissing" class="slot-row slot-row--stored">
         <span class="slot-time">{{ currentStartTime }} – {{ currentEndTime }}</span>
         <span class="slot-note">Créneaux enregistrés, plus proposés ce jour-là</span>

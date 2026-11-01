@@ -36,6 +36,9 @@ export {
   updateEventGamePlan,
 } from '@/api/calendar.api';
 
+// Scrim searches API
+export { fetchScrimSearches, createScrimSearch, deleteScrimSearch } from '@/api/scrims.api';
+
 // Balance Rules
 export { clearBalanceRulesCache } from '@/composables/useBalanceRules';
 

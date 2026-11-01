@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { AvailabilityStatus, PlayerAvailability, CalendarEvent, SubscriptionRenewal } from '@shared/types';
+import type { AvailabilityStatus, PlayerAvailability, CalendarEvent, SubscriptionRenewal, ScrimSearch } from '@shared/types';
 import { getPlayerInitials } from '@/utils/players';
 import {
   getAvailabilityClass,
@@ -28,6 +28,9 @@ interface Props {
   showDayNumber?: boolean;
   editMode?: boolean; // Availability edit mode
   matchmaking?: boolean; // Colour the day by the team's lineup, not the player's own status
+  scrimSearches?: ScrimSearch[]; // Teams looking for an opponent that day
+  selectable?: boolean; // Matchmaking: clicking the day picks it for a search
+  selected?: boolean;
   playerLabels?: Record<string, string>; // playerId -> roster-unique badge label
 }
 
@@ -36,6 +39,9 @@ const props = withDefaults(defineProps<Props>(), {
   showDayNumber: true,
   editMode: false,
   matchmaking: false,
+  scrimSearches: () => [],
+  selectable: false,
+  selected: false,
   playerLabels: () => ({}),
 });
 
@@ -43,6 +49,8 @@ const emit = defineEmits<{
   'set-availability': [status: AvailabilityStatus | null];
   'open-event-viewer': [events: CalendarEvent[], initialIndex: number];
   'open-create-event': [date: string];
+  'toggle-select': [date: string];
+  'open-search': [search: ScrimSearch];
 }>();
 
 // Sort events by start time
@@ -102,6 +110,9 @@ function handleCellClick() {
     if (!props.isPast) {
       cycleAvailability();
     }
+  } else if (props.matchmaking && props.selectable && !props.isPast) {
+    // Matchmaking: the day joins (or leaves) the days to put up for an opponent
+    emit('toggle-select', props.date);
   } else if (hasEvents.value) {
     // With events: open event viewer (even for past days)
     emit('open-event-viewer', sortedEvents.value, 0);
@@ -109,6 +120,17 @@ function handleCellClick() {
     // Team mode without events: emit to open create modal (for admins, not past)
     emit('open-create-event', props.date);
   }
+}
+
+// Click on a search = open it, whatever the cell would do
+function handleSearchClick(e: MouseEvent, search: ScrimSearch) {
+  e.stopPropagation();
+  emit('open-search', search);
+}
+
+// The team's own searches stand out by their solid badge; the name goes to the others
+function searchLabel(search: ScrimSearch): string {
+  return search.isMine ? 'Recherche' : search.team.name;
 }
 
 // Click on specific event = open viewer at that event index (or cycle in edit mode)
@@ -145,6 +167,8 @@ function cycleAvailability() {
         'has-events': hasEvents,
         'edit-mode': editMode,
         'matchmaking': matchmaking,
+        'is-selectable': matchmaking && selectable && !isPast,
+        'is-selected': selected,
       }
     ]"
     :title="matchmaking && !isPast ? teamAvailabilityTitle : undefined"
@@ -155,6 +179,25 @@ function cycleAvailability() {
       <span class="day-number">
         {{ dayNumber }}
       </span>
+      <span v-if="selected" class="selected-mark" aria-label="Jour sélectionné">✓</span>
+    </div>
+
+    <!-- Teams looking for an opponent that day -->
+    <div v-if="scrimSearches.length" class="searches-list">
+      <button
+        v-for="search in scrimSearches"
+        :key="search.id"
+        type="button"
+        class="search-badge"
+        :class="{ 'search-badge--mine': search.isMine }"
+        :title="`${searchLabel(search)} · ${search.startTime} – ${search.endTime}`"
+        @click="handleSearchClick($event, search)"
+      >
+        <img v-if="search.team.logoUrl && !search.isMine" class="search-logo" :src="search.team.logoUrl" alt="" />
+        <span v-else class="search-icon" aria-hidden="true">🔎</span>
+        <span class="search-time">{{ search.startTime }}</span>
+        <span class="search-team">{{ searchLabel(search) }}</span>
+      </button>
     </div>
 
     <!-- Subscription renewals -->
@@ -321,6 +364,15 @@ function cycleAvailability() {
     box-shadow: 0 0 0 2px $color-accent;
   }
 
+  &.is-selectable {
+    cursor: pointer;
+  }
+
+  &.is-selected {
+    border-color: $color-accent;
+    box-shadow: inset 0 0 0 2px $color-accent;
+  }
+
   @include tablet {
     min-height: 85px;
     padding: 0.4rem;
@@ -346,6 +398,7 @@ function cycleAvailability() {
 .day-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   position: relative;
   z-index: 1;
 
@@ -427,6 +480,92 @@ function cycleAvailability() {
   @include mobile {
     font-size: 2.5rem;
   }
+}
+
+.selected-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: $color-accent;
+  color: $color-white;
+  font-size: 0.7rem;
+  font-weight: 700;
+
+  @include mobile-lg {
+    width: 16px;
+    height: 16px;
+    font-size: 0.6rem;
+  }
+}
+
+.searches-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.search-badge {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: 3px 6px;
+  border: 1px dashed rgba($color-accent, 0.7);
+  border-radius: $radius-sm;
+  background: rgba($color-accent, 0.12);
+  color: $color-white;
+  font-size: 0.72rem;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  transition: filter 0.15s;
+
+  &:hover {
+    filter: brightness(1.2);
+  }
+
+  &--mine {
+    border-style: solid;
+    background: rgba($color-accent, 0.25);
+  }
+
+  @include mobile-lg {
+    padding: 2px 4px;
+    font-size: 0.6rem;
+  }
+}
+
+.search-logo {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.search-icon {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+}
+
+.search-time {
+  font-weight: 600;
+  flex-shrink: 0;
+
+  @include mobile-lg {
+    display: none;
+  }
+}
+
+.search-team {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .events-list {

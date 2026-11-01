@@ -5,18 +5,22 @@ import CalendarHeader from '@/components/calendar/layout/CalendarHeader.vue';
 import CalendarBody from '@/components/calendar/layout/CalendarBody.vue';
 import EventFormModal from '@/components/calendar/EventFormModal.vue';
 import EventViewerModal from '@/components/calendar/EventViewerModal.vue';
+import ScrimSelectionBar from '@/components/calendar/ScrimSelectionBar.vue';
+import ScrimSearchModal from '@/components/calendar/ScrimSearchModal.vue';
+import ScrimSearchViewerModal from '@/components/calendar/ScrimSearchViewerModal.vue';
 import NoTeamMessage from '@/components/common/NoTeamMessage.vue';
 import ErrorModal from '@/components/common/error/ErrorModal.vue';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import { useAuth } from '@/composables/useAuth';
 import { useCalendar } from '@/composables/useCalendar';
 import { useCalendarEvents } from '@/composables/useCalendarEvents';
+import { useScrimSearches } from '@/composables/useScrimSearches';
 import { useErrors } from '@/composables/useErrors';
 import { fetchAllMaps, fetchPlayers, fetchVenues, fetchCurrentTeam } from '@/api';
 import { computePlayerInitials } from '@/utils/players';
-import { splitMatchmakingVenues } from '@/utils/venues';
+import { splitMatchmakingVenues, formatVenueLabel } from '@/utils/venues';
 import { ERROR } from '@shared/constants';
-import type { MapConfig, Player, Venue } from '@shared/types';
+import type { MapConfig, Player, Venue, ScrimSearch } from '@shared/types';
 
 const { permissions, account } = useAuth();
 
@@ -41,6 +45,7 @@ const {
   calendarMode,
   currentYear,
   currentMonth,
+  monthString,
   currentWeekStart,
   navigationTitle,
   days,
@@ -129,6 +134,50 @@ watch(isMatchmaking, entering => {
   matchmakingVenueId.value = matchmakingVenues.value.quick[0]?.id ?? matchmakingVenues.value.others[0]?.id ?? null;
 });
 
+const matchmakingVenue = computed(() => venues.value.find(venue => venue.id === matchmakingVenueId.value) ?? null);
+
+// Teams looking for an opponent: at the shown venue in matchmaking, the team's own otherwise
+const {
+  byDate: scrimSearchesByDate,
+  mine: ownScrimSearches,
+  load: loadScrimSearches,
+} = useScrimSearches({
+  month: monthString,
+  venueId: computed(() => (isMatchmaking.value ? matchmakingVenueId.value : null)),
+  enabled: computed(() => !noTeam.value && (!isMatchmaking.value || matchmakingVenueId.value !== null)),
+});
+
+// Days picked for a search. Picking only makes sense with a venue to pick slots in.
+const canSearchScrims = computed(() => canCreateEvents.value && matchmakingVenueId.value !== null);
+const selectedDates = ref<string[]>([]);
+const showScrimSearchModal = ref(false);
+
+function toggleSelectedDate(date: string) {
+  selectedDates.value = selectedDates.value.includes(date)
+    ? selectedDates.value.filter(selected => selected !== date)
+    : [...selectedDates.value, date];
+}
+
+function clearSelectedDates() {
+  selectedDates.value = [];
+}
+
+// A selection belongs to one venue and one view of the month
+watch([isMatchmaking, matchmakingVenueId, monthString], clearSelectedDates);
+
+function handleScrimSearchesOpened() {
+  clearSelectedDates();
+  loadScrimSearches();
+}
+
+// The search being looked at, from a cell
+const viewedScrimSearch = ref<ScrimSearch | null>(null);
+
+const viewedSearchVenueLabel = computed(() => {
+  const venue = venues.value.find(candidate => candidate.id === viewedScrimSearch.value?.venueId);
+  return venue ? formatVenueLabel(venue) : null;
+});
+
 // Initial load
 onMounted(async () => {
   // Load what the event form and the RotationCalculator need (in parallel with calendar)
@@ -190,6 +239,7 @@ onMounted(async () => {
         :navigation-title="navigationTitle"
         :quick-venues="matchmakingVenues.quick"
         :other-venues="matchmakingVenues.others"
+        :can-search="canSearchScrims"
         @update:view-mode="viewMode = $event"
         @update:calendar-mode="calendarMode = $event"
         @prev="goToPrev"
@@ -206,6 +256,9 @@ onMounted(async () => {
           :days="days"
           :edit-mode="editMode"
           :matchmaking="isMatchmaking"
+          :scrim-searches="scrimSearchesByDate"
+          :selectable="canSearchScrims"
+          :selected-dates="selectedDates"
           :player-labels="playerLabels"
           @prev-month="goToPrevMonth"
           @next-month="goToNextMonth"
@@ -214,9 +267,37 @@ onMounted(async () => {
           @set-availability="setAvailability"
           @open-event-viewer="openEventViewer"
           @open-create-event="openCreateEvent"
+          @toggle-select="toggleSelectedDate"
+          @open-search="viewedScrimSearch = $event"
         />
       </div>
+
+      <ScrimSelectionBar
+        :count="selectedDates.length"
+        @search="showScrimSearchModal = true"
+        @clear="clearSelectedDates"
+      />
     </template>
+
+    <!-- Put the picked days up for an opponent -->
+    <ScrimSearchModal
+      :open="showScrimSearchModal"
+      :venue="matchmakingVenue"
+      :dates="selectedDates"
+      :days="days"
+      :own-searches="ownScrimSearches"
+      @close="showScrimSearchModal = false"
+      @opened="handleScrimSearchesOpened"
+    />
+
+    <!-- A search picked in a cell -->
+    <ScrimSearchViewerModal
+      :search="viewedScrimSearch"
+      :venue-label="viewedSearchVenueLabel"
+      :can-withdraw="(viewedScrimSearch?.isMine ?? false) && canCreateEvents"
+      @close="viewedScrimSearch = null"
+      @withdrawn="loadScrimSearches"
+    />
 
     <!-- Event viewer modal -->
     <EventViewerModal

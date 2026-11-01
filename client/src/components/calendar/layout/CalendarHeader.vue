@@ -10,6 +10,7 @@ defineProps<{
   navigationTitle: string;
   quickVenues: Venue[]; // Matchmaking: the team's own venues
   otherVenues: Venue[]; // Matchmaking: the rest of the network
+  canSearch?: boolean; // The reader may put days up for an opponent
 }>();
 
 const emit = defineEmits<{
@@ -72,6 +73,9 @@ const weekdays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
       :quick-venues="quickVenues"
       :other-venues="otherVenues"
     />
+    <p v-if="calendarMode === 'matchmaking' && canSearch && venueId" class="search-hint">
+      Clique sur les jours où tu veux jouer, puis choisis les créneaux à proposer aux autres équipes.
+    </p>
 
     <!-- Navigation header -->
     <div class="nav-header">
@@ -184,6 +188,13 @@ const weekdays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
     font-size: 0.8rem;
     border-radius: 6px;
   }
+}
+
+.search-hint {
+  margin: 0;
+  color: $color-text-secondary;
+  font-size: 0.8rem;
+  text-align: center;
 }
 
 .nav-header {
