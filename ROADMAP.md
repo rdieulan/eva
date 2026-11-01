@@ -8,6 +8,14 @@ _(rien — prêt pour un merge `dev` → `main`)_
 
 ## ✅ Terminé
 
+### Feature : Créneau d'un match choisi dans la grille de la salle
+
+**Périmètre livré** :
+- eva.gg ne publie pas de grille hebdomadaire : les créneaux d'une salle se lisent par date (`listLocationGameSessionsByDate`, public, confirmé par un appel sur Nîmes). Route `GET /api/venues/:id/slots?date=…`, cache de 5 minutes par salle et jour, salles créées à la main exclues.
+- Formulaire d'événement : pour un match sur une salle reliée, le champ « Créneau » remplace Début/Fin ; le créneau pose l'horaire et l'arène, et rappelle l'heure de convocation. Début/Fin ne reviennent que sans grille (pas de salle, salle non reliée, créneaux illisibles, autre type d'événement).
+- `CalendarEvent.evaSlotId` (migration 0017), gardé tant que salle, jour et heure ne bougent pas : c'est la clé qui permettra de croiser avec les réservations des joueurs.
+- Tests d'intégration avec eva.gg mocké sur la réponse réelle, unitaires sur la normalisation, le composable et le sélecteur.
+
 ### Feature : Compte eva.gg lié au profil
 
 **Périmètre livré** :
@@ -116,7 +124,14 @@ _(rien — prêt pour un merge `dev` → `main`)_
 |-------|--------|-------|
 | Compte eva.gg dédié | ⬜ | Jeton en variable d'environnement ; ouvre `bookings(userId)` sur les joueurs liés. Jamais de jeton perso de joueur. |
 | Vérifier l'inscription d'un joueur au créneau posé dans le calendrier | ⬜ | Croiser `bookings(userId)` avec les matchs de l'équipe ; rappel sur le tableau de bord d'accueil. |
-| Dispos de créneaux pour organiser des scrims | ⬜ | `listLocationGameSessionsByDate` (public d'après le bundle, à confirmer par un seul appel ciblé). |
+| Dispos de créneaux pour organiser des scrims | ⬜ | Même lecture que le sélecteur de créneau (`availableSeatCount` par créneau), à exposer côté équipe. |
+
+### Dette et détails relevés en route ⬜
+
+| Tâche | Statut | Notes |
+|-------|--------|-------|
+| Découper `EventFormModal.vue` | ⬜ | Plus de 850 lignes : extraire la vue lecture seule et les champs de lieu (salle, arène, créneau) en sous-composants. |
+| `POST /api/teams` ignore `venueId` | ⬜ | La salle passée à la création n'est pas enregistrée ; elle ne se pose qu'ensuite depuis la page équipe. Soit l'accepter, soit la retirer du contrat. |
 
 ### TopBar côté admin ⬜
 

@@ -44,6 +44,7 @@ export {
   fetchCurrentTeam,
   createTeam,
   fetchVenues,
+  fetchVenueSlots,
   updateTeam,
   fetchTeamMembers,
   updateMemberPermissions,

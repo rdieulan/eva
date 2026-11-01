@@ -102,31 +102,44 @@ listSeasons { nodes { id from to seasonNumber active status name } itemCount }
 
 Sert à connaître la saison courante pour interroger `experience` et les statistiques.
 
-### `listLocationGameSessionsByDate(data: ListLocationSessionsByDateInput!)` — créneaux **[lu dans le bundle]**
+### `listLocationGameSessionsByDate(data: ListLocationSessionsByDateInput!)` — créneaux d'un jour **[vérifié]**
 
-Public d'après le bundle : le hook qui l'appelle ne se désactive que si la salle ou la date
-manque, alors que les hooks de données personnelles se désactivent explicitement hors
-connexion, et la page `/booking/calendar` qui l'utilise est ouverte aux visiteurs. Non
-confirmé par un appel.
+Public : répond sans jeton (Nîmes, 2026-11-03, réponse brute conservée dans
+`tmp-eva-probe/sessions-nimes-2026-11-03.json`). C'est la requête de leur calendrier de
+réservation. **eva.gg ne publie pas de grille hebdomadaire** : les créneaux se lisent par
+salle et par date. Utilisé par `server/src/integrations/eva/eva-sessions.ts`, derrière
+`GET /api/venues/:id/slots?date=…` avec un cache de 5 minutes par salle et jour.
 
-Entrée observée :
+Entrée, telle que leur calendrier l'envoie pour un visiteur qui n'a encore rien choisi :
 
 ```graphql
 data: {
   date: "YYYY-MM-DD",
-  locationId: Int,
-  seatCount: Int!,            # obligatoire [vérifié]
-  seatTypes: ["Player"],
-  isCompetitiveModeOnly: Boolean,
-  gameIdList: [Int]           # omis quand vide
+  locationId: Int,            # Venue.externalId
+  seatCount: 1,               # obligatoire ; 1 liste toutes les sessions
+  seatTypes: ["PLAYER"],
+  isCompetitiveModeOnly: false,
+  gameIdList: [1]             # le jeu compétitif ; omis quand vide chez eux
 }
 ```
 
-Sortie (extrait) : `takenSeatCount totalSeatCount availableSeatCount unitPrice currency
-pricingType matchmakingLevel slot { id startTime convocationTime localDatetime duration }
-terrain { id displayNumber } game { id identifier name minPlayer maxPlayer }`.
+Ce que ça renvoie, une session par créneau et par arène :
 
-Piste pour les scrims : lire les créneaux libres d'une salle à une date.
+| Champ | Observé | Sens |
+|---|---|---|
+| `slot.id` | chaîne hex opaque (`51:60:2026-11-03:2026-11-03T19:00:00Z:40` une fois décodée) | identifiant du créneau, le même que portent les réservations ; stocké sur `CalendarEvent.evaSlotId` |
+| `slot.startTime` | `20:00` | début de jeu, `HH:mm` local |
+| `slot.convocationTime` | `19:50` | 10 min avant ; **c'est l'heure que leur app affiche aux joueurs** |
+| `slot.duration` | `40` | minutes |
+| `terrain.displayNumber` | `1` | notre numéro d'arène |
+| `availableSeatCount` / `totalSeatCount` | `3` / `10` | places restantes ; le total est le `maxPlayer` du jeu |
+| `competitiveMode { isAvailable isActive }` | `true` / `false` | mode compétitif ouvert sur la session |
+| `matchmakingLevel`, `unitPrice`, `pricingType`, `isSubscriptionUsable`… | | tarification et matchmaking, non utilisés |
+
+Grille observée à Nîmes : 12 créneaux de 40 minutes, de 14:00 à 21:20, sans trou. Une salle
+fermée ce jour-là renvoie une liste vide.
+
+Piste pour les scrims : `availableSeatCount` dit directement si un créneau est libre.
 
 ### Probablement publics **[lu dans le bundle, non confirmé]**
 

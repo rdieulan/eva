@@ -24,3 +24,5 @@ export {
   isSubscriptionRenewalDay,
   getNextSubscriptionRenewal,
 } from './subscription.utils';
+
+export { addMinutesToTime } from './time.utils';

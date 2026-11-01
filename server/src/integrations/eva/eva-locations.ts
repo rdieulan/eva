@@ -4,10 +4,7 @@
 // is the source of truth for their names, addresses and phone numbers.
 
 import { evaGraphql } from './eva-graphql';
-
-// "EVA BATTLE ARENA" (AFTER_H_BATTLE_ARENA), the competitive game our teams
-// play. A venue also runs arenas for their other games, which we ignore.
-const COMPETITIVE_GAME_ID = 1;
+import { COMPETITIVE_GAME_ID } from './eva-games';
 
 const LIST_LOCATIONS_QUERY = `
   query ListLocations($country: CountryEnum!) {

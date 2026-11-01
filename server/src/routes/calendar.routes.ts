@@ -8,6 +8,7 @@ import type { SetAvailabilityRequest, CreateEventRequest } from '@shared/types';
 import { ERROR } from '@shared/constants';
 import { apiLogger } from '@utils/logger';
 import * as calendarService from '@services/calendar.service';
+import { formatDateStr } from '@services/helpers/date.helper';
 
 const router = Router();
 
@@ -99,7 +100,7 @@ router.get('/events', authMiddleware, async (req: AuthRequest, res: Response) =>
 
 // POST /api/calendar/events
 router.post('/events', authMiddleware, requirePermission('calendar', 'canCreateEvents'), async (req: AuthRequest, res: Response) => {
-  const { date, startTime, endTime, type, title, description, venueId, arenaNumber, voiceMedium } =
+  const { date, startTime, endTime, type, title, description, venueId, arenaNumber, evaSlotId, voiceMedium } =
     req.body as CreateEventRequest;
   const createdByAccountId = req.account!.userId;
   const teamId = req.account?.teamId;
@@ -136,7 +137,7 @@ router.post('/events', authMiddleware, requirePermission('calendar', 'canCreateE
   }
 
   try {
-    const place = await calendarService.resolvePlaceForCreate({ type, venueId, arenaNumber, teamId });
+    const place = await calendarService.resolvePlaceForCreate({ type, venueId, arenaNumber, evaSlotId, teamId });
     if ('error' in place) {
       res.status(400).json({ errors: [place.error] });
       return;
@@ -157,6 +158,7 @@ router.post('/events', authMiddleware, requirePermission('calendar', 'canCreateE
       description,
       venueId: place.venueId,
       arenaNumber: place.arenaNumber,
+      evaSlotId: place.evaSlotId,
       voiceMedium: medium.voiceMedium,
       teamId,
       createdByUserId: createdByAccountId,
@@ -198,7 +200,7 @@ router.delete('/events/:id', authMiddleware, requirePermission('calendar', 'canD
 // PUT /api/calendar/events/:id
 router.put('/events/:id', authMiddleware, requirePermission('calendar', 'canEditEvents'), async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
-  const { date, startTime, endTime, type, title, description, venueId, arenaNumber, voiceMedium } =
+  const { date, startTime, endTime, type, title, description, venueId, arenaNumber, evaSlotId, voiceMedium } =
     req.body as CreateEventRequest;
   const teamId = req.account?.teamId;
 
@@ -249,7 +251,14 @@ router.put('/events/:id', authMiddleware, requirePermission('calendar', 'canEdit
       type: type ?? result.event.type,
       venueId,
       arenaNumber,
-      currentVenueId: result.event.venueId,
+      evaSlotId,
+      date,
+      startTime,
+      current: {
+        venueId: result.event.venueId,
+        date: formatDateStr(result.event.date),
+        startTime: result.event.startTime,
+      },
     });
     if ('error' in place) {
       res.status(400).json({ errors: [place.error] });
@@ -275,6 +284,7 @@ router.put('/events/:id', authMiddleware, requirePermission('calendar', 'canEdit
       description,
       venueId: place.venueId,
       arenaNumber: place.arenaNumber,
+      evaSlotId: place.evaSlotId,
       voiceMedium: medium.voiceMedium,
     });
 

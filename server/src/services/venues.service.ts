@@ -10,7 +10,23 @@ const PUBLIC_VENUE_SELECT = {
   address: true,
   phone: true,
   arenaCount: true,
+  externalId: true,
 } as const;
+
+type VenueRow = {
+  id: string;
+  name: string;
+  city: string;
+  address: string;
+  phone: string | null;
+  arenaCount: number;
+  externalId: number | null;
+};
+
+// The eva.gg id itself stays internal; the client only needs to know whether there is one
+function toVenue({ externalId, ...venue }: VenueRow): Venue {
+  return { ...venue, hasEvaSlots: externalId !== null };
+}
 
 export interface VenueInput {
   name: string;
@@ -28,7 +44,7 @@ export interface VenueInput {
  * Get all venues (public list)
  */
 export async function getAllVenues(): Promise<Venue[]> {
-  return prisma.venue.findMany({
+  const venues = await prisma.venue.findMany({
     select: PUBLIC_VENUE_SELECT,
     // By name: that is what the venue pickers display, so any other order
     // reads as random once the list is long.
@@ -37,16 +53,18 @@ export async function getAllVenues(): Promise<Venue[]> {
       { city: 'asc' },
     ],
   });
+  return venues.map(toVenue);
 }
 
 /**
  * Get a venue by ID
  */
 export async function getVenueById(venueId: string): Promise<Venue | null> {
-  return prisma.venue.findUnique({
+  const venue = await prisma.venue.findUnique({
     where: { id: venueId },
     select: PUBLIC_VENUE_SELECT,
   });
+  return venue ? toVenue(venue) : null;
 }
 
 // ============================================
@@ -57,7 +75,7 @@ export async function getVenueById(venueId: string): Promise<Venue | null> {
  * Create a venue
  */
 export async function createVenue(input: VenueInput): Promise<Venue> {
-  return prisma.venue.create({
+  const venue = await prisma.venue.create({
     data: {
       name: input.name.trim(),
       city: input.city.trim(),
@@ -67,6 +85,7 @@ export async function createVenue(input: VenueInput): Promise<Venue> {
     },
     select: PUBLIC_VENUE_SELECT,
   });
+  return toVenue(venue);
 }
 
 /**
@@ -76,7 +95,7 @@ export async function updateVenue(venueId: string, input: Partial<VenueInput>): 
   const existing = await prisma.venue.findUnique({ where: { id: venueId }, select: { id: true } });
   if (!existing) return null;
 
-  return prisma.venue.update({
+  const venue = await prisma.venue.update({
     where: { id: venueId },
     data: {
       ...(input.name !== undefined && { name: input.name.trim() }),
@@ -87,6 +106,7 @@ export async function updateVenue(venueId: string, input: Partial<VenueInput>): 
     },
     select: PUBLIC_VENUE_SELECT,
   });
+  return toVenue(venue);
 }
 
 /**

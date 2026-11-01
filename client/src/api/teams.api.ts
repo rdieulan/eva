@@ -1,6 +1,6 @@
 // Teams API client
 
-import type { AccountPermissions, Team, Venue } from '@shared/types';
+import type { AccountPermissions, Team, Venue, VenueSlot } from '@shared/types';
 import { ERROR } from '@shared/constants';
 import { authFetch } from '@/api/utils';
 import { ApiError } from '@/api/error';
@@ -62,6 +62,17 @@ export async function fetchVenues(): Promise<Venue[]> {
     '/api/venues',
     undefined,
     ERROR.venuesFetchFailed
+  );
+}
+
+/**
+ * The slots a venue runs on a day (YYYY-MM-DD), as eva.gg lists them
+ */
+export async function fetchVenueSlots(venueId: string, date: string): Promise<VenueSlot[]> {
+  return authFetch<VenueSlot[]>(
+    `/api/venues/${venueId}/slots?date=${encodeURIComponent(date)}`,
+    undefined,
+    ERROR.venueSlotsFetchFailed
   );
 }
 

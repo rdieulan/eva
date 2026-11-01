@@ -1,8 +1,14 @@
 // Tests for EventFormModal component
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mount } from '@vue/test-utils';
+import { mount, flushPromises } from '@vue/test-utils';
 import EventFormModal from '@/components/calendar/EventFormModal.vue';
+import { fetchVenueSlots } from '@/api/teams.api';
 import type { CalendarEvent, MapConfig, Player } from '@shared/types';
+
+vi.mock('@/api/teams.api', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/api/teams.api')>(),
+  fetchVenueSlots: vi.fn(),
+}));
 
 describe('EventFormModal Component', () => {
   const mockMaps: MapConfig[] = [
@@ -445,7 +451,171 @@ describe('EventFormModal Component - Editing an existing event', () => {
       description: 'On se retrouve 30 min avant',
       venueId: 'venue-1',
       arenaNumber: 2,
+      evaSlotId: null,
       voiceMedium: null,
+    });
+  });
+});
+
+describe('EventFormModal Component - eva.gg slot', () => {
+  const venues = [
+    { id: 'venue-1', name: 'Nîmes', city: 'Nimes', address: '1 rue', phone: null, arenaCount: 2, hasEvaSlots: true },
+    { id: 'venue-2', name: 'Garage', city: 'Paris', address: '2 rue', phone: null, arenaCount: 1, hasEvaSlots: false },
+  ];
+
+  const SLOT_20H = {
+    slotId: 'slot-20:00',
+    startTime: '20:00',
+    endTime: '20:40',
+    convocationTime: '19:50',
+    arenaNumber: 2,
+    availableSeats: 3,
+    totalSeats: 10,
+  };
+
+  function mountForm(props: Record<string, unknown> = {}) {
+    return mount(EventFormModal, {
+      props: {
+        open: false,
+        canCreate: true,
+        canEdit: true,
+        selectedDate: '2026-11-03',
+        venues,
+        teamVenueId: 'venue-1',
+        maps: [],
+        players: [],
+        ...props,
+      },
+      global: { stubs: { Teleport: true } },
+    });
+  }
+
+  async function submit(wrapper: ReturnType<typeof mountForm>) {
+    await wrapper.find('#event-title').setValue('Match vs TeamX');
+    await wrapper.findAll('button').find(b => b.text() === 'Créer' || b.text() === 'Enregistrer')!.trigger('click');
+    return wrapper.emitted('submit')?.[0]?.[0] as Record<string, unknown>;
+  }
+
+  beforeEach(() => {
+    vi.mocked(fetchVenueSlots).mockReset();
+    vi.mocked(fetchVenueSlots).mockResolvedValue([SLOT_20H]);
+  });
+
+  it('offers the slots of the venue once a day is set', async () => {
+    const wrapper = mountForm();
+    await wrapper.setProps({ open: true });
+    await flushPromises();
+
+    expect(wrapper.find('#event-slot').exists()).toBe(true);
+    expect(fetchVenueSlots).toHaveBeenCalledWith('venue-1', '2026-11-03');
+  });
+
+  it('offers no slot for a venue eva.gg does not list', async () => {
+    const wrapper = mountForm({ teamVenueId: 'venue-2' });
+    await wrapper.setProps({ open: true });
+    await flushPromises();
+
+    expect(wrapper.find('#event-slot').exists()).toBe(false);
+    expect(fetchVenueSlots).not.toHaveBeenCalled();
+  });
+
+  it('plays the match on the chosen slot: its times, its arena, its id', async () => {
+    const wrapper = mountForm();
+    await wrapper.setProps({ open: true });
+    await flushPromises();
+
+    await wrapper.find('#event-slot').setValue('slot-20:00');
+
+    expect(await submit(wrapper)).toMatchObject({
+      startTime: '20:00',
+      endTime: '20:40',
+      arenaNumber: 2,
+      evaSlotId: 'slot-20:00',
+    });
+  });
+
+  it('takes the times from the slot, not from hand-typed fields', async () => {
+    const wrapper = mountForm();
+    await wrapper.setProps({ open: true });
+    await flushPromises();
+
+    expect(wrapper.find('#event-start').exists()).toBe(false);
+    expect(wrapper.find('#event-end').exists()).toBe(false);
+  });
+
+  it('refuses a match on a listed venue without a slot', async () => {
+    const wrapper = mountForm();
+    await wrapper.setProps({ open: true });
+    await flushPromises();
+
+    expect(await submit(wrapper)).toBeUndefined();
+    expect(wrapper.text()).toContain('Veuillez choisir un créneau');
+  });
+
+  it('brings the time fields back when the slots cannot be read', async () => {
+    vi.mocked(fetchVenueSlots).mockRejectedValue(new Error('502'));
+    const wrapper = mountForm();
+    await wrapper.setProps({ open: true });
+    await flushPromises();
+
+    expect(wrapper.find('#event-start').exists()).toBe(true);
+    expect(await submit(wrapper)).toMatchObject({ startTime: '20:00', endTime: '22:00', evaSlotId: null });
+  });
+
+  it('brings the time fields back when the match moves to a venue without a grid', async () => {
+    const wrapper = mountForm();
+    await wrapper.setProps({ open: true });
+    await flushPromises();
+    await wrapper.find('#event-slot').setValue('slot-20:00');
+
+    await wrapper.find('#event-venue').setValue('venue-2');
+
+    expect(wrapper.find('#event-slot').exists()).toBe(false);
+    expect(wrapper.find('#event-start').exists()).toBe(true);
+    expect(await submit(wrapper)).toMatchObject({ venueId: 'venue-2', evaSlotId: null });
+  });
+
+  it('asks for a slot again when the day moves', async () => {
+    const wrapper = mountForm();
+    await wrapper.setProps({ open: true });
+    await flushPromises();
+    await wrapper.find('#event-slot').setValue('slot-20:00');
+
+    await wrapper.find('#event-date').setValue('2026-11-04');
+    await flushPromises();
+
+    expect(fetchVenueSlots).toHaveBeenLastCalledWith('venue-1', '2026-11-04');
+    expect((wrapper.find('#event-slot').element as HTMLSelectElement).value).toBe('');
+    expect(await submit(wrapper)).toBeUndefined();
+    expect(wrapper.text()).toContain('Veuillez choisir un créneau');
+  });
+
+  it('opens on the slot the match is already played on and keeps it', async () => {
+    const wrapper = mountForm({
+      editEvent: {
+        id: 'event-1',
+        date: '2026-11-03',
+        startTime: '20:00',
+        endTime: '20:40',
+        type: 'MATCH',
+        title: 'Match vs TeamX',
+        venue: { id: 'venue-1', name: 'Nîmes', city: 'Nimes' },
+        arenaNumber: 2,
+        evaSlotId: 'slot-20:00',
+        createdById: 'player-1',
+        createdAt: '2026-10-01T00:00:00Z',
+      },
+    });
+    await wrapper.setProps({ open: true });
+    await flushPromises();
+
+    expect((wrapper.find('#event-slot').element as HTMLSelectElement).value).toBe('slot-20:00');
+    await wrapper.find('#event-desc').setValue('On se retrouve 30 min avant');
+    expect(await submit(wrapper)).toMatchObject({
+      description: 'On se retrouve 30 min avant',
+      startTime: '20:00',
+      endTime: '20:40',
+      evaSlotId: 'slot-20:00',
     });
   });
 });

@@ -8,7 +8,7 @@ import type {
   EventType,
   VoiceMedium,
 } from '@shared/types';
-import { ERROR } from '@shared/constants';
+import { ERROR, EVA_SLOT_ID_MAX_LENGTH } from '@shared/constants';
 import { isSubscriptionRenewalDay } from '@shared/utils';
 import { formatDateStr, parseMonthRange } from './helpers/date.helper';
 import { EVENT_VENUE_INCLUDE, formatEventForFrontend } from './helpers/calendar.helper';
@@ -215,10 +215,29 @@ export async function getMonthEvents(month: string, teamId: string) {
   return events.map(formatEventForFrontend);
 }
 
-// Where a match is played: the venue and the arena of that venue, or the error
-// to answer with. A field left out keeps its current value.
-export type MatchPlace = { venueId?: string | null; arenaNumber?: number | null };
+// Where a match is played: the venue, the arena of that venue and the eva.gg
+// slot it runs on, or the error to answer with. A field left out keeps its
+// current value.
+export type MatchPlace = { venueId?: string | null; arenaNumber?: number | null; evaSlotId?: string | null };
 export type MatchPlaceResolution = MatchPlace | { error: string };
+
+/**
+ * Check the eva.gg slot a match is placed on: an opaque id we only bound, that
+ * makes no sense without the venue it belongs to.
+ */
+function resolveSlot(
+  venueId: string | null,
+  evaSlotId: string | null,
+): { evaSlotId: string | null } | { error: string } {
+  if (evaSlotId === null) return { evaSlotId: null };
+  if (typeof evaSlotId !== 'string') return { error: ERROR.evaSlotIdInvalid };
+
+  const trimmed = evaSlotId.trim();
+  if (!trimmed || trimmed.length > EVA_SLOT_ID_MAX_LENGTH) return { error: ERROR.evaSlotIdInvalid };
+  if (venueId === null) return { error: ERROR.slotRequiresVenue };
+
+  return { evaSlotId: trimmed };
+}
 
 /**
  * Check the arena against the venue it is supposed to belong to.
@@ -255,12 +274,14 @@ export async function resolvePlaceForCreate(input: {
   type: EventType;
   venueId?: string | null;
   arenaNumber?: number | null;
+  evaSlotId?: string | null;
   teamId: string;
 }): Promise<MatchPlaceResolution> {
   if (input.type !== 'MATCH') {
     if (input.venueId) return { error: ERROR.matchOnlyVenue };
     if (input.arenaNumber) return { error: ERROR.arenaRequiresVenue };
-    return { venueId: null, arenaNumber: null };
+    if (input.evaSlotId) return { error: ERROR.matchOnlySlot };
+    return { venueId: null, arenaNumber: null, evaSlotId: null };
   }
 
   let venueId: string | null;
@@ -280,43 +301,61 @@ export async function resolvePlaceForCreate(input: {
   const arena = await resolveArena(venueId, input.arenaNumber ?? null);
   if ('error' in arena) return arena;
 
-  return { venueId, arenaNumber: arena.arenaNumber };
+  const slot = resolveSlot(venueId, input.evaSlotId ?? null);
+  if ('error' in slot) return slot;
+
+  return { venueId, arenaNumber: arena.arenaNumber, evaSlotId: slot.evaSlotId };
 }
 
 /**
  * Where a match being updated is played, given the type it ends up with.
  * Leaving the venue out keeps the current one; moving the match to another
  * venue drops an arena that was not re-stated, since numbers differ per venue.
+ * An eva.gg slot is tied to the venue, the day and the start time: it is kept
+ * only while none of them moves, unless it is re-stated.
  */
 export async function resolvePlaceForUpdate(input: {
   type: EventType;
   venueId?: string | null;
   arenaNumber?: number | null;
-  currentVenueId: string | null;
+  evaSlotId?: string | null;
+  date?: string;
+  startTime?: string;
+  current: { venueId: string | null; date: string; startTime: string };
 }): Promise<MatchPlaceResolution> {
   if (input.type !== 'MATCH') {
     if (input.venueId) return { error: ERROR.matchOnlyVenue };
     if (input.arenaNumber) return { error: ERROR.arenaRequiresVenue };
-    return { venueId: null, arenaNumber: null };
+    if (input.evaSlotId) return { error: ERROR.matchOnlySlot };
+    return { venueId: null, arenaNumber: null, evaSlotId: null };
   }
 
-  const venueChanges = input.venueId !== undefined && input.venueId !== input.currentVenueId;
+  const venueChanges = input.venueId !== undefined && input.venueId !== input.current.venueId;
   if (input.venueId !== undefined && input.venueId !== null && !await venueExists(input.venueId)) {
     return { error: ERROR.venueNotFound };
   }
-  const venueId = input.venueId === undefined ? input.currentVenueId : input.venueId;
+  const venueId = input.venueId === undefined ? input.current.venueId : input.venueId;
 
-  // Nothing to say about the arena, and the venue it belonged to has not moved
-  if (input.arenaNumber === undefined && !venueChanges) {
-    return input.venueId === undefined ? {} : { venueId };
+  const place: MatchPlace = {};
+  if (input.venueId !== undefined) place.venueId = venueId;
+
+  // The arena is re-checked when stated, or dropped when its venue moves
+  if (input.arenaNumber !== undefined || venueChanges) {
+    const arena = await resolveArena(venueId, input.arenaNumber ?? null);
+    if ('error' in arena) return arena;
+    place.arenaNumber = arena.arenaNumber;
   }
 
-  const arena = await resolveArena(venueId, input.arenaNumber ?? null);
-  if ('error' in arena) return arena;
+  const slotAnchorMoves = venueChanges
+    || (input.date !== undefined && input.date !== input.current.date)
+    || (input.startTime !== undefined && input.startTime !== input.current.startTime);
+  if (input.evaSlotId !== undefined || slotAnchorMoves) {
+    const slot = resolveSlot(venueId, input.evaSlotId ?? null);
+    if ('error' in slot) return slot;
+    place.evaSlotId = slot.evaSlotId;
+  }
 
-  return input.venueId === undefined
-    ? { arenaNumber: arena.arenaNumber }
-    : { venueId, arenaNumber: arena.arenaNumber };
+  return place;
 }
 
 export interface CreateEventData {
@@ -328,6 +367,7 @@ export interface CreateEventData {
   description?: string;
   venueId?: string | null;
   arenaNumber?: number | null;
+  evaSlotId?: string | null;
   voiceMedium?: VoiceMedium | null;
   teamId: string;
   createdByUserId: string;
@@ -357,6 +397,7 @@ export async function createEvent(data: CreateEventData) {
       description: data.description?.trim() || null,
       venueId: data.venueId ?? null,
       arenaNumber: data.arenaNumber ?? null,
+      evaSlotId: data.evaSlotId ?? null,
       voiceMedium: data.voiceMedium ?? null,
       createdById: user.player.id,
       teamId: data.teamId,
@@ -374,7 +415,7 @@ export async function getEventWithTeamCheck(eventId: string, teamId?: string): P
   | { notFound: true }
   | { accessDenied: true }
   | { event: { id: string; type: EventType; teamId: string | null; venueId: string | null;
-      voiceMedium: VoiceMedium | null; startTime: string; endTime: string } }
+      voiceMedium: VoiceMedium | null; date: Date; startTime: string; endTime: string } }
 > {
   const event = await prisma.calendarEvent.findUnique({ where: { id: eventId } });
 
@@ -405,6 +446,7 @@ export interface UpdateEventData {
   description?: string;
   venueId?: string | null;
   arenaNumber?: number | null;
+  evaSlotId?: string | null;
   voiceMedium?: VoiceMedium | null;
 }
 
@@ -423,6 +465,7 @@ export async function updateEvent(eventId: string, data: UpdateEventData) {
       ...(data.description !== undefined && { description: data.description?.trim() || null }),
       ...(data.venueId !== undefined && { venueId: data.venueId }),
       ...(data.arenaNumber !== undefined && { arenaNumber: data.arenaNumber }),
+      ...(data.evaSlotId !== undefined && { evaSlotId: data.evaSlotId }),
       ...(data.voiceMedium !== undefined && { voiceMedium: data.voiceMedium }),
     },
     include: EVENT_VENUE_INCLUDE,

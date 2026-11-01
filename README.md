@@ -5,7 +5,7 @@ Outil web de gestion d'équipe FPS 4v4 : planification de postes par map, calend
 ## Fonctionnalités
 
 - **Planificateur** : assignation des joueurs aux 4 postes de chaque map, avec règles d'équilibrage configurables et export PNG.
-- **Calendrier** : disponibilités joueurs (dispo, possible, vocal uniquement, indispo), événements (match, événement, réunion vocale avec sa plateforme : Discord, TeamSpeak, WhatsApp…), salle et arène où se joue un match (salle de l'équipe par défaut), rattachement d'un plan de jeu à un match, jours de renouvellement d'abonnement des joueurs.
+- **Calendrier** : disponibilités joueurs (dispo, possible, vocal uniquement, indispo), événements (match, événement, réunion vocale avec sa plateforme : Discord, TeamSpeak, WhatsApp…), salle et arène où se joue un match (salle de l'équipe par défaut), créneau du match choisi parmi ceux que la salle propose ce jour-là (lus sur eva.gg, horaire et convocation compris), rattachement d'un plan de jeu à un match, jours de renouvellement d'abonnement des joueurs.
 - **Profil** : niveau d'abonnement (bronze, argent, or) et date de renouvellement, l'abonnement se renouvelant tous les 30 jours à partir de cette date. Liaison du compte eva.gg par son tag (`Pseudo#123456`), résolu vers l'identifiant stable d'eva.gg pour suivre le joueur même s'il change de pseudo (voir [docs/EVA_API.md](docs/EVA_API.md)).
 - **Équipes** : création d'équipe, invitations par lien, permissions granulaires par membre (leader, gestion calendrier, planificateur, etc.).
 - **Comptes multi-rôles** : Player, Manager (gérant de salle), Admin. Liaison de comptes + switch sans re-login.

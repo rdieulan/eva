@@ -157,7 +157,10 @@ function handleCreateEvent() {
           </div>
           <div class="detail-row">
             <span class="detail-label">🕐 Horaire</span>
-            <span class="detail-value">{{ currentEvent.startTime }} - {{ currentEvent.endTime }}</span>
+            <span class="detail-value">
+              {{ currentEvent.startTime }} - {{ currentEvent.endTime }}
+              <span v-if="currentEvent.evaSlotId" class="detail-tag">créneau</span>
+            </span>
           </div>
           <div v-if="venueLabel" class="detail-row">
             <span class="detail-label">📍 Salle</span>
@@ -312,6 +315,16 @@ function handleCreateEvent() {
 .detail-value {
   color: $color-white;
   font-weight: 500;
+}
+
+.detail-tag {
+  margin-left: $spacing-sm;
+  padding: 2px 8px;
+  border-radius: $radius-sm;
+  background: rgba($color-accent, 0.2);
+  color: $color-accent;
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 .event-description {

@@ -5,6 +5,8 @@ import ConfirmModal from '@/components/common/ConfirmModal.vue';
 import RotationCalculatorModal from '@/components/common/rotation/RotationCalculatorModal.vue';
 import GamePlanViewer from '@/components/common/GamePlanViewer.vue';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
+import VenueSlotPicker from '@/components/calendar/VenueSlotPicker.vue';
+import type { VenueSlotsStatus } from '@/composables/useVenueSlots';
 import { useErrors } from '@/composables/useErrors';
 import { ERROR } from '@shared/constants';
 import { EVENT_TYPES, VOICE_MEDIUMS } from '@shared/types';
@@ -18,6 +20,7 @@ import type {
   MapConfig,
   Player,
   Venue,
+  VenueSlot,
   VoiceMedium,
 } from '@shared/types';
 
@@ -55,6 +58,7 @@ const title = ref('');
 const description = ref('');
 const venueId = ref<string | null>(null);
 const arenaNumber = ref<number | null>(null);
+const evaSlotId = ref<string | null>(null);
 const voiceMedium = ref<VoiceMedium>(DEFAULT_VOICE_MEDIUM);
 const gamePlan = ref<MatchGamePlan | null>(null);
 
@@ -93,6 +97,7 @@ watch(
         description.value = props.editEvent.description || '';
         venueId.value = props.editEvent.venue?.id ?? null;
         arenaNumber.value = props.editEvent.arenaNumber ?? null;
+        evaSlotId.value = props.editEvent.evaSlotId ?? null;
         voiceMedium.value = props.editEvent.voiceMedium ?? DEFAULT_VOICE_MEDIUM;
         gamePlan.value = props.editEvent.gamePlan || null;
       } else {
@@ -105,9 +110,11 @@ watch(
         description.value = '';
         venueId.value = props.teamVenueId ?? null;
         arenaNumber.value = null;
+        evaSlotId.value = null;
         voiceMedium.value = DEFAULT_VOICE_MEDIUM;
         gamePlan.value = null;
       }
+      anchorSlot();
     }
   }
 );
@@ -148,6 +155,42 @@ function handleVenueChange() {
   arenaNumber.value = null;
 }
 
+// A venue filled from eva.gg has its slots listed per day: a match there is
+// played on one of them, and its times come from the slot. The times are only
+// typed by hand when there is no grid to pick from.
+const selectedVenue = computed(() => props.venues?.find(v => v.id === venueId.value) ?? null);
+const showSlotPicker = computed(() => showVenue.value && !!selectedVenue.value?.hasEvaSlots && !!date.value);
+const slotStatus = ref<VenueSlotsStatus>('idle');
+const usesSlots = computed(() => showSlotPicker.value && slotStatus.value !== 'unavailable');
+
+// What the chosen slot was picked for. Moving the day, the venue or the start
+// time by hand leaves the slot behind, since eva.gg's slot is tied to the three.
+const slotAnchor = ref<{ date: string; venueId: string | null; startTime: string } | null>(null);
+
+function anchorSlot() {
+  slotAnchor.value = evaSlotId.value
+    ? { date: date.value, venueId: venueId.value, startTime: startTime.value }
+    : null;
+}
+
+watch([date, venueId, startTime], ([newDate, newVenueId, newStartTime]) => {
+  const anchor = slotAnchor.value;
+  if (!anchor) return;
+  if (newDate !== anchor.date || newVenueId !== anchor.venueId || newStartTime !== anchor.startTime) {
+    evaSlotId.value = null;
+    slotAnchor.value = null;
+  }
+});
+
+// Playing on a slot sets the times the venue runs it on, and the arena when the venue has several
+function applySlot(slot: VenueSlot) {
+  evaSlotId.value = slot.slotId;
+  startTime.value = slot.startTime;
+  endTime.value = slot.endTime;
+  if (arenaNumbers.value.length) arenaNumber.value = slot.arenaNumber;
+  anchorSlot();
+}
+
 // Venue of the event being viewed, for the read-only display
 const eventVenueLabel = computed(() => {
   const venue = props.editEvent?.venue;
@@ -173,7 +216,9 @@ function handleSubmit() {
   if (!title.value.trim()) {
     addError(ERROR.eventTitleRequired);
   }
-  if (!startTime.value || !endTime.value) {
+  if (usesSlots.value && !evaSlotId.value) {
+    addError(ERROR.eventSlotRequired);
+  } else if (!startTime.value || !endTime.value) {
     addError(ERROR.eventTimeRequired);
   } else if (startTime.value >= endTime.value) {
     addError(ERROR.eventTimeInvalid);
@@ -193,6 +238,7 @@ function handleSubmit() {
     description: description.value.trim(),
     venueId: showVenue.value ? venueId.value : null,
     arenaNumber: showVenue.value ? arenaNumber.value : null,
+    evaSlotId: showVenue.value ? evaSlotId.value : null,
     voiceMedium: showMedium.value ? voiceMedium.value : null,
   };
 
@@ -270,7 +316,10 @@ const modalSize = computed(() => {
         </div>
         <div class="event-view-row">
           <span class="event-view-label">🕐 Horaire</span>
-          <span class="event-view-value">{{ startTime }} - {{ endTime }}</span>
+          <span class="event-view-value">
+            {{ startTime }} - {{ endTime }}
+            <span v-if="evaSlotId" class="event-view-tag">créneau</span>
+          </span>
         </div>
         <div v-if="showVenue" class="event-view-row">
           <span class="event-view-label">📍 Salle</span>
@@ -330,8 +379,8 @@ const modalSize = computed(() => {
         />
       </div>
 
-      <!-- Time range -->
-      <div class="form-row">
+      <!-- Time range, typed by hand only when no slot grid gives it -->
+      <div v-if="!usesSlots" class="form-row">
         <div class="form-group">
           <label class="form-label" for="event-start">Début</label>
           <input
@@ -388,6 +437,17 @@ const modalSize = computed(() => {
           </option>
         </select>
       </div>
+
+      <!-- Slot of the venue (only when its slots are listed) -->
+      <VenueSlotPicker
+        v-if="showSlotPicker"
+        :venue-id="venueId"
+        :date="date"
+        :model-value="evaSlotId"
+        :current-start-time="startTime"
+        @select="applySlot"
+        @status="slotStatus = $event"
+      />
 
       <!-- Platform (only for VOICE_MEETING type) -->
       <div v-if="showMedium" class="form-group">
@@ -730,6 +790,16 @@ const modalSize = computed(() => {
 .event-view-value {
   color: $color-white;
   font-weight: 500;
+}
+
+.event-view-tag {
+  margin-left: $spacing-sm;
+  padding: 2px 8px;
+  border-radius: $radius-sm;
+  background: rgba($color-accent, 0.2);
+  color: $color-accent;
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 .event-view-description {
