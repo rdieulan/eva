@@ -90,6 +90,7 @@ export const ERROR = {
   teamRequiredForPlans: 'Vous devez appartenir à une équipe pour accéder aux plans',
   teamRequiredForEvents: 'Vous devez appartenir à une équipe pour créer des événements',
   teamRequiredForCalendar: 'Vous devez appartenir à une équipe pour accéder au calendrier',
+  teamRequiredForScrims: 'Vous devez appartenir à une équipe pour chercher un adversaire',
   userAlreadyInTeam: 'Vous êtes déjà membre d\'une équipe',
   memberNotFound: 'Membre non trouvé dans cette équipe',
   cannotModifyLeaderPermissions: 'Impossible de modifier les permissions du leader',
@@ -203,6 +204,19 @@ export const ERROR = {
   voiceMeetingOnlyMedium: 'Seules les réunions vocales ont une plateforme',
   voiceMediumRequired: 'Une réunion vocale demande une plateforme',
   voiceMediumInvalid: `Plateforme invalide (valeurs acceptées : ${VOICE_MEDIUMS.join(', ')})`,
+
+  // Scrim searches
+  scrimSearchNotFound: 'Recherche introuvable',
+  scrimSearchNotOpen: 'Cette recherche a déjà trouvé un adversaire',
+  scrimSearchDateInPast: 'Impossible de chercher un adversaire sur un jour passé',
+  scrimSearchSlotsUnknown: 'Un des créneaux n\'existe pas dans cette salle ce jour-là',
+  scrimSearchSlotsNotConsecutive: 'Les créneaux doivent se suivre sur la même arène',
+  scrimSearchSlotsNotCompetitive: 'Un des créneaux n\'est pas ouvert au mode compétitif',
+  scrimSearchSlotsNotFree: 'Un des créneaux a déjà des inscrits, il ne peut pas accueillir un match',
+  scrimSearchAlreadyOpen: 'Votre équipe cherche déjà un adversaire sur un de ces créneaux',
+  scrimSearchesFetchFailed: 'Erreur lors de la récupération des recherches',
+  scrimSearchCreateFailed: 'Erreur lors de l\'ouverture de la recherche',
+  scrimSearchDeleteFailed: 'Erreur lors du retrait de la recherche',
 
   // Planner / Maps
   mapsLoadFailed: 'Erreur lors du chargement des cartes',

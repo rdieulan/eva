@@ -55,12 +55,12 @@ model Session {
 
 model Player {
   id                      String            @id @default(cuid())
-  permissions             Json?             // Granular permissions JSON
+  permissions             Json? // Granular permissions JSON
   teamId                  String?
   subscriptionTier        SubscriptionTier?
   subscriptionRenewalDate DateTime?         @db.Date // Renews every 30 days from this date
   evaUserId               Int?              @unique // User id on eva.gg, stable across renames; one eva.gg account per player
-  evaUsername             String?           // eva.gg tag (Pseudo#123456) as it was when the player linked it; display only
+  evaUsername             String? // eva.gg tag (Pseudo#123456) as it was when the player linked it; display only
   evaLinkedAt             DateTime?
   createdAt               DateTime          @default(now())
   updatedAt               DateTime          @updatedAt
@@ -71,6 +71,7 @@ model Player {
   createdEvents           CalendarEvent[]
   gamePlanPlayers         GamePlanPlayer[]
   createdInvites          TeamInvite[]
+  openedScrimSearches     ScrimSearch[]
 
   @@index([teamId])
 }
@@ -81,7 +82,7 @@ model Player {
 
 model Manager {
   id                       String         @id @default(cuid())
-  permissions              Json?          // Manager-specific permissions
+  permissions              Json? // Manager-specific permissions
   activationToken          String?        @unique
   activationTokenExpiresAt DateTime?
   createdAt                DateTime       @default(now())
@@ -95,12 +96,12 @@ model Manager {
 // ============================================
 
 model Admin {
-  id                       String   @id @default(cuid())
-  permissions              Json     // Toutes les permissions admin (superAdmin = toutes à true)
-  activationToken          String?  @unique
+  id                       String    @id @default(cuid())
+  permissions              Json // Toutes les permissions admin (superAdmin = toutes à true)
+  activationToken          String?   @unique
   activationTokenExpiresAt DateTime?
-  createdAt                DateTime @default(now())
-  updatedAt                DateTime @updatedAt
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
   user                     User?
 }
 
@@ -109,24 +110,25 @@ model Admin {
 // ============================================
 
 model Team {
-  id             String          @id @default(cuid())
+  id             String              @id @default(cuid())
   name           String
   // The team's logo, a small image kept in the database so it survives redeploys
   logoData       Bytes?
   logoType       String? // image/png, image/jpeg or image/webp, as read from the file itself
   logoUpdatedAt  DateTime? // Changes the logo URL, so browsers drop their cached copy
   venueId        String?
-  leaderId       String          @unique
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  venue          Venue?          @relation(fields: [venueId], references: [id])
-  leader         Player          @relation("TeamLeader", fields: [leaderId], references: [id])
-  members        Player[]        @relation("TeamMembers")
+  leaderId       String              @unique
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  venue          Venue?              @relation(fields: [venueId], references: [id])
+  leader         Player              @relation("TeamLeader", fields: [leaderId], references: [id])
+  members        Player[]            @relation("TeamMembers")
   balanceRules   BalanceRule[]
   gamePlans      GamePlan[]
   calendarEvents CalendarEvent[]
   invites        TeamInvite[]
   favoriteVenues TeamFavoriteVenue[]
+  scrimSearches  ScrimSearch[]
 
   @@index([venueId])
 }
@@ -145,28 +147,29 @@ model TeamFavoriteVenue {
 }
 
 model Venue {
-  id         String          @id @default(cuid())
-  externalId Int?            @unique // Location id on eva.gg, for venues filled by scripts/sync-venues.ts
-  name       String
-  city       String
-  address    String
-  phone      String?
-  arenaCount Int             @default(1) // Arenas the venue runs for the competitive game
+  id            String              @id @default(cuid())
+  externalId    Int?                @unique // Location id on eva.gg, for venues filled by scripts/sync-venues.ts
+  name          String
+  city          String
+  address       String
+  phone         String?
+  arenaCount    Int                 @default(1) // Arenas the venue runs for the competitive game
   // Where the venue can be reached online, as eva.gg publishes them; hand-made venues fill them in the admin
-  website    String?
-  discord    String?
-  facebook   String?
-  instagram  String?
-  x          String?
-  tiktok     String?
-  youtube    String?
-  twitch     String?
-  createdAt  DateTime        @default(now())
-  updatedAt  DateTime        @updatedAt
-  teams      Team[]
-  managers   VenueManager[]
-  matches    CalendarEvent[]
-  favoredBy  TeamFavoriteVenue[]
+  website       String?
+  discord       String?
+  facebook      String?
+  instagram     String?
+  x             String?
+  tiktok        String?
+  youtube       String?
+  twitch        String?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  teams         Team[]
+  managers      VenueManager[]
+  matches       CalendarEvent[]
+  favoredBy     TeamFavoriteVenue[]
+  scrimSearches ScrimSearch[]
 }
 
 model VenueManager {
@@ -253,7 +256,7 @@ model CalendarEvent {
   teamId      String?
   venueId     String? // Where a MATCH is played; other event types have none
   arenaNumber Int? // Which arena of that venue, when the team knows it
-  evaSlotIds  String[] @default([]) // The eva.gg slots the match runs on, consecutive on one arena, in order; empty when none picked
+  evaSlotIds  String[]     @default([]) // The eva.gg slots the match runs on, consecutive on one arena, in order; empty when none picked
   voiceMedium VoiceMedium? // Where a VOICE_MEETING is held; other event types have none
   createdById String
   createdAt   DateTime     @default(now())
@@ -266,6 +269,31 @@ model CalendarEvent {
   @@index([date])
   @@index([teamId])
   @@index([venueId])
+}
+
+// A team puts a run of consecutive slots of a venue (one arena) up for an
+// opponent. Times and arena are read from eva.gg when the search opens, so
+// it can be shown without asking eva.gg again. A withdrawn search is deleted.
+model ScrimSearch {
+  id              String            @id @default(cuid())
+  teamId          String
+  venueId         String
+  date            DateTime          @db.Date
+  arenaNumber     Int
+  evaSlotIds      String[] // The slots, consecutive, in order
+  startTime       String // HH:mm, first slot
+  endTime         String // HH:mm, last slot
+  convocationTime String // HH:mm, when eva.gg expects the players for the first slot
+  status          ScrimSearchStatus @default(OPEN)
+  createdById     String
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  team            Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  venue           Venue             @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  createdBy       Player            @relation(fields: [createdById], references: [id])
+
+  @@index([venueId, date])
+  @@index([teamId, date])
 }
 
 model TeamInvite {
@@ -344,4 +372,7 @@ enum BalanceSeverity {
   WARNING
 }
 
-
+enum ScrimSearchStatus {
+  OPEN
+  MATCHED
+}

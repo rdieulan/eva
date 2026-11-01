@@ -58,6 +58,7 @@ describe('GET /api/venues/:id/slots', () => {
       arenaNumber: 1,
       takenSeats: 7,
       totalSeats: 10,
+      isCompetitiveAvailable: true,
     }]);
     expect(sessions).toHaveBeenCalledWith(51, '2026-11-03');
   });

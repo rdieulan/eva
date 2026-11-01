@@ -33,4 +33,5 @@ export interface VenueSlot {
   arenaNumber: number;
   takenSeats: number; // Players already booked on the slot
   totalSeats: number; // Capacity of the slot as eva.gg opened it
+  isCompetitiveAvailable: boolean; // The competitive mode can be booked on it, which a match needs
 }

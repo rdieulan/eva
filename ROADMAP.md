@@ -38,14 +38,21 @@ Le planificateur de postes est **parqué** (`PLANNER_ENABLED`, `shared/constants
 
 **Découpe (ordre de construction, ce qui reste).**
 
-1. Recherches de scrim, données et API : déclarer une suite de créneaux, annuler, lister par salle et par mois.
-2. Déclarer des recherches depuis le calendrier : sélection de plusieurs jours, fenêtre des créneaux proposables par jour.
-3. Voir et proposer : recherches des autres équipes dans les jours, proposition, acceptation ou refus qui crée le match des deux côtés, notification in-app et courriel.
-4. Page publique du tableau d'une salle.
+1. Déclarer des recherches depuis le calendrier : sélection de plusieurs jours, fenêtre des créneaux proposables par jour, retrait d'une recherche.
+2. Voir et proposer : recherches des autres équipes dans les jours, proposition, acceptation ou refus qui crée le match des deux côtés, notification in-app et courriel.
+3. Page publique du tableau d'une salle.
 
 ---
 
 ## ✅ Terminé
+
+### Feature : Recherches de scrim (données et API)
+
+**Périmètre livré** :
+- Table `ScrimSearch` (migration 0022) : équipe, salle, jour, arène, suite de créneaux dans l'ordre, heures de début, de fin et de convocation, statut `OPEN` ou `MATCHED`. Une recherche retirée est supprimée. Supprimée avec l'équipe ou la salle.
+- `POST /api/scrims/searches` (permission `canCreateEvents`) ne reçoit que la salle, le jour et les identifiants de créneaux : le serveur relit les créneaux du jour chez eva.gg (cache partagé avec le formulaire d'événement) et en tire heures et arène. Refus : jour passé, créneau inconnu ce jour-là, créneaux qui ne se suivent pas ou sur deux arènes, créneau fermé au mode compétitif, créneau où quelqu'un est déjà inscrit, recherche déjà ouverte par l'équipe sur un de ces créneaux, salle non reliée à eva.gg.
+- `GET /api/scrims/searches?month=` liste les recherches ouvertes de l'équipe ; avec `&venueId=` celles de toutes les équipes dans cette salle, avec nom et logo d'équipe et le drapeau `isMine`. `DELETE /api/scrims/searches/:id` retire une recherche ouverte de sa propre équipe ; une recherche qui a trouvé un adversaire reste.
+- `VenueSlot.isCompetitiveAvailable` exposé par la route des créneaux : la fenêtre de déclaration s'en servira pour ne proposer que les créneaux jouables.
 
 ### Feature : Mode Matchmaking du calendrier
 

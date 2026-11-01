@@ -50,6 +50,7 @@ export async function getVenueSlots(venueId: string, date: string): Promise<Venu
     arenaNumber: session.arenaNumber,
     takenSeats: session.takenSeats,
     totalSeats: session.totalSeats,
+    isCompetitiveAvailable: session.isCompetitiveAvailable,
   }));
 
   cache.set(key, { slots, expiresAt: Date.now() + VENUE_SLOTS_CACHE_TTL_MS });

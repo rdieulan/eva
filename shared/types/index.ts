@@ -44,6 +44,14 @@ export type {
 export { AVAILABILITY_STATUSES, EVENT_TYPES, VOICE_MEDIUMS } from './calendar.types';
 
 export type {
+  ScrimSearchStatus,
+  ScrimSearchTeam,
+  ScrimSearch,
+  CreateScrimSearchRequest,
+} from './scrim.types';
+export { SCRIM_SEARCH_STATUSES } from './scrim.types';
+
+export type {
   SubscriptionTier,
   PlayerSubscription,
   SubscriptionRenewal,
