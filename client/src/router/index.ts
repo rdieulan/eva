@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import type { RouteRecordRaw } from 'vue-router';
 import type { Account } from '@shared/types';
+import { PLANNER_ENABLED } from '@shared/constants';
 import { useAuth } from '@/composables/useAuth';
 
 // Pages allowed without team membership
@@ -71,12 +72,15 @@ const routes: RouteRecordRaw[] = [
     component: HomePage,
     meta: { title: 'Accueil', requiresAuth: true }
   },
-  {
-    path: '/planner',
-    name: 'planner',
-    component: PlannerPage,
-    meta: { title: 'Planificateur', requiresAuth: true }
-  },
+  // The planner is parked for now (see PLANNER_ENABLED); its address sends back home
+  ...(PLANNER_ENABLED
+    ? [{
+        path: '/planner',
+        name: 'planner',
+        component: PlannerPage,
+        meta: { title: 'Planificateur', requiresAuth: true },
+      }]
+    : [{ path: '/planner', redirect: '/' }]),
   {
     path: '/calendar',
     name: 'calendar',

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { AccountPermissions } from '@shared/types';
+import { PLANNER_ENABLED } from '@shared/constants';
 import Modal from '@/components/common/Modal.vue';
 
 const props = defineProps<{
@@ -35,8 +36,8 @@ function handleSave() {
     </template>
 
     <div class="permissions-editor">
-      <!-- Planner permissions -->
-      <div class="perm-category">
+      <!-- Planner permissions (the planner itself is parked, see PLANNER_ENABLED) -->
+      <div v-if="PLANNER_ENABLED" class="perm-category">
         <h4>Planificateur</h4>
         <label class="perm-item">
           <input
@@ -99,7 +100,7 @@ function handleSave() {
           />
           Supprimer des événements
         </label>
-        <label class="perm-item">
+        <label v-if="PLANNER_ENABLED" class="perm-item">
           <input
             type="checkbox"
             :checked="editingPermissions.calendar.canAttachGamePlan"

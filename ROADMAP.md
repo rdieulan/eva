@@ -2,7 +2,19 @@
 
 ## 📋 En cours
 
-_(rien — prêt pour un merge `dev` → `main`)_
+### Ligne directrice (décidée le 2026-11-01)
+
+**« Faire jouer l'équipe. »** Quand, où, contre qui, et que les huit soient dans l'arène. Deux métiers pour l'instant : **organiser** (calendrier, disponibilités, créneaux de salle, réservations vérifiées) et **trouver un adversaire** (scrim ancré sur un créneau réel). Une fonctionnalité n'entre que si elle retire une étape entre « on veut jouer » et « on est huit dans l'arène ». Hors ligne : vidéo, statistiques détaillées, suivi de ligue, bot Discord comme produit.
+
+Le planificateur de postes est **parqué** (`PLANNER_ENABLED`, `shared/constants/feature.constants.ts`) : complet et testé, pas assez abouti pour être montré. Retiré de la navigation, de l'accueil et des fiches de match ; API et données conservées.
+
+### À cadrer avant construction
+
+| Sujet | État | Notes |
+|-------|------|-------|
+| Matchmaking de scrims | ⬜ vision à poser | À détailler avec le capitaine : à partir du créneau libre d'une salle, pas d'une annonce flottante. Dépend de la connexion eva.gg pour vérifier les inscriptions des deux équipes. |
+| Rappel mensuel au capitaine d'une équipe de ligue locale | ⬜ à préciser | Validation d'inscription à faire chaque mois sur competitive.eva.gg. À établir : quoi valider exactement, quand (date butoir), où sur le site, et si c'est lisible publiquement pour savoir si c'est déjà fait. Affiché sur le tableau de bord d'accueil. |
+| Nom de domaine | ⬜ | Sans « eva » dans le nom (demande OAuth à venir, deux concurrents l'ont déjà pris). `.fr` ou `.gg` ouverts là où les `.com` sont pris. Conditionne la demande de client OAuth2. |
 
 ---
 

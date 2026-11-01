@@ -8,7 +8,7 @@ import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import VenueSlotPicker from '@/components/calendar/VenueSlotPicker.vue';
 import type { VenueSlotsStatus } from '@/composables/useVenueSlots';
 import { useErrors } from '@/composables/useErrors';
-import { ERROR } from '@shared/constants';
+import { ERROR, PLANNER_ENABLED } from '@shared/constants';
 import { EVENT_TYPES, VOICE_MEDIUMS } from '@shared/types';
 import { getEventTypeClass, getEventTypeDisplay, getEventTypeTitle, getVoiceMediumLabel } from '@/utils/calendar';
 import { formatVenueLabel } from '@/utils/venues';
@@ -283,12 +283,12 @@ function handleGamePlanAssociate(newGamePlan: MatchGamePlan) {
 
 // Check if we can show the game plan button
 const canSetGamePlan = computed(() => {
-  return props.canAttachGamePlan && type.value === 'MATCH' && props.maps && props.maps.length > 0 && props.players && props.players.length > 0;
+  return PLANNER_ENABLED && props.canAttachGamePlan && type.value === 'MATCH' && props.maps && props.maps.length > 0 && props.players && props.players.length > 0;
 });
 
 // Check if there's a game plan to display
 const hasGamePlan = computed(() => {
-  return gamePlan.value && gamePlan.value.maps && gamePlan.value.maps.length > 0;
+  return PLANNER_ENABLED && gamePlan.value && gamePlan.value.maps && gamePlan.value.maps.length > 0;
 });
 
 // Modal size: larger when there's a game plan to display

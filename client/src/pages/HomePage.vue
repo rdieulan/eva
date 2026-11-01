@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
+import { PLANNER_ENABLED } from '@shared/constants';
 import NoTeamMessage from '@/components/common/NoTeamMessage.vue';
 
 const router = useRouter();
@@ -28,7 +29,7 @@ function goToTeam() {
 
     <!-- Show navigation only if user has a team -->
     <nav v-if="hasTeam" class="nav-cards">
-      <button class="nav-card" @click="goToPlanner">
+      <button v-if="PLANNER_ENABLED" class="nav-card" @click="goToPlanner">
         <div class="card-icon">📋</div>
         <h2>Planificateur</h2>
         <p>Organisez les postes de votre équipe par map</p>

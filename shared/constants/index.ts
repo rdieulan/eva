@@ -5,3 +5,4 @@ export * from './validation.constants';
 export * from './subscription.constants';
 export * from './eva.constants';
 export * from './team.constants';
+export * from './feature.constants';

@@ -15,6 +15,7 @@ import {
 } from '@/utils/calendar';
 import { formatVenueLabel } from '@/utils/venues';
 import { buildEvaBookingUrl, assessSlotHeadcount } from '@shared/utils';
+import { PLANNER_ENABLED } from '@shared/constants';
 
 const props = defineProps<{
   events: CalendarEvent[];
@@ -256,7 +257,7 @@ function handleCreateEvent() {
         <!-- Game Plan (for MATCH events) -->
         <ErrorDisplay :errors="errors" />
         <GamePlanViewer
-          v-if="currentEvent.type === 'MATCH' && currentEvent.gamePlan"
+          v-if="PLANNER_ENABLED && currentEvent.type === 'MATCH' && currentEvent.gamePlan"
           :gamePlan="currentEvent.gamePlan"
           @error="setError"
         />
