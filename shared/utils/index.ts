@@ -26,3 +26,5 @@ export {
 } from './subscription.utils';
 
 export { addMinutesToTime } from './time.utils';
+
+export { buildEvaBookingUrl, assessSlotHeadcount, type SlotHeadcount, type SlotHeadcountStatus } from './eva.utils';

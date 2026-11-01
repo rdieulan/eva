@@ -132,7 +132,7 @@ Ce que ça renvoie, une session par créneau et par arène :
 | `slot.convocationTime` | `19:50` | 10 min avant ; **c'est l'heure que leur app affiche aux joueurs** |
 | `slot.duration` | `40` | minutes |
 | `terrain.displayNumber` | `1` | notre numéro d'arène |
-| `takenSeatCount` / `availableSeatCount` / `totalSeatCount` | `7` / `3` / `10` | joueurs inscrits, places restantes, capacité du créneau tel qu'eva.gg l'a ouvert (le `maxPlayer` du jeu, 10 ici) |
+| `takenSeatCount` / `availableSeatCount` / `totalSeatCount` | `7` / `3` / `10` | joueurs inscrits, places restantes, capacité affichée. **Ne pas se fier à `totalSeatCount`** : un créneau de match fait 8 joueurs (4 contre 4), eva.gg affiche souvent 10 par erreur. On compare `takenSeatCount` à notre constante `MATCH_PLAYER_COUNT` ; moins de 8 il manque du monde, plus de 8 quelqu'un s'est greffé et il faut régulariser avec la salle. |
 | `competitiveMode { isAvailable isActive }` | `true` / `false` | mode compétitif ouvert sur la session |
 | `matchmakingLevel`, `unitPrice`, `pricingType`, `isSubscriptionUsable`… | | tarification et matchmaking, non utilisés |
 
@@ -140,6 +140,29 @@ Grille observée à Nîmes : 12 créneaux de 40 minutes, de 14:00 à 21:20, sans
 fermée ce jour-là renvoie une liste vide.
 
 Piste pour les scrims : `availableSeatCount` dit directement si un créneau est libre.
+
+### `listParticipants(slotId, terrainId, gameId)` — hors de portée **[vérifié]**
+
+Affiche « qui joue ce soir » dans le détail d'une session de leur calendrier. **On ne s'en
+sert pas, et on ne peut pas s'en servir**, pour deux raisons indépendantes :
+
+1. **Elle exige un jeton reCAPTCHA** (`x-recaptcha-token`, action `get_game_session`), que
+   leur page obtient de Google juste avant l'appel. Ce jeton n'est délivré qu'à une page
+   chargée depuis leur domaine, avec leur clé publique, dans un vrai navigateur. Notre
+   serveur ne peut ni l'obtenir ni le falsifier, et c'est la barrière qu'eva.gg a posée
+   contre la collecte automatisée de la présence de leurs clients. On la respecte.
+2. **La réponse n'identifie personne** : `user { displayName }`, niveau, plan
+   d'abonnement, `isAnonymous`. Pas d'identifiant, pas de tag. Un nom d'affichage n'est ni
+   unique ni stable, et certains inscrits sont anonymes : croiser des pseudos donnerait une
+   réponse probable, jamais sûre, donc une fausse certitude pour le leader.
+
+Seuls trois autres appels de leur application portent ce même en-tête, tous sur des actions
+sensibles d'un compte. C'est une protection ciblée, pas une friction générale.
+
+**Conséquence pour nous** : savoir *qui* est inscrit à un créneau n'a pas de réponse
+publique. Le compteur par créneau dit *combien*, c'est tout ce qu'on affiche. La détection
+nominative demande un accès accordé par eva.gg (droits d'un gérant de salle, ou accord
+partenaire).
 
 ### Probablement publics **[lu dans le bundle, non confirmé]**
 
@@ -185,6 +208,7 @@ Les réservations et sessions à venir d'un joueur ne sont pas publiques non plu
 
 | Élément | Rôle |
 |---|---|
+| `shared/utils/eva.utils.ts` | liens vers leur application (calendrier de réservation d'une salle à une date) |
 | `server/src/integrations/eva/eva-graphql.ts` | client partagé, erreurs typées (`EvaApiError.hasCode`) |
 | `server/src/integrations/eva/eva-players.ts` | résolution tag → identité |
 | `server/src/integrations/eva/eva-locations.ts` | salles |

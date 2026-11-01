@@ -58,16 +58,30 @@ beforeEach(() => {
 });
 
 describe('VenueSlotPicker', () => {
-  it('lists the slots of the day with the players already in, out of the capacity', async () => {
-    vi.mocked(fetchVenueSlots).mockResolvedValue([S20H, { ...S20H40, totalSeats: 8 }]);
+  it('lists the slots of the day with the players already in, against a full match of 8', async () => {
+    // eva.gg announces 10 seats on these slots; a match is 8, and that is what we count against
+    vi.mocked(fetchVenueSlots).mockResolvedValue([S20H, { ...S20H40, totalSeats: 10 }]);
     const wrapper = mountPicker();
     await flushPromises();
 
     expect(rows(wrapper).map(r => `${r.find('.slot-time').text()} ${r.find('.slot-players').text()}`)).toEqual([
-      '20:00 – 20:40 7/10 joueurs',
+      '20:00 – 20:40 7/8 joueurs',
       '20:40 – 21:20 0/8 joueurs',
     ]);
     expect(wrapper.text()).toContain('deux créneaux qui se suivent');
+  });
+
+  it('marks a slot that holds a full match, and one with extra players in', async () => {
+    vi.mocked(fetchVenueSlots).mockResolvedValue([
+      { ...S20H, takenSeats: 8 },
+      { ...S20H40, takenSeats: 9 },
+    ]);
+    const wrapper = mountPicker();
+    await flushPromises();
+
+    expect(row(wrapper, '20:00').classes()).toContain('headcount-full');
+    expect(row(wrapper, '20:40').classes()).toContain('headcount-over');
+    expect(row(wrapper, '20:40').find('.slot-players').text()).toBe('9/8 joueurs');
   });
 
   it('groups the slots by arena only when the day runs on several', async () => {

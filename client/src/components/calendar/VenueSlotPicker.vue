@@ -2,6 +2,7 @@
 import { computed, toRef, watch } from 'vue';
 import type { VenueSlot } from '@shared/types';
 import { useVenueSlots, type VenueSlotsStatus } from '@/composables/useVenueSlots';
+import { assessSlotHeadcount } from '@shared/utils';
 
 const props = defineProps<{
   venueId: string | null;
@@ -116,13 +117,13 @@ const selectionSummary = computed(() => {
             :key="slot.slotId"
             type="button"
             class="slot-row"
-            :class="{ selected: isSelected(slot), full: slot.takenSeats >= slot.totalSeats }"
+            :class="[{ selected: isSelected(slot) }, `headcount-${assessSlotHeadcount(slot.takenSeats).status}`]"
             :aria-pressed="isSelected(slot)"
             :disabled="disabled"
             @click="toggle(slot)"
           >
             <span class="slot-time">{{ slot.startTime }} – {{ slot.endTime }}</span>
-            <span class="slot-players">{{ slot.takenSeats }}/{{ slot.totalSeats }} joueurs</span>
+            <span class="slot-players">{{ assessSlotHeadcount(slot.takenSeats).label }}</span>
           </button>
         </div>
       </div>
@@ -200,7 +201,12 @@ const selectionSummary = computed(() => {
     border-color: $color-accent;
   }
 
-  &.full .slot-players {
+  // Players already booked, against a full match: over is the one that needs sorting out
+  &.headcount-full .slot-players {
+    color: $color-success;
+  }
+
+  &.headcount-over .slot-players {
     color: $color-danger;
   }
 

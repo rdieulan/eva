@@ -7,8 +7,11 @@ import { isValidVoiceMedium } from './validation.helper';
 
 // Relation to load alongside an event so it can be formatted for the frontend
 export const EVENT_VENUE_INCLUDE = {
-  venue: { select: { id: true, name: true, city: true } },
+  venue: { select: { id: true, name: true, city: true, externalId: true } },
 } as const;
+
+// The venue of an event as Prisma hands it over, before we rename its eva.gg id
+type EventVenueRow = Omit<EventVenue, 'evaLocationId'> & { externalId: number | null };
 
 // Which platform a voice meeting is held on, or the error to answer with.
 // An empty result keeps the one the event already has.
@@ -71,7 +74,7 @@ export function formatEventForFrontend(event: {
   title: string;
   description: string | null;
   gamePlan: unknown;
-  venue?: EventVenue | null;
+  venue?: EventVenueRow | null;
   arenaNumber?: number | null;
   evaSlotIds: string[];
   voiceMedium?: VoiceMedium | null;
@@ -87,7 +90,9 @@ export function formatEventForFrontend(event: {
     title: event.title,
     description: event.description || undefined,
     gamePlan: (event.gamePlan || undefined) as MatchGamePlan | undefined,
-    venue: event.venue ?? undefined,
+    venue: event.venue
+      ? { id: event.venue.id, name: event.venue.name, city: event.venue.city, evaLocationId: event.venue.externalId }
+      : undefined,
     arenaNumber: event.arenaNumber ?? undefined,
     evaSlotIds: event.evaSlotIds,
     voiceMedium: event.voiceMedium ?? undefined,

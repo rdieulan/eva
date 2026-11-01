@@ -52,6 +52,7 @@ export interface EventVenue {
   id: string;
   name: string;
   city: string;
+  evaLocationId: number | null; // Id of the venue on eva.gg, to link into their booking calendar
 }
 
 // Calendar event (match or event)

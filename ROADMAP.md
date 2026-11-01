@@ -8,6 +8,13 @@ _(rien — prêt pour un merge `dev` → `main`)_
 
 ## ✅ Terminé
 
+### Feature : Réservation d'un match sur eva.gg
+
+**Périmètre livré** :
+- Fiche d'un match à venir : joueurs inscrits sur ses créneaux, lus chez eva.gg et comparés à un match plein de 8 (la capacité affichée par eva.gg, souvent 10, est ignorée). Moins de 8 : « il en manque N » ; plus de 8 : « N de trop », à régulariser avec la salle. Détail par créneau quand ils diffèrent. Bouton « Réserver ma place sur eva.gg » qui ouvre le calendrier de la salle au bon jour.
+- eva.gg donne le nombre d'inscrits, jamais les noms : l'affichage montre un écart éventuel, il ne prétend pas savoir qui manque. Pas de case « j'ai réservé » déclarative, qui créerait une fausse certitude pour le leader.
+- `EventVenue.evaLocationId` pour construire le lien, `buildEvaBookingUrl` partagé.
+
 ### Feature : Créneau d'un match choisi dans la grille de la salle
 
 **Périmètre livré** :
@@ -122,9 +129,8 @@ _(rien — prêt pour un merge `dev` → `main`)_
 
 | Tâche | Statut | Notes |
 |-------|--------|-------|
-| Compte eva.gg dédié | ⬜ | Jeton en variable d'environnement ; ouvre `bookings(userId)` sur les joueurs liés. Jamais de jeton perso de joueur. |
-| Vérifier l'inscription d'un joueur au créneau posé dans le calendrier | ⬜ | Croiser `bookings(userId)` avec les matchs de l'équipe ; rappel sur le tableau de bord d'accueil. |
-| Dispos de créneaux pour organiser des scrims | ⬜ | Même lecture que le sélecteur de créneau (`availableSeatCount` par créneau), à exposer côté équipe. |
+| Savoir **qui** est inscrit à un créneau | ⬜ **bloqué** | Aucune voie publique : la liste des participants est derrière un reCAPTCHA et ne renvoie aucun identifiant (voir [docs/EVA_API.md](docs/EVA_API.md)). Demande un accès accordé par eva.gg : droits d'un gérant de salle, ou accord partenaire. Démarche en cours côté gérant de Nîmes. |
+| Dispos de créneaux pour organiser des scrims | ⬜ | Même lecture que le sélecteur de créneau (places restantes par créneau), à exposer côté équipe. |
 
 ### Dette et détails relevés en route ⬜
 

@@ -4,6 +4,7 @@ import Modal from '@/components/common/Modal.vue';
 import GamePlanViewer from '@/components/common/GamePlanViewer.vue';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import { useErrors } from '@/composables/useErrors';
+import { useVenueSlots } from '@/composables/useVenueSlots';
 import type { CalendarEvent } from '@shared/types';
 import {
   formatLongDate,
@@ -13,6 +14,7 @@ import {
   isPastDateStr,
 } from '@/utils/calendar';
 import { formatVenueLabel } from '@/utils/venues';
+import { buildEvaBookingUrl, assessSlotHeadcount } from '@shared/utils';
 
 const props = defineProps<{
   events: CalendarEvent[];
@@ -73,6 +75,44 @@ function goToNext() {
 
 
 // Where the match is played, once the event is a match
+// How many players eva.gg has on the slots of this match. It tells us the
+// count, never the names, so this shows whether seats are missing, not who.
+const { slots: venueSlots, status: slotsStatus } = useVenueSlots({
+  venueId: computed(() => currentEvent.value?.venue?.id ?? null),
+  date: computed(() => currentEvent.value?.date ?? ''),
+  enabled: computed(() => !!currentEvent.value?.evaSlotIds.length && !isEventPast.value),
+});
+
+const matchSlots = computed(() => {
+  const ids = currentEvent.value?.evaSlotIds ?? [];
+  return ids
+    .map(id => venueSlots.value.find(slot => slot.slotId === id))
+    .filter((slot): slot is NonNullable<typeof slot> => !!slot);
+});
+
+// Each slot measured against a full match. One line when every slot of the match
+// holds the same players, one per slot otherwise, since a player who booked only
+// the first half shows up exactly there.
+const bookedLines = computed(() => {
+  const slots = matchSlots.value;
+  if (slotsStatus.value !== 'ready' || !slots.length) return null;
+
+  const distinct = new Set(slots.map(slot => slot.takenSeats));
+  if (distinct.size === 1) {
+    const headcount = assessSlotHeadcount(slots[0]!.takenSeats);
+    return [{ ...headcount, prefix: '' }];
+  }
+  return slots.map(slot => ({ ...assessSlotHeadcount(slot.takenSeats), prefix: `${slot.startTime} : ` }));
+});
+
+// Where a player books their own seat for this match. eva.gg tells us how many
+// players are in, never who, so each one checks their own booking there.
+const bookingUrl = computed(() => {
+  const event = currentEvent.value;
+  if (!event || event.type !== 'MATCH' || isEventPast.value) return null;
+  return buildEvaBookingUrl(event.venue?.evaLocationId ?? null, event.date);
+});
+
 const venueLabel = computed(() => {
   if (currentEvent.value?.type !== 'MATCH') return null;
   const venue = currentEvent.value.venue;
@@ -164,6 +204,19 @@ function handleCreateEvent() {
               </span>
             </span>
           </div>
+          <div v-if="bookedLines" class="detail-row">
+            <span class="detail-label">👥 Sur eva.gg</span>
+            <span class="detail-value">
+              <span
+                v-for="line in bookedLines"
+                :key="line.prefix"
+                class="booked-line"
+                :class="`headcount-${line.status}`"
+              >
+                {{ line.prefix }}{{ line.label }}<template v-if="line.note"> · {{ line.note }}</template>
+              </span>
+            </span>
+          </div>
           <div v-if="venueLabel" class="detail-row">
             <span class="detail-label">📍 Salle</span>
             <span class="detail-value">{{ venueLabel }}</span>
@@ -173,6 +226,17 @@ function handleCreateEvent() {
             <span class="detail-value">{{ mediumLabel }}</span>
           </div>
         </div>
+
+        <!-- Booking on eva.gg: a seat is taken there, not here -->
+        <a
+          v-if="bookingUrl"
+          class="btn-booking"
+          :href="bookingUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          🎟️ Réserver ma place sur eva.gg
+        </a>
 
         <!-- Description -->
         <div v-if="currentEvent.description" class="event-description">
@@ -317,6 +381,48 @@ function handleCreateEvent() {
 .detail-value {
   color: $color-white;
   font-weight: 500;
+}
+
+.booked-line {
+  display: block;
+  white-space: nowrap;
+
+  & + & {
+    margin-top: 2px;
+  }
+
+  // Against a full match of 8: short is a warning, extra players are a problem to sort out
+  &.headcount-full {
+    color: $color-success;
+  }
+
+  &.headcount-missing {
+    color: $color-warning;
+  }
+
+  &.headcount-over {
+    color: $color-danger;
+  }
+}
+
+.btn-booking {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  padding: 0.75rem;
+  background: rgba($color-accent, 0.15);
+  border: 1px solid $color-accent;
+  border-radius: $radius-md;
+  color: $color-accent;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.2s;
+
+  &:hover {
+    background: rgba($color-accent, 0.25);
+  }
 }
 
 .detail-tag {
