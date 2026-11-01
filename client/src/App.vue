@@ -4,9 +4,11 @@ import { useRoute } from 'vue-router';
 import DynamicTopBar from '@/components/common/layout/DynamicTopBar.vue';
 import { useAuth } from '@/composables/useAuth';
 import { useBalanceRules } from '@/composables/useBalanceRules';
+import { useTeamLogo } from '@/composables/useTeamLogo';
 
 const { isAuthenticated, account, isLoading, initAuth } = useAuth();
 const { fetchRules } = useBalanceRules();
+const { teamLogoUrl, load: loadTeamLogo, clear: clearTeamLogo } = useTeamLogo();
 
 const route = useRoute();
 
@@ -19,6 +21,15 @@ onMounted(async () => {
 watch(isAuthenticated, async (authenticated) => {
   if (authenticated) {
     await fetchRules();
+  }
+}, { immediate: true });
+
+// The team logo in the top bar follows the team of the signed-in player
+watch(() => account.value?.teamId ?? null, async (teamId) => {
+  if (teamId) {
+    await loadTeamLogo();
+  } else {
+    clearTeamLogo();
   }
 }, { immediate: true });
 
@@ -42,6 +53,7 @@ const showTopBar = computed(() => route.name !== 'login');
         v-if="showTopBar"
         :isAuthenticated="isAuthenticated"
         :userName="userName"
+        :teamLogoUrl="teamLogoUrl"
       >
         <!-- Dynamic content will be injected by each page via teleport -->
         <div id="topbar-dynamic-content" class="dynamic-content"></div>

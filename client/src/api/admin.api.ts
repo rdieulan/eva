@@ -214,7 +214,7 @@ export function buildPasswordResetUrl(token: string): string {
 export interface TeamAdminSummary {
   id: string;
   name: string;
-  logo: string | null;
+  logoUrl: string | null;
   venue: { id: string; name: string; city: string } | null;
   leader: { id: string; name: string; email: string } | null;
   memberCount: number;

@@ -8,6 +8,14 @@ _(rien — prêt pour un merge `dev` → `main`)_
 
 ## ✅ Terminé
 
+### Feature : Logo d'équipe
+
+**Périmètre livré** :
+- Image envoyée depuis la page équipe par qui gère l'équipe, gardée en base (migration 0020, colonne binaire + type + date), donc insensible aux redéploiements. PNG, JPEG ou WebP, 256 Ko au plus ; le serveur lit la signature du fichier, jamais l'extension ni le type annoncé. Pas d'URL distante : une image hébergée ailleurs peut disparaître, changer, ou pister qui consulte la page.
+- Routes `PUT` / `DELETE /api/teams/current/logo` (permission `canManageTeam`) et `GET /api/teams/:id/logo` (publique, chargée par `<img>`, cache long : l'URL change à chaque envoi).
+- Les octets ne sont jamais chargés par les autres requêtes sur les équipes (omission globale Prisma). L'ancienne colonne texte `logo`, qu'aucun écran n'alimentait, est supprimée.
+- Affiché sur la page équipe (avec initiales en attendant) et dans la barre du haut.
+
 ### Feature : Liens d'une salle (Discord, réseaux)
 
 **Périmètre livré** :

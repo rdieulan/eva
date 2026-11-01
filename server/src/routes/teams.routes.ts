@@ -1,12 +1,12 @@
 // Team routes - HTTP protocol only, business logic in services
 
-import { Router } from 'express';
-import type { Response } from 'express';
+import { Router, raw } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { authMiddleware, requirePermission } from '@middleware/auth.middleware';
 import type { AuthRequest } from '@middleware/auth.middleware';
 import type { AccountPermissions } from '@shared/types';
-import { validateTeamName } from '@shared/utils';
-import { ERROR } from '@shared/constants';
+import { validateTeamName, detectImageType } from '@shared/utils';
+import { ERROR, TEAM_LOGO_MAX_BYTES, TEAM_LOGO_MIME_TYPES } from '@shared/constants';
 import { apiLogger } from '@utils/logger';
 import * as teamsService from '@services/teams.service';
 
@@ -14,7 +14,7 @@ const router = Router();
 
 // POST /api/teams - Create a new team
 router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
-  const { name, logo, venueId } = req.body;
+  const { name, venueId } = req.body;
 
   const nameValid = validateTeamName(name);
   if (nameValid !== true) {
@@ -24,7 +24,6 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const result = await teamsService.createTeam({
       name,
-      logo,
       venueId,
       leaderId: req.account!.userId,
     });
@@ -68,7 +67,7 @@ router.put('/current', authMiddleware, requirePermission('team', 'canManageTeam'
       return res.status(404).json({ errors: [ERROR.teamNotFound] });
     }
 
-    const { name, logo, venueId } = req.body;
+    const { name, venueId } = req.body;
 
     if (name !== undefined) {
       const nameValid = validateTeamName(name);
@@ -77,7 +76,7 @@ router.put('/current', authMiddleware, requirePermission('team', 'canManageTeam'
       }
     }
 
-    const result = await teamsService.updateTeam(team.id, { name, logo, venueId });
+    const result = await teamsService.updateTeam(team.id, { name, venueId });
 
     if (result.error) {
       return res.status(400).json({ errors: [result.error] });
@@ -192,6 +191,94 @@ router.post('/current/leave', authMiddleware, async (req: AuthRequest, res: Resp
     apiLogger.error('Error leaving team:', error);
     res.status(500).json({ errors: [ERROR.serverError] });
   }
+});
+
+// ============================================
+// Logo
+// ============================================
+
+// A year: the URL changes with every upload, so a cached copy can never go stale
+const LOGO_CACHE_SECONDS = 365 * 24 * 60 * 60;
+
+// The image arrives as the raw request body, in one of the accepted formats
+const logoBody = raw({ type: [...TEAM_LOGO_MIME_TYPES], limit: TEAM_LOGO_MAX_BYTES });
+
+// GET /api/teams/:id/logo - The team's logo image. Loaded by <img>, which carries no token.
+router.get('/:id/logo', async (req: Request, res: Response) => {
+  try {
+    const logo = await teamsService.getTeamLogo(req.params.id);
+    if (!logo) {
+      return res.status(404).json({ errors: [ERROR.teamLogoNotFound] });
+    }
+    res.set('Content-Type', logo.type);
+    res.set('Cache-Control', `public, max-age=${LOGO_CACHE_SECONDS}, immutable`);
+    res.send(logo.data);
+  } catch (error) {
+    apiLogger.error('Error fetching team logo:', error);
+    res.status(500).json({ errors: [ERROR.serverError] });
+  }
+});
+
+// PUT /api/teams/current/logo - Replace the team's logo with the image sent as body
+router.put(
+  '/current/logo',
+  authMiddleware,
+  requirePermission('team', 'canManageTeam'),
+  logoBody,
+  async (req: AuthRequest, res: Response) => {
+    // Only an accepted content type gets parsed into a Buffer; anything else arrives as is
+    if (!Buffer.isBuffer(req.body) || !req.body.length) {
+      return res.status(400).json({ errors: [ERROR.teamLogoTypeInvalid] });
+    }
+
+    // What the file really is, whatever the request claimed
+    const type = detectImageType(new Uint8Array(req.body));
+    if (!type) {
+      return res.status(400).json({ errors: [ERROR.teamLogoTypeInvalid] });
+    }
+
+    try {
+      const team = await teamsService.getPlayerTeam(req.account!.playerId!);
+      if (!team) {
+        return res.status(404).json({ errors: [ERROR.teamNotFound] });
+      }
+
+      const logoUrl = await teamsService.setTeamLogo(team.id, { data: req.body, type });
+      res.json({ logoUrl });
+    } catch (error) {
+      apiLogger.error('Error uploading team logo:', error);
+      res.status(500).json({ errors: [ERROR.teamLogoUploadFailed] });
+    }
+  },
+);
+
+// DELETE /api/teams/current/logo - Remove the team's logo
+router.delete(
+  '/current/logo',
+  authMiddleware,
+  requirePermission('team', 'canManageTeam'),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const team = await teamsService.getPlayerTeam(req.account!.playerId!);
+      if (!team) {
+        return res.status(404).json({ errors: [ERROR.teamNotFound] });
+      }
+
+      await teamsService.clearTeamLogo(team.id);
+      res.status(204).end();
+    } catch (error) {
+      apiLogger.error('Error removing team logo:', error);
+      res.status(500).json({ errors: [ERROR.teamLogoDeleteFailed] });
+    }
+  },
+);
+
+// The body parser refuses an oversized image before the handler runs; answer in our words
+router.use((error: unknown, _req: Request, res: Response, next: NextFunction) => {
+  if (error && typeof error === 'object' && (error as { type?: string }).type === 'entity.too.large') {
+    return res.status(413).json({ errors: [ERROR.teamLogoTooLarge] });
+  }
+  next(error);
 });
 
 export default router;

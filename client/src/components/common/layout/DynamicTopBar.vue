@@ -5,6 +5,7 @@ import SvgIcon from '@/components/common/SvgIcon.vue';
 defineProps<{
   isAuthenticated?: boolean;
   userName?: string;
+  teamLogoUrl?: string | null; // Logo of the player's team, next to the home button when it has one
 }>();
 
 const router = useRouter();
@@ -29,6 +30,7 @@ function goToProfile() {
       <button class="btn-home" @click="goToHome" title="Retour à l'accueil">
         <SvgIcon name="home" class="home-icon" />
       </button>
+      <img v-if="teamLogoUrl" class="team-logo" :src="teamLogoUrl" alt="Logo de l'équipe" />
     </div>
 
     <!-- Section centrale - Dynamique (slot) -->
@@ -75,6 +77,15 @@ function goToProfile() {
   @include mobile {
     min-height: 52px;
   }
+}
+
+.team-logo {
+  width: 36px;
+  height: 36px;
+  margin-left: $spacing-sm;
+  border-radius: $radius-sm;
+  object-fit: cover;
+  background: $color-bg-secondary;
 }
 
 .section-logo {

@@ -91,6 +91,9 @@ const adapter = new PrismaPg(pool);
 
 export const prisma = new PrismaClient({
   adapter,
+  // The logo bytes are only read by the route that serves them; every other
+  // team query would otherwise drag them along.
+  omit: { team: { logoData: true } },
   log: [
     { level: 'error', emit: 'stdout' },
     { level: 'warn', emit: 'stdout' },

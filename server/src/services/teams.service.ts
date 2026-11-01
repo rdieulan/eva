@@ -11,15 +11,25 @@ import { getPlayerWithTeam } from '@services/player.service';
 // ============================================
 export interface TeamCreateData {
   name: string;
-  logo?: string | null;
   venueId?: string | null;
   leaderId: string;
 }
 
 export interface TeamUpdateData {
   name?: string;
-  logo?: string | null;
   venueId?: string | null;
+}
+
+// What identifies a team's logo without loading its bytes
+type TeamLogoRef = { id: string; logoType: string | null; logoUpdatedAt: Date | null };
+
+/**
+ * Where the client loads a team's logo from. The URL carries the upload time,
+ * so a new logo gets a new URL and browsers never show a stale cached one.
+ */
+export function logoUrlOf(team: TeamLogoRef): string | null {
+  if (!team.logoType || !team.logoUpdatedAt) return null;
+  return `/api/teams/${team.id}/logo?v=${team.logoUpdatedAt.getTime()}`;
 }
 
 export interface MemberWithRole {
@@ -40,7 +50,7 @@ export { getPlayerWithTeam, getPlayerTeam } from '@services/player.service';
 export interface TeamView {
   id: string;
   name: string;
-  logo: string | null;
+  logoUrl: string | null;
   venueId: string | null;
   leaderId: string;
   createdAt: Date;
@@ -66,7 +76,7 @@ export async function getTeamViewForPlayer(playerId: string): Promise<TeamView |
   return {
     id: team.id,
     name: team.name,
-    logo: team.logo,
+    logoUrl: logoUrlOf(team),
     venueId: team.venueId,
     leaderId: team.leaderId,
     createdAt: team.createdAt,
@@ -102,7 +112,7 @@ export interface TeamAdminMember {
 export interface TeamAdminSummary {
   id: string;
   name: string;
-  logo: string | null;
+  logoUrl: string | null;
   venue: { id: string; name: string; city: string } | null;
   leader: { id: string; name: string; email: string } | null;
   memberCount: number;
@@ -131,7 +141,7 @@ export async function listAllTeams(): Promise<TeamAdminSummary[]> {
   return teams.map(t => ({
     id: t.id,
     name: t.name,
-    logo: t.logo,
+    logoUrl: logoUrlOf(t),
     venue: t.venue,
     leader: t.leader?.user
       ? { id: t.leader.user.id, name: t.leader.user.name, email: t.leader.user.email }
@@ -173,7 +183,7 @@ export async function getTeamAdminDetail(teamId: string): Promise<TeamAdminDetai
   return {
     id: team.id,
     name: team.name,
-    logo: team.logo,
+    logoUrl: logoUrlOf(team),
     venue: team.venue,
     leader: team.leader?.user
       ? { id: team.leader.user.id, name: team.leader.user.name, email: team.leader.user.email }
@@ -210,7 +220,6 @@ export async function createTeam(data: TeamCreateData) {
   const team = await prisma.team.create({
     data: {
       name: data.name.trim(),
-      logo: data.logo || null,
       leader: { connect: { id: user.player.id } },
       members: { connect: { id: user.player.id } },
     },
@@ -256,12 +265,56 @@ export async function updateTeam(teamId: string, data: TeamUpdateData) {
     where: { id: teamId },
     data: {
       ...(data.name && { name: data.name.trim() }),
-      ...(data.logo !== undefined && { logo: data.logo }),
       ...(data.venueId !== undefined && { venueId: data.venueId }),
     },
   });
 
   return { team };
+}
+
+// ============================================
+// Logo
+// ============================================
+
+export interface TeamLogo {
+  data: Buffer;
+  type: string;
+}
+
+/**
+ * The logo image of a team, null when it has none (or no such team)
+ */
+export async function getTeamLogo(teamId: string): Promise<TeamLogo | null> {
+  // The bytes are omitted from every team query by default; this is the one place that wants them
+  const team = await prisma.team.findUnique({
+    where: { id: teamId },
+    select: { logoData: true, logoType: true },
+  });
+  if (!team?.logoData || !team.logoType) return null;
+  return { data: Buffer.from(team.logoData), type: team.logoType };
+}
+
+/**
+ * Replace the logo of a team with an image already checked by the caller
+ */
+export async function setTeamLogo(teamId: string, logo: TeamLogo): Promise<string> {
+  const team = await prisma.team.update({
+    where: { id: teamId },
+    // A fresh copy makes the bytes a plain Uint8Array, which is what Prisma stores
+    data: { logoData: new Uint8Array(logo.data), logoType: logo.type, logoUpdatedAt: new Date() },
+    select: { id: true, logoType: true, logoUpdatedAt: true },
+  });
+  return logoUrlOf(team)!;
+}
+
+/**
+ * Remove the logo of a team
+ */
+export async function clearTeamLogo(teamId: string): Promise<void> {
+  await prisma.team.update({
+    where: { id: teamId },
+    data: { logoData: null, logoType: null, logoUpdatedAt: null },
+  });
 }
 
 /**

@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import type { Venue } from '@shared/types';
+import { TEAM_LOGO_MIME_TYPES } from '@shared/constants';
 import SvgIcon from '@/components/common/SvgIcon.vue';
 import { formatVenueLabel } from '@/utils/venues';
 
 interface TeamData {
   id: string;
   name: string;
+  logoUrl: string | null;
   venueId?: string;
   leader: { id: string; name: string } | null;
 }
@@ -20,9 +22,38 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   save: [data: { name: string; venueId: string | null }];
+  uploadLogo: [file: File];
+  removeLogo: [];
   deleteTeam: [];
   leaveTeam: [];
 }>();
+
+// What the file picker offers by default; the server checks the real content anyway
+const LOGO_ACCEPT = TEAM_LOGO_MIME_TYPES.join(',');
+
+// Letters standing in for a team without a logo
+const teamInitials = computed(() =>
+  props.team.name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(word => word[0]!.toUpperCase())
+    .join(''),
+);
+
+const logoInput = ref<HTMLInputElement | null>(null);
+
+function pickLogo() {
+  logoInput.value?.click();
+}
+
+function handleLogoChosen(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  // Reset so choosing the same file again still fires a change
+  input.value = '';
+  if (file) emit('uploadLogo', file);
+}
 
 // The venue the team is affiliated with, when it is known
 const teamVenue = computed(() => props.venues.find(v => v.id === props.team.venueId) ?? null);
@@ -68,6 +99,28 @@ function saveChanges() {
         <SvgIcon name="edit" />
         Modifier
       </button>
+    </div>
+
+    <!-- Logo: shown to everyone, changed by whoever manages the team -->
+    <div class="team-logo">
+      <img v-if="team.logoUrl" class="team-logo-image" :src="team.logoUrl" :alt="`Logo de ${team.name}`" />
+      <div v-else class="team-logo-placeholder" aria-hidden="true">{{ teamInitials }}</div>
+
+      <div v-if="canManageTeam" class="team-logo-actions">
+        <input
+          ref="logoInput"
+          class="team-logo-input"
+          type="file"
+          :accept="LOGO_ACCEPT"
+          @change="handleLogoChosen"
+        />
+        <button type="button" class="btn-logo" @click="pickLogo">
+          {{ team.logoUrl ? 'Changer le logo' : 'Ajouter un logo' }}
+        </button>
+        <button v-if="team.logoUrl" type="button" class="btn-logo btn-logo--remove" @click="emit('removeLogo')">
+          Retirer
+        </button>
+      </div>
     </div>
 
     <div v-if="isEditing" class="edit-form">
@@ -146,6 +199,60 @@ function saveChanges() {
   border-radius: $radius-lg;
   padding: $spacing-lg;
   height: fit-content;
+}
+
+.team-logo {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  margin-bottom: $spacing-md;
+}
+
+.team-logo-image,
+.team-logo-placeholder {
+  width: 72px;
+  height: 72px;
+  border-radius: $radius-md;
+  border: 1px solid $color-border-light;
+  flex-shrink: 0;
+}
+
+.team-logo-image {
+  object-fit: cover;
+  background: $color-bg-secondary;
+}
+
+.team-logo-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba($color-accent, 0.15);
+  color: $color-accent;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.team-logo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+}
+
+// Driven by the button next to it; the native control stays out of the way
+.team-logo-input {
+  display: none;
+}
+
+.btn-logo {
+  @include btn-base($color-accent);
+  padding: $spacing-xs $spacing-md;
+  font-size: $font-size-sm;
+
+  &--remove {
+    @include btn-base($color-danger);
+    padding: $spacing-xs $spacing-md;
+    font-size: $font-size-sm;
+  }
 }
 
 .section-header {

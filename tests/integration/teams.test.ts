@@ -6,6 +6,7 @@ import { app } from '../../server/src/app';
 import { createAuthenticatedUser, createUserWithTeam } from './helpers/auth';
 import { prisma, expectNoRecordCreated } from './helpers/db';
 import { TEAM_NAME_MIN_LENGTH } from '@shared/constants/validation.constants';
+import { TEAM_LOGO_MAX_BYTES } from '@shared/constants/team.constants';
 import { ERROR } from '@shared/constants/error.constants';
 import { DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
 
@@ -384,5 +385,126 @@ describe('Teams API', () => {
 
       expect(res.status).toBe(403);
     });
+  });
+});
+
+// ============================================
+// Team logo
+// ============================================
+describe('Team logo API', () => {
+  // The first bytes of real files: that is what the server trusts, not the declared type
+  const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52]);
+  const GIF = Buffer.from([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 1, 0, 1, 0]);
+
+  function upload(token: string, body: Buffer, type = 'image/png') {
+    return request(app)
+      .put('/api/teams/current/logo')
+      .set('Authorization', `Bearer ${token}`)
+      .set('Content-Type', type)
+      .send(body);
+  }
+
+  it('should store the logo and serve it back with its real type and a long cache', async () => {
+    const { token, team } = await createUserWithTeam();
+
+    const res = await upload(token, PNG);
+
+    expect(res.status).toBe(200);
+    const [path, version] = (res.body.logoUrl as string).split('?v=');
+    expect(path).toBe(`/api/teams/${team.id}/logo`);
+    expect(Number(version)).toBeGreaterThan(0);
+
+    const image = await request(app).get(res.body.logoUrl);
+    expect(image.status).toBe(200);
+    expect(image.headers['content-type']).toBe('image/png');
+    expect(image.headers['cache-control']).toContain('immutable');
+    expect(Buffer.compare(image.body as Buffer, PNG)).toBe(0);
+
+    const current = await request(app)
+      .get('/api/teams/current')
+      .set('Authorization', `Bearer ${token}`);
+    expect(current.body.logoUrl).toBe(res.body.logoUrl);
+  });
+
+  it('should change the URL on every upload so a cached copy never lingers', async () => {
+    const { token } = await createUserWithTeam();
+
+    const first = await upload(token, PNG);
+    await new Promise(resolve => setTimeout(resolve, 5));
+    const second = await upload(token, PNG);
+
+    expect(second.body.logoUrl).not.toBe(first.body.logoUrl);
+  });
+
+  it('should refuse a file that is not really a PNG, JPEG or WebP, whatever it claims', async () => {
+    const { token, user } = await createUserWithTeam();
+
+    const res = await upload(token, GIF, 'image/png');
+
+    expect(res.status).toBe(400);
+    expect(res.body.errors).toContain(ERROR.teamLogoTypeInvalid);
+    const team = await prisma.team.findFirst({ where: { leader: { id: user.playerId! } }, select: { logoType: true } });
+    expect(team!.logoType).toBeNull();
+  });
+
+  it('should refuse a declared type a logo cannot be', async () => {
+    const { token } = await createUserWithTeam();
+
+    const res = await upload(token, GIF, 'image/gif');
+
+    expect(res.status).toBe(400);
+    expect(res.body.errors).toContain(ERROR.teamLogoTypeInvalid);
+  });
+
+  it('should refuse an image above the size limit', async () => {
+    const { token } = await createUserWithTeam();
+    const huge = Buffer.concat([PNG, Buffer.alloc(TEAM_LOGO_MAX_BYTES)]);
+
+    const res = await upload(token, huge);
+
+    expect(res.status).toBe(413);
+    expect(res.body.errors).toContain(ERROR.teamLogoTooLarge);
+  });
+
+  it('should refuse a member who cannot manage the team', async () => {
+    const { token: leaderToken, team } = await createUserWithTeam();
+    const member = await createAuthenticatedUser({ email: 'member@example.com' });
+    const invite = await request(app)
+      .post(`/api/teams/${team.id}/invites`)
+      .set('Authorization', `Bearer ${leaderToken}`)
+      .send({ expiresInHours: 24, maxUses: 1 });
+    await request(app)
+      .post(`/api/invites/${invite.body.code}/join`)
+      .set('Authorization', `Bearer ${member.token}`)
+      .expect(200);
+
+    const res = await upload(member.token, PNG);
+
+    expect(res.status).toBe(403);
+  });
+
+  it('should remove the logo', async () => {
+    const { token, team } = await createUserWithTeam();
+    const uploaded = await upload(token, PNG);
+
+    const res = await request(app)
+      .delete('/api/teams/current/logo')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(204);
+    const image = await request(app).get(uploaded.body.logoUrl);
+    expect(image.status).toBe(404);
+    const row = await prisma.team.findUnique({ where: { id: team.id }, select: { logoType: true, logoUpdatedAt: true } });
+    expect(row!.logoType).toBeNull();
+    expect(row!.logoUpdatedAt).toBeNull();
+  });
+
+  it('should answer 404 for a team without a logo', async () => {
+    const { team } = await createUserWithTeam();
+
+    const res = await request(app).get(`/api/teams/${team.id}/logo`);
+
+    expect(res.status).toBe(404);
+    expect(res.body.errors).toContain(ERROR.teamLogoNotFound);
   });
 });

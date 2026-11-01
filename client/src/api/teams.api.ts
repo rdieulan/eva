@@ -45,7 +45,7 @@ export async function fetchCurrentTeam(): Promise<TeamWithMembers | null> {
  * Create a new team (current player becomes leader)
  */
 export async function createTeam(
-  teamData: { name: string; logo?: string | null; venueId?: string | null }
+  teamData: { name: string; venueId?: string | null }
 ): Promise<Team & { isLeader: boolean }> {
   return authFetch<Team & { isLeader: boolean }>(
     API_BASE,
@@ -80,13 +80,40 @@ export async function fetchVenueSlots(venueId: string, date: string): Promise<Ve
  * Update team info
  */
 export async function updateTeam(
-  teamData: { name?: string; logo?: string | null; venueId?: string | null }
+  teamData: { name?: string; venueId?: string | null }
 ): Promise<Team> {
   return authFetch<Team>(
     `${API_BASE}/current`,
     { method: 'PUT', body: JSON.stringify(teamData) },
     ERROR.teamUpdateFailed
   );
+}
+
+/**
+ * Replace the team's logo with an image file; answers with where to load it from
+ */
+export async function uploadTeamLogo(file: File): Promise<{ logoUrl: string }> {
+  const response = await authFetch(`${API_BASE}/current/logo`, {
+    method: 'PUT',
+    // The file goes as the body itself, its type telling the server what it is
+    headers: { 'Content-Type': file.type },
+    body: file,
+  });
+  if (!response.ok) {
+    throw ApiError.fromResponse(await response.json(), ERROR.teamLogoUploadFailed);
+  }
+  return (await response.json()) as { logoUrl: string };
+}
+
+/**
+ * Remove the team's logo
+ */
+export async function deleteTeamLogo(): Promise<void> {
+  // Answers 204 with no body, so the JSON-parsing form of authFetch does not apply
+  const response = await authFetch(`${API_BASE}/current/logo`, { method: 'DELETE' });
+  if (!response.ok) {
+    throw ApiError.fromResponse(await response.json(), ERROR.teamLogoDeleteFailed);
+  }
 }
 
 /**
@@ -164,7 +191,7 @@ export interface InviteValidation {
   valid: boolean;
   reason?: string;
   teamName?: string;
-  teamLogo?: string | null;
+  teamLogoUrl?: string | null;
   expiresAt?: string;
 }
 

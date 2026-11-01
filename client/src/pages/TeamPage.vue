@@ -14,11 +14,14 @@ import {
   createInvite,
   fetchInvites,
   revokeInvite,
+  uploadTeamLogo,
+  deleteTeamLogo,
 } from '@/api';
+import { useTeamLogo } from '@/composables/useTeamLogo';
 import type { TeamWithMembers, TeamMember, TeamInvite } from '@/api';
 import type { AccountPermissions, Venue } from '@shared/types';
 import { DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
-import { ERROR } from '@shared/constants';
+import { ERROR, TEAM_LOGO_MAX_BYTES, TEAM_LOGO_MIME_TYPES } from '@shared/constants';
 import { useErrors } from '@/composables/useErrors';
 import ConfirmModal from '@/components/common/ConfirmModal.vue';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
@@ -30,6 +33,7 @@ import TeamInviteModal from '@/components/team/TeamInviteModal.vue';
 
 const router = useRouter();
 const { token, permissions, account } = useAuth();
+const { set: setTeamLogo } = useTeamLogo();
 
 
 // State
@@ -116,6 +120,44 @@ async function handleSaveTeam(data: { name: string; venueId: string | null }) {
     showSuccess('Équipe mise à jour');
   } catch (e) {
     setErrorFromException(e, ERROR.serverError);
+  }
+}
+
+// Logo handlers: the file is checked here before it travels, the server checks it again
+async function handleUploadLogo(file: File) {
+  if (!team.value) return;
+  clearErrors();
+
+  if (!(TEAM_LOGO_MIME_TYPES as readonly string[]).includes(file.type)) {
+    setError(ERROR.teamLogoTypeInvalid);
+    return;
+  }
+  if (file.size > TEAM_LOGO_MAX_BYTES) {
+    setError(ERROR.teamLogoTooLarge);
+    return;
+  }
+
+  try {
+    const { logoUrl } = await uploadTeamLogo(file);
+    team.value.logoUrl = logoUrl;
+    setTeamLogo(logoUrl);
+    showSuccess('Logo mis à jour');
+  } catch (e) {
+    setErrorFromException(e, ERROR.teamLogoUploadFailed);
+  }
+}
+
+async function handleRemoveLogo() {
+  if (!team.value) return;
+  clearErrors();
+
+  try {
+    await deleteTeamLogo();
+    team.value.logoUrl = null;
+    setTeamLogo(null);
+    showSuccess('Logo retiré');
+  } catch (e) {
+    setErrorFromException(e, ERROR.teamLogoDeleteFailed);
   }
 }
 
@@ -265,6 +307,8 @@ onMounted(loadData);
         :can-manage-team="canManageTeam"
         :is-leader="isLeader"
         @save="handleSaveTeam"
+        @upload-logo="handleUploadLogo"
+        @remove-logo="handleRemoveLogo"
         @delete-team="showDeleteTeamModal = true"
         @leave-team="showLeaveTeamModal = true"
       />

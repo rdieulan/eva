@@ -6,7 +6,7 @@
 export interface Team {
   id: string;
   name: string;
-  logo?: string;
+  logoUrl: string | null; // Where to load the team's logo from, null when it has none
   venueId?: string;
   leaderId: string;
   createdAt: string;

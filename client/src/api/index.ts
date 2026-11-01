@@ -45,6 +45,8 @@ export {
   createTeam,
   fetchVenues,
   fetchVenueSlots,
+  uploadTeamLogo,
+  deleteTeamLogo,
   updateTeam,
   fetchTeamMembers,
   updateMemberPermissions,

@@ -3,6 +3,7 @@
 import { prisma } from '@db/prisma';
 import crypto from 'crypto';
 import { ERROR } from '@shared/constants';
+import { logoUrlOf } from '@services/teams.service';
 
 // ============================================
 // Helpers
@@ -146,7 +147,7 @@ export async function verifyInviteCode(code: string) {
   const invite = await prisma.teamInvite.findUnique({
     where: { code },
     include: {
-      team: { select: { name: true, logo: true } },
+      team: { select: { id: true, name: true, logoType: true, logoUpdatedAt: true } },
     },
   });
 
@@ -162,7 +163,7 @@ export async function verifyInviteCode(code: string) {
   return {
     valid: true,
     teamName: invite.team.name,
-    teamLogo: invite.team.logo,
+    teamLogoUrl: logoUrlOf(invite.team),
     expiresAt: invite.expiresAt,
   };
 }
