@@ -219,7 +219,16 @@ function handleCreateEvent() {
           </div>
           <div v-if="venueLabel" class="detail-row">
             <span class="detail-label">📍 Salle</span>
-            <span class="detail-value">{{ venueLabel }}</span>
+            <span class="detail-value">
+              {{ venueLabel }}
+              <a
+                v-if="currentEvent.venue?.discord"
+                class="detail-link"
+                :href="currentEvent.venue.discord"
+                target="_blank"
+                rel="noopener noreferrer"
+              >Discord</a>
+            </span>
           </div>
           <div v-if="mediumLabel" class="detail-row">
             <span class="detail-label">🎙️ Plateforme</span>
@@ -422,6 +431,21 @@ function handleCreateEvent() {
 
   &:hover {
     background: rgba($color-accent, 0.25);
+  }
+}
+
+.detail-link {
+  margin-left: $spacing-sm;
+  padding: 2px 8px;
+  border-radius: $radius-sm;
+  background: rgba($color-accent, 0.2);
+  color: $color-accent;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-decoration: none;
+
+  &:hover {
+    background: rgba($color-accent, 0.35);
   }
 }
 

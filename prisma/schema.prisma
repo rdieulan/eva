@@ -135,6 +135,15 @@ model Venue {
   address    String
   phone      String?
   arenaCount Int             @default(1) // Arenas the venue runs for the competitive game
+  // Where the venue can be reached online, as eva.gg publishes them; hand-made venues fill them in the admin
+  website    String?
+  discord    String?
+  facebook   String?
+  instagram  String?
+  x          String?
+  tiktok     String?
+  youtube    String?
+  twitch     String?
   createdAt  DateTime        @default(now())
   updatedAt  DateTime        @updatedAt
   teams      Team[]

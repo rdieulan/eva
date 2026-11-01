@@ -93,6 +93,11 @@ Un `data.getPublicPlayerByUsername` à `null` est traité comme « introuvable �
 ### `listLocations(country: CountryEnum!)` — salles **[vérifié, en prod]**
 
 Utilisé par `npm run db:sync-venues`. Voir `server/src/integrations/eva/eva-locations.ts`.
+On en récupère nom, ville, adresse, téléphone, nombre d'arènes, le site externe
+(`externalUrl`) et le bloc `socialNetworks { discord facebook instagram x tiktok youtube
+twitch }`. Chaque lien n'est gardé que si c'est une URL http(s) absolue ; eva.gg y met
+parfois un pseudo ou un champ vide, écartés. Les 59 salles FR ont un Discord et un
+Instagram, aucune de site externe (vérifié au 2026-11-01).
 
 ### `listSeasons` — saisons **[lu dans le bundle]**
 

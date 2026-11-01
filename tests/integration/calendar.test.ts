@@ -887,7 +887,7 @@ describe('Calendar API', () => {
         });
 
       expect(res.status).toBe(201);
-      expect(res.body.venue).toEqual({ id: venue.id, name: 'VR Arena', city: 'Lyon', evaLocationId: null });
+      expect(res.body.venue).toEqual({ id: venue.id, name: 'VR Arena', city: 'Lyon', evaLocationId: null, discord: null });
     });
 
     it('should play the match in the chosen venue, team venue or not', async () => {
@@ -908,7 +908,7 @@ describe('Calendar API', () => {
         });
 
       expect(res.status).toBe(201);
-      expect(res.body.venue).toEqual({ id: away.id, name: 'Away', city: 'Paris', evaLocationId: null });
+      expect(res.body.venue).toEqual({ id: away.id, name: 'Away', city: 'Paris', evaLocationId: null, discord: null });
     });
 
     it('should accept a match with no venue even when the team has one', async () => {
@@ -1088,7 +1088,7 @@ describe('Calendar API', () => {
         .set('Authorization', `Bearer ${token}`);
 
       expect(month.body.days[date].events[0].venue)
-        .toEqual({ id: venue.id, name: 'VR Arena', city: 'Lyon', evaLocationId: null });
+        .toEqual({ id: venue.id, name: 'VR Arena', city: 'Lyon', evaLocationId: null, discord: null });
     });
   });
 

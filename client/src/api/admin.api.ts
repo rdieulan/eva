@@ -1,6 +1,6 @@
 // Admin API client - venue / manager / admin / player / team management
 
-import type { AdminPermissions, Venue } from '@shared/types';
+import type { AdminPermissions, Venue, VenueLinks } from '@shared/types';
 import { ERROR } from '@shared/constants';
 import { authFetch } from '@/api/utils';
 
@@ -10,7 +10,7 @@ const ADMINS_BASE = '/api/admin/admins';
 const PLAYERS_BASE = '/api/admin/players';
 const TEAMS_BASE = '/api/admin/teams';
 
-export interface VenueInput {
+export interface VenueInput extends Partial<VenueLinks> {
   name: string;
   city: string;
   address: string;

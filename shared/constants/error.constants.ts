@@ -100,6 +100,7 @@ export const ERROR = {
   venueNameRequired: 'Le nom de la salle est requis',
   venueCityRequired: 'La ville est requise',
   venueAddressRequired: 'L\'adresse est requise',
+  venueLinkInvalid: 'Un lien de salle doit être une adresse web complète commençant par http:// ou https://',
   venueNotOnEva: 'Cette salle n\'est pas reliée à eva.gg, ses créneaux ne peuvent pas être listés',
   venueSlotsFetchFailed: 'Erreur lors de la récupération des créneaux de la salle',
 

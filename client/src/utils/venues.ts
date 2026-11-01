@@ -1,6 +1,6 @@
 // Venue display helpers
 
-import type { Venue } from '@shared/types';
+import type { Venue, VenueLinkKey } from '@shared/types';
 
 // Compare names the way a reader does: "Nîmes" and "NIMES" are the same town
 function normalize(text: string): string {
@@ -26,3 +26,15 @@ export function formatVenueLabel(venue: Pick<Venue, 'name' | 'city'>): string {
 
   return normalize(name).includes(normalize(city)) ? name : `${name} - ${city}`;
 }
+
+// Keyed by VenueLinkKey: a new network does not compile until it has a label
+export const VENUE_LINK_LABELS: Record<VenueLinkKey, string> = {
+  website: 'Site web',
+  discord: 'Discord',
+  facebook: 'Facebook',
+  instagram: 'Instagram',
+  x: 'X',
+  tiktok: 'TikTok',
+  youtube: 'YouTube',
+  twitch: 'Twitch',
+};

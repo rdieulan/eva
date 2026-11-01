@@ -7,7 +7,7 @@ import { isValidVoiceMedium } from './validation.helper';
 
 // Relation to load alongside an event so it can be formatted for the frontend
 export const EVENT_VENUE_INCLUDE = {
-  venue: { select: { id: true, name: true, city: true, externalId: true } },
+  venue: { select: { id: true, name: true, city: true, externalId: true, discord: true } },
 } as const;
 
 // The venue of an event as Prisma hands it over, before we rename its eva.gg id
@@ -91,7 +91,13 @@ export function formatEventForFrontend(event: {
     description: event.description || undefined,
     gamePlan: (event.gamePlan || undefined) as MatchGamePlan | undefined,
     venue: event.venue
-      ? { id: event.venue.id, name: event.venue.name, city: event.venue.city, evaLocationId: event.venue.externalId }
+      ? {
+          id: event.venue.id,
+          name: event.venue.name,
+          city: event.venue.city,
+          evaLocationId: event.venue.externalId,
+          discord: event.venue.discord,
+        }
       : undefined,
     arenaNumber: event.arenaNumber ?? undefined,
     evaSlotIds: event.evaSlotIds,

@@ -8,6 +8,13 @@ _(rien — prêt pour un merge `dev` → `main`)_
 
 ## ✅ Terminé
 
+### Feature : Liens d'une salle (Discord, réseaux)
+
+**Périmètre livré** :
+- La salle porte son site et ses réseaux (Discord, Facebook, Instagram, X, TikTok, YouTube, Twitch), remplis par `db:sync-venues` depuis eva.gg (`socialNetworks` + `externalUrl`) et modifiables dans l'écran d'administration des salles.
+- Seule une URL http(s) absolue est stockée, côté sync comme côté saisie : écarte un pseudo, un champ vide, un `javascript:` de n'importe quelle source. Validation partagée `normalizeLinkUrl`.
+- Le Discord de la salle s'affiche sur la page équipe (salle affiliée) et sur la fiche d'un match.
+
 ### Feature : Réservation d'un match sur eva.gg
 
 **Périmètre livré** :

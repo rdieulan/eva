@@ -3,10 +3,11 @@
 
 import { Router, Response } from 'express';
 import { authMiddleware, requireAdmin, requireAdminPermission, AuthRequest } from '@middleware/auth.middleware';
-import { validateEmail, validateName } from '@shared/utils';
+import { validateEmail, validateName, isAcceptableLinkInput } from '@shared/utils';
 import { ERROR } from '@shared/constants';
 import { apiLogger } from '@utils/logger';
-import type { AdminPermissions } from '@shared/types';
+import type { AdminPermissions, VenueLinks } from '@shared/types';
+import { VENUE_LINK_KEYS } from '@shared/types';
 import * as venuesService from '@services/venues.service';
 import * as managerService from '@services/manager.service';
 import * as adminService from '@services/admin.service';
@@ -62,23 +63,39 @@ router.get('/venues', async (_req: AuthRequest, res: Response) => {
   }
 });
 
+// The links of a venue as sent by the admin screen, only those present in the body
+function pickLinks(body: Record<string, unknown>): Partial<VenueLinks> {
+  const links: Partial<VenueLinks> = {};
+  for (const key of VENUE_LINK_KEYS) {
+    if (body[key] !== undefined) links[key] = body[key] as string | null;
+  }
+  return links;
+}
+
+// Every link given has to be an absolute http(s) URL, or empty to clear it
+function hasInvalidLink(links: Partial<VenueLinks>): boolean {
+  return VENUE_LINK_KEYS.some(key => key in links && !isAcceptableLinkInput(links[key]));
+}
+
 // POST /api/admin/venues - Create a venue
 router.post(
   '/venues',
   requireAdminPermission('canManageVenues'),
   async (req: AuthRequest, res: Response) => {
     const { name, city, address, phone, arenaCount } = req.body ?? {};
+    const links = pickLinks(req.body ?? {});
 
     const errors: string[] = [];
     if (!name || typeof name !== 'string' || !name.trim()) errors.push(ERROR.venueNameRequired);
     if (!city || typeof city !== 'string' || !city.trim()) errors.push(ERROR.venueCityRequired);
     if (!address || typeof address !== 'string' || !address.trim()) errors.push(ERROR.venueAddressRequired);
     if (arenaCount !== undefined && !isValidArenaCount(arenaCount)) errors.push(ERROR.venueArenaCountInvalid);
+    if (hasInvalidLink(links)) errors.push(ERROR.venueLinkInvalid);
 
     if (errors.length) return res.status(400).json({ errors });
 
     try {
-      const venue = await venuesService.createVenue({ name, city, address, phone, arenaCount });
+      const venue = await venuesService.createVenue({ name, city, address, phone, arenaCount, ...links });
       res.status(201).json(venue);
     } catch (error) {
       apiLogger.error('Admin: error creating venue:', error);
@@ -93,10 +110,11 @@ router.put(
   requireAdminPermission('canManageVenues'),
   async (req: AuthRequest, res: Response) => {
     const { name, city, address, phone, arenaCount } = req.body ?? {};
+    const links = pickLinks(req.body ?? {});
 
     // At least one field must be provided
     if (name === undefined && city === undefined && address === undefined && phone === undefined
-      && arenaCount === undefined) {
+      && arenaCount === undefined && !Object.keys(links).length) {
       return res.status(400).json({ errors: [ERROR.requiredFieldsMissing] });
     }
 
@@ -105,11 +123,12 @@ router.put(
     if (city !== undefined && (typeof city !== 'string' || !city.trim())) errors.push(ERROR.venueCityRequired);
     if (address !== undefined && (typeof address !== 'string' || !address.trim())) errors.push(ERROR.venueAddressRequired);
     if (arenaCount !== undefined && !isValidArenaCount(arenaCount)) errors.push(ERROR.venueArenaCountInvalid);
+    if (hasInvalidLink(links)) errors.push(ERROR.venueLinkInvalid);
 
     if (errors.length) return res.status(400).json({ errors });
 
     try {
-      const venue = await venuesService.updateVenue(req.params.id, { name, city, address, phone, arenaCount });
+      const venue = await venuesService.updateVenue(req.params.id, { name, city, address, phone, arenaCount, ...links });
       if (!venue) return res.status(404).json({ errors: [ERROR.venueNotFound] });
       res.json(venue);
     } catch (error) {

@@ -1,7 +1,9 @@
 // Venues service - business logic
 
 import { prisma } from '@db/prisma';
-import type { Venue } from '@shared/types';
+import type { Venue, VenueLinks } from '@shared/types';
+import { VENUE_LINK_KEYS } from '@shared/types';
+import { normalizeLinkUrl } from '@shared/utils';
 
 const PUBLIC_VENUE_SELECT = {
   id: true,
@@ -11,9 +13,17 @@ const PUBLIC_VENUE_SELECT = {
   phone: true,
   arenaCount: true,
   externalId: true,
+  website: true,
+  discord: true,
+  facebook: true,
+  instagram: true,
+  x: true,
+  tiktok: true,
+  youtube: true,
+  twitch: true,
 } as const;
 
-type VenueRow = {
+type VenueRow = VenueLinks & {
   id: string;
   name: string;
   city: string;
@@ -23,12 +33,21 @@ type VenueRow = {
   externalId: number | null;
 };
 
+// Links given by hand, each normalised to an absolute URL or cleared
+function linksData(input: Partial<VenueLinks>): Partial<VenueLinks> {
+  const data: Partial<VenueLinks> = {};
+  for (const key of VENUE_LINK_KEYS) {
+    if (input[key] !== undefined) data[key] = normalizeLinkUrl(input[key]);
+  }
+  return data;
+}
+
 // The eva.gg id itself stays internal; the client only needs to know whether there is one
 function toVenue({ externalId, ...venue }: VenueRow): Venue {
   return { ...venue, hasEvaSlots: externalId !== null };
 }
 
-export interface VenueInput {
+export interface VenueInput extends Partial<VenueLinks> {
   name: string;
   city: string;
   address: string;
@@ -82,6 +101,7 @@ export async function createVenue(input: VenueInput): Promise<Venue> {
       address: input.address.trim(),
       phone: input.phone?.trim() || null,
       ...(input.arenaCount !== undefined && { arenaCount: input.arenaCount }),
+      ...linksData(input),
     },
     select: PUBLIC_VENUE_SELECT,
   });
@@ -103,6 +123,7 @@ export async function updateVenue(venueId: string, input: Partial<VenueInput>): 
       ...(input.address !== undefined && { address: input.address.trim() }),
       ...(input.phone !== undefined && { phone: input.phone?.trim() || null }),
       ...(input.arenaCount !== undefined && { arenaCount: input.arenaCount }),
+      ...linksData(input),
     },
     select: PUBLIC_VENUE_SELECT,
   });

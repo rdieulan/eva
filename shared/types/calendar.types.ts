@@ -53,6 +53,7 @@ export interface EventVenue {
   name: string;
   city: string;
   evaLocationId: number | null; // Id of the venue on eva.gg, to link into their booking calendar
+  discord: string | null; // The venue's Discord, where the team finds the staff and the other teams
 }
 
 // Calendar event (match or event)

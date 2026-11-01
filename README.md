@@ -9,6 +9,7 @@ Outil web de gestion d'équipe FPS 4v4 : planification de postes par map, calend
 - **Profil** : niveau d'abonnement (bronze, argent, or) et date de renouvellement, l'abonnement se renouvelant tous les 30 jours à partir de cette date. Liaison du compte eva.gg par son tag (`Pseudo#123456`), résolu vers l'identifiant stable d'eva.gg pour suivre le joueur même s'il change de pseudo (voir [docs/EVA_API.md](docs/EVA_API.md)).
 - **Équipes** : création d'équipe, invitations par lien, permissions granulaires par membre (leader, gestion calendrier, planificateur, etc.).
 - **Comptes multi-rôles** : Player, Manager (gérant de salle), Admin. Liaison de comptes + switch sans re-login.
+- **Salles** : nom, adresse, téléphone, nombre d'arènes et liens (Discord, réseaux sociaux, site), remplis automatiquement depuis eva.gg et modifiables dans l'administration. Le Discord de la salle s'affiche sur la page équipe et sur la fiche d'un match.
 - **Administration** (`/admin`) : CRUD des salles et des managers, génération de liens d'activation.
 
 ## Stack

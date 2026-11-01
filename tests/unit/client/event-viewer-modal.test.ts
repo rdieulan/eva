@@ -31,7 +31,7 @@ function match(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
     endTime: '21:20',
     type: 'MATCH',
     title: 'Scrim vs TeamX',
-    venue: { id: 'venue-1', name: 'Nîmes', city: 'Nimes', evaLocationId: 51 },
+    venue: { id: 'venue-1', name: 'Nîmes', city: 'Nimes', evaLocationId: 51, discord: null },
     arenaNumber: 1,
     evaSlotIds: ['slot-20:00', 'slot-20:40'],
     createdById: 'player-1',
@@ -66,12 +66,31 @@ describe('EventViewerModal - booking on eva.gg', () => {
 
   it('offers no booking link for a venue eva.gg does not run', async () => {
     const wrapper = mountViewer(match({
-      venue: { id: 'venue-2', name: 'Garage', city: 'Paris', evaLocationId: null },
+      venue: { id: 'venue-2', name: 'Garage', city: 'Paris', evaLocationId: null, discord: null },
       evaSlotIds: [],
     }));
     await flushPromises();
 
     expect(wrapper.find('a.btn-booking').exists()).toBe(false);
+  });
+
+  it('links to the Discord of the venue when it has one', async () => {
+    const wrapper = mountViewer(match({
+      venue: { id: 'venue-1', name: 'Nîmes', city: 'Nimes', evaLocationId: 51, discord: 'https://discord.gg/evanimes' },
+    }));
+    await flushPromises();
+
+    const link = wrapper.find('a.detail-link');
+    expect(link.text()).toBe('Discord');
+    expect(link.attributes('href')).toBe('https://discord.gg/evanimes');
+    expect(link.attributes('target')).toBe('_blank');
+  });
+
+  it('shows no Discord link when the venue has none', async () => {
+    const wrapper = mountViewer();
+    await flushPromises();
+
+    expect(wrapper.find('a.detail-link').exists()).toBe(false);
   });
 
   it('offers no booking link on a past match', async () => {

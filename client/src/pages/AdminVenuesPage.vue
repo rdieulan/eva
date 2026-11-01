@@ -7,7 +7,9 @@ import {
   deleteAdminVenue,
 } from '@/api';
 import type { VenueInput } from '@/api/admin.api';
-import type { Venue } from '@shared/types';
+import type { Venue, VenueLinkKey } from '@shared/types';
+import { VENUE_LINK_KEYS } from '@shared/types';
+import { VENUE_LINK_LABELS } from '@/utils/venues';
 import { ERROR } from '@shared/constants';
 import { useErrors } from '@/composables/useErrors';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
@@ -23,6 +25,12 @@ const successMessage = ref<string | null>(null);
 const showFormModal = ref(false);
 const editingVenueId = ref<string | null>(null);
 const form = reactive<VenueInput>({ name: '', city: '', address: '', phone: '', arenaCount: 1 });
+// One field per network, empty when the venue has none there
+const linkForm = reactive<Record<VenueLinkKey, string>>(emptyLinks());
+
+function emptyLinks(): Record<VenueLinkKey, string> {
+  return Object.fromEntries(VENUE_LINK_KEYS.map(key => [key, ''])) as Record<VenueLinkKey, string>;
+}
 const isSaving = ref(false);
 
 // Delete state
@@ -53,6 +61,7 @@ function openCreate() {
   form.address = '';
   form.phone = '';
   form.arenaCount = 1;
+  Object.assign(linkForm, emptyLinks());
   clearErrors();
   showFormModal.value = true;
 }
@@ -64,6 +73,7 @@ function openEdit(venue: Venue) {
   form.address = venue.address;
   form.phone = venue.phone ?? '';
   form.arenaCount = venue.arenaCount;
+  for (const key of VENUE_LINK_KEYS) linkForm[key] = venue[key] ?? '';
   clearErrors();
   showFormModal.value = true;
 }
@@ -78,6 +88,7 @@ async function saveVenue() {
       address: form.address,
       phone: form.phone || null,
       arenaCount: Number(form.arenaCount),
+      ...Object.fromEntries(VENUE_LINK_KEYS.map(key => [key, linkForm[key].trim() || null])),
     };
     if (editingVenueId.value) {
       const updated = await updateAdminVenue(editingVenueId.value, payload);
@@ -187,6 +198,15 @@ onMounted(loadVenues);
           Nombre d'arènes
           <input v-model.number="form.arenaCount" type="number" min="1" max="20" required />
         </label>
+
+        <!-- Where the venue can be reached online; filled by the eva.gg sync for its venues -->
+        <fieldset class="venue-links">
+          <legend>Liens (optionnels, adresses complètes)</legend>
+          <label v-for="key in VENUE_LINK_KEYS" :key="key">
+            {{ VENUE_LINK_LABELS[key] }}
+            <input v-model="linkForm[key]" type="url" placeholder="https://…" maxlength="300" />
+          </label>
+        </fieldset>
       </form>
 
       <template #footer>
@@ -339,6 +359,26 @@ onMounted(loadVenues);
       outline: none;
       border-color: $color-accent;
     }
+  }
+}
+
+.venue-links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $spacing-sm $spacing-md;
+  margin: 0;
+  padding: $spacing-md;
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+
+  legend {
+    padding: 0 $spacing-xs;
+    color: $color-text-secondary;
+    font-size: $font-size-sm;
+  }
+
+  @include mobile-lg {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 </style>

@@ -1,9 +1,20 @@
 // Venue types
 
 /**
+ * Where a venue can be reached online. The same list eva.gg publishes for its
+ * locations, plus their website; venues created by hand fill them in the admin.
+ */
+export const VENUE_LINK_KEYS = ['website', 'discord', 'facebook', 'instagram', 'x', 'tiktok', 'youtube', 'twitch'] as const;
+
+export type VenueLinkKey = typeof VENUE_LINK_KEYS[number];
+
+// One URL per network, null when the venue has none there
+export type VenueLinks = Record<VenueLinkKey, string | null>;
+
+/**
  * Public venue data (visible by all authenticated users)
  */
-export interface Venue {
+export interface Venue extends VenueLinks {
   id: string;
   name: string;
   city: string;

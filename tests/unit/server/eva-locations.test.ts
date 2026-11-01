@@ -8,14 +8,24 @@ function location(overrides: Partial<EvaLocation> = {}): EvaLocation {
     name: 'Saint-Quentin',
     isClosed: false,
     telephone: '+33323043668',
+    externalUrl: 'https://www.eva.gg/fr-FR/locations/saint-quentin',
     address: { street: '191 rue Georges Pompidou', city: 'Saint-Quentin' },
+    socialNetworks: {
+      discord: 'https://discord.gg/evasaintquentin',
+      facebook: null,
+      instagram: 'https://www.instagram.com/eva.saintquentin/',
+      x: null,
+      tiktok: null,
+      youtube: null,
+      twitch: null,
+    },
     details: { terrains: [{ id: 124, games: [{ gameId: 1 }] }] },
     ...overrides,
   };
 }
 
 describe('toVenues', () => {
-  it('keeps the eva.gg id so the sync can run again', () => {
+  it('keeps the eva.gg id so the sync can run again, and the links the venue publishes', () => {
     expect(toVenues([location()]).venues).toEqual([{
       externalId: 57,
       name: 'Saint-Quentin',
@@ -23,7 +33,42 @@ describe('toVenues', () => {
       address: '191 rue Georges Pompidou',
       phone: '+33323043668',
       arenaCount: 1,
+      website: 'https://www.eva.gg/fr-FR/locations/saint-quentin',
+      discord: 'https://discord.gg/evasaintquentin',
+      facebook: null,
+      instagram: 'https://www.instagram.com/eva.saintquentin/',
+      x: null,
+      tiktok: null,
+      youtube: null,
+      twitch: null,
     }]);
+  });
+
+  it('keeps only links it can turn into a link: absolute http(s) URLs', () => {
+    const venue = toVenues([location({
+      externalUrl: '  ',
+      socialNetworks: {
+        discord: 'evasaintquentin',
+        facebook: 'javascript:alert(1)',
+        instagram: ' https://www.instagram.com/eva/ ',
+        x: null,
+        tiktok: null,
+        youtube: null,
+        twitch: null,
+      },
+    })]).venues[0]!;
+
+    expect(venue.website).toBeNull();
+    expect(venue.discord).toBeNull();
+    expect(venue.facebook).toBeNull();
+    expect(venue.instagram).toBe('https://www.instagram.com/eva/');
+  });
+
+  it('copes with a location that publishes no network at all', () => {
+    const venue = toVenues([location({ externalUrl: null, socialNetworks: null })]).venues[0]!;
+
+    expect(venue.discord).toBeNull();
+    expect(venue.website).toBeNull();
   });
 
   it('keeps the city when it differs from the venue name', () => {

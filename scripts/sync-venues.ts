@@ -10,6 +10,7 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
 import { fetchEvaLocations, toVenues, type VenueInput } from '../server/src/integrations/eva/eva-locations';
+import { VENUE_LINK_KEYS } from '../shared/types/venue.types';
 
 const databaseUrl = process.env.DATABASE_URL || 'postgresql://eva_user:eva_secret_password@localhost:5432/eva_db';
 const pool = new pg.Pool({ connectionString: databaseUrl });
@@ -18,12 +19,11 @@ const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 const DEFAULT_COUNTRY = 'FR';
 
 // Fields the sync owns: a difference on any of them is worth reporting
-const SYNCED_FIELDS = ['name', 'city', 'address', 'phone', 'arenaCount'] as const;
+const SYNCED_FIELDS = ['name', 'city', 'address', 'phone', 'arenaCount', ...VENUE_LINK_KEYS] as const;
 
-function changedFields(
-  current: { name: string; city: string; address: string; phone: string | null; arenaCount: number },
-  next: VenueInput,
-): string[] {
+type SyncedVenue = Pick<VenueInput, typeof SYNCED_FIELDS[number]>;
+
+function changedFields(current: SyncedVenue, next: VenueInput): string[] {
   return SYNCED_FIELDS.filter(field => current[field] !== next[field]);
 }
 
@@ -37,7 +37,22 @@ async function main() {
 
   const known = await prisma.venue.findMany({
     where: { externalId: { not: null } },
-    select: { externalId: true, name: true, city: true, address: true, phone: true, arenaCount: true },
+    select: {
+      externalId: true,
+      name: true,
+      city: true,
+      address: true,
+      phone: true,
+      arenaCount: true,
+      website: true,
+      discord: true,
+      facebook: true,
+      instagram: true,
+      x: true,
+      tiktok: true,
+      youtube: true,
+      twitch: true,
+    },
   });
   const byExternalId = new Map(known.map(venue => [venue.externalId!, venue]));
 

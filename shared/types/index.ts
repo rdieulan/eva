@@ -100,6 +100,7 @@ export type {
   LoginCredentials,
 } from './auth.types';
 
-export type { Venue, VenueSlot } from './venue.types';
+export type { Venue, VenueSlot, VenueLinks, VenueLinkKey } from './venue.types';
+export { VENUE_LINK_KEYS } from './venue.types';
 
 export type { EvaAccountLink, LinkEvaAccountRequest } from './eva.types';

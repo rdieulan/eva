@@ -28,3 +28,5 @@ export {
 export { addMinutesToTime } from './time.utils';
 
 export { buildEvaBookingUrl, assessSlotHeadcount, type SlotHeadcount, type SlotHeadcountStatus } from './eva.utils';
+
+export { normalizeLinkUrl, isAcceptableLinkInput } from './venue.utils';

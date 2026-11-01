@@ -5,6 +5,8 @@
 
 import { evaGraphql } from './eva-graphql';
 import { COMPETITIVE_GAME_ID } from './eva-games';
+import { normalizeLinkUrl } from '../../../../shared/utils/venue.utils';
+import type { VenueLinks } from '../../../../shared/types/venue.types';
 
 const LIST_LOCATIONS_QUERY = `
   query ListLocations($country: CountryEnum!) {
@@ -13,9 +15,19 @@ const LIST_LOCATIONS_QUERY = `
       name
       isClosed
       telephone
+      externalUrl
       address {
         street
         city
+      }
+      socialNetworks {
+        discord
+        facebook
+        instagram
+        x
+        tiktok
+        youtube
+        twitch
       }
       details {
         terrains {
@@ -27,22 +39,45 @@ const LIST_LOCATIONS_QUERY = `
   }
 `;
 
+// The networks eva.gg lists for a location, each a URL or null
+export type EvaSocialNetworks = Record<Exclude<keyof VenueLinks, 'website'>, string | null>;
+
 export interface EvaLocation {
   id: number;
   name: string;
   isClosed: boolean;
   telephone: string | null;
+  externalUrl: string | null;
   address: { street: string | null; city: string | null } | null;
+  socialNetworks: EvaSocialNetworks | null;
   details: { terrains: { id: number; games: { gameId: number }[] }[] };
 }
 
-export interface VenueInput {
+export interface VenueInput extends VenueLinks {
   externalId: number;
   name: string;
   city: string;
   address: string;
   phone: string | null;
   arenaCount: number;
+}
+
+/**
+ * The links of a location we can turn into a link ourselves: absolute http(s)
+ * URLs only. Anything else eva.gg puts there (a handle, a blank) is dropped.
+ */
+function toLinks(location: EvaLocation): VenueLinks {
+  const networks = location.socialNetworks;
+  return {
+    website: normalizeLinkUrl(location.externalUrl),
+    discord: normalizeLinkUrl(networks?.discord),
+    facebook: normalizeLinkUrl(networks?.facebook),
+    instagram: normalizeLinkUrl(networks?.instagram),
+    x: normalizeLinkUrl(networks?.x),
+    tiktok: normalizeLinkUrl(networks?.tiktok),
+    youtube: normalizeLinkUrl(networks?.youtube),
+    twitch: normalizeLinkUrl(networks?.twitch),
+  };
 }
 
 export interface MappingResult {
@@ -90,6 +125,7 @@ export function toVenues(locations: EvaLocation[]): MappingResult {
       address: street,
       phone: location.telephone?.trim() || null,
       arenaCount: countCompetitiveArenas(location),
+      ...toLinks(location),
     });
   }
 

@@ -142,6 +142,62 @@ describe('Admin API', () => {
     });
   });
 
+  describe('venue links', () => {
+    it('stores the links of a venue, trimmed, and clears the blank ones', async () => {
+      const { token } = await createAuthenticatedAdmin();
+
+      const res = await request(app)
+        .post('/api/admin/venues')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          name: 'EVA Nîmes',
+          city: 'Nîmes',
+          address: '400 av Claude Baillet',
+          discord: ' https://discord.gg/evanimes ',
+          website: '',
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.discord).toBe('https://discord.gg/evanimes');
+      expect(res.body.website).toBeNull();
+      expect(res.body.instagram).toBeNull();
+
+      const persisted = await prisma.venue.findUnique({ where: { id: res.body.id } });
+      expect(persisted!.discord).toBe('https://discord.gg/evanimes');
+    });
+
+    it('refuses a link that is not a web address', async () => {
+      const { token } = await createAuthenticatedAdmin();
+
+      const res = await request(app)
+        .post('/api/admin/venues')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ name: 'EVA Nîmes', city: 'Nîmes', address: 'addr', discord: 'evanimes' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.errors).toContain(ERROR.venueLinkInvalid);
+    });
+
+    it('updates a single link and clears it with an empty value', async () => {
+      const { token } = await createAuthenticatedAdmin();
+      const venue = await createTestVenue();
+
+      const set = await request(app)
+        .put(`/api/admin/venues/${venue.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ twitch: 'https://www.twitch.tv/evanimes' });
+      expect(set.status).toBe(200);
+      expect(set.body.twitch).toBe('https://www.twitch.tv/evanimes');
+
+      const clear = await request(app)
+        .put(`/api/admin/venues/${venue.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ twitch: '' });
+      expect(clear.status).toBe(200);
+      expect(clear.body.twitch).toBeNull();
+    });
+  });
+
   describe('PUT /api/admin/venues/:id', () => {
     it('updates a venue', async () => {
       const { token } = await createAuthenticatedAdmin();

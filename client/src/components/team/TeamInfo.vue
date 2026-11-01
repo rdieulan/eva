@@ -24,11 +24,13 @@ const emit = defineEmits<{
   leaveTeam: [];
 }>();
 
+// The venue the team is affiliated with, when it is known
+const teamVenue = computed(() => props.venues.find(v => v.id === props.team.venueId) ?? null);
+
 // Computed venue name
 const venueName = computed(() => {
   if (!props.team.venueId) return 'Non affiliée';
-  const venue = props.venues.find(v => v.id === props.team.venueId);
-  return venue ? formatVenueLabel(venue) : 'Inconnue';
+  return teamVenue.value ? formatVenueLabel(teamVenue.value) : 'Inconnue';
 });
 
 // Edit mode state
@@ -95,7 +97,16 @@ function saveChanges() {
       </div>
       <div class="info-item">
         <label>Salle affiliée</label>
-        <span>{{ venueName }}</span>
+        <span>
+          {{ venueName }}
+          <a
+            v-if="teamVenue?.discord"
+            class="venue-link"
+            :href="teamVenue.discord"
+            target="_blank"
+            rel="noopener noreferrer"
+          >Discord</a>
+        </span>
       </div>
       <div class="info-item">
         <label>Leader</label>
@@ -203,6 +214,21 @@ function saveChanges() {
   display: flex;
   flex-direction: column;
   gap: $spacing-md;
+}
+
+.venue-link {
+  margin-left: $spacing-sm;
+  padding: 2px 8px;
+  border-radius: $radius-sm;
+  background: rgba($color-accent, 0.2);
+  color: $color-accent;
+  font-size: $font-size-xs;
+  font-weight: 600;
+  text-decoration: none;
+
+  &:hover {
+    background: rgba($color-accent, 0.35);
+  }
 }
 
 .info-item {
