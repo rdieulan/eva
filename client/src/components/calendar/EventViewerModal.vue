@@ -159,7 +159,9 @@ function handleCreateEvent() {
             <span class="detail-label">🕐 Horaire</span>
             <span class="detail-value">
               {{ currentEvent.startTime }} - {{ currentEvent.endTime }}
-              <span v-if="currentEvent.evaSlotId" class="detail-tag">créneau</span>
+              <span v-if="currentEvent.evaSlotIds.length" class="detail-tag">
+                {{ currentEvent.evaSlotIds.length > 1 ? `${currentEvent.evaSlotIds.length} créneaux` : '1 créneau' }}
+              </span>
             </span>
           </div>
           <div v-if="venueLabel" class="detail-row">

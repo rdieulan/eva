@@ -10,3 +10,5 @@ export const TEAM_NAME_MIN_LENGTH = 2;
 export const EVA_USERNAME_MAX_LENGTH = 64;
 // An eva.gg slot id is an opaque hex string, about 80 characters long today
 export const EVA_SLOT_ID_MAX_LENGTH = 200;
+// A match runs on a few consecutive slots of 40 minutes; this only bounds what is stored
+export const EVA_SLOTS_PER_MATCH_MAX = 6;

@@ -6,7 +6,7 @@ import { EvaApiError } from '../../../server/src/integrations/eva/eva-graphql';
 // Two sessions as eva.gg answered for Nîmes on 2026-11-03, narrowed to the fields we ask for
 function session(startTime: string, convocationTime: string, overrides: Record<string, unknown> = {}) {
   return {
-    availableSeatCount: 10,
+    takenSeatCount: 0,
     totalSeatCount: 10,
     slot: { id: `slot-${startTime}`, startTime, convocationTime, duration: 40 },
     terrain: { displayNumber: 1 },
@@ -52,7 +52,7 @@ describe('fetchLocationSessions', () => {
     stubFetch({
       data: {
         listLocationGameSessionsByDate: [
-          session('20:00', '19:50', { availableSeatCount: 3 }),
+          session('20:00', '19:50', { takenSeatCount: 7 }),
         ],
       },
     });
@@ -63,7 +63,7 @@ describe('fetchLocationSessions', () => {
       endTime: '20:40',
       convocationTime: '19:50',
       arenaNumber: 1,
-      availableSeats: 3,
+      takenSeats: 7,
       totalSeats: 10,
       isCompetitiveAvailable: true,
     }]);

@@ -12,6 +12,7 @@ describe('DayCell Component - Past Days Behavior', () => {
     endTime: '22:00',
     type: 'MATCH',
     title: 'Past Match',
+    evaSlotIds: [],
     createdById: 'admin-1',
     createdAt: '2025-01-01T00:00:00Z',
   };
@@ -131,6 +132,7 @@ describe('DayCell Component - Future Days Behavior', () => {
     endTime: '22:00',
     type: 'MATCH',
     title: 'Future Match',
+    evaSlotIds: [],
     createdById: 'admin-1',
     createdAt: '2026-01-01T00:00:00Z',
   };

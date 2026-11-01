@@ -226,7 +226,7 @@ model CalendarEvent {
   teamId      String?
   venueId     String? // Where a MATCH is played; other event types have none
   arenaNumber Int? // Which arena of that venue, when the team knows it
-  evaSlotId   String? // The eva.gg slot the match is played on, when picked from the venue's day
+  evaSlotIds  String[] @default([]) // The eva.gg slots the match runs on, consecutive on one arena, in order; empty when none picked
   voiceMedium VoiceMedium? // Where a VOICE_MEETING is held; other event types have none
   createdById String
   createdAt   DateTime     @default(now())

@@ -12,8 +12,8 @@ _(rien — prêt pour un merge `dev` → `main`)_
 
 **Périmètre livré** :
 - eva.gg ne publie pas de grille hebdomadaire : les créneaux d'une salle se lisent par date (`listLocationGameSessionsByDate`, public, confirmé par un appel sur Nîmes). Route `GET /api/venues/:id/slots?date=…`, cache de 5 minutes par salle et jour, salles créées à la main exclues.
-- Formulaire d'événement : pour un match sur une salle reliée, le champ « Créneau » remplace Début/Fin ; le créneau pose l'horaire et l'arène, et rappelle l'heure de convocation. Début/Fin ne reviennent que sans grille (pas de salle, salle non reliée, créneaux illisibles, autre type d'événement).
-- `CalendarEvent.evaSlotId` (migration 0017), gardé tant que salle, jour et heure ne bougent pas : c'est la clé qui permettra de croiser avec les réservations des joueurs.
+- Formulaire d'événement : Type, Titre, Salle, Date, puis pour un match sur une salle reliée la liste des créneaux du jour à la place de Début/Fin. Un match couvre une suite de créneaux consécutifs sur une arène (un scrim en prend deux) ; l'horaire et l'arène viennent des créneaux choisis, avec le rappel de l'heure de convocation et le nombre de joueurs déjà inscrits sur la capacité. Début/Fin ne reviennent que sans grille (pas de salle, salle non reliée, créneaux illisibles, autre type d'événement).
+- `CalendarEvent.evaSlotIds` (migrations 0017 et 0018) : la liste des créneaux consécutifs du match, gardée tant que salle, jour et heure ne bougent pas. C'est la clé qui permettra de croiser avec les réservations des joueurs.
 - Tests d'intégration avec eva.gg mocké sur la réponse réelle, unitaires sur la normalisation, le composable et le sélecteur.
 
 ### Feature : Compte eva.gg lié au profil

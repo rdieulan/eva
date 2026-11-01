@@ -37,6 +37,7 @@ describe('useCalendarEvents', () => {
     title: 'Test Match',
     description: undefined,
     gamePlan: undefined,
+    evaSlotIds: [],
     createdById: 'user-1',
     createdAt: '2026-01-20T10:00:00Z',
   });

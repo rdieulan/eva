@@ -48,7 +48,7 @@ export async function getVenueSlots(venueId: string, date: string): Promise<Venu
     endTime: session.endTime,
     convocationTime: session.convocationTime,
     arenaNumber: session.arenaNumber,
-    availableSeats: session.availableSeats,
+    takenSeats: session.takenSeats,
     totalSeats: session.totalSeats,
   }));
 

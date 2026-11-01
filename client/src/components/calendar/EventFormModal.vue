@@ -58,7 +58,7 @@ const title = ref('');
 const description = ref('');
 const venueId = ref<string | null>(null);
 const arenaNumber = ref<number | null>(null);
-const evaSlotId = ref<string | null>(null);
+const evaSlotIds = ref<string[]>([]);
 const voiceMedium = ref<VoiceMedium>(DEFAULT_VOICE_MEDIUM);
 const gamePlan = ref<MatchGamePlan | null>(null);
 
@@ -97,7 +97,7 @@ watch(
         description.value = props.editEvent.description || '';
         venueId.value = props.editEvent.venue?.id ?? null;
         arenaNumber.value = props.editEvent.arenaNumber ?? null;
-        evaSlotId.value = props.editEvent.evaSlotId ?? null;
+        evaSlotIds.value = props.editEvent.evaSlotIds;
         voiceMedium.value = props.editEvent.voiceMedium ?? DEFAULT_VOICE_MEDIUM;
         gamePlan.value = props.editEvent.gamePlan || null;
       } else {
@@ -110,11 +110,11 @@ watch(
         description.value = '';
         venueId.value = props.teamVenueId ?? null;
         arenaNumber.value = null;
-        evaSlotId.value = null;
+        evaSlotIds.value = [];
         voiceMedium.value = DEFAULT_VOICE_MEDIUM;
         gamePlan.value = null;
       }
-      anchorSlot();
+      anchorSlots();
     }
   }
 );
@@ -155,20 +155,20 @@ function handleVenueChange() {
   arenaNumber.value = null;
 }
 
-// A venue filled from eva.gg has its slots listed per day: a match there is
-// played on one of them, and its times come from the slot. The times are only
-// typed by hand when there is no grid to pick from.
+// A venue filled from eva.gg has its slots listed per day: a match there runs
+// on consecutive slots of one arena, and its times and arena come from them.
+// The times are only typed by hand when there is no grid to pick from.
 const selectedVenue = computed(() => props.venues?.find(v => v.id === venueId.value) ?? null);
 const showSlotPicker = computed(() => showVenue.value && !!selectedVenue.value?.hasEvaSlots && !!date.value);
 const slotStatus = ref<VenueSlotsStatus>('idle');
 const usesSlots = computed(() => showSlotPicker.value && slotStatus.value !== 'unavailable');
 
-// What the chosen slot was picked for. Moving the day, the venue or the start
-// time by hand leaves the slot behind, since eva.gg's slot is tied to the three.
+// What the chosen slots were picked for. Moving the day, the venue or the start
+// time leaves them behind, since eva.gg's slots are tied to the three.
 const slotAnchor = ref<{ date: string; venueId: string | null; startTime: string } | null>(null);
 
-function anchorSlot() {
-  slotAnchor.value = evaSlotId.value
+function anchorSlots() {
+  slotAnchor.value = evaSlotIds.value.length
     ? { date: date.value, venueId: venueId.value, startTime: startTime.value }
     : null;
 }
@@ -177,19 +177,28 @@ watch([date, venueId, startTime], ([newDate, newVenueId, newStartTime]) => {
   const anchor = slotAnchor.value;
   if (!anchor) return;
   if (newDate !== anchor.date || newVenueId !== anchor.venueId || newStartTime !== anchor.startTime) {
-    evaSlotId.value = null;
+    evaSlotIds.value = [];
     slotAnchor.value = null;
   }
 });
 
-// Playing on a slot sets the times the venue runs it on, and the arena when the venue has several
-function applySlot(slot: VenueSlot) {
-  evaSlotId.value = slot.slotId;
-  startTime.value = slot.startTime;
-  endTime.value = slot.endTime;
-  if (arenaNumbers.value.length) arenaNumber.value = slot.arenaNumber;
-  anchorSlot();
+// Playing on slots sets the times the venue runs them on, and the arena when the venue has several
+function applySlots(slots: VenueSlot[]) {
+  evaSlotIds.value = slots.map(slot => slot.slotId);
+  const first = slots[0];
+  const last = slots[slots.length - 1];
+  if (first && last) {
+    startTime.value = first.startTime;
+    endTime.value = last.endTime;
+    if (arenaNumbers.value.length) arenaNumber.value = first.arenaNumber;
+  }
+  anchorSlots();
 }
+
+// "1 créneau" / "2 créneaux", for the read-only view
+const slotCountLabel = computed(() =>
+  evaSlotIds.value.length > 1 ? `${evaSlotIds.value.length} créneaux` : '1 créneau',
+);
 
 // Venue of the event being viewed, for the read-only display
 const eventVenueLabel = computed(() => {
@@ -216,7 +225,7 @@ function handleSubmit() {
   if (!title.value.trim()) {
     addError(ERROR.eventTitleRequired);
   }
-  if (usesSlots.value && !evaSlotId.value) {
+  if (usesSlots.value && !evaSlotIds.value.length) {
     addError(ERROR.eventSlotRequired);
   } else if (!startTime.value || !endTime.value) {
     addError(ERROR.eventTimeRequired);
@@ -238,7 +247,7 @@ function handleSubmit() {
     description: description.value.trim(),
     venueId: showVenue.value ? venueId.value : null,
     arenaNumber: showVenue.value ? arenaNumber.value : null,
-    evaSlotId: showVenue.value ? evaSlotId.value : null,
+    evaSlotIds: showVenue.value ? evaSlotIds.value : [],
     voiceMedium: showMedium.value ? voiceMedium.value : null,
   };
 
@@ -318,7 +327,7 @@ const modalSize = computed(() => {
           <span class="event-view-label">🕐 Horaire</span>
           <span class="event-view-value">
             {{ startTime }} - {{ endTime }}
-            <span v-if="evaSlotId" class="event-view-tag">créneau</span>
+            <span v-if="evaSlotIds.length" class="event-view-tag">{{ slotCountLabel }}</span>
           </span>
         </div>
         <div v-if="showVenue" class="event-view-row">
@@ -367,42 +376,6 @@ const modalSize = computed(() => {
         </div>
       </div>
 
-      <!-- Date -->
-      <div class="form-group">
-        <label class="form-label" for="event-date">Date</label>
-        <input
-          id="event-date"
-          v-model="date"
-          type="date"
-          class="form-input"
-          required
-        />
-      </div>
-
-      <!-- Time range, typed by hand only when no slot grid gives it -->
-      <div v-if="!usesSlots" class="form-row">
-        <div class="form-group">
-          <label class="form-label" for="event-start">Début</label>
-          <input
-            id="event-start"
-            v-model="startTime"
-            type="time"
-            class="form-input"
-            required
-          />
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="event-end">Fin</label>
-          <input
-            id="event-end"
-            v-model="endTime"
-            type="time"
-            class="form-input"
-            required
-          />
-        </div>
-      </div>
-
       <!-- Title -->
       <div class="form-group">
         <label class="form-label" for="event-title">Titre</label>
@@ -427,8 +400,8 @@ const modalSize = computed(() => {
         </select>
       </div>
 
-      <!-- Arena (only when the venue runs several) -->
-      <div v-if="showVenue && arenaNumbers.length" class="form-group">
+      <!-- Arena (only when the venue runs several and no slot names it) -->
+      <div v-if="showVenue && arenaNumbers.length && !usesSlots" class="form-group">
         <label class="form-label" for="event-arena">🏟️ Arène</label>
         <select id="event-arena" v-model="arenaNumber" class="form-input form-select">
           <option :value="null">Non définie</option>
@@ -438,16 +411,53 @@ const modalSize = computed(() => {
         </select>
       </div>
 
-      <!-- Slot of the venue (only when its slots are listed) -->
+      <!-- Date -->
+      <div class="form-group">
+        <label class="form-label" for="event-date">Date</label>
+        <input
+          id="event-date"
+          v-model="date"
+          type="date"
+          class="form-input"
+          required
+        />
+      </div>
+
+      <!-- Slots of the venue (only when its slots are listed) -->
       <VenueSlotPicker
         v-if="showSlotPicker"
         :venue-id="venueId"
         :date="date"
-        :model-value="evaSlotId"
+        :model-value="evaSlotIds"
         :current-start-time="startTime"
-        @select="applySlot"
+        :current-end-time="endTime"
+        @select="applySlots"
         @status="slotStatus = $event"
       />
+
+      <!-- Time range, typed by hand only when no slot grid gives it -->
+      <div v-if="!usesSlots" class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="event-start">Début</label>
+          <input
+            id="event-start"
+            v-model="startTime"
+            type="time"
+            class="form-input"
+            required
+          />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="event-end">Fin</label>
+          <input
+            id="event-end"
+            v-model="endTime"
+            type="time"
+            class="form-input"
+            required
+          />
+        </div>
+      </div>
 
       <!-- Platform (only for VOICE_MEETING type) -->
       <div v-if="showMedium" class="form-group">

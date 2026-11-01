@@ -66,7 +66,7 @@ export interface CalendarEvent {
   gamePlan?: MatchGamePlan; // Plan de jeu pour les MATCH
   venue?: EventVenue; // Salle pour les MATCH
   arenaNumber?: number; // Arène de cette salle, quand elle est connue
-  evaSlotId?: string; // Créneau eva.gg de cette salle sur lequel le match est joué, quand il a été choisi
+  evaSlotIds: string[]; // Créneaux de cette salle sur lesquels le match se joue, consécutifs, dans l'ordre ; vide si aucun
   voiceMedium?: VoiceMedium; // Plateforme pour les VOICE_MEETING
   createdById: string;
   createdAt: string;
@@ -113,9 +113,10 @@ export interface CreateEventRequest {
   venueId?: string | null;
   // Arena of that venue, between 1 and its arenaCount; null means not decided.
   arenaNumber?: number | null;
-  // eva.gg slot of that venue the match is played on; null means none picked. On update,
-  // left out keeps it unless the venue, date or start time move, since the slot is tied to them.
-  evaSlotId?: string | null;
+  // Slots of that venue the match runs on, consecutive and in order; null or empty means none
+  // picked. On update, left out keeps them unless the venue, date or start time move, since
+  // the slots are tied to them.
+  evaSlotIds?: string[] | null;
   // Platform of a VOICE_MEETING. Required on creation, kept as is when left out on update.
   voiceMedium?: VoiceMedium | null;
 }

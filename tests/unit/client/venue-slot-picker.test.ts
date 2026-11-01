@@ -8,27 +8,49 @@ vi.mock('@/api/teams.api', () => ({
   fetchVenueSlots: vi.fn(),
 }));
 
-const SLOT_20H = {
-  slotId: 'slot-20:00',
-  startTime: '20:00',
-  endTime: '20:40',
-  convocationTime: '19:50',
-  arenaNumber: 1,
-  availableSeats: 3,
-  totalSeats: 10,
-};
-const SLOT_20H40 = { ...SLOT_20H, slotId: 'slot-20:40', startTime: '20:40', endTime: '21:20', convocationTime: '20:30', availableSeats: 10 };
+function slot(startTime: string, endTime: string, overrides: Record<string, unknown> = {}) {
+  return {
+    slotId: `slot-${startTime}`,
+    startTime,
+    endTime,
+    convocationTime: '19:50',
+    arenaNumber: 1,
+    takenSeats: 0,
+    totalSeats: 10,
+    ...overrides,
+  };
+}
+
+const S19H20 = slot('19:20', '20:00', { convocationTime: '19:10' });
+const S20H = slot('20:00', '20:40', { takenSeats: 7 });
+const S20H40 = slot('20:40', '21:20', { convocationTime: '20:30' });
+const S21H20 = slot('21:20', '22:00', { convocationTime: '21:10' });
+const DAY = [S19H20, S20H, S20H40, S21H20];
 
 function mountPicker(props: Record<string, unknown> = {}) {
   return mount(VenueSlotPicker, {
     props: {
       venueId: 'venue-1',
       date: '2026-11-03',
-      modelValue: null,
+      modelValue: [],
       currentStartTime: '20:00',
+      currentEndTime: '20:40',
       ...props,
     },
   });
+}
+
+function rows(wrapper: ReturnType<typeof mountPicker>) {
+  return wrapper.findAll('button.slot-row');
+}
+
+function row(wrapper: ReturnType<typeof mountPicker>, time: string) {
+  return rows(wrapper).find(r => r.text().startsWith(time))!;
+}
+
+function lastSelection(wrapper: ReturnType<typeof mountPicker>): string[] {
+  const emitted = wrapper.emitted('select')!;
+  return (emitted[emitted.length - 1]![0] as { slotId: string }[]).map(s => s.slotId);
 }
 
 beforeEach(() => {
@@ -36,58 +58,106 @@ beforeEach(() => {
 });
 
 describe('VenueSlotPicker', () => {
-  it('lists the slots of the day, with nothing picked yet', async () => {
-    vi.mocked(fetchVenueSlots).mockResolvedValue([SLOT_20H, SLOT_20H40]);
+  it('lists the slots of the day with the players already in, out of the capacity', async () => {
+    vi.mocked(fetchVenueSlots).mockResolvedValue([S20H, { ...S20H40, totalSeats: 8 }]);
     const wrapper = mountPicker();
     await flushPromises();
 
-    const options = wrapper.findAll('option');
-    expect(options.map(o => o.text())).toEqual(['Choisir un créneau', '20:00 – 20:40 · 3/10 places', '20:40 – 21:20 · 10/10 places']);
-    expect((options[0]!.element as HTMLOptionElement).disabled).toBe(true);
+    expect(rows(wrapper).map(r => `${r.find('.slot-time').text()} ${r.find('.slot-players').text()}`)).toEqual([
+      '20:00 – 20:40 7/10 joueurs',
+      '20:40 – 21:20 0/8 joueurs',
+    ]);
+    expect(wrapper.text()).toContain('deux créneaux qui se suivent');
   });
 
-  it('names the arena only when the day runs on several', async () => {
-    vi.mocked(fetchVenueSlots).mockResolvedValue([SLOT_20H, { ...SLOT_20H, slotId: 'slot-20:00-2', arenaNumber: 2 }]);
+  it('groups the slots by arena only when the day runs on several', async () => {
+    vi.mocked(fetchVenueSlots).mockResolvedValue([S20H, { ...S20H, slotId: 'slot-20:00-2', arenaNumber: 2 }]);
     const wrapper = mountPicker();
     await flushPromises();
 
-    expect(wrapper.findAll('option')[1]!.text()).toBe('20:00 – 20:40 · arène 1 · 3/10 places');
+    expect(wrapper.findAll('.slot-arena-label').map(l => l.text())).toEqual(['Arène 1', 'Arène 2']);
   });
 
-  it('hands the chosen slot to the form', async () => {
-    vi.mocked(fetchVenueSlots).mockResolvedValue([SLOT_20H]);
+  it('starts a run on the clicked slot', async () => {
+    vi.mocked(fetchVenueSlots).mockResolvedValue(DAY);
     const wrapper = mountPicker();
     await flushPromises();
 
-    await wrapper.find('select').setValue('slot-20:00');
+    await row(wrapper, '20:00').trigger('click');
 
-    expect(wrapper.emitted('select')).toEqual([[SLOT_20H]]);
+    expect(lastSelection(wrapper)).toEqual(['slot-20:00']);
+  });
+
+  it('extends the run with the next or the previous slot, in time order', async () => {
+    vi.mocked(fetchVenueSlots).mockResolvedValue(DAY);
+    const wrapper = mountPicker({ modelValue: ['slot-20:00'] });
+    await flushPromises();
+
+    await row(wrapper, '20:40').trigger('click');
+    expect(lastSelection(wrapper)).toEqual(['slot-20:00', 'slot-20:40']);
+
+    await wrapper.setProps({ modelValue: ['slot-20:00', 'slot-20:40'] });
+    await row(wrapper, '19:20').trigger('click');
+    expect(lastSelection(wrapper)).toEqual(['slot-19:20', 'slot-20:00', 'slot-20:40']);
+  });
+
+  it('starts over when the clicked slot does not follow the run', async () => {
+    vi.mocked(fetchVenueSlots).mockResolvedValue(DAY);
+    const wrapper = mountPicker({ modelValue: ['slot-19:20'] });
+    await flushPromises();
+
+    await row(wrapper, '21:20').trigger('click');
+
+    expect(lastSelection(wrapper)).toEqual(['slot-21:20']);
+  });
+
+  it('shortens the run from either end, down to nothing', async () => {
+    vi.mocked(fetchVenueSlots).mockResolvedValue(DAY);
+    const wrapper = mountPicker({ modelValue: ['slot-20:00', 'slot-20:40'] });
+    await flushPromises();
+
+    await row(wrapper, '20:40').trigger('click');
+    expect(lastSelection(wrapper)).toEqual(['slot-20:00']);
+
+    await wrapper.setProps({ modelValue: ['slot-20:00'] });
+    await row(wrapper, '20:00').trigger('click');
+    expect(lastSelection(wrapper)).toEqual([]);
+  });
+
+  it('keeps a run on one arena', async () => {
+    vi.mocked(fetchVenueSlots).mockResolvedValue([S20H, S20H40, { ...S21H20, arenaNumber: 2 }]);
+    const wrapper = mountPicker({ modelValue: ['slot-20:00', 'slot-20:40'] });
+    await flushPromises();
+
+    await row(wrapper, '21:20').trigger('click');
+
+    expect(lastSelection(wrapper)).toEqual(['slot-21:20']);
+  });
+
+  it('sums up the run with its convocation time', async () => {
+    vi.mocked(fetchVenueSlots).mockResolvedValue(DAY);
+    const wrapper = mountPicker({ modelValue: ['slot-20:00', 'slot-20:40'] });
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('2 créneaux, 20:00 – 21:20, convocation à 19:50');
+    expect(rows(wrapper).filter(r => r.classes('selected')).map(r => r.text().slice(0, 5))).toEqual(['20:00', '20:40']);
+  });
+
+  it('keeps saved slots that eva.gg no longer lists, and says so', async () => {
+    vi.mocked(fetchVenueSlots).mockResolvedValue([S21H20]);
+    const wrapper = mountPicker({ modelValue: ['slot-gone'], currentStartTime: '20:00', currentEndTime: '21:20' });
+    await flushPromises();
+
+    expect(wrapper.find('.slot-row--stored').text()).toContain('20:00 – 21:20');
+    expect(wrapper.text()).toContain('plus proposés');
   });
 
   it('tells the form whether slots can be listed', async () => {
-    vi.mocked(fetchVenueSlots).mockResolvedValue([SLOT_20H]);
+    vi.mocked(fetchVenueSlots).mockResolvedValue(DAY);
     const wrapper = mountPicker();
     await flushPromises();
 
     expect(wrapper.emitted('status')!.map(([status]) => status)).toEqual(['loading', 'ready']);
-  });
-
-  it('reminds the convocation time of the chosen slot', async () => {
-    vi.mocked(fetchVenueSlots).mockResolvedValue([SLOT_20H]);
-    const wrapper = mountPicker({ modelValue: 'slot-20:00' });
-    await flushPromises();
-
-    expect(wrapper.text()).toContain('Convocation à 19:50');
-  });
-
-  it('keeps a saved slot that eva.gg no longer lists, and says so', async () => {
-    vi.mocked(fetchVenueSlots).mockResolvedValue([SLOT_20H40]);
-    const wrapper = mountPicker({ modelValue: 'slot-gone', currentStartTime: '20:00' });
-    await flushPromises();
-
-    expect((wrapper.find('select').element as HTMLSelectElement).value).toBe('slot-gone');
-    expect(wrapper.findAll('option').map(o => o.text())).toContain('Créneau enregistré (20:00)');
-    expect(wrapper.text()).toContain("n'est plus proposé");
   });
 
   it('steps aside when the slots cannot be read, so the times get typed by hand', async () => {
@@ -95,7 +165,7 @@ describe('VenueSlotPicker', () => {
     const wrapper = mountPicker();
     await flushPromises();
 
-    expect(wrapper.find('select').exists()).toBe(false);
+    expect(rows(wrapper)).toHaveLength(0);
     expect(wrapper.text()).toContain('ne peuvent pas être lus');
     expect(wrapper.emitted('status')!.at(-1)).toEqual(['unavailable']);
   });

@@ -12,7 +12,7 @@ import { addMinutesToTime } from '../../../../shared/utils/time.utils';
 const LIST_SESSIONS_QUERY = `
   query useSessions($data: ListLocationSessionsByDateInput!) {
     listLocationGameSessionsByDate(data: $data) {
-      availableSeatCount
+      takenSeatCount
       totalSeatCount
       slot {
         id
@@ -31,7 +31,7 @@ const LIST_SESSIONS_QUERY = `
 `;
 
 interface EvaSessionData {
-  availableSeatCount: number;
+  takenSeatCount: number;
   totalSeatCount: number;
   slot: { id: string; startTime: string; convocationTime: string; duration: number };
   terrain: { displayNumber: number | string };
@@ -44,8 +44,8 @@ export interface EvaSession {
   endTime: string;         // HH:mm, start plus the slot duration
   convocationTime: string; // HH:mm, when eva.gg expects the players; what their app shows
   arenaNumber: number;
-  availableSeats: number;
-  totalSeats: number;
+  takenSeats: number;
+  totalSeats: number; // Capacity of the slot as eva.gg opened it (10, or 8 in some modes)
   isCompetitiveAvailable: boolean;
 }
 
@@ -76,7 +76,7 @@ export async function fetchLocationSessions(locationId: number, date: string): P
       endTime: addMinutesToTime(session.slot.startTime, session.slot.duration),
       convocationTime: session.slot.convocationTime,
       arenaNumber: Number(session.terrain.displayNumber),
-      availableSeats: session.availableSeatCount,
+      takenSeats: session.takenSeatCount,
       totalSeats: session.totalSeatCount,
       isCompetitiveAvailable: session.competitiveMode?.isAvailable ?? false,
     }))

@@ -75,6 +75,7 @@ describe('Calendar Integration Tests', () => {
             endTime: '22:00',
             type: 'MATCH',
             title: 'Important Match',
+            evaSlotIds: [],
             createdById: 'admin-1',
             createdAt: '2026-01-01T00:00:00Z',
           },
@@ -164,6 +165,7 @@ describe('Calendar Integration Tests', () => {
     const createdEvent: CalendarEvent = {
       id: 'event-new',
       ...newEvent,
+      evaSlotIds: [],
       createdById: 'admin-1',
       createdAt: '2026-01-07T00:00:00Z',
     };
@@ -188,6 +190,7 @@ describe('Calendar Integration Tests', () => {
     const updatedEvent: CalendarEvent = {
       id: 'event-1',
       ...updatedEventData,
+      evaSlotIds: [],
       createdById: 'admin-1',
       createdAt: '2026-01-01T00:00:00Z',
     };

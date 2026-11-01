@@ -1337,9 +1337,9 @@ describe('Calendar API', () => {
   // ============================================
   // Match slot (eva.gg)
   // ============================================
-  describe('Match slot', () => {
-    const SLOT = '35313a36303a323032362d31312d30333a323032362d31312d30335431393a30303a30305a3a3430';
-    const OTHER_SLOT = '35313a36303a323032362d31312d30333a323032362d31312d30335431393a34303a30305a3a3430';
+  describe('Match slots', () => {
+    const SLOT_20H = '35313a36303a323032362d31312d30333a323032362d31312d30335431393a30303a30305a3a3430';
+    const SLOT_20H40 = '35313a36303a323032362d31312d30333a323032362d31312d30335431393a34303a30305a3a3430';
 
     async function createMatch(token: string, body: Record<string, unknown> = {}) {
       return request(app)
@@ -1348,7 +1348,7 @@ describe('Calendar API', () => {
         .send({
           date: getFutureDate(),
           startTime: '20:00',
-          endTime: '20:40',
+          endTime: '21:20',
           type: 'MATCH',
           title: 'Match vs TeamX',
           ...body,
@@ -1362,153 +1362,161 @@ describe('Calendar API', () => {
         .send(body);
     }
 
-    it('should place the match on the chosen slot of the venue', async () => {
+    it('should play the match on the chosen slots of the venue, in order', async () => {
       const { token, team } = await createUserWithTeam();
       await createVenue({ teamId: team.id });
 
-      const res = await createMatch(token, { evaSlotId: ` ${SLOT} ` });
+      const res = await createMatch(token, { evaSlotIds: [` ${SLOT_20H} `, SLOT_20H40] });
 
       expect(res.status).toBe(201);
-      expect(res.body.evaSlotId).toBe(SLOT);
+      expect(res.body.evaSlotIds).toEqual([SLOT_20H, SLOT_20H40]);
 
       const event = await prisma.calendarEvent.findUnique({ where: { id: res.body.id } });
-      expect(event!.evaSlotId).toBe(SLOT);
+      expect(event!.evaSlotIds).toEqual([SLOT_20H, SLOT_20H40]);
     });
 
-    it('should leave the slot out when none was picked', async () => {
+    it('should leave the slots empty when none was picked', async () => {
       const { token, team } = await createUserWithTeam();
       await createVenue({ teamId: team.id });
 
-      const res = await createMatch(token);
-
-      expect(res.status).toBe(201);
-      expect(res.body.evaSlotId).toBeUndefined();
+      for (const body of [{}, { evaSlotIds: null }, { evaSlotIds: [] }]) {
+        const res = await createMatch(token, body);
+        expect(res.status).toBe(201);
+        expect(res.body.evaSlotIds).toEqual([]);
+      }
     });
 
-    it('should refuse a slot without a venue', async () => {
+    it('should refuse slots without a venue', async () => {
       const { token } = await createUserWithTeam();
 
-      const res = await createMatch(token, { venueId: null, evaSlotId: SLOT });
+      const res = await createMatch(token, { venueId: null, evaSlotIds: [SLOT_20H] });
 
       expect(res.status).toBe(400);
       expect(res.body.errors).toContain(ERROR.slotRequiresVenue);
     });
 
-    it('should refuse a slot on anything but a match', async () => {
+    it('should refuse slots on anything but a match', async () => {
       const { token, team } = await createUserWithTeam();
       await createVenue({ teamId: team.id });
 
-      const res = await createMatch(token, { type: 'EVENT', evaSlotId: SLOT });
+      const res = await createMatch(token, { type: 'EVENT', evaSlotIds: [SLOT_20H] });
 
       expect(res.status).toBe(400);
       expect(res.body.errors).toContain(ERROR.matchOnlySlot);
     });
 
-    it.each(['', '   ', 42, 'x'.repeat(201)])('should refuse %j as a slot id', async (evaSlotId) => {
+    it.each([
+      ['a bare string', SLOT_20H],
+      ['an empty id', ['']],
+      ['a number', [42]],
+      ['an oversized id', ['x'.repeat(201)]],
+      ['the same slot twice', [SLOT_20H, SLOT_20H]],
+      ['too many slots', Array.from({ length: 7 }, (_, i) => `slot-${i}`)],
+    ])('should refuse %s as a slot list', async (_label, evaSlotIds) => {
       const { token, team } = await createUserWithTeam();
       await createVenue({ teamId: team.id });
 
-      const res = await createMatch(token, { evaSlotId });
+      const res = await createMatch(token, { evaSlotIds });
 
       expect(res.status).toBe(400);
-      expect(res.body.errors).toContain(ERROR.evaSlotIdInvalid);
+      expect(res.body.errors).toContain(ERROR.evaSlotsInvalid);
     });
 
-    it('should keep the slot when the update does not touch where or when the match is played', async () => {
+    it('should keep the slots when the update does not touch where or when the match is played', async () => {
       const { token, team } = await createUserWithTeam();
       await createVenue({ teamId: team.id });
-      const created = await createMatch(token, { evaSlotId: SLOT });
+      const created = await createMatch(token, { evaSlotIds: [SLOT_20H, SLOT_20H40] });
 
-      const res = await update(token, created.body.id, { title: 'Match vs TeamY', endTime: '21:00' });
+      const res = await update(token, created.body.id, { title: 'Match vs TeamY', endTime: '21:30' });
 
       expect(res.status).toBe(200);
-      expect(res.body.evaSlotId).toBe(SLOT);
+      expect(res.body.evaSlotIds).toEqual([SLOT_20H, SLOT_20H40]);
     });
 
-    it('should replace the slot when another one is stated', async () => {
+    it('should replace the slots when others are stated', async () => {
       const { token, team } = await createUserWithTeam();
       await createVenue({ teamId: team.id });
-      const created = await createMatch(token, { evaSlotId: SLOT });
+      const created = await createMatch(token, { evaSlotIds: [SLOT_20H] });
 
-      const res = await update(token, created.body.id, { startTime: '20:40', endTime: '21:20', evaSlotId: OTHER_SLOT });
+      const res = await update(token, created.body.id, { startTime: '20:40', endTime: '21:20', evaSlotIds: [SLOT_20H40] });
 
       expect(res.status).toBe(200);
-      expect(res.body.evaSlotId).toBe(OTHER_SLOT);
+      expect(res.body.evaSlotIds).toEqual([SLOT_20H40]);
     });
 
-    it('should clear the slot on an explicit null', async () => {
+    it('should clear the slots on an explicit null or empty list', async () => {
       const { token, team } = await createUserWithTeam();
       await createVenue({ teamId: team.id });
-      const created = await createMatch(token, { evaSlotId: SLOT });
+      const created = await createMatch(token, { evaSlotIds: [SLOT_20H] });
 
-      const res = await update(token, created.body.id, { evaSlotId: null });
+      const res = await update(token, created.body.id, { evaSlotIds: null });
 
       expect(res.status).toBe(200);
-      expect(res.body.evaSlotId).toBeUndefined();
+      expect(res.body.evaSlotIds).toEqual([]);
       const event = await prisma.calendarEvent.findUnique({ where: { id: created.body.id } });
-      expect(event!.evaSlotId).toBeNull();
+      expect(event!.evaSlotIds).toEqual([]);
     });
 
     it.each([
       ['the day moves', () => ({ date: '2030-01-15' })],
       ['the start time moves', () => ({ startTime: '20:40', endTime: '21:20' })],
-    ])('should drop a slot that was not re-stated when %s', async (_label, body) => {
+    ])('should drop slots that were not re-stated when %s', async (_label, body) => {
       const { token, team } = await createUserWithTeam();
       await createVenue({ teamId: team.id });
-      const created = await createMatch(token, { evaSlotId: SLOT });
+      const created = await createMatch(token, { evaSlotIds: [SLOT_20H, SLOT_20H40] });
 
       const res = await update(token, created.body.id, body());
 
       expect(res.status).toBe(200);
-      expect(res.body.evaSlotId).toBeUndefined();
+      expect(res.body.evaSlotIds).toEqual([]);
     });
 
-    it('should drop the slot when the match moves to another venue', async () => {
+    it('should drop the slots when the match moves to another venue', async () => {
       const { token, team } = await createUserWithTeam();
       await createVenue({ teamId: team.id });
       const away = await createVenue({ name: 'Away' });
-      const created = await createMatch(token, { evaSlotId: SLOT });
+      const created = await createMatch(token, { evaSlotIds: [SLOT_20H] });
 
       const res = await update(token, created.body.id, { venueId: away.id });
 
       expect(res.status).toBe(200);
       expect(res.body.venue.id).toBe(away.id);
-      expect(res.body.evaSlotId).toBeUndefined();
+      expect(res.body.evaSlotIds).toEqual([]);
     });
 
-    it('should keep the slot when the same day and start time are sent again', async () => {
+    it('should keep the slots when the same day and start time are sent again', async () => {
       const { token, team } = await createUserWithTeam();
       await createVenue({ teamId: team.id });
-      const created = await createMatch(token, { evaSlotId: SLOT });
+      const created = await createMatch(token, { evaSlotIds: [SLOT_20H] });
 
       const res = await update(token, created.body.id, { date: created.body.date, startTime: '20:00' });
 
       expect(res.status).toBe(200);
-      expect(res.body.evaSlotId).toBe(SLOT);
+      expect(res.body.evaSlotIds).toEqual([SLOT_20H]);
     });
 
-    it('should drop the slot when the match stops being a match', async () => {
+    it('should drop the slots when the match stops being a match', async () => {
       const { token, team } = await createUserWithTeam();
       await createVenue({ teamId: team.id });
-      const created = await createMatch(token, { evaSlotId: SLOT });
+      const created = await createMatch(token, { evaSlotIds: [SLOT_20H] });
 
       const res = await update(token, created.body.id, { type: 'EVENT' });
 
       expect(res.status).toBe(200);
-      expect(res.body.evaSlotId).toBeUndefined();
+      expect(res.body.evaSlotIds).toEqual([]);
     });
 
-    it('should return the slot with the month data', async () => {
+    it('should return the slots with the month data', async () => {
       const { token, team } = await createUserWithTeam();
       await createVenue({ teamId: team.id });
       const date = getFutureDate();
-      await createMatch(token, { date, evaSlotId: SLOT });
+      await createMatch(token, { date, evaSlotIds: [SLOT_20H, SLOT_20H40] });
 
       const month = await request(app)
         .get(`/api/calendar/availability?month=${date!.substring(0, 7)}`)
         .set('Authorization', `Bearer ${token}`);
 
-      expect(month.body.days[date!].events[0].evaSlotId).toBe(SLOT);
+      expect(month.body.days[date!].events[0].evaSlotIds).toEqual([SLOT_20H, SLOT_20H40]);
     });
   });
 });

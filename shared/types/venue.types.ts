@@ -20,6 +20,6 @@ export interface VenueSlot {
   endTime: string;         // HH:mm
   convocationTime: string; // HH:mm, when players are expected; what eva.gg shows them
   arenaNumber: number;
-  availableSeats: number;
-  totalSeats: number;
+  takenSeats: number; // Players already booked on the slot
+  totalSeats: number; // Capacity of the slot as eva.gg opened it
 }

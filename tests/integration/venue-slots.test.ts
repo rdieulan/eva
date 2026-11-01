@@ -28,7 +28,7 @@ const SLOT_20H = {
   endTime: '20:40',
   convocationTime: '19:50',
   arenaNumber: 1,
-  availableSeats: 3,
+  takenSeats: 7,
   totalSeats: 10,
   isCompetitiveAvailable: true,
 };
@@ -56,7 +56,7 @@ describe('GET /api/venues/:id/slots', () => {
       endTime: '20:40',
       convocationTime: '19:50',
       arenaNumber: 1,
-      availableSeats: 3,
+      takenSeats: 7,
       totalSeats: 10,
     }]);
     expect(sessions).toHaveBeenCalledWith(51, '2026-11-03');

@@ -113,6 +113,7 @@ describe('EventFormModal Component', () => {
       endTime: '21:00',
       type: 'MATCH',
       title: 'Important Match',
+      evaSlotIds: [],
       createdById: 'admin-1',
       createdAt: '2026-01-01T00:00:00Z',
     };
@@ -138,6 +139,7 @@ describe('EventFormModal Component', () => {
       endTime: '21:00',
       type: 'EVENT',
       title: 'Team Meeting',
+      evaSlotIds: [],
       createdById: 'admin-1',
       createdAt: '2026-01-01T00:00:00Z',
     };
@@ -191,6 +193,7 @@ describe('EventFormModal Component', () => {
       endTime: '21:00',
       type: 'MATCH',
       title: 'Match',
+      evaSlotIds: [],
       createdById: 'admin-1',
       createdAt: '2026-01-01T00:00:00Z',
     };
@@ -310,6 +313,7 @@ describe('EventFormModal Component - Match venue', () => {
         type: 'MATCH' as const,
         title: 'Away game',
         venue: { id: 'venue-2', name: 'Laser Dome', city: 'Paris' },
+        evaSlotIds: [],
         createdById: 'player-1',
         createdAt: '2026-10-01T00:00:00Z',
       },
@@ -332,6 +336,7 @@ describe('EventFormModal Component - Match venue', () => {
         type: 'MATCH' as const,
         title: 'Away game',
         venue: { id: 'venue-2', name: 'Laser Dome', city: 'Paris' },
+        evaSlotIds: [],
         createdById: 'player-1',
         createdAt: '2026-10-01T00:00:00Z',
       },
@@ -353,6 +358,7 @@ describe('EventFormModal Component - Match venue', () => {
         type: 'VOICE_MEETING' as const,
         title: 'Strat Polaris',
         voiceMedium: 'DISCORD' as const,
+        evaSlotIds: [],
         createdById: 'player-1',
         createdAt: '2026-10-01T00:00:00Z',
       },
@@ -382,6 +388,7 @@ describe('EventFormModal Component - Editing an existing event', () => {
     description: 'On se retrouve 30 min avant',
     venue: { id: 'venue-1', name: 'VR Arena', city: 'Lyon' },
     arenaNumber: 2,
+    evaSlotIds: [],
     createdById: 'player-1',
     createdAt: '2026-10-01T00:00:00Z',
   };
@@ -451,13 +458,13 @@ describe('EventFormModal Component - Editing an existing event', () => {
       description: 'On se retrouve 30 min avant',
       venueId: 'venue-1',
       arenaNumber: 2,
-      evaSlotId: null,
+      evaSlotIds: [],
       voiceMedium: null,
     });
   });
 });
 
-describe('EventFormModal Component - eva.gg slot', () => {
+describe('EventFormModal Component - Venue slots', () => {
   const venues = [
     { id: 'venue-1', name: 'Nîmes', city: 'Nimes', address: '1 rue', phone: null, arenaCount: 2, hasEvaSlots: true },
     { id: 'venue-2', name: 'Garage', city: 'Paris', address: '2 rue', phone: null, arenaCount: 1, hasEvaSlots: false },
@@ -469,9 +476,10 @@ describe('EventFormModal Component - eva.gg slot', () => {
     endTime: '20:40',
     convocationTime: '19:50',
     arenaNumber: 2,
-    availableSeats: 3,
+    takenSeats: 7,
     totalSeats: 10,
   };
+  const SLOT_20H40 = { ...SLOT_20H, slotId: 'slot-20:40', startTime: '20:40', endTime: '21:20', convocationTime: '20:30' };
 
   function mountForm(props: Record<string, unknown> = {}) {
     return mount(EventFormModal, {
@@ -490,6 +498,10 @@ describe('EventFormModal Component - eva.gg slot', () => {
     });
   }
 
+  function slotButton(wrapper: ReturnType<typeof mountForm>, time: string) {
+    return wrapper.findAll('button.slot-row').find(b => b.text().startsWith(time))!;
+  }
+
   async function submit(wrapper: ReturnType<typeof mountForm>) {
     await wrapper.find('#event-title').setValue('Match vs TeamX');
     await wrapper.findAll('button').find(b => b.text() === 'Créer' || b.text() === 'Enregistrer')!.trigger('click');
@@ -498,49 +510,45 @@ describe('EventFormModal Component - eva.gg slot', () => {
 
   beforeEach(() => {
     vi.mocked(fetchVenueSlots).mockReset();
-    vi.mocked(fetchVenueSlots).mockResolvedValue([SLOT_20H]);
+    vi.mocked(fetchVenueSlots).mockResolvedValue([SLOT_20H, SLOT_20H40]);
   });
 
-  it('offers the slots of the venue once a day is set', async () => {
+  it('asks for the venue before the day, then offers the slots of that day', async () => {
     const wrapper = mountForm();
     await wrapper.setProps({ open: true });
     await flushPromises();
 
-    expect(wrapper.find('#event-slot').exists()).toBe(true);
+    const ids = wrapper.findAll('input, select, textarea, .slot-list').map(el => el.attributes('id') ?? el.classes()[0]);
+    expect(ids).toEqual(['event-title', 'event-venue', 'event-date', 'slot-list', 'event-desc']);
     expect(fetchVenueSlots).toHaveBeenCalledWith('venue-1', '2026-11-03');
   });
 
-  it('offers no slot for a venue eva.gg does not list', async () => {
+  it('offers no slot for a venue eva.gg does not list, and asks the times by hand', async () => {
     const wrapper = mountForm({ teamVenueId: 'venue-2' });
     await wrapper.setProps({ open: true });
     await flushPromises();
 
-    expect(wrapper.find('#event-slot').exists()).toBe(false);
+    expect(wrapper.find('.slot-list').exists()).toBe(false);
+    expect(wrapper.find('#event-start').exists()).toBe(true);
     expect(fetchVenueSlots).not.toHaveBeenCalled();
   });
 
-  it('plays the match on the chosen slot: its times, its arena, its id', async () => {
+  it('plays the match on two consecutive slots: from the first start to the last end, on their arena', async () => {
     const wrapper = mountForm();
     await wrapper.setProps({ open: true });
     await flushPromises();
 
-    await wrapper.find('#event-slot').setValue('slot-20:00');
-
-    expect(await submit(wrapper)).toMatchObject({
-      startTime: '20:00',
-      endTime: '20:40',
-      arenaNumber: 2,
-      evaSlotId: 'slot-20:00',
-    });
-  });
-
-  it('takes the times from the slot, not from hand-typed fields', async () => {
-    const wrapper = mountForm();
-    await wrapper.setProps({ open: true });
-    await flushPromises();
+    await slotButton(wrapper, '20:00').trigger('click');
+    await slotButton(wrapper, '20:40').trigger('click');
 
     expect(wrapper.find('#event-start').exists()).toBe(false);
-    expect(wrapper.find('#event-end').exists()).toBe(false);
+    expect(wrapper.find('#event-arena').exists()).toBe(false);
+    expect(await submit(wrapper)).toMatchObject({
+      startTime: '20:00',
+      endTime: '21:20',
+      arenaNumber: 2,
+      evaSlotIds: ['slot-20:00', 'slot-20:40'],
+    });
   });
 
   it('refuses a match on a listed venue without a slot', async () => {
@@ -549,7 +557,7 @@ describe('EventFormModal Component - eva.gg slot', () => {
     await flushPromises();
 
     expect(await submit(wrapper)).toBeUndefined();
-    expect(wrapper.text()).toContain('Veuillez choisir un créneau');
+    expect(wrapper.text()).toContain('Veuillez choisir au moins un créneau');
   });
 
   it('brings the time fields back when the slots cannot be read', async () => {
@@ -559,49 +567,49 @@ describe('EventFormModal Component - eva.gg slot', () => {
     await flushPromises();
 
     expect(wrapper.find('#event-start').exists()).toBe(true);
-    expect(await submit(wrapper)).toMatchObject({ startTime: '20:00', endTime: '22:00', evaSlotId: null });
+    expect(await submit(wrapper)).toMatchObject({ startTime: '20:00', endTime: '22:00', evaSlotIds: [] });
   });
 
   it('brings the time fields back when the match moves to a venue without a grid', async () => {
     const wrapper = mountForm();
     await wrapper.setProps({ open: true });
     await flushPromises();
-    await wrapper.find('#event-slot').setValue('slot-20:00');
+    await slotButton(wrapper, '20:00').trigger('click');
 
     await wrapper.find('#event-venue').setValue('venue-2');
 
-    expect(wrapper.find('#event-slot').exists()).toBe(false);
+    expect(wrapper.find('.slot-list').exists()).toBe(false);
     expect(wrapper.find('#event-start').exists()).toBe(true);
-    expect(await submit(wrapper)).toMatchObject({ venueId: 'venue-2', evaSlotId: null });
+    expect(await submit(wrapper)).toMatchObject({ venueId: 'venue-2', evaSlotIds: [] });
   });
 
-  it('asks for a slot again when the day moves', async () => {
+  it('asks for slots again when the day moves', async () => {
     const wrapper = mountForm();
     await wrapper.setProps({ open: true });
     await flushPromises();
-    await wrapper.find('#event-slot').setValue('slot-20:00');
+    await slotButton(wrapper, '20:00').trigger('click');
 
     await wrapper.find('#event-date').setValue('2026-11-04');
     await flushPromises();
 
     expect(fetchVenueSlots).toHaveBeenLastCalledWith('venue-1', '2026-11-04');
-    expect((wrapper.find('#event-slot').element as HTMLSelectElement).value).toBe('');
+    expect(wrapper.findAll('button.slot-row.selected')).toHaveLength(0);
     expect(await submit(wrapper)).toBeUndefined();
-    expect(wrapper.text()).toContain('Veuillez choisir un créneau');
+    expect(wrapper.text()).toContain('Veuillez choisir au moins un créneau');
   });
 
-  it('opens on the slot the match is already played on and keeps it', async () => {
+  it('opens on the slots the match is already played on and keeps them', async () => {
     const wrapper = mountForm({
       editEvent: {
         id: 'event-1',
         date: '2026-11-03',
         startTime: '20:00',
-        endTime: '20:40',
+        endTime: '21:20',
         type: 'MATCH',
         title: 'Match vs TeamX',
         venue: { id: 'venue-1', name: 'Nîmes', city: 'Nimes' },
         arenaNumber: 2,
-        evaSlotId: 'slot-20:00',
+        evaSlotIds: ['slot-20:00', 'slot-20:40'],
         createdById: 'player-1',
         createdAt: '2026-10-01T00:00:00Z',
       },
@@ -609,13 +617,13 @@ describe('EventFormModal Component - eva.gg slot', () => {
     await wrapper.setProps({ open: true });
     await flushPromises();
 
-    expect((wrapper.find('#event-slot').element as HTMLSelectElement).value).toBe('slot-20:00');
+    expect(wrapper.findAll('button.slot-row.selected').map(b => b.text().slice(0, 5))).toEqual(['20:00', '20:40']);
     await wrapper.find('#event-desc').setValue('On se retrouve 30 min avant');
     expect(await submit(wrapper)).toMatchObject({
       description: 'On se retrouve 30 min avant',
       startTime: '20:00',
-      endTime: '20:40',
-      evaSlotId: 'slot-20:00',
+      endTime: '21:20',
+      evaSlotIds: ['slot-20:00', 'slot-20:40'],
     });
   });
 });
@@ -692,6 +700,7 @@ describe('EventFormModal Component - Voice meeting platform', () => {
         type: 'VOICE_MEETING' as const,
         title: 'Strat Polaris',
         voiceMedium: 'GOOGLE_MEET' as const,
+        evaSlotIds: [],
         createdById: 'player-1',
         createdAt: '2026-10-01T00:00:00Z',
       },
@@ -716,6 +725,7 @@ describe('EventFormModal Component - Voice meeting platform', () => {
         type: 'VOICE_MEETING' as const,
         title: 'Strat Polaris',
         voiceMedium: 'WHATSAPP' as const,
+        evaSlotIds: [],
         createdById: 'player-1',
         createdAt: '2026-10-01T00:00:00Z',
       },

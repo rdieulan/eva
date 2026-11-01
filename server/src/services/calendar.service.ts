@@ -8,7 +8,7 @@ import type {
   EventType,
   VoiceMedium,
 } from '@shared/types';
-import { ERROR, EVA_SLOT_ID_MAX_LENGTH } from '@shared/constants';
+import { ERROR, EVA_SLOT_ID_MAX_LENGTH, EVA_SLOTS_PER_MATCH_MAX } from '@shared/constants';
 import { isSubscriptionRenewalDay } from '@shared/utils';
 import { formatDateStr, parseMonthRange } from './helpers/date.helper';
 import { EVENT_VENUE_INCLUDE, formatEventForFrontend } from './helpers/calendar.helper';
@@ -216,27 +216,33 @@ export async function getMonthEvents(month: string, teamId: string) {
 }
 
 // Where a match is played: the venue, the arena of that venue and the eva.gg
-// slot it runs on, or the error to answer with. A field left out keeps its
+// slots it runs on, or the error to answer with. A field left out keeps its
 // current value.
-export type MatchPlace = { venueId?: string | null; arenaNumber?: number | null; evaSlotId?: string | null };
+export type MatchPlace = { venueId?: string | null; arenaNumber?: number | null; evaSlotIds?: string[] };
 export type MatchPlaceResolution = MatchPlace | { error: string };
 
 /**
- * Check the eva.gg slot a match is placed on: an opaque id we only bound, that
- * makes no sense without the venue it belongs to.
+ * Check the eva.gg slots a match is placed on: opaque ids we only bound and
+ * keep distinct, that make no sense without the venue they belong to. Whether
+ * they follow each other is only known to eva.gg, so it is the form's job.
  */
-function resolveSlot(
+function resolveSlots(
   venueId: string | null,
-  evaSlotId: string | null,
-): { evaSlotId: string | null } | { error: string } {
-  if (evaSlotId === null) return { evaSlotId: null };
-  if (typeof evaSlotId !== 'string') return { error: ERROR.evaSlotIdInvalid };
+  evaSlotIds: unknown,
+): { evaSlotIds: string[] } | { error: string } {
+  if (evaSlotIds === null || evaSlotIds === undefined) return { evaSlotIds: [] };
+  if (!Array.isArray(evaSlotIds) || evaSlotIds.length > EVA_SLOTS_PER_MATCH_MAX) return { error: ERROR.evaSlotsInvalid };
 
-  const trimmed = evaSlotId.trim();
-  if (!trimmed || trimmed.length > EVA_SLOT_ID_MAX_LENGTH) return { error: ERROR.evaSlotIdInvalid };
-  if (venueId === null) return { error: ERROR.slotRequiresVenue };
+  const trimmed: string[] = [];
+  for (const id of evaSlotIds) {
+    if (typeof id !== 'string') return { error: ERROR.evaSlotsInvalid };
+    const clean = id.trim();
+    if (!clean || clean.length > EVA_SLOT_ID_MAX_LENGTH || trimmed.includes(clean)) return { error: ERROR.evaSlotsInvalid };
+    trimmed.push(clean);
+  }
+  if (trimmed.length && venueId === null) return { error: ERROR.slotRequiresVenue };
 
-  return { evaSlotId: trimmed };
+  return { evaSlotIds: trimmed };
 }
 
 /**
@@ -274,14 +280,14 @@ export async function resolvePlaceForCreate(input: {
   type: EventType;
   venueId?: string | null;
   arenaNumber?: number | null;
-  evaSlotId?: string | null;
+  evaSlotIds?: string[] | null;
   teamId: string;
 }): Promise<MatchPlaceResolution> {
   if (input.type !== 'MATCH') {
     if (input.venueId) return { error: ERROR.matchOnlyVenue };
     if (input.arenaNumber) return { error: ERROR.arenaRequiresVenue };
-    if (input.evaSlotId) return { error: ERROR.matchOnlySlot };
-    return { venueId: null, arenaNumber: null, evaSlotId: null };
+    if (input.evaSlotIds?.length) return { error: ERROR.matchOnlySlot };
+    return { venueId: null, arenaNumber: null, evaSlotIds: [] };
   }
 
   let venueId: string | null;
@@ -301,24 +307,24 @@ export async function resolvePlaceForCreate(input: {
   const arena = await resolveArena(venueId, input.arenaNumber ?? null);
   if ('error' in arena) return arena;
 
-  const slot = resolveSlot(venueId, input.evaSlotId ?? null);
-  if ('error' in slot) return slot;
+  const slots = resolveSlots(venueId, input.evaSlotIds);
+  if ('error' in slots) return slots;
 
-  return { venueId, arenaNumber: arena.arenaNumber, evaSlotId: slot.evaSlotId };
+  return { venueId, arenaNumber: arena.arenaNumber, evaSlotIds: slots.evaSlotIds };
 }
 
 /**
  * Where a match being updated is played, given the type it ends up with.
  * Leaving the venue out keeps the current one; moving the match to another
  * venue drops an arena that was not re-stated, since numbers differ per venue.
- * An eva.gg slot is tied to the venue, the day and the start time: it is kept
- * only while none of them moves, unless it is re-stated.
+ * The eva.gg slots are tied to the venue, the day and the start time: they are
+ * kept only while none of them moves, unless they are re-stated.
  */
 export async function resolvePlaceForUpdate(input: {
   type: EventType;
   venueId?: string | null;
   arenaNumber?: number | null;
-  evaSlotId?: string | null;
+  evaSlotIds?: string[] | null;
   date?: string;
   startTime?: string;
   current: { venueId: string | null; date: string; startTime: string };
@@ -326,8 +332,8 @@ export async function resolvePlaceForUpdate(input: {
   if (input.type !== 'MATCH') {
     if (input.venueId) return { error: ERROR.matchOnlyVenue };
     if (input.arenaNumber) return { error: ERROR.arenaRequiresVenue };
-    if (input.evaSlotId) return { error: ERROR.matchOnlySlot };
-    return { venueId: null, arenaNumber: null, evaSlotId: null };
+    if (input.evaSlotIds?.length) return { error: ERROR.matchOnlySlot };
+    return { venueId: null, arenaNumber: null, evaSlotIds: [] };
   }
 
   const venueChanges = input.venueId !== undefined && input.venueId !== input.current.venueId;
@@ -349,10 +355,10 @@ export async function resolvePlaceForUpdate(input: {
   const slotAnchorMoves = venueChanges
     || (input.date !== undefined && input.date !== input.current.date)
     || (input.startTime !== undefined && input.startTime !== input.current.startTime);
-  if (input.evaSlotId !== undefined || slotAnchorMoves) {
-    const slot = resolveSlot(venueId, input.evaSlotId ?? null);
-    if ('error' in slot) return slot;
-    place.evaSlotId = slot.evaSlotId;
+  if (input.evaSlotIds !== undefined || slotAnchorMoves) {
+    const slots = resolveSlots(venueId, input.evaSlotIds);
+    if ('error' in slots) return slots;
+    place.evaSlotIds = slots.evaSlotIds;
   }
 
   return place;
@@ -367,7 +373,7 @@ export interface CreateEventData {
   description?: string;
   venueId?: string | null;
   arenaNumber?: number | null;
-  evaSlotId?: string | null;
+  evaSlotIds?: string[];
   voiceMedium?: VoiceMedium | null;
   teamId: string;
   createdByUserId: string;
@@ -397,7 +403,7 @@ export async function createEvent(data: CreateEventData) {
       description: data.description?.trim() || null,
       venueId: data.venueId ?? null,
       arenaNumber: data.arenaNumber ?? null,
-      evaSlotId: data.evaSlotId ?? null,
+      evaSlotIds: data.evaSlotIds ?? [],
       voiceMedium: data.voiceMedium ?? null,
       createdById: user.player.id,
       teamId: data.teamId,
@@ -446,7 +452,7 @@ export interface UpdateEventData {
   description?: string;
   venueId?: string | null;
   arenaNumber?: number | null;
-  evaSlotId?: string | null;
+  evaSlotIds?: string[];
   voiceMedium?: VoiceMedium | null;
 }
 
@@ -465,7 +471,7 @@ export async function updateEvent(eventId: string, data: UpdateEventData) {
       ...(data.description !== undefined && { description: data.description?.trim() || null }),
       ...(data.venueId !== undefined && { venueId: data.venueId }),
       ...(data.arenaNumber !== undefined && { arenaNumber: data.arenaNumber }),
-      ...(data.evaSlotId !== undefined && { evaSlotId: data.evaSlotId }),
+      ...(data.evaSlotIds !== undefined && { evaSlotIds: data.evaSlotIds }),
       ...(data.voiceMedium !== undefined && { voiceMedium: data.voiceMedium }),
     },
     include: EVENT_VENUE_INCLUDE,

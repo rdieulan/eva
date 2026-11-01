@@ -7,6 +7,7 @@ import {
   TEAM_NAME_MIN_LENGTH,
   EVA_USERNAME_MAX_LENGTH,
   EVA_SLOT_ID_MAX_LENGTH,
+  EVA_SLOTS_PER_MATCH_MAX,
 } from '@shared/constants/validation.constants';
 import { EVENT_TYPES, VOICE_MEDIUMS } from '@shared/types/calendar.types';
 import { SUBSCRIPTION_TIERS } from '@shared/types/subscription.types';
@@ -172,7 +173,7 @@ export const ERROR = {
   eventDateRequired: 'Veuillez sélectionner une date',
   eventTitleRequired: 'Veuillez entrer un titre',
   eventTimeRequired: 'Veuillez renseigner les heures de début et fin',
-  eventSlotRequired: 'Veuillez choisir un créneau',
+  eventSlotRequired: 'Veuillez choisir au moins un créneau',
   eventTimeInvalid: 'L\'heure de fin doit être après l\'heure de début',
   exportPngFailed: 'Erreur lors de l\'export PNG',
   monthParamRequired: 'Paramètre month requis (format YYYY-MM)',
@@ -186,9 +187,9 @@ export const ERROR = {
   matchOnlyVenue: 'Seuls les matchs peuvent avoir une salle',
   arenaRequiresVenue: 'Le numéro d\'arène demande une salle',
   arenaNumberInvalid: 'Numéro d\'arène invalide pour cette salle',
-  matchOnlySlot: 'Seuls les matchs ont un créneau eva.gg',
-  slotRequiresVenue: 'Un créneau eva.gg demande une salle',
-  evaSlotIdInvalid: `Identifiant de créneau eva.gg invalide (texte de 1 à ${EVA_SLOT_ID_MAX_LENGTH} caractères)`,
+  matchOnlySlot: 'Seuls les matchs ont des créneaux',
+  slotRequiresVenue: 'Un créneau demande une salle',
+  evaSlotsInvalid: `Liste de créneaux invalide (identifiants distincts de 1 à ${EVA_SLOT_ID_MAX_LENGTH} caractères, ${EVA_SLOTS_PER_MATCH_MAX} créneaux au plus)`,
   venueArenaCountInvalid: 'Le nombre d\'arènes doit être un entier supérieur ou égal à 1',
   voiceMeetingOnlyMedium: 'Seules les réunions vocales ont une plateforme',
   voiceMediumRequired: 'Une réunion vocale demande une plateforme',

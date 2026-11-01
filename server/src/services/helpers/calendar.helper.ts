@@ -73,7 +73,7 @@ export function formatEventForFrontend(event: {
   gamePlan: unknown;
   venue?: EventVenue | null;
   arenaNumber?: number | null;
-  evaSlotId?: string | null;
+  evaSlotIds: string[];
   voiceMedium?: VoiceMedium | null;
   createdById: string;
   createdAt: Date;
@@ -89,7 +89,7 @@ export function formatEventForFrontend(event: {
     gamePlan: (event.gamePlan || undefined) as MatchGamePlan | undefined,
     venue: event.venue ?? undefined,
     arenaNumber: event.arenaNumber ?? undefined,
-    evaSlotId: event.evaSlotId ?? undefined,
+    evaSlotIds: event.evaSlotIds,
     voiceMedium: event.voiceMedium ?? undefined,
     createdById: event.createdById,
     createdAt: event.createdAt.toISOString(),

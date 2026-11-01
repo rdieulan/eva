@@ -127,12 +127,12 @@ Ce que ça renvoie, une session par créneau et par arène :
 
 | Champ | Observé | Sens |
 |---|---|---|
-| `slot.id` | chaîne hex opaque (`51:60:2026-11-03:2026-11-03T19:00:00Z:40` une fois décodée) | identifiant du créneau, le même que portent les réservations ; stocké sur `CalendarEvent.evaSlotId` |
+| `slot.id` | chaîne hex opaque (`51:60:2026-11-03:2026-11-03T19:00:00Z:40` une fois décodée) | identifiant du créneau, le même que portent les réservations ; un match en garde la liste dans `CalendarEvent.evaSlotIds` |
 | `slot.startTime` | `20:00` | début de jeu, `HH:mm` local |
 | `slot.convocationTime` | `19:50` | 10 min avant ; **c'est l'heure que leur app affiche aux joueurs** |
 | `slot.duration` | `40` | minutes |
 | `terrain.displayNumber` | `1` | notre numéro d'arène |
-| `availableSeatCount` / `totalSeatCount` | `3` / `10` | places restantes ; le total est le `maxPlayer` du jeu |
+| `takenSeatCount` / `availableSeatCount` / `totalSeatCount` | `7` / `3` / `10` | joueurs inscrits, places restantes, capacité du créneau tel qu'eva.gg l'a ouvert (le `maxPlayer` du jeu, 10 ici) |
 | `competitiveMode { isAvailable isActive }` | `true` / `false` | mode compétitif ouvert sur la session |
 | `matchmakingLevel`, `unitPrice`, `pricingType`, `isSubscriptionUsable`… | | tarification et matchmaking, non utilisés |
 
