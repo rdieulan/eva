@@ -130,7 +130,6 @@ function goBack() {
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
 @use '@/styles/buttons' as *;
-@use 'sass:color';
 
 .create-team-page {
   display: flex;
@@ -144,7 +143,7 @@ function goBack() {
 
 .create-team-card {
   background: $color-bg-secondary;
-  border: 1px solid $color-border;
+  border: $border-thin solid $color-border;
   border-radius: $radius-lg;
   padding: $spacing-xl;
   max-width: 450px;
@@ -206,7 +205,7 @@ function goBack() {
   input, select {
     padding: $spacing-sm $spacing-md;
     background: $color-bg-tertiary;
-    border: 1px solid $color-border;
+    border: $border-thin solid $color-border;
     border-radius: $radius-md;
     color: $color-text-primary;
     font-size: $font-size-base;

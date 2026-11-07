@@ -65,6 +65,7 @@ export async function expectNoRecordCreated<T>(
 export async function cleanDatabase(): Promise<void> {
   // Delete in order of dependencies (children first)
   await prisma.calendarEvent.deleteMany();
+  await prisma.scrimProposal.deleteMany();
   await prisma.scrimSearch.deleteMany();
   await prisma.availability.deleteMany();
   await prisma.gamePlanPlayer.deleteMany();

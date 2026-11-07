@@ -219,7 +219,7 @@ function saveChanges() {
 
 .team-info {
   background: $color-bg-tertiary;
-  border: 1px solid $color-border-light;
+  border: $border-thin solid $color-border-light;
   border-radius: $radius-lg;
   padding: $spacing-lg;
   height: fit-content;
@@ -237,7 +237,7 @@ function saveChanges() {
   width: 72px;
   height: 72px;
   border-radius: $radius-md;
-  border: 1px solid $color-border-light;
+  border: $border-thin solid $color-border-light;
   flex-shrink: 0;
 }
 
@@ -250,7 +250,7 @@ function saveChanges() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba($color-accent, 0.15);
+  background: with-alpha($color-accent, 0.15);
   color: $color-accent;
   font-size: 1.5rem;
   font-weight: 700;
@@ -315,7 +315,7 @@ function saveChanges() {
   input, select {
     padding: $spacing-sm $spacing-md;
     background: $color-bg-secondary;
-    border: 1px solid $color-border-light;
+    border: $border-thin solid $color-border-light;
     border-radius: $radius-md;
     color: $color-white;
     font-size: $font-size-base;
@@ -351,14 +351,14 @@ function saveChanges() {
   margin-left: $spacing-sm;
   padding: 2px 8px;
   border-radius: $radius-sm;
-  background: rgba($color-accent, 0.2);
+  background: with-alpha($color-accent, 0.2);
   color: $color-accent;
   font-size: $font-size-xs;
   font-weight: 600;
   text-decoration: none;
 
   &:hover {
-    background: rgba($color-accent, 0.35);
+    background: with-alpha($color-accent, 0.35);
   }
 }
 

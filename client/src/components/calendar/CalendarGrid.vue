@@ -13,7 +13,7 @@ const props = defineProps<{
   scrimSearches?: Record<string, ScrimSearch[]>; // Searches of each day
   selectable?: boolean; // Matchmaking: days can be picked for a search
   selectedDates?: string[];
-  playerLabels?: Record<string, string>;
+  currentPlayerId?: string; // Puts the reader first in the roster of a day, in edit mode
 }>();
 
 const emit = defineEmits<{
@@ -24,6 +24,7 @@ const emit = defineEmits<{
   'open-create-event': [date: string];
   'toggle-select': [date: string];
   'open-search': [search: ScrimSearch];
+  'open-day': [date: string];
 }>();
 
 // Today's date string for comparison
@@ -128,12 +129,13 @@ function handleSetAvailability(date: string, status: AvailabilityStatus | null) 
         :scrim-searches="props.scrimSearches?.[cell.date] ?? []"
         :selectable="props.selectable"
         :selected="props.selectedDates?.includes(cell.date) ?? false"
-        :player-labels="props.playerLabels"
+        :current-player-id="props.currentPlayerId"
         @set-availability="(status) => handleSetAvailability(cell.date, status)"
         @open-event-viewer="(events, index) => emit('open-event-viewer', events, index)"
         @open-create-event="(date) => emit('open-create-event', date)"
         @toggle-select="(date) => emit('toggle-select', date)"
         @open-search="(search) => emit('open-search', search)"
+        @open-day="(date) => emit('open-day', date)"
       />
     </div>
   </div>
@@ -161,7 +163,8 @@ function handleSetAvailability(date: string, status: AvailabilityStatus | null) 
 
 .days-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  // minmax(0, 1fr), not 1fr: a column must not grow to fit a long title
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: $spacing-sm;
 
   @include tablet {

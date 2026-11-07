@@ -86,7 +86,7 @@ $tab-top: $spacing-md;
   height: $tab-height;
   padding: $spacing-xs 0;
   background: $color-bg-secondary;
-  border: 1px solid $color-border;
+  border: $border-thin solid $color-border;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -138,7 +138,7 @@ $tab-top: $spacing-md;
 
   .drawer-overlay {
     right: 0;
-    border-left: 1px solid $color-border;
+    border-left: $border-thin solid $color-border;
   }
 }
 
@@ -170,7 +170,7 @@ $tab-top: $spacing-md;
 
   .drawer-overlay {
     left: 0;
-    border-right: 1px solid $color-border;
+    border-right: $border-thin solid $color-border;
   }
 }
 
@@ -195,7 +195,7 @@ $tab-top: $spacing-md;
     height: 50vh;
     border-left: none !important;
     border-right: none !important;
-    border-top: 1px solid $color-border;
+    border-top: $border-thin solid $color-border;
   }
 }
 
@@ -205,7 +205,7 @@ $tab-top: $spacing-md;
   align-items: center;
   height: calc(#{$tab-top} + #{$tab-height});
   margin: 0 $spacing-md;
-  border-bottom: 1px solid $color-border;
+  border-bottom: $border-thin solid $color-border;
   flex-shrink: 0;
 
   h2 {
@@ -223,7 +223,7 @@ $tab-top: $spacing-md;
 .drawer-footer {
   flex-shrink: 0;
   padding: $spacing-sm $spacing-md;
-  border-top: 1px solid $color-border;
+  border-top: $border-thin solid $color-border;
 }
 
 // Transitions
@@ -253,7 +253,7 @@ $tab-top: $spacing-md;
     width: 80px;
     height: 32px;
     border-radius: $radius-md $radius-md 0 0;
-    border: 1px solid $color-border;
+    border: $border-thin solid $color-border;
     border-bottom: none;
     bottom: auto;
     top: calc(-1 * 32px);

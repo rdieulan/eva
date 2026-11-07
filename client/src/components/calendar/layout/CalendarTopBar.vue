@@ -12,8 +12,8 @@ import {
 const legendStatuses = [...AVAILABILITY_STATUSES, null];
 
 defineProps<{
-  editMode: boolean;
-  matchmaking?: boolean; // The days are coloured by the team's availability, not the player's
+  editMode: boolean; // The days show every player's status; otherwise one colour, the team's lineup
+  matchmaking?: boolean; // No editing of one's own days while looking for an opponent
 }>();
 
 defineEmits<{
@@ -23,20 +23,8 @@ defineEmits<{
 
 <template>
   <div class="calendar-toolbar">
-    <!-- What the day colours mean: the team's lineup in matchmaking, the player's own status otherwise -->
-    <div v-if="matchmaking" class="availability-legend">
-      <span
-        v-for="status in TEAM_AVAILABILITY_STATUSES"
-        :key="status"
-        class="legend-item"
-        :class="getTeamAvailabilityClass(status)"
-        :title="getTeamAvailabilityDisplay(status).title"
-      >
-        <span class="legend-dot"></span>
-        <span class="legend-label">{{ getTeamAvailabilityDisplay(status).label }}</span>
-      </span>
-    </div>
-    <div v-else class="availability-legend">
+    <!-- What the day colours mean: the fill is the player's own status, the border the team's lineup -->
+    <div class="availability-legend" title="Coin de la case : ma disponibilité">
       <span
         v-for="status in legendStatuses"
         :key="status ?? 'unset'"
@@ -46,6 +34,18 @@ defineEmits<{
       >
         <span class="legend-dot"></span>
         <span class="legend-label">{{ getAvailabilityDisplay(status).label }}</span>
+      </span>
+    </div>
+    <div class="availability-legend" title="Case : l'équipe">
+      <span
+        v-for="status in TEAM_AVAILABILITY_STATUSES"
+        :key="status"
+        class="legend-item"
+        :class="getTeamAvailabilityClass(status)"
+        :title="getTeamAvailabilityDisplay(status).title"
+      >
+        <span class="legend-dot"></span>
+        <span class="legend-label">{{ getTeamAvailabilityDisplay(status).label }}</span>
       </span>
     </div>
 
@@ -65,7 +65,6 @@ defineEmits<{
 
 <style lang="scss">
 @use '@/styles/variables' as *;
-@use 'sass:map';
 
 .calendar-toolbar {
   display: flex;
@@ -82,7 +81,7 @@ defineEmits<{
   align-items: center;
   gap: $spacing-md;
   padding: 0.4rem 0.75rem;
-  background: rgba($color-bg-tertiary, 0.5);
+  background: with-alpha($color-bg-tertiary, 0.5);
   border-radius: $radius-md;
   font-size: 0.8rem;
 
@@ -123,12 +122,12 @@ defineEmits<{
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  border: 1px solid;
+  border: $border-thin solid;
 
-  @each $status, $style in $availability-styles {
+  @each $status, $color in $availability-colors {
     .availability--#{$status} & {
-      background: map.get($style, color);
-      border-color: map.get($style, color);
+      background: $color;
+      border-color: $color;
     }
   }
 
@@ -158,9 +157,9 @@ defineEmits<{
 .legend-label {
   color: $color-text-secondary;
 
-  @each $status, $style in $availability-styles {
+  @each $status, $color in $availability-colors {
     .availability--#{$status} & {
-      color: map.get($style, color);
+      color: $color;
     }
   }
 
@@ -176,8 +175,8 @@ defineEmits<{
   align-items: center;
   gap: $spacing-sm;
   padding: 0.5rem 1rem;
-  background: rgba($color-edit, 0.1);
-  border: 2px solid $color-edit;
+  background: with-alpha($color-edit, 0.1);
+  border: $border-thick solid $color-edit;
   border-radius: $radius-md;
   color: $color-edit;
   font-size: 0.9rem;
@@ -189,13 +188,13 @@ defineEmits<{
   -webkit-tap-highlight-color: transparent;
 
   &:hover {
-    background: rgba($color-edit, 0.2);
+    background: with-alpha($color-edit, 0.2);
     border-color: $color-edit;
     color: $color-white;
   }
 
   &.active {
-    background: rgba($color-success, 0.2);
+    background: with-alpha($color-success, 0.2);
     border-color: $color-success;
     color: $color-success;
   }

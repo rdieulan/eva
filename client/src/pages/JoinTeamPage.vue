@@ -169,7 +169,6 @@ function formatExpiration(dateStr: string): string {
 
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
-@use 'sass:color';
 
 .join-team-page {
   display: flex;
@@ -183,7 +182,7 @@ function formatExpiration(dateStr: string): string {
 
 .join-card {
   background: $color-bg-secondary;
-  border: 1px solid $color-border;
+  border: $border-thin solid $color-border;
   border-radius: $radius-lg;
   padding: $spacing-xl;
   max-width: 450px;
@@ -263,7 +262,7 @@ h1 {
   color: white;
 
   &:hover:not(:disabled) {
-    background: color.scale($color-accent, $lightness: -17%);
+    background: shade($color-accent, 17%);
   }
 }
 
@@ -273,14 +272,14 @@ h1 {
   width: 100%;
 
   &:hover:not(:disabled) {
-    background: color.scale($color-success, $lightness: -17%);
+    background: shade($color-success, 17%);
   }
 }
 
 .btn-home {
   background: $color-bg-tertiary;
   color: $color-text-primary;
-  border: 1px solid $color-border;
+  border: $border-thin solid $color-border;
 
   &:hover {
     background: $color-bg-secondary;

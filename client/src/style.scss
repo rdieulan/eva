@@ -1,11 +1,12 @@
 @use 'styles/variables' as *;
+@use 'styles/themes';
 
 // ===========================================
 // Global Styles
 // ===========================================
 
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: $font-family;
   line-height: 1.5;
   font-weight: 400;
 
@@ -36,11 +37,6 @@
   --font-size-4xl: #{$font-size-4xl};
 
   --touch-target-min: #{$touch-target-min};
-
-  --radius-sm: #{$radius-sm};
-  --radius-md: #{$radius-md};
-  --radius-lg: #{$radius-lg};
-  --radius-xl: #{$radius-xl};
 }
 
 * {
@@ -65,7 +61,7 @@ h1 {
 
 button {
   border-radius: $radius-md;
-  border: 1px solid transparent;
+  border: $border-thin solid transparent;
   padding: 0.6em 1.2em;
   font-size: 1em;
   font-weight: 500;
@@ -189,8 +185,8 @@ button {
 
 
 .success-message {
-  background-color: rgba($color-success, 0.1);
-  border: 1px solid rgba($color-success, 0.3);
+  background-color: with-alpha($color-success, 0.1);
+  border: $border-thin solid with-alpha($color-success, 0.3);
   color: $color-success;
   padding: $spacing-md;
   border-radius: $radius-sm;
@@ -205,7 +201,7 @@ button {
 .btn-secondary {
   padding: $spacing-sm $spacing-lg;
   background: $color-bg-tertiary;
-  border: 1px solid $color-border;
+  border: $border-thin solid $color-border;
   border-radius: $radius-sm;
   color: $color-text-primary;
   font-weight: 500;

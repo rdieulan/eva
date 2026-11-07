@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import CalendarPage from '@/pages/CalendarPage.vue';
-import type { MonthData, CalendarEvent } from '@shared/types';
+import type { MonthData, CalendarEvent, ScrimSearch, Venue } from '@shared/types';
 
 import { ref } from 'vue';
 
@@ -42,6 +42,7 @@ vi.mock('@/api', () => ({
   fetchVenues: vi.fn(() => Promise.resolve([])),
   fetchCurrentTeam: vi.fn(() => Promise.resolve(null)),
   fetchScrimSearches: vi.fn(() => Promise.resolve([])),
+  updateTeam: vi.fn(),
 }));
 
 import * as calendarApi from '@/api/calendar.api';
@@ -95,6 +96,168 @@ describe('Calendar Integration Tests', () => {
       { id: 'player-1', name: 'Alice' },
       { id: 'player-2', name: 'Bob' },
     ]);
+  });
+
+  it('leaves room under the calendar for the selection bar while days are picked', async () => {
+    const wrapper = mount(CalendarPage);
+    await wrapper.vm.$nextTick();
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    const body = wrapper.findComponent({ name: 'CalendarBody' });
+    expect(body.exists()).toBe(true);
+    expect(wrapper.find('.calendar-content').classes()).not.toContain('has-selection-bar');
+
+    await body.vm.$emit('toggle-select', '2026-01-20');
+    expect(wrapper.find('.calendar-content').classes()).toContain('has-selection-bar');
+
+    await body.vm.$emit('toggle-select', '2026-01-20');
+    expect(wrapper.find('.calendar-content').classes()).not.toContain('has-selection-bar');
+  });
+
+  it('lists a day whole from its cell, then opens a row of it in place of the list', async () => {
+    const wrapper = mount(CalendarPage);
+    await wrapper.vm.$nextTick();
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    const body = wrapper.findComponent({ name: 'CalendarBody' });
+    const agenda = wrapper.findComponent({ name: 'DayAgendaModal' });
+    const dayEvents = mockMonthData.days['2026-01-20']!.events;
+    expect(agenda.props('day')).toBeNull();
+
+    await body.vm.$emit('open-day', '2026-01-20');
+    expect(agenda.props('day')).toEqual({ date: '2026-01-20', searches: [], events: dayEvents, renewals: [] });
+
+    await agenda.vm.$emit('open-event-viewer', dayEvents, 0);
+    expect(agenda.props('day')).toBeNull();
+    expect(wrapper.findComponent({ name: 'EventViewerModal' }).props('events')).toEqual(dayEvents);
+  });
+
+  it('opens a search listed in the day in place of the list', async () => {
+    const search: ScrimSearch = {
+      id: 'search-1', team: { id: 'them', name: 'Les Autres', logoUrl: null }, date: '2026-01-20',
+      slots: [{ slotId: 'a', venueId: 'v', arenaNumber: 1, startTime: '20:00', endTime: '20:40', convocationTime: '19:50' }],
+      slotCount: 1, matchCount: 1, matchedCount: 0, takenSlotIds: [], startTime: '20:00', endTime: '20:40', convocationTime: '19:50',
+      status: 'OPEN', isMine: false, proposals: [], createdAt: '',
+    };
+    const wrapper = mount(CalendarPage);
+    await wrapper.vm.$nextTick();
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    const agenda = wrapper.findComponent({ name: 'DayAgendaModal' });
+    await wrapper.findComponent({ name: 'CalendarBody' }).vm.$emit('open-day', '2026-01-20');
+    await agenda.vm.$emit('open-search', search);
+
+    expect(agenda.props('day')).toBeNull();
+    expect(wrapper.findComponent({ name: 'ScrimSearchViewerModal' }).props('search')).toEqual(search);
+  });
+
+  it('changes our own search from its sheet: the search modal opens on it, in place of the sheet', async () => {
+    const search: ScrimSearch = {
+      id: 'search-ours', team: { id: 'us', name: 'Nous', logoUrl: null }, date: '2026-01-20',
+      slots: [{ slotId: 'a', venueId: 'v', arenaNumber: 1, startTime: '20:00', endTime: '20:40', convocationTime: '19:50' }],
+      slotCount: 1, matchCount: 1, matchedCount: 0, takenSlotIds: [], startTime: '20:00', endTime: '20:40', convocationTime: '19:50',
+      status: 'OPEN', isMine: true, proposals: [], createdAt: '',
+    };
+    const wrapper = mount(CalendarPage);
+    await wrapper.vm.$nextTick();
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    const viewer = wrapper.findComponent({ name: 'ScrimSearchViewerModal' });
+    await wrapper.findComponent({ name: 'CalendarBody' }).vm.$emit('open-search', search);
+    await viewer.vm.$emit('edit', search);
+
+    const searchModal = wrapper.findComponent({ name: 'ScrimSearchModal' });
+    expect(viewer.props('search')).toBeNull();
+    expect(searchModal.props('open')).toBe(true);
+    expect(searchModal.props('editing')).toEqual(search);
+
+    await searchModal.vm.$emit('close');
+    expect(searchModal.props('open')).toBe(false);
+    expect(searchModal.props('editing')).toBeNull();
+  });
+
+  it('opens another team\'s search over the search modal, which stays open under it', async () => {
+    const search: ScrimSearch = {
+      id: 'search-2', team: { id: 'them', name: 'Les Rivaux', logoUrl: null }, date: '2026-01-20',
+      slots: [{ slotId: 'a', venueId: 'v', arenaNumber: 1, startTime: '20:00', endTime: '20:40', convocationTime: '19:50' }],
+      slotCount: 1, matchCount: 1, matchedCount: 0, takenSlotIds: [], startTime: '20:00', endTime: '20:40', convocationTime: '19:50',
+      status: 'OPEN', isMine: false, proposals: [], createdAt: '',
+    };
+    const wrapper = mount(CalendarPage);
+    await wrapper.vm.$nextTick();
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    await wrapper.findComponent({ name: 'ScrimSelectionBar' }).vm.$emit('search');
+    const searchModal = wrapper.findComponent({ name: 'ScrimSearchModal' });
+    await searchModal.vm.$emit('open-search', search);
+
+    expect(wrapper.findComponent({ name: 'ScrimSearchViewerModal' }).props('search')).toEqual(search);
+    expect(searchModal.props('open')).toBe(true);
+  });
+
+  describe('matchmaking venues', () => {
+    function venue(id: string, name: string): Venue {
+      return {
+        id, name, city: name, address: '', phone: null, arenaCount: 1, hasEvaSlots: true,
+        website: null, discord: null, facebook: null, instagram: null, x: null, tiktok: null, youtube: null, twitch: null,
+      };
+    }
+
+    async function mountInMatchmaking() {
+      (api.fetchVenues as any).mockResolvedValueOnce([venue('nimes', 'Nîmes'), venue('agen', 'Agen')]);
+      (api.fetchCurrentTeam as any).mockResolvedValueOnce({ venueId: 'nimes', favoriteVenueIds: [] });
+      const wrapper = mount(CalendarPage);
+      await new Promise(resolve => setTimeout(resolve, 50));
+      const header = wrapper.findComponent({ name: 'CalendarHeader' });
+      await header.vm.$emit('update:calendarMode', 'matchmaking');
+      await wrapper.vm.$nextTick();
+      return { wrapper, header: wrapper.findComponent({ name: 'CalendarHeader' }) };
+    }
+
+    it('lands on the team\'s venue and lists the searches of the venues ticked', async () => {
+      const { header } = await mountInMatchmaking();
+
+      expect(header.props('venueIds')).toEqual(['nimes']);
+      expect(header.props('venues').affiliated.id).toBe('nimes');
+      await new Promise(resolve => setTimeout(resolve, 0));
+      expect(api.fetchScrimSearches).toHaveBeenLastCalledWith(expect.any(String), ['nimes']);
+
+      await header.vm.$emit('update:venueIds', ['nimes', 'agen']);
+      await new Promise(resolve => setTimeout(resolve, 0));
+      expect(api.fetchScrimSearches).toHaveBeenLastCalledWith(expect.any(String), ['nimes', 'agen']);
+    });
+
+    it('lists the searches of a day whole in matchmaking, the team\'s events left to the team\'s view', async () => {
+      const { wrapper } = await mountInMatchmaking();
+
+      await wrapper.findComponent({ name: 'CalendarBody' }).vm.$emit('open-day', '2026-01-20');
+
+      expect(wrapper.findComponent({ name: 'DayAgendaModal' }).props('day')).toEqual({ date: '2026-01-20', searches: [], events: [], renewals: [] });
+    });
+
+    it('makes a venue a favorite of the team from its star, at once', async () => {
+      (api.updateTeam as any).mockResolvedValue({ favoriteVenueIds: ['agen'] });
+      const { header } = await mountInMatchmaking();
+
+      await header.vm.$emit('toggle-favorite', 'agen');
+      expect(header.props('venues').favorites.map((v: Venue) => v.id)).toEqual(['agen']);
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(api.updateTeam).toHaveBeenCalledWith({ favoriteVenueIds: ['agen'] });
+      expect(header.props('venues').favorites.map((v: Venue) => v.id)).toEqual(['agen']);
+    });
+
+    it('puts the favorites back as they were when the change is refused', async () => {
+      (api.updateTeam as any).mockRejectedValue(new Error('refused'));
+      const { wrapper, header } = await mountInMatchmaking();
+
+      await header.vm.$emit('toggle-favorite', 'agen');
+      await new Promise(resolve => setTimeout(resolve, 0));
+      await wrapper.vm.$nextTick();
+
+      expect(header.props('venues').favorites).toEqual([]);
+      expect(wrapper.findComponent({ name: 'ErrorModal' }).props('open')).toBe(true);
+    });
   });
 
   it('should load calendar data on mount', async () => {

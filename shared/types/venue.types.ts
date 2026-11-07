@@ -24,14 +24,23 @@ export interface Venue extends VenueLinks {
   hasEvaSlots: boolean; // Filled from eva.gg, so its slots can be listed per day
 }
 
+// The token an EVA Pass holder spends on a slot: one of peak hours (HP) or of
+// off-peak hours (HC)
+export type SlotTokenType = 'peak' | 'offPeak';
+
 // One slot of a venue on a given day: one arena, one start time
 export interface VenueSlot {
-  slotId: string;          // Opaque eva.gg id, the one bookings carry
+  slotId: string;          // Opaque, one arena at one hour: eva.gg's slot id names the hour, the same on every arena, and the arena follows it
   startTime: string;       // HH:mm, when play starts
   endTime: string;         // HH:mm
   convocationTime: string; // HH:mm, when players are expected; what eva.gg shows them
   arenaNumber: number;
+  gameId: number; // Which eva.gg game the slot runs; a match needs COMPETITIVE_GAME_ID
   takenSeats: number; // Players already booked on the slot
   totalSeats: number; // Capacity of the slot as eva.gg opened it
   isCompetitiveAvailable: boolean; // The competitive mode can be booked on it, which a match needs
+  tokenType: SlotTokenType | null; // What a pass holder spends on it; null when eva.gg rates it neither way
+  // Peak sessions the venue still opens to EVA Pass holders that day, when
+  // this slot counts against them; 0: a pass holder can no longer open it
+  passQuotaLeft: number | null;
 }

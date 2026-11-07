@@ -83,7 +83,6 @@ function handleJoin() {
 
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
-@use 'sass:color';
 
 .no-team-message {
   display: flex;
@@ -129,7 +128,7 @@ function handleJoin() {
     input {
       flex: 1;
       padding: $spacing-sm $spacing-md;
-      border: 1px solid $color-border;
+      border: $border-thin solid $color-border;
       border-radius: $radius-md;
       background: $color-bg-tertiary;
       color: $color-text-primary;
@@ -157,7 +156,7 @@ function handleJoin() {
       white-space: nowrap;
 
       &:hover:not(:disabled) {
-        background: color.scale($color-success, $lightness: -17%);
+        background: shade($color-success, 17%);
       }
 
       &:disabled {
@@ -209,7 +208,7 @@ function handleJoin() {
     transition: background-color 0.2s;
 
     &:hover {
-      background-color: rgba($color-accent, 0.8);
+      background-color: with-alpha($color-accent, 0.8);
     }
   }
 }

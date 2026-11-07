@@ -66,7 +66,7 @@ defineEmits<{
 
 .team-members {
   background: $color-bg-tertiary;
-  border: 1px solid $color-border-light;
+  border: $border-thin solid $color-border-light;
   border-radius: $radius-lg;
   padding: $spacing-lg;
 }
@@ -100,7 +100,7 @@ defineEmits<{
   align-items: center;
   padding: $spacing-md;
   background: $color-bg-secondary;
-  border: 1px solid $color-border-light;
+  border: $border-thin solid $color-border-light;
   border-radius: $radius-md;
 
   &.is-leader {
@@ -108,7 +108,7 @@ defineEmits<{
   }
 
   &.is-me {
-    background: rgba($color-accent, 0.1);
+    background: with-alpha($color-accent, 0.1);
   }
 }
 

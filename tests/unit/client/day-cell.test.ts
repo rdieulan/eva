@@ -103,6 +103,26 @@ describe('DayCell Component - Past Days Behavior', () => {
     expect(wrapper.emitted('open-event-viewer')).toBeTruthy();
   });
 
+  it('should show the icon of the kind of event on its row', () => {
+    const wrapper = mount(DayCell, {
+      props: {
+        date: '2025-01-15',
+        dayNumber: 15,
+        isCurrentMonth: true,
+        isToday: false,
+        isPast: true,
+        currentPlayerStatus: null,
+        playerAvailabilities: [],
+        events: [mockEvent],
+        editMode: false,
+      },
+    });
+
+    const badge = wrapper.find('.event-badge');
+    expect(badge.classes()).toContain('event-type--match');
+    expect(badge.find('.item-icon .svg-icon, .item-icon.svg-icon').exists()).toBe(true);
+  });
+
   it('should NOT have pointer-events: none style blocking clicks', () => {
     const wrapper = mount(DayCell, {
       props: {
@@ -226,14 +246,13 @@ describe('DayCell Component - Subscription renewals', () => {
           { playerId: 'player-1', playerName: 'Nova', tier: 'GOLD' as const },
           { playerId: 'player-2', playerName: 'Orion', tier: null },
         ],
-        playerLabels: { 'player-1': 'No', 'player-2': 'Or' },
       },
     });
 
     const strip = wrapper.find('.renewal-strip');
     expect(strip.exists()).toBe(true);
+    expect(strip.find('.renewal-icon').exists()).toBe(true);
     expect(strip.find('.renewal-names').text()).toBe('Nova, Orion');
-    expect(strip.find('.renewal-labels').text()).toBe('No Or');
     expect(strip.attributes('title')).toBe("Renouvellement d'abonnement : Nova (Or), Orion");
   });
 });
@@ -260,25 +279,63 @@ describe('DayCell Component - Voice only availability', () => {
     expect(fromVoiceOnly.emitted('set-availability')![0]).toEqual(['UNAVAILABLE']);
   });
 
-  it('should colour the day and show a microphone behind it in edit mode', () => {
+  it('should show a microphone in the voice-coloured corner of the day', () => {
     const wrapper = mount(DayCell, { props: { ...baseProps, currentPlayerStatus: 'VOICE_ONLY' as const } });
 
-    expect(wrapper.classes()).toContain('availability--voice-only');
-    expect(wrapper.find('.status-bg-icon .svg-icon').exists()).toBe(true);
+    const corner = wrapper.find('.corner');
+    expect(corner.classes()).toContain('availability--voice-only');
+    expect(corner.find('.svg-icon').exists()).toBe(true);
   });
 
-  it('should colour a voice-only player badge and explain it in its tooltip', () => {
+  it('should list the teammates with their status in edit mode, most available first, unset told apart from unavailable', () => {
+    const wrapper = mount(DayCell, {
+      props: {
+        ...baseProps,
+        currentPlayerStatus: null,
+        currentPlayerId: 'player-4',
+        playerAvailabilities: [
+          { playerId: 'player-1', playerName: 'Nova', status: 'VOICE_ONLY' as const },
+          { playerId: 'player-2', playerName: 'Orion', status: null },
+          { playerId: 'player-3', playerName: 'Lune', status: 'UNAVAILABLE' as const },
+          { playerId: 'player-4', playerName: 'Moi', status: 'AVAILABLE' as const },
+        ],
+      },
+    });
+
+    // The reader is left out: the cell colour already says where they stand
+    const players = wrapper.findAll('.roster-player');
+    expect(players.map(player => player.text())).toEqual(['Nova', 'Lune', 'Orion']);
+    expect(players[0]!.classes()).toContain('availability--voice-only');
+    expect(players[1]!.classes()).toContain('availability--unavailable');
+    expect(players[2]!.classes()).toContain('availability--unset');
+    expect(players[2]!.attributes('title')).toBe('Orion : Non renseigné');
+    expect(wrapper.find('.items').exists()).toBe(false);
+    expect(wrapper.classes()).toContain('edit-mode');
+  });
+
+  it('should draw a new symbol when a click sets another status, so it springs in over the old one', async () => {
+    const wrapper = mount(DayCell, { props: { ...baseProps, currentPlayerStatus: 'AVAILABLE' as const } });
+    const before = wrapper.find('.corner-symbol');
+    expect(before.text()).toBe('✓');
+
+    await wrapper.setProps({ currentPlayerStatus: 'CONDITIONAL' as const });
+
+    const after = wrapper.find('.corner-symbol');
+    expect(after.text()).toBe('~');
+    expect(after.element).not.toBe(before.element);
+  });
+
+  it('should show what is planned, not the roster, outside edit mode', () => {
     const wrapper = mount(DayCell, {
       props: {
         ...baseProps,
         editMode: false,
         currentPlayerStatus: null,
-        playerAvailabilities: [{ playerId: 'player-1', playerName: 'Nova', status: 'VOICE_ONLY' as const }],
+        playerAvailabilities: [{ playerId: 'player-1', playerName: 'Nova', status: 'AVAILABLE' as const }],
       },
     });
 
-    const badge = wrapper.find('.player-avatar');
-    expect(badge.classes()).toContain('availability--voice-only');
-    expect(badge.attributes('title')).toBe('Nova : Dispo pour le vocal uniquement');
+    expect(wrapper.find('.roster').exists()).toBe(false);
+    expect(wrapper.find('.items').exists()).toBe(true);
   });
 });

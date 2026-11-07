@@ -116,7 +116,7 @@ function cancelEditingName(): void {
 .player-edit-panel {
   position: fixed;
   background: $color-bg-secondary;
-  border: 1px solid $color-border;
+  border: $border-thin solid $color-border;
   border-radius: $radius-md;
   padding: $spacing-sm;
   z-index: 1001;
@@ -131,7 +131,7 @@ function cancelEditingName(): void {
     gap: $spacing-sm;
     margin-bottom: $spacing-sm;
     padding-bottom: $spacing-sm;
-    border-bottom: 1px solid $color-border;
+    border-bottom: $border-thin solid $color-border;
 
     .panel-title {
       flex: 1;
@@ -158,7 +158,7 @@ function cancelEditingName(): void {
       .name-input {
         flex: 1;
         background: $color-bg-primary;
-        border: 1px solid $color-border;
+        border: $border-thin solid $color-border;
         border-radius: $radius-sm;
         padding: 4px 8px;
         font-size: 14px;
@@ -169,7 +169,7 @@ function cancelEditingName(): void {
       .name-save,
       .name-cancel {
         background: $color-bg-tertiary;
-        border: 1px solid $color-border;
+        border: $border-thin solid $color-border;
         border-radius: $radius-sm;
         padding: 4px 8px;
         cursor: pointer;

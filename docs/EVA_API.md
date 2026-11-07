@@ -123,8 +123,9 @@ data: {
   locationId: Int,            # Venue.externalId
   seatCount: 1,               # obligatoire ; 1 liste toutes les sessions
   seatTypes: ["PLAYER"],
-  isCompetitiveModeOnly: false,
-  gameIdList: [1]             # le jeu compétitif ; omis quand vide chez eux
+  isCompetitiveModeOnly: false
+  # gameIdList omis : on lit tous les jeux, pour qu'un créneau pris par un autre
+  # jeu apparaisse à sa place dans la soirée au lieu de laisser un trou
 }
 ```
 
@@ -132,14 +133,22 @@ Ce que ça renvoie, une session par créneau et par arène :
 
 | Champ | Observé | Sens |
 |---|---|---|
-| `slot.id` | chaîne hex opaque (`51:60:2026-11-03:2026-11-03T19:00:00Z:40` une fois décodée) | identifiant du créneau, le même que portent les réservations ; un match en garde la liste dans `CalendarEvent.evaSlotIds` |
+| `slot.id` | chaîne hex opaque (`51:60:2026-11-03:2026-11-03T19:00:00Z:40` une fois décodée : salle, jour, heure de début en UTC, durée) | identifiant **de l'heure** dans la salle, le même que portent les réservations. **Il ne dit pas l'arène** : toutes les arènes d'une salle partagent le même `slot.id` à la même heure (leur propre API demande `slotId` et `terrainId` pour désigner une session). Notre créneau est une arène à une heure : `VenueSlot.slotId` est ce `slot.id` suivi de l'arène (`arenaSlotId`, `eva-sessions.ts`), et c'est lui que gardent les recherches, les propositions et les matchs (`CalendarEvent.evaSlotIds`) |
 | `slot.startTime` | `20:00` | début de jeu, `HH:mm` local |
 | `slot.convocationTime` | `19:50` | 10 min avant ; **c'est l'heure que leur app affiche aux joueurs** |
 | `slot.duration` | `40` | minutes |
 | `terrain.displayNumber` | `1` | notre numéro d'arène |
+| `game.id` | `1` | le jeu de la session ; `1` = EVA Battle Arena (`COMPETITIVE_GAME_ID`), le seul qu'un match peut prendre. **Un même créneau (arène + heure) est listé une fois par jeu réservable** (trois à Nîmes, jeux 1, 5 et 10), tous à 0 inscrit tant que personne n'a réservé : la première réservation fixe le jeu de l'arène. `eva-sessions.ts` replie ces sessions en un créneau, tenu par le jeu qui a des inscrits, ou par le nôtre sinon. |
 | `takenSeatCount` / `availableSeatCount` / `totalSeatCount` | `7` / `3` / `10` | joueurs inscrits, places restantes, capacité affichée. **Ne pas se fier à `totalSeatCount`** : un créneau de match fait 8 joueurs (4 contre 4), eva.gg affiche souvent 10 par erreur. On compare `takenSeatCount` à notre constante `MATCH_PLAYER_COUNT` ; moins de 8 il manque du monde, plus de 8 quelqu'un s'est greffé et il faut régulariser avec la salle. |
 | `competitiveMode { isAvailable isActive }` | `true` / `false` | mode compétitif ouvert sur la session |
-| `matchmakingLevel`, `unitPrice`, `pricingType`, `isSubscriptionUsable`… | | tarification et matchmaking, non utilisés |
+| `pricingType` / `subscriptionPricingType` | `PEAK_HOUR`, `OFF_PEAK_HOUR`, `GOOD_DEAL_HOUR`, `NORMAL` | le tarif de la session, pour un visiteur puis pour un abonné EVA Pass. **Un abonné paie en jetons** : une heure pleine prend un jeton HP, une heure creuse ou un bon plan un jeton HC (leur appli montre un bon plan comme une heure creuse à un abonné), `NORMAL` n'est ni l'un ni l'autre. On lit le tarif abonné, à défaut celui du visiteur, comme leur appli (`VenueSlot.tokenType`). |
+| `subscriptionThreshold { mustDeduct countLeftDaily }` | `true` / `14` | **le quota de la salle pour les EVA Pass, lisible sans compte**. Une salle limite chaque jour le nombre de sessions en heures pleines ouvertes aux abonnés ; `countLeftDaily` dit ce qu'il en reste, la même valeur sur toutes les sessions du jour, `mustDeduct` si la session compte contre lui (les heures pleines). À 0, un abonné n'ouvre plus de session en heures pleines ce jour-là : un match, qui prend des créneaux vides, ne s'y joue plus (`VenueSlot.passQuotaLeft`). |
+| `unitPrice`, `regularUnitPrice`, `matchmakingLevel`, `isSubscriptionUsable`… | | prix et matchmaking, non utilisés : nos joueurs paient en jetons ; `isSubscriptionUsable` dépend du compte qui demande, `false` pour un visiteur |
+
+Journées relevées à Nîmes, hors ligne dans `tmp-eva-probe/` : le mardi 3 novembre 2026,
+bon plan de 14:00 à 16:40 puis heures creuses, aucune heure pleine ; le samedi 7 novembre
+2026 (un seul appel, sans compte), heures creuses de 10:00 à 12:40 puis heures pleines, et
+14 sessions en heures pleines encore ouvertes aux abonnés ce jour-là.
 
 Grille observée à Nîmes : 12 créneaux de 40 minutes, de 14:00 à 21:20, sans trou. Une salle
 fermée ce jour-là renvoie une liste vide.

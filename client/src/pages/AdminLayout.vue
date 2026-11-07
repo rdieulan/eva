@@ -45,7 +45,7 @@ const canManageAdmins = computed(() => {
   align-items: center;
   gap: $spacing-xl;
   padding: $spacing-lg $spacing-xl;
-  border-bottom: 1px solid $color-border;
+  border-bottom: $border-thin solid $color-border;
   background: $color-bg-secondary;
 
   h1 {

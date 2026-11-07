@@ -370,7 +370,7 @@ const modalSize = computed(() => {
             :class="[getEventTypeClass(eventType), { active: type === eventType }]"
             @click="type = eventType"
           >
-            <span class="type-btn-icon">{{ getEventTypeDisplay(eventType).icon }}</span>
+            <span class="type-btn-icon">{{ getEventTypeDisplay(eventType).emoji }}</span>
             <span class="type-btn-label">{{ getEventTypeDisplay(eventType).label }}</span>
           </button>
         </div>
@@ -547,7 +547,6 @@ const modalSize = computed(() => {
 
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
-@use 'sass:color';
 
 .event-form {
   display: flex;
@@ -601,7 +600,7 @@ const modalSize = computed(() => {
 .form-input {
   padding: 0.75rem;
   background: $color-bg-tertiary;
-  border: 1px solid $color-border-light;
+  border: $border-thin solid $color-border-light;
   border-radius: 6px;
   color: $color-white;
   font-size: 0.95rem;
@@ -649,7 +648,7 @@ const modalSize = computed(() => {
   gap: $spacing-xs;
   padding: 0.75rem;
   background: $color-bg-tertiary;
-  border: 2px solid $color-border-light;
+  border: $border-thick solid $color-border-light;
   border-radius: $radius-md;
   color: $color-text-secondary;
   font-size: 0.9rem;
@@ -662,7 +661,7 @@ const modalSize = computed(() => {
 
   @each $type, $color in $event-type-colors {
     &.active.event-type--#{$type} {
-      background: rgba($color, 0.2);
+      background: with-alpha($color, 0.2);
       border-color: $color;
       color: $color;
     }
@@ -725,10 +724,10 @@ const modalSize = computed(() => {
 .btn-danger {
   background: $color-danger;
   color: white;
-  border: 1px solid $color-danger;
+  border: $border-thin solid $color-danger;
 
   &:hover {
-    background: color.adjust($color-danger, $lightness: 5%);
+    background: tint($color-danger, 5%);
   }
 }
 
@@ -750,7 +749,7 @@ const modalSize = computed(() => {
 
   @each $type, $color in $event-type-colors {
     &.event-type--#{$type} {
-      background: rgba($color, 0.2);
+      background: with-alpha($color, 0.2);
       color: $color;
     }
   }
@@ -772,7 +771,7 @@ const modalSize = computed(() => {
   flex-direction: column;
   gap: 0.75rem;
   padding: $spacing-md;
-  background: rgba($color-bg-tertiary, 0.5);
+  background: with-alpha($color-bg-tertiary, 0.5);
   border-radius: $radius-md;
 
   @include mobile {
@@ -806,7 +805,7 @@ const modalSize = computed(() => {
   margin-left: $spacing-sm;
   padding: 2px 8px;
   border-radius: $radius-sm;
-  background: rgba($color-accent, 0.2);
+  background: with-alpha($color-accent, 0.2);
   color: $color-accent;
   font-size: 0.75rem;
   font-weight: 600;
@@ -814,7 +813,7 @@ const modalSize = computed(() => {
 
 .event-view-description {
   padding: $spacing-md;
-  background: rgba($color-bg-tertiary, 0.5);
+  background: with-alpha($color-bg-tertiary, 0.5);
   border-radius: $radius-md;
 
   .event-view-label {
@@ -831,7 +830,7 @@ const modalSize = computed(() => {
 
 .game-plan-view {
   padding: $spacing-md;
-  background: rgba($color-bg-tertiary, 0.5);
+  background: with-alpha($color-bg-tertiary, 0.5);
   border-radius: $radius-md;
 
   @include mobile-lg {
@@ -859,7 +858,7 @@ const modalSize = computed(() => {
 }
 
 .absent-badge {
-  background: rgba($color-danger, 0.2);
+  background: with-alpha($color-danger, 0.2);
   color: $color-danger;
   padding: $spacing-xs 0.75rem;
   border-radius: 20px;
@@ -873,10 +872,10 @@ const modalSize = computed(() => {
 }
 
 .game-plan-edit {
-  border: 1px solid $color-border-light;
+  border: $border-thin solid $color-border-light;
 
   .game-plan-header {
-    border-bottom: 1px solid $color-border-light;
+    border-bottom: $border-thin solid $color-border-light;
     padding-bottom: 0.75rem;
     margin-bottom: 0.75rem;
   }
@@ -885,7 +884,7 @@ const modalSize = computed(() => {
 .btn-change-plan {
   padding: 0.4rem 0.75rem;
   background: $color-border-light;
-  border: 1px solid $color-bg-tertiary;
+  border: $border-thin solid $color-bg-tertiary;
   border-radius: $radius-sm;
   color: $color-text-muted;
   font-size: 0.8rem;
@@ -906,7 +905,7 @@ const modalSize = computed(() => {
 .btn-set-gameplan {
   width: 100%;
   padding: 0.75rem;
-  background: rgba($color-warning, 0.2);
+  background: with-alpha($color-warning, 0.2);
   border: 2px dashed $color-warning;
   border-radius: $radius-md;
   color: $color-warning;
@@ -916,7 +915,7 @@ const modalSize = computed(() => {
   transition: all 0.2s;
 
   &:hover {
-    background: rgba($color-warning, 0.3);
+    background: with-alpha($color-warning, 0.3);
     border-style: solid;
   }
 

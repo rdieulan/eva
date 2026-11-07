@@ -173,14 +173,13 @@ function getBalanceClass(map: MapConfig): string {
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
 @use '@/styles/buttons' as *;
-@use 'sass:color';
 
 .planner-sidebar {
   background: $color-bg-secondary;
   width: 100%;
   min-width: 180px;
   max-width: 220px;
-  border-right: 1px solid $color-border;
+  border-right: $border-thin solid $color-border;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -195,13 +194,13 @@ function getBalanceClass(map: MapConfig): string {
     min-width: unset;
     max-width: unset;
     border-right: none;
-    border-bottom: 1px solid $color-border;
+    border-bottom: $border-thin solid $color-border;
   }
 }
 
 .sidebar-header {
   padding: $spacing-md;
-  border-bottom: 1px solid $color-border;
+  border-bottom: $border-thin solid $color-border;
 
   @include tablet {
     padding: 0.75rem;
@@ -229,7 +228,7 @@ function getBalanceClass(map: MapConfig): string {
   display: flex;
   width: 100%;
   background: $color-bg-tertiary;
-  border: 1px solid $color-accent;
+  border: $border-thin solid $color-accent;
   border-radius: $radius-md;
   padding: 2px;
   cursor: pointer;
@@ -405,7 +404,7 @@ function getBalanceClass(map: MapConfig): string {
   padding: $spacing-sm $spacing-md;
   margin-bottom: $spacing-xs;
   background: $color-bg-tertiary;
-  border: 1px solid $color-border;
+  border: $border-thin solid $color-border;
   border-radius: $radius-sm;
   color: $color-text-primary;
   font-size: $font-size-sm;
@@ -462,7 +461,7 @@ function getBalanceClass(map: MapConfig): string {
 
   li {
     padding: $spacing-xs 0;
-    border-bottom: 1px solid $color-border;
+    border-bottom: $border-thin solid $color-border;
 
     &:last-child {
       border-bottom: none;
@@ -480,8 +479,8 @@ function getBalanceClass(map: MapConfig): string {
 
 .edit-warning {
   padding: $spacing-sm;
-  background: rgba($color-warning, 0.1);
-  border: 1px solid rgba($color-warning, 0.3);
+  background: with-alpha($color-warning, 0.1);
+  border: $border-thin solid with-alpha($color-warning, 0.3);
   border-radius: $radius-sm;
   font-size: $font-size-xs;
   color: $color-warning;
@@ -522,36 +521,36 @@ function getBalanceClass(map: MapConfig): string {
 
 .btn-save {
   // Default state (no changes)
-  background: rgba($color-accent, 0.1);
-  border-color: rgba($color-accent, 0.3);
+  background: with-alpha($color-accent, 0.1);
+  border-color: with-alpha($color-accent, 0.3);
   color: $color-text-secondary;
 
   &.has-changes {
-    background: rgba($color-accent, 0.15);
-    border-color: rgba($color-accent, 0.4);
+    background: with-alpha($color-accent, 0.15);
+    border-color: with-alpha($color-accent, 0.4);
     color: $color-text-primary;
 
     &:hover:not(:disabled):not(.is-success):not(.is-error) {
-      background: rgba($color-accent, 0.25);
+      background: with-alpha($color-accent, 0.25);
     }
   }
 
   &.is-saving {
-    background: rgba($color-accent, 0.15);
-    border-color: rgba($color-accent, 0.4);
+    background: with-alpha($color-accent, 0.15);
+    border-color: with-alpha($color-accent, 0.4);
     color: $color-text-primary;
   }
 
   &.is-success {
-    background: rgba($color-success, 0.15) !important;
-    border-color: rgba($color-success, 0.4) !important;
+    background: with-alpha($color-success, 0.15) !important;
+    border-color: with-alpha($color-success, 0.4) !important;
     color: $color-text-primary;
     animation: pulse-success 0.3s ease-out;
   }
 
   &.is-error {
-    background: rgba($color-danger, 0.15) !important;
-    border-color: rgba($color-danger, 0.4) !important;
+    background: with-alpha($color-danger, 0.15) !important;
+    border-color: with-alpha($color-danger, 0.4) !important;
     color: $color-text-primary;
     animation: shake 0.3s ease-out;
   }
@@ -560,7 +559,7 @@ function getBalanceClass(map: MapConfig): string {
 .btn-spinner {
   width: 16px;
   height: 16px;
-  border: 2px solid rgba($color-white, 0.3);
+  border: $border-thick solid with-alpha($color-white, 0.3);
   border-top-color: $color-white;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -619,17 +618,17 @@ function getBalanceClass(map: MapConfig): string {
 
 .btn-cancel {
   // Default state (no changes)
-  background: rgba($color-danger, 0.1);
-  border-color: rgba($color-danger, 0.3);
+  background: with-alpha($color-danger, 0.1);
+  border-color: with-alpha($color-danger, 0.3);
   color: $color-text-secondary;
 
   &.has-changes {
-    background: rgba($color-danger, 0.15);
-    border-color: rgba($color-danger, 0.4);
+    background: with-alpha($color-danger, 0.15);
+    border-color: with-alpha($color-danger, 0.4);
     color: $color-text-primary;
 
     &:hover:not(:disabled) {
-      background: rgba($color-danger, 0.25);
+      background: with-alpha($color-danger, 0.25);
     }
   }
 }

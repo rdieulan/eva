@@ -1,8 +1,11 @@
-// Scrim matchmaking: a team puts a run of slots of a venue up for an opponent
+// Scrim matchmaking: a team offers slots of one venue or more, for a day, to
+// whoever wants to play against it
 
 /**
  * Where a search stands. Mirrors the ScrimSearchStatus enum in
- * prisma/schema.prisma. A cancelled search is deleted, not kept.
+ * prisma/schema.prisma. A search stays open until it has all its matches, or
+ * its remaining slots no longer hold one; a cancelled search is deleted, not
+ * kept.
  */
 export const SCRIM_SEARCH_STATUSES = ['OPEN', 'MATCHED'] as const;
 
@@ -15,25 +18,84 @@ export interface ScrimSearchTeam {
   logoUrl: string | null;
 }
 
-// A run of consecutive slots on one arena of a venue, on which a team wants to play
-export interface ScrimSearch {
+/**
+ * Where a proposal stands. Mirrors the ScrimProposalStatus enum in
+ * prisma/schema.prisma.
+ */
+export const SCRIM_PROPOSAL_STATUSES = ['PENDING', 'ACCEPTED', 'DECLINED', 'WITHDRAWN'] as const;
+
+export type ScrimProposalStatus = typeof SCRIM_PROPOSAL_STATUSES[number];
+
+// A team's answer to a search, naming the run it wants to play among the
+// offered slots, in one of the venues. The searching team sees every proposal
+// on its search; another team only sees its own.
+export interface ScrimProposal {
   id: string;
-  team: ScrimSearchTeam;
-  venueId: string;
-  date: string;            // YYYY-MM-DD
+  searchId: string;
+  team: ScrimSearchTeam; // The team proposing
+  message: string | null;
+  status: ScrimProposalStatus;
+  venueId: string;         // Where the run is played
+  evaSlotIds: string[];    // The run: consecutive slots on one arena, in order
   arenaNumber: number;
-  evaSlotIds: string[];    // The slots, consecutive, in order
-  startTime: string;       // HH:mm, first slot
-  endTime: string;         // HH:mm, last slot
-  convocationTime: string; // HH:mm, when eva.gg expects the players for the first slot
-  status: ScrimSearchStatus;
-  isMine: boolean;         // Posted by the reader's own team
+  startTime: string;       // HH:mm, first slot of the run
+  endTime: string;         // HH:mm, last slot of the run
+  convocationTime: string; // HH:mm, for the first slot
+  isMine: boolean; // Sent by the reader's own team
   createdAt: string;
 }
 
-// What a team sends to open a search: the server reads the rest from the venue's slots
-export interface CreateScrimSearchRequest {
+// A slot a search offers: where and when, as eva.gg gave it when the search opened
+export interface ScrimOfferedSlot {
+  slotId: string;          // Opaque eva.gg id
   venueId: string;
-  date: string;        // YYYY-MM-DD
+  arenaNumber: number;
+  startTime: string;       // HH:mm
+  endTime: string;         // HH:mm
+  convocationTime: string; // HH:mm
+}
+
+// A team's offer for a day: slots of one venue or more, and the matches it
+// wants to play on them that day, wherever they are played; an opponent picks
+// the run of a match among them. A team plays one match at a time, so no two
+// matches of a search overlap.
+export interface ScrimSearch {
+  id: string;
+  team: ScrimSearchTeam;
+  date: string;            // YYYY-MM-DD
+  slots: ScrimOfferedSlot[]; // Venue by venue in the team's order, arena by arena, then by time
+  slotCount: number;       // How many consecutive slots a match takes
+  matchCount: number;      // How many matches the team wants to play that day
+  matchedCount: number;    // How many it already has
+  takenSlotIds: string[];  // Offered slots no other match can take: at the time of a match already made
+  startTime: string;       // HH:mm, earliest offered slot
+  endTime: string;         // HH:mm, end of the latest offered slot
+  convocationTime: string; // HH:mm, when eva.gg expects the players for the earliest slot
+  status: ScrimSearchStatus;
+  isMine: boolean;         // Posted by the reader's own team
+  proposals: ScrimProposal[]; // All of them on the reader's own search, only the reader's team's otherwise
+  createdAt: string;
+}
+
+// What a team sends to answer a search: the run it wants to play, and a word
+export interface CreateScrimProposalRequest {
+  evaSlotIds: string[];
+  message?: string;
+}
+
+// The slots a team offers in one venue
+export interface ScrimVenueOffer {
+  venueId: string;
   evaSlotIds: string[];
 }
+
+// What a team sends to open a search: the server reads the rest from the venues' slots
+export interface CreateScrimSearchRequest {
+  date: string;              // YYYY-MM-DD
+  venues: ScrimVenueOffer[]; // A venue at most once, in the team's order
+  slotCount: number;         // How many consecutive slots a match takes
+  matchCount: number;        // How many matches the team wants to play that day
+}
+
+// A change to an open search: everything but its day
+export type UpdateScrimSearchRequest = Omit<CreateScrimSearchRequest, 'date'>;

@@ -1,0 +1,9 @@
+// The themes, one file each. A theme sets the tokens listed in _night.scss
+// under `[data-theme='<id>']`, overriding only what it changes: the rest falls
+// through to « Nuit », which also serves as the default on the root element.
+//
+// Adding a theme takes two steps: its file here, and its entry in
+// client/src/constants/themes.ts so it can be picked.
+
+@use 'night';
+@use 'slate';

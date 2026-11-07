@@ -1,4 +1,4 @@
-// The open scrim searches of a month, reloaded whenever the month or the venue changes
+// The open scrim searches of a month, reloaded whenever the month or the venues change
 
 import { ref, computed, watch, type Ref } from 'vue';
 import type { ScrimSearch } from '@shared/types';
@@ -9,13 +9,13 @@ export type ScrimSearchesStatus = 'idle' | 'loading' | 'ready' | 'unavailable';
 
 export function useScrimSearches(options: {
   month: Ref<string>;            // YYYY-MM
-  venueId: Ref<string | null>;   // A venue's searches, or the team's own when null
+  venueIds: Ref<string[] | null>; // Every team's searches offering slots in these venues, the team's own wherever they are; the team's own alone when null
   enabled: Ref<boolean>;
 }) {
   const searches = ref<ScrimSearch[]>([]);
   const status = ref<ScrimSearchesStatus>('idle');
 
-  // Answers that arrive after the month or venue moved on are dropped
+  // Answers that arrive after the month or the venues moved on are dropped
   let requestId = 0;
 
   async function load() {
@@ -28,7 +28,7 @@ export function useScrimSearches(options: {
     const id = ++requestId;
     status.value = 'loading';
     try {
-      const loaded = await fetchScrimSearches(options.month.value, options.venueId.value);
+      const loaded = await fetchScrimSearches(options.month.value, options.venueIds.value);
       if (id !== requestId) return;
       searches.value = loaded;
       status.value = 'ready';
@@ -39,7 +39,7 @@ export function useScrimSearches(options: {
     }
   }
 
-  watch([options.month, options.venueId, options.enabled], load, { immediate: true });
+  watch([options.month, options.venueIds, options.enabled], load, { immediate: true });
 
   // The searches of each day, for the calendar cells
   const byDate = computed<Record<string, ScrimSearch[]>>(() => {
@@ -50,8 +50,5 @@ export function useScrimSearches(options: {
     return grouped;
   });
 
-  // The team's own open searches
-  const mine = computed(() => searches.value.filter(search => search.isMine));
-
-  return { searches, status, byDate, mine, load };
+  return { searches, status, byDate, load };
 }

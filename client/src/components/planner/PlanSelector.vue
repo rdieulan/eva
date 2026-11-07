@@ -185,7 +185,7 @@ function closeDropdown() {
   gap: $spacing-sm;
   padding: $spacing-sm $spacing-md;
   background: $color-bg-secondary;
-  border: 1px solid $color-border;
+  border: $border-thin solid $color-border;
   border-radius: $radius-md;
   color: $color-text-primary;
   font-size: $font-size-sm;
@@ -238,7 +238,7 @@ function closeDropdown() {
   margin-top: 4px;
   min-width: 250px;
   background: $color-bg-secondary;
-  border: 1px solid $color-border;
+  border: $border-thin solid $color-border;
   border-radius: $radius-md;
   box-shadow: 0 4px 20px $color-shadow;
   z-index: 100;
@@ -267,7 +267,7 @@ function closeDropdown() {
   }
 
   &.active {
-    background: rgba($color-accent, 0.2);
+    background: with-alpha($color-accent, 0.2);
 
     .plan-item-name {
       color: $color-accent;
@@ -286,7 +286,7 @@ function closeDropdown() {
   flex: 1;
   padding: 4px 8px;
   background: $color-bg-tertiary;
-  border: 1px solid $color-accent;
+  border: $border-thin solid $color-accent;
   border-radius: $radius-sm;
   color: $color-text-primary;
   font-size: $font-size-sm;
@@ -314,12 +314,12 @@ function closeDropdown() {
   }
 
   &.delete:hover {
-    background: rgba($color-danger, 0.2);
+    background: with-alpha($color-danger, 0.2);
   }
 }
 
 .dropdown-footer {
-  border-top: 1px solid $color-border;
+  border-top: $border-thin solid $color-border;
   padding: $spacing-sm;
 }
 

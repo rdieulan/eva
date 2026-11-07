@@ -45,11 +45,12 @@ export function getAvailabilityClass(status: AvailabilityStatus | null): string 
 const TEAM_AVAILABILITY_DISPLAY: Record<TeamAvailabilityStatus, Pick<AvailabilityDisplay, 'label' | 'title'>> = {
   ready: { label: `${TEAM_PLAYER_COUNT} dispos`, title: `Au moins ${TEAM_PLAYER_COUNT} joueurs disponibles` },
   shaky: { label: `${TEAM_PLAYER_COUNT} possibles`, title: `${TEAM_PLAYER_COUNT} joueurs en comptant les disponibilités possibles` },
+  voice: { label: `${TEAM_PLAYER_COUNT} en vocal`, title: `Au moins ${TEAM_PLAYER_COUNT} joueurs en vocal, pas d'alignement en salle pour l'instant` },
   short: { label: `Moins de ${TEAM_PLAYER_COUNT}`, title: `Moins de ${TEAM_PLAYER_COUNT} joueurs mobilisables` },
-  unknown: { label: '?', title: 'Personne n\'a encore renseigné sa disponibilité' },
+  unknown: { label: '?', title: 'Rien d\'acquis pour l\'instant, des joueurs n\'ont pas encore répondu' },
 };
 
-export const TEAM_AVAILABILITY_STATUSES: readonly TeamAvailabilityStatus[] = ['ready', 'shaky', 'short', 'unknown'];
+export const TEAM_AVAILABILITY_STATUSES: readonly TeamAvailabilityStatus[] = ['ready', 'shaky', 'voice', 'short', 'unknown'];
 
 /**
  * Get the label and meaning of a team-level availability

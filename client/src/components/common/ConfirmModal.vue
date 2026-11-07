@@ -86,7 +86,6 @@ function handleCancel() {
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
 @use '@/styles/buttons' as *;
-@use 'sass:color';
 
 h3 {
   margin: 0;
@@ -124,7 +123,7 @@ h3 {
   input {
     padding: $spacing-sm;
     background: $color-bg-tertiary;
-    border: 1px solid $color-border;
+    border: $border-thin solid $color-border;
     border-radius: $radius-sm;
     color: $color-text-primary;
     font-size: $font-size-base;

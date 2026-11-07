@@ -29,6 +29,18 @@ export { addMinutesToTime } from './time.utils';
 
 export { buildEvaBookingUrl, assessSlotHeadcount, type SlotHeadcount, type SlotHeadcountStatus } from './eva.utils';
 
+export {
+  followsOn,
+  isOneRun,
+  orderRunSlots,
+  slotStreaks,
+  runSpan,
+  spansOverlap,
+  countMatches,
+  type RunSlot,
+  type TimeSpan,
+} from './scrim.utils';
+
 export { normalizeLinkUrl, isAcceptableLinkInput } from './venue.utils';
 
 export { detectImageType } from './image.utils';

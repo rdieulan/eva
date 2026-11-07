@@ -107,6 +107,6 @@ export async function unlinkMyEvaAccount(): Promise<void> {
   // Answers 204 with no body, so the JSON-parsing form of authFetch does not apply
   const response = await authFetch('/api/players/me/eva-account', { method: 'DELETE' });
   if (!response.ok) {
-    throw ApiError.fromResponse(await response.json(), ERROR.evaAccountUnlinkFailed);
+    throw await ApiError.fromFailedResponse(response, ERROR.evaAccountUnlinkFailed);
   }
 }

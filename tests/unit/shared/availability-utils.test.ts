@@ -11,7 +11,7 @@ function statuses(...entries: Array<[AvailabilityStatus | null, number]>): Array
 describe('assessTeamAvailability', () => {
   it('is ready with a full lineup of available players', () => {
     expect(assessTeamAvailability(statuses(['AVAILABLE', TEAM_PLAYER_COUNT])))
-      .toEqual({ status: 'ready', available: TEAM_PLAYER_COUNT, conditional: 0, answered: TEAM_PLAYER_COUNT });
+      .toEqual({ status: 'ready', available: TEAM_PLAYER_COUNT, conditional: 0, voice: 0, pending: 0 });
   });
 
   it('stays ready with more players than needed, whatever the others say', () => {
@@ -22,32 +22,55 @@ describe('assessTeamAvailability', () => {
 
   it('is shaky when the lineup needs a conditional player', () => {
     expect(assessTeamAvailability(statuses(['AVAILABLE', TEAM_PLAYER_COUNT - 1], ['CONDITIONAL', 1])))
-      .toEqual({ status: 'shaky', available: TEAM_PLAYER_COUNT - 1, conditional: 1, answered: TEAM_PLAYER_COUNT });
+      .toEqual({ status: 'shaky', available: TEAM_PLAYER_COUNT - 1, conditional: 1, voice: 0, pending: 0 });
   });
 
   it('is shaky with a lineup made only of conditional players', () => {
     expect(assessTeamAvailability(statuses(['CONDITIONAL', TEAM_PLAYER_COUNT])).status).toBe('shaky');
   });
 
-  it('is short when available and conditional players do not add up', () => {
-    expect(assessTeamAvailability(statuses(['AVAILABLE', TEAM_PLAYER_COUNT - 2], ['CONDITIONAL', 1])).status)
+  it('is voice when the arena is out of reach but a table can meet on voice chat', () => {
+    expect(assessTeamAvailability(statuses(['VOICE_ONLY', TEAM_PLAYER_COUNT], ['UNAVAILABLE', 1])))
+      .toEqual({ status: 'voice', available: 0, conditional: 0, voice: TEAM_PLAYER_COUNT, pending: 0 });
+    // Players bound for the arena sit at the voice table too
+    expect(assessTeamAvailability(statuses(['AVAILABLE', 1], ['CONDITIONAL', 1], ['VOICE_ONLY', TEAM_PLAYER_COUNT - 2], ['UNAVAILABLE', 2])).status)
+      .toBe('voice');
+  });
+
+  it('is short once everyone has answered and the players do not add up', () => {
+    expect(assessTeamAvailability(statuses(['AVAILABLE', TEAM_PLAYER_COUNT - 2], ['CONDITIONAL', 1], ['UNAVAILABLE', 2])).status)
       .toBe('short');
   });
 
-  it('does not count voice-only, unavailable or unset players', () => {
-    const result = assessTeamAvailability(
-      statuses(['AVAILABLE', TEAM_PLAYER_COUNT - 1], ['VOICE_ONLY', 3], ['UNAVAILABLE', 3], [null, 3]),
-    );
-    expect(result).toEqual({ status: 'short', available: TEAM_PLAYER_COUNT - 1, conditional: 0, answered: TEAM_PLAYER_COUNT + 5 });
+  it('does not count unavailable players', () => {
+    const result = assessTeamAvailability(statuses(['AVAILABLE', TEAM_PLAYER_COUNT - 1], ['UNAVAILABLE', 3]));
+    expect(result).toEqual({ status: 'short', available: TEAM_PLAYER_COUNT - 1, conditional: 0, voice: 0, pending: 0 });
   });
 
-  it('is unknown while nobody has answered: silence is not a no', () => {
-    expect(assessTeamAvailability([])).toEqual({ status: 'unknown', available: 0, conditional: 0, answered: 0 });
-    expect(assessTeamAvailability(statuses([null, 5])).status).toBe('unknown');
+  it('is short when not even a voice table can meet', () => {
+    expect(assessTeamAvailability(statuses(['AVAILABLE', 1], ['VOICE_ONLY', 2], ['UNAVAILABLE', 3])).status).toBe('short');
   });
 
-  it('is short as soon as one answer shows the lineup is not there', () => {
-    expect(assessTeamAvailability(statuses(['UNAVAILABLE', 1], [null, 4])).status).toBe('short');
-    expect(assessTeamAvailability(statuses(['AVAILABLE', 1], [null, 4])).status).toBe('short');
+  it('is short when the silent players could not complete anything anyway', () => {
+    expect(assessTeamAvailability(statuses(['AVAILABLE', 1], ['UNAVAILABLE', 3], [null, TEAM_PLAYER_COUNT - 2])).status).toBe('short');
+    expect(assessTeamAvailability(statuses([null, TEAM_PLAYER_COUNT - 1])).status).toBe('short');
+    expect(assessTeamAvailability([]).status).toBe('short');
+  });
+
+  it('is unknown while nothing is sure and the silent players could still fill a table: silence is not a no', () => {
+    expect(assessTeamAvailability(statuses([null, 5])))
+      .toEqual({ status: 'unknown', available: 0, conditional: 0, voice: 0, pending: 5 });
+    expect(assessTeamAvailability(statuses(['AVAILABLE', 1], [null, 5])).status).toBe('unknown');
+    expect(assessTeamAvailability(statuses(['UNAVAILABLE', 1], [null, TEAM_PLAYER_COUNT])).status).toBe('unknown');
+    expect(assessTeamAvailability(statuses(['AVAILABLE', TEAM_PLAYER_COUNT - 1], ['UNAVAILABLE', 1], [null, 1])).status).toBe('unknown');
+  });
+
+  it('is voice as soon as a voice table is sure, whatever the silent players may add', () => {
+    expect(assessTeamAvailability(statuses(['VOICE_ONLY', TEAM_PLAYER_COUNT], [null, TEAM_PLAYER_COUNT])).status).toBe('voice');
+    expect(assessTeamAvailability(statuses(['AVAILABLE', 2], ['CONDITIONAL', 1], ['VOICE_ONLY', 1], [null, 2])).status).toBe('voice');
+  });
+
+  it('is unknown while silent players could still fill the voice table', () => {
+    expect(assessTeamAvailability(statuses(['AVAILABLE', 1], ['VOICE_ONLY', 2], ['UNAVAILABLE', 2], [null, 1])).status).toBe('unknown');
   });
 });

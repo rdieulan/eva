@@ -34,8 +34,7 @@ export async function fetchCurrentTeam(): Promise<TeamWithMembers | null> {
   }
 
   if (!response.ok) {
-    const errorData = await response.json();
-    throw ApiError.fromResponse(errorData, ERROR.teamFetchFailed);
+    throw await ApiError.fromFailedResponse(response, ERROR.teamFetchFailed);
   }
 
   return response.json();
@@ -100,7 +99,7 @@ export async function uploadTeamLogo(file: File): Promise<{ logoUrl: string }> {
     body: file,
   });
   if (!response.ok) {
-    throw ApiError.fromResponse(await response.json(), ERROR.teamLogoUploadFailed);
+    throw await ApiError.fromFailedResponse(response, ERROR.teamLogoUploadFailed);
   }
   return (await response.json()) as { logoUrl: string };
 }
@@ -112,7 +111,7 @@ export async function deleteTeamLogo(): Promise<void> {
   // Answers 204 with no body, so the JSON-parsing form of authFetch does not apply
   const response = await authFetch(`${API_BASE}/current/logo`, { method: 'DELETE' });
   if (!response.ok) {
-    throw ApiError.fromResponse(await response.json(), ERROR.teamLogoDeleteFailed);
+    throw await ApiError.fromFailedResponse(response, ERROR.teamLogoDeleteFailed);
   }
 }
 

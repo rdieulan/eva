@@ -136,7 +136,7 @@ defineExpose({ resetForm });
   select, input {
     padding: $spacing-sm $spacing-md;
     background: $color-bg-secondary;
-    border: 1px solid $color-border-light;
+    border: $border-thin solid $color-border-light;
     border-radius: $radius-md;
     color: $color-white;
     font-size: $font-size-base;
@@ -172,7 +172,7 @@ defineExpose({ resetForm });
   flex: 1;
   padding: $spacing-sm $spacing-md;
   background: $color-bg-secondary;
-  border: 1px solid $color-border-light;
+  border: $border-thin solid $color-border-light;
   border-radius: $radius-md;
   color: $color-accent;
   font-family: monospace;

@@ -1,6 +1,11 @@
 // ===========================================
 // SCSS Variables & Mixins
 // ===========================================
+// Layout constants (breakpoints, spacing, font sizes) are fixed at build time.
+// Everything that makes up the look (colours, radii, borders, font) is a theme
+// token: a CSS custom property set by the active theme (see styles/themes/),
+// which the SCSS names below merely point to. Components keep using the SCSS
+// names; the value is resolved by the browser, so themes switch at runtime.
 
 // ===== Breakpoints =====
 $breakpoint-mobile: 480px;
@@ -53,92 +58,194 @@ $font-size-4xl: 3rem;
 // ===== Touch Target =====
 $touch-target-min: 44px;
 
+// ===========================================
+// THEME TOKENS
+// Values live in styles/themes/_<theme>.scss. Add a token there first, then
+// expose it here.
+// ===========================================
+
+// ===== Typeface =====
+$font-family: var(--font-family);
 
 // ===== Border Radius =====
-$radius-sm: 4px;
-$radius-md: 8px;
-$radius-lg: 12px;
-$radius-xl: 16px;
+$radius-sm: var(--radius-sm);
+$radius-md: var(--radius-md);
+$radius-lg: var(--radius-lg);
+$radius-xl: var(--radius-xl);
 
-// ===========================================
-// COLOR PALETTE
-// All colors used by the application
-// Edit here to change the global theme
-// ===========================================
+// ===== Border widths: thin for quiet separations, thick for emphasis =====
+$border-thin: var(--border-thin);
+$border-thick: var(--border-thick);
 
 // ===== Base Colors =====
-$color-white: #fff;
-$color-black: #000;
+$color-white: var(--color-white);
+$color-black: var(--color-black);
 
 // ===== Backgrounds (darkest to lightest) =====
-$color-bg-primary: #0f0f1a;
-$color-bg-secondary: #1a1a2e;
-$color-bg-tertiary: #2a2a4a;
+$color-bg-primary: var(--color-bg-primary);
+$color-bg-secondary: var(--color-bg-secondary);
+$color-bg-tertiary: var(--color-bg-tertiary);
 
 // ===== Borders =====
-$color-border: #333;
-$color-border-light: #3a3a5a;
+$color-border: var(--color-border);
+$color-border-light: var(--color-border-light);
 
 // ===== Text =====
-$color-text-primary: rgba(255, 255, 255, 0.87);
-$color-text-secondary: #888;
-$color-text-muted: #ccc;
+$color-text-primary: var(--color-text-primary);
+$color-text-secondary: var(--color-text-secondary);
+$color-text-muted: var(--color-text-muted);
 
 // ===== Accent (primary actions, buttons, links) =====
-$color-accent: #7a7aba;
+$color-accent: var(--color-accent);
 
 // ===== Semantic =====
 // Success: validations, confirmations, available
-$color-success: #4ade80;
-
+$color-success: var(--color-success);
 // Danger: errors, deletions, cancellations, unavailable
-$color-danger: #981b1b;
-
+$color-danger: var(--color-danger);
 // Warning: alerts, attention required
-$color-warning: #fb923c;
-
+$color-warning: var(--color-warning);
 // Info: information, help
-$color-info: #60a5fa;
-
+$color-info: var(--color-info);
 // Conditional: conditional availability (yellow)
-$color-conditional: #facc15;
+$color-conditional: var(--color-conditional);
 
 // ===== Special =====
 // Star/favorite (main role)
-$color-star: #fbbf24;
-
+$color-star: var(--color-star);
 // Edit/modify actions (buttons, icons)
-$color-edit: #fbbf24;
-
+$color-edit: var(--color-edit);
 // Interactive handles (resize, drag, manipulation)
-$color-handle: #4ecdc4;
-
+$color-handle: var(--color-handle);
 // Voice meeting events: a blue-violet, kept distinct from $color-voice so a
 // meeting is not read as a voice-only availability
-$color-voice-meeting: #8891f2;
-
+$color-voice-meeting: var(--color-voice-meeting);
 // Subscription renewal days in the calendar
-$color-renewal: #f87171;
-
+$color-renewal: var(--color-renewal);
 // Voice-only availability: can join voice chat, not play
-$color-voice: #c084fc;
+$color-voice: var(--color-voice);
+
+// ===== Overlay / Shadow =====
+$color-overlay: var(--color-overlay);
+$color-shadow: var(--color-shadow);
+
+// ===== Relief: the three kinds of day =====
+// A day the team can use is raised; a day of the month it cannot use is idle;
+// a day outside the month is sunken. Each kind has a box-shadow, and a tint
+// laid over its surface as a vertical gradient of two colours, top then
+// bottom: lit from above when raised, shaded from above when sunken. A theme
+// gives each kind the relief it wants: a plate, the ground itself, a hollow.
+// A flat theme sets the shadows to a null shadow (`0 0 0 0 transparent`,
+// never `none`, so they can sit in a shadow list next to a ring) and the
+// tints to `transparent, transparent`.
+$elevation-raised: var(--elevation-raised);
+$elevation-idle: var(--elevation-idle);
+$elevation-sunken: var(--elevation-sunken);
+$surface-raised-tint: var(--surface-raised-tint);
+$surface-idle-tint: var(--surface-idle-tint);
+$surface-sunken-tint: var(--surface-sunken-tint);
+// A relief surface may drop its outline, so the relief reads without a line
+// around it; a flat theme keeps it
+$surface-border-width: var(--surface-border-width);
+// The fill of an idle day: its own plate, or `transparent` in a theme where
+// such a day is the ground itself
+$surface-idle-fill: var(--surface-idle-fill);
+// The large day number behind a day: its neutral ink, and how much of the
+// day's own colour replaces it, so the number reads as a denser patch of the
+// day rather than a wash over it. 0% keeps the neutral ink everywhere.
+$day-number-ink: var(--day-number-ink);
+$day-number-tint: var(--day-number-tint);
+// The corner of a day: a chamfered triangle in the reader's colour near the
+// bottom-right of the day, cut as a recess in it, or standing on it as a chip
+// where the theme says so. Three walls, each a trapezoid of the day's own
+// surface under its gradient, lit or shaded by the light; a face in the
+// reader's colour, under the shadow of the walls when it is a floor. A flat
+// theme sets the rim and the walls to zero and every gradient to `none`: the
+// face fills the whole corner.
+// Leg of the triangle, walls included, on desktop; two thirds of it on small
+// screens. The face left inside the walls must hold the symbol, an 11px round
+// on its centroid: size ≥ 3.414 × walls + 23.3px, or the symbol overflows the
+// face.
+$corner-size: var(--corner-size);
+// Gap between the triangle and the edges of the day, bare surface of the day,
+// as a share of the padding of the day: 0 sets the triangle flush in the
+// corner, 1 in line with the content
+$corner-rim: var(--corner-rim);
+$corner-bevel-width: var(--corner-bevel-width); // Width of the walls
+// The corner sits in the bottom-right of the day. One set for the corner of
+// a raised day, one for an idle day: the three walls, along the bottom edge,
+// the right edge and the hypotenuse, the face, a filter list on the face or
+// `none` (an idle day may fade the reader's colour, so the status recedes
+// with a day the team cannot use), and the cast shadow, as filter
+// drop-shadow() list or `none`. Under a light from the top-left, a recess has
+// its bottom and right walls lit alike, so the walls along the edges of the
+// day read as one even band around the rounded vertex, its diagonal wall in
+// shadow, its floor shaded below the diagonal and no cast shadow; a chip
+// standing on the day is the mirror, with a cast shadow below. A theme may
+// cut a recess in both kinds of day, or stand a chip on the idle one. A day
+// outside the month has no corner: its availabilities are not loaded.
+$corner-raised-wall-bottom: var(--corner-raised-wall-bottom);
+$corner-raised-wall-right: var(--corner-raised-wall-right);
+$corner-raised-wall-diagonal: var(--corner-raised-wall-diagonal);
+$corner-raised-face: var(--corner-raised-face);
+$corner-raised-face-filter: var(--corner-raised-face-filter);
+$corner-raised-cast: var(--corner-raised-cast);
+$corner-idle-wall-bottom: var(--corner-idle-wall-bottom);
+$corner-idle-wall-right: var(--corner-idle-wall-right);
+$corner-idle-wall-diagonal: var(--corner-idle-wall-diagonal);
+$corner-idle-face: var(--corner-idle-face);
+$corner-idle-face-filter: var(--corner-idle-face-filter);
+$corner-idle-cast: var(--corner-idle-cast);
+$corner-symbol-color: var(--corner-symbol-color);
+
+// ===== Texture: an image laid over the ground, or `none` =====
+$texture-bg: var(--texture-bg);
+
+// The soft diagonal backdrop of the pages and bars, under the theme's texture
+@mixin surface-gradient {
+  background: $texture-bg, linear-gradient(135deg, $color-bg-secondary 0%, $color-bg-tertiary 100%);
+}
+
+// ===========================================
+// COLOR HELPERS
+// Tokens are resolved by the browser, so SCSS cannot do colour math on them.
+// These helpers emit the native CSS equivalent, which can.
+// ===========================================
+
+// The colour at a given opacity: with-alpha($color-accent, 0.15)
+@function with-alpha($color, $alpha) {
+  @return color-mix(in srgb, #{$color} #{$alpha * 100%}, transparent);
+}
+
+// The colour darkened by mixing in black: shade($color-accent, 10%)
+@function shade($color, $amount) {
+  @return color-mix(in srgb, #{$color}, black #{$amount});
+}
+
+// The colour lightened by mixing in white: tint($color-accent, 25%)
+@function tint($color, $amount) {
+  @return color-mix(in srgb, #{$color}, white #{$amount});
+}
+
+// ===========================================
+// STATUS MAPS
+// ===========================================
 
 // Availability statuses — keys are the kebab-case AvailabilityStatus values, used as
 // `.availability--<key>` modifiers (see getAvailabilityClass in utils/availability.ts).
-// avatar-bg / avatar-border: lightness shifts of the player badges, calibrated per colour
-// so the initials stay readable.
-$availability-styles: (
-  available: (color: $color-success, avatar-bg: -43%, avatar-border: 0%),
-  conditional: (color: $color-conditional, avatar-bg: -28%, avatar-border: 0%),
-  voice-only: (color: $color-voice, avatar-bg: -40%, avatar-border: 0%),
-  unavailable: (color: $color-danger, avatar-bg: -36%, avatar-border: 34%),
+$availability-colors: (
+  available: $color-success,
+  conditional: $color-conditional,
+  voice-only: $color-voice,
+  unavailable: $color-danger,
 );
 
-// Team-level availability of a day in matchmaking mode — keys are the
-// TeamAvailabilityStatus values, used as `.team-availability--<key>` modifiers
+// Team-level availability of a day — keys are the TeamAvailabilityStatus
+// values, used as `.team-availability--<key>` modifiers
 $team-availability-colors: (
   ready: $color-success,
   shaky: $color-conditional,
+  voice: $color-voice,
   short: $color-danger,
 );
 
@@ -149,14 +256,3 @@ $event-type-colors: (
   event: $color-info,
   voice-meeting: $color-voice-meeting,
 );
-
-// ===========================================
-// DERIVED COLORS (computed from base colors)
-// Use rgba() or color.adjust() in components
-// to create variants (hover, bg, border, etc.)
-// ===========================================
-
-// Overlay/Shadow
-$color-overlay: rgba($color-black, 0.7);
-$color-shadow: rgba($color-black, 0.3);
-

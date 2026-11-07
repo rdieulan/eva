@@ -14,7 +14,7 @@ const props = defineProps<{
   scrimSearches?: Record<string, ScrimSearch[]>; // Searches of each day
   selectable?: boolean; // Matchmaking: days can be picked for a search
   selectedDates?: string[];
-  playerLabels?: Record<string, string>;
+  currentPlayerId?: string; // Puts the reader first in the roster of a day, in edit mode
 }>();
 
 const emit = defineEmits<{
@@ -25,6 +25,7 @@ const emit = defineEmits<{
   'open-create-event': [date: string];
   'toggle-select': [date: string];
   'open-search': [search: ScrimSearch];
+  'open-day': [date: string];
 }>();
 
 // Day names (full) - tuple type for type safety
@@ -136,12 +137,13 @@ watch(() => props.weekStart, () => {
           :scrim-searches="props.scrimSearches?.[cell.date] ?? []"
           :selectable="props.selectable"
           :selected="props.selectedDates?.includes(cell.date) ?? false"
-          :player-labels="props.playerLabels"
+          :current-player-id="props.currentPlayerId"
           @set-availability="(status) => handleSetAvailability(cell.date, status)"
           @open-event-viewer="(events, index) => emit('open-event-viewer', events, index)"
           @open-create-event="(date) => emit('open-create-event', date)"
           @toggle-select="(date) => emit('toggle-select', date)"
           @open-search="(search) => emit('open-search', search)"
+          @open-day="(date) => emit('open-day', date)"
         />
       </div>
     </div>
@@ -170,7 +172,8 @@ watch(() => props.weekStart, () => {
 
 .week-days {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  // minmax(0, 1fr), not 1fr: a column must not grow to fit a long title
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: $spacing-sm;
 
   @include tablet {
@@ -178,7 +181,7 @@ watch(() => props.weekStart, () => {
   }
 
   @include mobile-lg {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: $spacing-sm;
   }
 
@@ -190,10 +193,11 @@ watch(() => props.weekStart, () => {
 .week-day-column {
   display: flex;
   flex-direction: column;
+  min-width: 0; // A grid item: may shrink below the width of its titles
   gap: $spacing-sm;
 
   &.is-today .week-day-header {
-    background: rgba($color-accent, 0.2);
+    background: with-alpha($color-accent, 0.2);
     border-color: $color-accent;
   }
 
@@ -212,8 +216,8 @@ watch(() => props.weekStart, () => {
   flex-direction: column;
   align-items: center;
   padding: $spacing-sm;
-  background: rgba($color-bg-tertiary, 0.5);
-  border: 1px solid $color-border-light;
+  background: with-alpha($color-bg-tertiary, 0.5);
+  border: $border-thin solid $color-border-light;
   border-radius: $radius-md;
 
   @include tablet {
@@ -273,78 +277,27 @@ watch(() => props.weekStart, () => {
   }
 }
 
+// A day keeps the height every day has (see DayCell): a week reads like a row
+// of the month, and switching between the two moves nothing
 .week-day-cell {
-  min-height: 200px;
-
   @include mobile-lg {
     flex: 1;
-    min-height: 80px;
-  }
-
-  @include mobile {
-    min-height: 70px;
   }
 }
 
 :deep(.day-cell) {
-  min-height: 200px;
-
-  @include tablet {
-    min-height: 160px;
-  }
-
   @include mobile-lg {
-    min-height: 80px;
     // Switch to row layout for week view on mobile
     flex-direction: row;
     align-items: stretch;
   }
-
-  @include mobile {
-    min-height: 70px;
-  }
 }
 
-// Week view mobile: reorganize DayCell content
+// Week view mobile: the day header is already shown in week-day-header
 @include mobile-lg {
   :deep(.day-cell) {
-    // Main content area (events)
-    .events-list {
-      flex: 1;
-      justify-content: center;
-    }
-
-    // Player summary on right side, vertical
-    .players-summary {
-      flex-direction: column;
-      flex-wrap: nowrap;
-      margin-top: 0;
-      margin-left: auto;
-      justify-content: center;
-      gap: 2px;
-      padding-left: 0.25rem;
-      border-left: 1px solid rgba($color-white, 0.1);
-    }
-
-    // Hide day header (already shown in week-day-header)
     .day-header {
       display: none;
-    }
-  }
-}
-
-@include mobile {
-  :deep(.day-cell) {
-    .players-summary {
-      gap: 2px;
-      padding-left: 0.2rem;
-    }
-
-    // Keep same size as mobile-lg with visible initials
-    .player-avatar {
-      width: 16px;
-      height: 16px;
-      font-size: 0.45rem;
     }
   }
 }

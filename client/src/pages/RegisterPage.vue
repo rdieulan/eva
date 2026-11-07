@@ -184,7 +184,6 @@ function goToLogin() {
 
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
-@use 'sass:color';
 
 .register-page {
   min-height: 100%;
@@ -225,7 +224,7 @@ function goToLogin() {
   input {
     width: 100%;
     padding: $spacing-sm $spacing-md;
-    border: 1px solid $color-border;
+    border: $border-thin solid $color-border;
     border-radius: $radius-sm;
     background-color: $color-bg-primary;
     color: $color-text-primary;
@@ -267,7 +266,7 @@ function goToLogin() {
   transition: background-color 0.2s;
 
   &:hover:not(:disabled) {
-    background-color: color.scale($color-accent, $lightness: -17%);
+    background-color: shade($color-accent, 17%);
   }
 
   &:disabled {
@@ -291,7 +290,7 @@ function goToLogin() {
     text-decoration: underline;
 
     &:hover {
-      color: color.scale($color-accent, $lightness: 25%);
+      color: tint($color-accent, 25%);
     }
   }
 }

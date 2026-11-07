@@ -13,38 +13,49 @@ function normalize(text: string): string {
 }
 
 /**
- * Label of a venue for the pickers and the event screens.
- *
- * eva.gg names most venues after the town they are in, so repeating the city
- * would give "Nîmes - Nimes" or "Toulouse Blagnac - Blagnac". The city is only
- * worth showing when it says something the name does not, which is the case
- * when the arena sits in a neighbouring town: "Cannes - Mougins".
+ * Label of a venue wherever the app names it: its name alone. eva.gg names a
+ * venue after its town (Nîmes, Toulouse Blagnac, Lyon Nord), the name players
+ * know it by. The town of its address, often a neighbouring one (Avignon sits
+ * in Le Pontet), only shows in the admin's details of the venue.
  */
-export function formatVenueLabel(venue: Pick<Venue, 'name' | 'city'>): string {
-  const name = venue.name.trim();
-  const city = venue.city.trim();
+export function formatVenueLabel(venue: Pick<Venue, 'name'>): string {
+  return venue.name.trim();
+}
 
-  return normalize(name).includes(normalize(city)) ? name : `${name} - ${city}`;
+// The venues of the matchmaking menu, in the order it lists them
+export interface MatchmakingVenues {
+  affiliated: Venue | null; // The team's own venue, always first
+  favorites: Venue[];       // In the team's order
+  others: Venue[];          // The rest of the network, alphabetically
 }
 
 /**
- * The venues the matchmaking calendar can show, split between the team's own
- * (affiliated venue first, then favorites in the team's order) and the rest of
- * the network. Only venues linked to eva.gg have slots to show.
+ * The venues the matchmaking calendar can show: the team's affiliated venue,
+ * then its favorites in the team's order, then the rest of the network. Only
+ * venues linked to eva.gg have slots to show.
  */
-export function splitMatchmakingVenues(
+export function groupMatchmakingVenues(
   venues: Venue[],
   team: { venueId?: string | null; favoriteVenueIds: string[] } | null,
-): { quick: Venue[]; others: Venue[] } {
+): MatchmakingVenues {
   const linked = venues.filter(venue => venue.hasEvaSlots);
-  const quickIds = [...(team?.venueId ? [team.venueId] : []), ...(team?.favoriteVenueIds ?? [])];
-  const quick = [...new Set(quickIds)]
+  const affiliated = linked.find(venue => venue.id === team?.venueId) ?? null;
+  const favorites = [...new Set(team?.favoriteVenueIds ?? [])]
     .map(id => linked.find(venue => venue.id === id))
-    .filter((venue): venue is Venue => venue !== undefined);
+    .filter((venue): venue is Venue => venue !== undefined && venue !== affiliated);
   const others = linked
-    .filter(venue => !quick.includes(venue))
+    .filter(venue => venue !== affiliated && !favorites.includes(venue))
     .sort((a, b) => formatVenueLabel(a).localeCompare(formatVenueLabel(b), 'fr'));
-  return { quick, others };
+  return { affiliated, favorites, others };
+}
+
+/**
+ * Whether a venue answers what the reader typed: in its name or its town,
+ * accents and case aside
+ */
+export function venueMatches(venue: Pick<Venue, 'name' | 'city'>, query: string): boolean {
+  const wanted = normalize(query);
+  return !wanted || normalize(venue.name).includes(wanted) || normalize(venue.city).includes(wanted);
 }
 
 // Keyed by VenueLinkKey: a new network does not compile until it has a label

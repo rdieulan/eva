@@ -460,8 +460,8 @@ h1 {
 
 
   &.success {
-    background: rgba($color-success, 0.1);
-    border: 1px solid rgba($color-success, 0.3);
+    background: with-alpha($color-success, 0.1);
+    border: $border-thin solid with-alpha($color-success, 0.3);
     color: $color-success;
   }
 }

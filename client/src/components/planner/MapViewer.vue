@@ -911,7 +911,7 @@ defineExpose({
 
   button {
     padding: $spacing-sm $spacing-md;
-    border: 1px solid $color-border;
+    border: $border-thin solid $color-border;
     background: $color-bg-secondary;
     color: $color-text-muted;
     border-radius: $radius-sm;
@@ -922,7 +922,7 @@ defineExpose({
     }
 
     &.active {
-      background: rgba($color-accent, 0.4);
+      background: with-alpha($color-accent, 0.4);
       border-color: $color-accent;
       color: $color-white;
     }
@@ -982,8 +982,8 @@ defineExpose({
 }
 
 .zone {
-  fill: rgba($color-text-secondary, 0.1);
-  stroke: rgba($color-text-secondary, 0.3);
+  fill: with-alpha($color-text-secondary, 0.1);
+  stroke: with-alpha($color-text-secondary, 0.3);
   stroke-width: 0.3;
 
   &.active {
@@ -1006,8 +1006,8 @@ defineExpose({
 }
 
 .marker {
-  fill: rgba($color-text-secondary, 0.1);
-  stroke: rgba($color-text-secondary, 0.3);
+  fill: with-alpha($color-text-secondary, 0.1);
+  stroke: with-alpha($color-text-secondary, 0.3);
   stroke-width: 0.3;
 
   &.active {

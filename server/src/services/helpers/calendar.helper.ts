@@ -7,7 +7,7 @@ import { isValidVoiceMedium } from './validation.helper';
 
 // Relation to load alongside an event so it can be formatted for the frontend
 export const EVENT_VENUE_INCLUDE = {
-  venue: { select: { id: true, name: true, city: true, externalId: true, discord: true } },
+  venue: { select: { id: true, name: true, externalId: true, discord: true } },
 } as const;
 
 // The venue of an event as Prisma hands it over, before we rename its eva.gg id
@@ -94,7 +94,6 @@ export function formatEventForFrontend(event: {
       ? {
           id: event.venue.id,
           name: event.venue.name,
-          city: event.venue.city,
           evaLocationId: event.venue.externalId,
           discord: event.venue.discord,
         }

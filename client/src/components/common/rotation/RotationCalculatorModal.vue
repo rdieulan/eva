@@ -175,7 +175,7 @@ const { errors, setError } = useErrors();
 
   button {
     padding: 0.4rem 0.8rem;
-    border: 2px solid $color-text-secondary;
+    border: $border-thick solid $color-text-secondary;
     background: transparent;
     color: $color-text-muted;
     border-radius: $radius-sm;
@@ -211,7 +211,7 @@ const { errors, setError } = useErrors();
 .btn-small {
   padding: 0.2rem $spacing-sm;
   background: $color-bg-tertiary;
-  border: 1px solid $color-border;
+  border: $border-thin solid $color-border;
   color: $color-text-secondary;
   border-radius: 3px;
   font-size: 0.75rem;
@@ -236,7 +236,7 @@ const { errors, setError } = useErrors();
   gap: 0.4rem;
   padding: 0.3rem 0.6rem;
   background: $color-bg-tertiary;
-  border: 1px solid $color-border;
+  border: $border-thin solid $color-border;
   border-radius: $radius-sm;
   color: $color-text-secondary;
   font-size: 0.8rem;
@@ -249,7 +249,7 @@ const { errors, setError } = useErrors();
   }
 
   &.checked {
-    background: rgba($color-success, 0.2);
+    background: with-alpha($color-success, 0.2);
     border-color: $color-success;
     color: $color-success;
   }
@@ -267,7 +267,7 @@ const { errors, setError } = useErrors();
 }
 
 .export-section {
-  border-top: 1px solid $color-border;
+  border-top: $border-thin solid $color-border;
   padding-top: $spacing-lg;
   margin-top: $spacing-md;
 }
@@ -276,8 +276,8 @@ const { errors, setError } = useErrors();
   width: 100%;
   margin-top: $spacing-md;
   padding: 0.75rem;
-  background: rgba($color-success, 0.2);
-  border: 1px solid $color-success;
+  background: with-alpha($color-success, 0.2);
+  border: $border-thin solid $color-success;
   border-radius: $radius-md;
   color: $color-success;
   font-size: 0.9rem;
@@ -286,7 +286,7 @@ const { errors, setError } = useErrors();
   transition: all 0.2s;
 
   &:hover {
-    background: rgba($color-success, 0.3);
+    background: with-alpha($color-success, 0.3);
   }
 }
 </style>

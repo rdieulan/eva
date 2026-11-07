@@ -132,18 +132,18 @@ function getAssignmentName(mapId: string, assignmentId: number): string {
   display: flex;
   flex-direction: column;
   gap: $spacing-md;
-  border-top: 1px solid $color-border;
+  border-top: $border-thin solid $color-border;
   padding-top: $spacing-lg;
 }
 
 .result-card {
   background: $color-bg-tertiary;
-  border: 1px solid $color-border;
+  border: $border-thin solid $color-border;
   border-radius: 6px;
   padding: $spacing-md;
 
   &.has-errors {
-    border-color: rgba($color-danger, 0.5);
+    border-color: with-alpha($color-danger, 0.5);
   }
 
   h3 {
@@ -171,7 +171,7 @@ function getAssignmentName(mapId: string, assignmentId: number): string {
 .plan-select {
   padding: 0.25rem 0.5rem;
   background: $color-bg-secondary;
-  border: 1px solid $color-text-secondary;
+  border: $border-thin solid $color-text-secondary;
   border-radius: $radius-sm;
   color: $color-text-muted;
   font-size: 0.8rem;
@@ -221,7 +221,7 @@ function getAssignmentName(mapId: string, assignmentId: number): string {
   background: $color-bg-secondary;
   border-radius: $radius-sm;
   cursor: pointer;
-  border: 2px solid transparent;
+  border: $border-thick solid transparent;
   transition: all 0.15s;
   align-items: center;
 
@@ -231,7 +231,7 @@ function getAssignmentName(mapId: string, assignmentId: number): string {
   }
 
   &.selected {
-    background: rgba($color-success, 0.1);
+    background: with-alpha($color-success, 0.1);
     border-color: $color-success;
 
     .config-selector {
@@ -254,7 +254,7 @@ function getAssignmentName(mapId: string, assignmentId: number): string {
 
 .assignment-tag {
   padding: 0.15rem 0.4rem;
-  border: 1px solid;
+  border: $border-thin solid;
   border-radius: 3px;
   font-size: 0.75rem;
   font-weight: 600;

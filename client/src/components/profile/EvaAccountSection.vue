@@ -80,36 +80,6 @@ onMounted(load);
 @use '@/styles/variables' as *;
 @use '@/styles/buttons' as *;
 
-.eva-account-section {
-  background: $color-bg-tertiary;
-  border: 1px solid $color-border-light;
-  border-radius: $radius-lg;
-  padding: $spacing-lg;
-  margin-bottom: $spacing-lg;
-
-  @include mobile-lg {
-    padding: 1.25rem;
-    margin-bottom: $spacing-md;
-    border-radius: 10px;
-  }
-
-  @include mobile {
-    padding: $spacing-md;
-    margin-bottom: 0.75rem;
-  }
-
-  h2 {
-    color: $color-accent;
-    margin: 0 0 $spacing-md;
-    font-size: 1.1rem;
-    font-weight: 600;
-
-    @include mobile-lg {
-      font-size: 1rem;
-    }
-  }
-}
-
 .loading-state {
   color: $color-text-secondary;
   text-align: center;
@@ -130,7 +100,7 @@ onMounted(load);
   gap: $spacing-md;
   padding: $spacing-sm $spacing-md;
   background: $color-bg-secondary;
-  border: 1px solid $color-accent;
+  border: $border-thin solid $color-accent;
   border-radius: $radius-md;
 
   @include mobile-lg {
@@ -181,7 +151,7 @@ onMounted(load);
   input {
     padding: 0.75rem $spacing-md;
     background: $color-bg-secondary;
-    border: 2px solid $color-border-light;
+    border: $border-thick solid $color-border-light;
     border-radius: $radius-md;
     color: $color-white;
     font-size: 1rem;
@@ -216,8 +186,8 @@ onMounted(load);
   text-align: center;
 
   &.success {
-    background: rgba($color-success, 0.1);
-    border: 1px solid rgba($color-success, 0.3);
+    background: with-alpha($color-success, 0.1);
+    border: $border-thin solid with-alpha($color-success, 0.3);
     color: $color-success;
   }
 }

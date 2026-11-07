@@ -25,8 +25,8 @@ const hasErrors = computed(() => displayErrors.value.length > 0);
 @use '@/styles/variables' as *;
 
 .error-display {
-  background-color: rgba($color-danger, 0.1);
-  border: 1px solid rgba($color-danger, 0.3);
+  background-color: with-alpha($color-danger, 0.1);
+  border: $border-thin solid with-alpha($color-danger, 0.3);
   color: $color-danger;
   padding: $spacing-sm;
   border-radius: $radius-sm;

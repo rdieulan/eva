@@ -17,6 +17,8 @@ function slot(startTime: string, endTime: string, overrides: Record<string, unkn
     arenaNumber: 1,
     takenSeats: 0,
     totalSeats: 10,
+    gameId: 1,
+    isCompetitiveAvailable: true,
     ...overrides,
   };
 }
@@ -65,10 +67,22 @@ describe('VenueSlotPicker', () => {
     await flushPromises();
 
     expect(rows(wrapper).map(r => `${r.find('.slot-time').text()} ${r.find('.slot-players').text()}`)).toEqual([
-      '20:00 – 20:40 7/8 joueurs',
-      '20:40 – 21:20 0/8 joueurs',
+      '20:00 7/8 joueurs',
+      '20:40 0/8 joueurs',
     ]);
+    // The start on the slot, like a row of the calendar; the whole span on hover
+    expect(rows(wrapper).map(r => r.attributes('title'))).toEqual(['20:00 – 20:40', '20:40 – 21:20']);
     expect(wrapper.text()).toContain('deux créneaux qui se suivent');
+  });
+
+  it('measures a slot against every note this picker may write on it, whatever the slots of the day', async () => {
+    vi.mocked(fetchVenueSlots).mockResolvedValue([S20H, S20H40]);
+    const wrapper = mountPicker({ playableOnly: true, runLength: 2, allowedSlotIds: ['slot-20:00'], excludedNote: 'Déjà pris' });
+    await flushPromises();
+
+    const notes = wrapper.findAll('.slot-ruler .slot-players').map(note => note.text());
+    expect(notes.sort()).toEqual(['Autre jeu', 'Compétitif fermé', 'Déjà pris', 'Non proposé', 'Occupé', 'Plage trop courte'].sort());
+    expect(wrapper.find('.slot-ruler').attributes('aria-hidden')).toBe('true');
   });
 
   it('marks a slot that holds a full match, and one with extra players in', async () => {

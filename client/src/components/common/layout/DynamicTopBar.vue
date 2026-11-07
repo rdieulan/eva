@@ -63,7 +63,7 @@ function goToProfile() {
   display: flex;
   align-items: stretch;
   background: $color-bg-secondary;
-  border-bottom: 1px solid $color-border;
+  border-bottom: $border-thin solid $color-border;
   min-height: 70px;
 
   @include tablet {
@@ -92,7 +92,7 @@ function goToProfile() {
   display: flex;
   align-items: center;
   padding: $spacing-sm $spacing-md;
-  border-right: 1px solid $color-border;
+  border-right: $border-thin solid $color-border;
 
   @include tablet {
     padding: $spacing-sm 0.75rem;
@@ -163,7 +163,7 @@ function goToProfile() {
   display: flex;
   align-items: center;
   padding: $spacing-sm $spacing-md;
-  border-left: 1px solid $color-border;
+  border-left: $border-thin solid $color-border;
 
   @include tablet {
     padding: $spacing-sm 0.75rem;
@@ -183,7 +183,7 @@ function goToProfile() {
   align-items: center;
   gap: $spacing-sm;
   padding: $spacing-sm $spacing-md;
-  border: 2px solid rgba($color-accent, 0.4);
+  border: $border-thick solid with-alpha($color-accent, 0.4);
   background: transparent;
   color: $color-accent;
   border-radius: 6px;
@@ -239,7 +239,7 @@ function goToProfile() {
   align-items: center;
   gap: $spacing-sm;
   padding: $spacing-sm $spacing-md;
-  border: 2px solid $color-accent;
+  border: $border-thick solid $color-accent;
   background: transparent;
   color: $color-accent;
   border-radius: 6px;

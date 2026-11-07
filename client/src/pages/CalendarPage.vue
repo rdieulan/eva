@@ -8,6 +8,7 @@ import EventViewerModal from '@/components/calendar/EventViewerModal.vue';
 import ScrimSelectionBar from '@/components/calendar/ScrimSelectionBar.vue';
 import ScrimSearchModal from '@/components/calendar/ScrimSearchModal.vue';
 import ScrimSearchViewerModal from '@/components/calendar/ScrimSearchViewerModal.vue';
+import DayAgendaModal, { type DayAgenda } from '@/components/calendar/DayAgendaModal.vue';
 import NoTeamMessage from '@/components/common/NoTeamMessage.vue';
 import ErrorModal from '@/components/common/error/ErrorModal.vue';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
@@ -16,11 +17,11 @@ import { useCalendar } from '@/composables/useCalendar';
 import { useCalendarEvents } from '@/composables/useCalendarEvents';
 import { useScrimSearches } from '@/composables/useScrimSearches';
 import { useErrors } from '@/composables/useErrors';
-import { fetchAllMaps, fetchPlayers, fetchVenues, fetchCurrentTeam } from '@/api';
-import { computePlayerInitials } from '@/utils/players';
-import { splitMatchmakingVenues, formatVenueLabel } from '@/utils/venues';
-import { ERROR } from '@shared/constants';
-import type { MapConfig, Player, Venue, ScrimSearch } from '@shared/types';
+import { fetchAllMaps, fetchPlayers, fetchVenues, fetchCurrentTeam, updateTeam } from '@/api';
+import { groupMatchmakingVenues } from '@/utils/venues';
+import { searchVenueIds } from '@/utils/scrims';
+import { ERROR, SCRIM_SEARCH_VENUES_MAX, TEAM_FAVORITE_VENUES_MAX } from '@shared/constants';
+import type { CalendarEvent, MapConfig, Player, Venue, ScrimSearch } from '@shared/types';
 
 const { permissions, account } = useAuth();
 
@@ -97,21 +98,6 @@ const {
 provide('calendarEditMode', editMode);
 provide('toggleCalendarEditMode', toggleEditMode);
 
-// Stable, roster-unique badge labels so players who share a first letter stay
-// distinguishable in the availability pastilles. Derived from the loaded days
-// (keyed by playerId) so it matches the ids the pastilles render with.
-const playerLabels = computed<Record<string, string>>(() => {
-  const roster = new Map<string, string>(); // playerId -> playerName
-  for (const day of Object.values(days.value)) {
-    for (const p of day?.playerAvailabilities ?? []) {
-      if (!roster.has(p.playerId)) roster.set(p.playerId, p.playerName);
-    }
-  }
-  return computePlayerInitials(
-    [...roster].map(([playerId, playerName]) => ({ playerId, playerName }))
-  );
-});
-
 // Maps and players for RotationCalculator
 const maps = ref<MapConfig[]>([]);
 const players = ref<Player[]>([]);
@@ -121,34 +107,65 @@ const venues = ref<Venue[]>([]);
 const teamVenueId = ref<string | null>(null);
 const teamFavoriteVenueIds = ref<string[]>([]);
 
-// Matchmaking: the team's venues first, the rest of the network behind, and the one shown
+// Matchmaking: the team's affiliated venue, its favorites, the rest of the
+// network, and the venues ticked in the menu
 const matchmakingVenues = computed(() =>
-  splitMatchmakingVenues(venues.value, { venueId: teamVenueId.value, favoriteVenueIds: teamFavoriteVenueIds.value }),
+  groupMatchmakingVenues(venues.value, { venueId: teamVenueId.value, favoriteVenueIds: teamFavoriteVenueIds.value }),
 );
-const matchmakingVenueId = ref<string | null>(null);
+const matchmakingVenueIds = ref<string[]>([]);
 const isMatchmaking = computed(() => calendarMode.value === 'matchmaking');
 
 // Entering matchmaking lands on the team's venue, or the first one it can show
 watch(isMatchmaking, entering => {
-  if (!entering || matchmakingVenueId.value) return;
-  matchmakingVenueId.value = matchmakingVenues.value.quick[0]?.id ?? matchmakingVenues.value.others[0]?.id ?? null;
+  if (!entering || matchmakingVenueIds.value.length) return;
+  const { affiliated, favorites, others } = matchmakingVenues.value;
+  const first = affiliated ?? favorites[0] ?? others[0];
+  matchmakingVenueIds.value = first ? [first.id] : [];
 });
 
-const matchmakingVenue = computed(() => venues.value.find(venue => venue.id === matchmakingVenueId.value) ?? null);
+// The ticked venues in the order of the menu, the order a search offers them in
+const selectedVenues = computed(() => {
+  const { affiliated, favorites, others } = matchmakingVenues.value;
+  return [...(affiliated ? [affiliated] : []), ...favorites, ...others]
+    .filter(venue => matchmakingVenueIds.value.includes(venue.id));
+});
 
-// Teams looking for an opponent: at the shown venue in matchmaking, the team's own otherwise
+// A star in the venue menu: the venue joins the team's favorites, last, or
+// leaves them. The menu reorders at once; a refusal puts it back.
+const canEditFavorites = computed(() => permissions.value.team.canManageTeam);
+const favoritesFull = computed(() => teamFavoriteVenueIds.value.length >= TEAM_FAVORITE_VENUES_MAX);
+const savingFavorites = ref(false);
+
+async function toggleFavoriteVenue(venueId: string) {
+  if (savingFavorites.value) return;
+  const before = teamFavoriteVenueIds.value;
+  teamFavoriteVenueIds.value = before.includes(venueId) ? before.filter(id => id !== venueId) : [...before, venueId];
+  savingFavorites.value = true;
+  try {
+    const saved = await updateTeam({ favoriteVenueIds: teamFavoriteVenueIds.value });
+    teamFavoriteVenueIds.value = saved.favoriteVenueIds;
+  } catch (err) {
+    teamFavoriteVenueIds.value = before;
+    setErrorFromException(err, ERROR.teamUpdateFailed);
+    showErrorModal.value = true;
+  } finally {
+    savingFavorites.value = false;
+  }
+}
+
+// Teams looking for an opponent: ours wherever they are, and in matchmaking
+// every other team's in the ticked venues
 const {
   byDate: scrimSearchesByDate,
-  mine: ownScrimSearches,
   load: loadScrimSearches,
 } = useScrimSearches({
   month: monthString,
-  venueId: computed(() => (isMatchmaking.value ? matchmakingVenueId.value : null)),
-  enabled: computed(() => !noTeam.value && (!isMatchmaking.value || matchmakingVenueId.value !== null)),
+  venueIds: computed(() => (isMatchmaking.value ? matchmakingVenueIds.value : null)),
+  enabled: computed(() => !noTeam.value && (!isMatchmaking.value || matchmakingVenueIds.value.length > 0)),
 });
 
-// Days picked for a search. Picking only makes sense with a venue to pick slots in.
-const canSearchScrims = computed(() => canCreateEvents.value && matchmakingVenueId.value !== null);
+// Days picked for a search. Picking only makes sense with venues to pick slots in.
+const canSearchScrims = computed(() => canCreateEvents.value && matchmakingVenueIds.value.length > 0);
 const selectedDates = ref<string[]>([]);
 const showScrimSearchModal = ref(false);
 
@@ -162,21 +179,80 @@ function clearSelectedDates() {
   selectedDates.value = [];
 }
 
-// A selection belongs to one venue and one view of the month
-watch([isMatchmaking, matchmakingVenueId, monthString], clearSelectedDates);
+// A selection belongs to one view of the month; the venues can change under it,
+// as long as one at least is left to offer slots in
+watch([isMatchmaking, monthString], clearSelectedDates);
+watch(matchmakingVenueIds, ids => {
+  if (!ids.length) clearSelectedDates();
+});
 
 function handleScrimSearchesOpened() {
   clearSelectedDates();
   loadScrimSearches();
 }
 
-// The search being looked at, from a cell
+// A proposal was sent, answered or withdrawn; an accepted one also put a match in the calendar
+function handleScrimSearchChanged({ matched }: { matched: boolean }) {
+  loadScrimSearches();
+  if (matched) loadCalendarData();
+}
+
+// The search being looked at, from a cell, or from the search modal over which it opens
 const viewedScrimSearch = ref<ScrimSearch | null>(null);
 
-const viewedSearchVenueLabel = computed(() => {
-  const venue = venues.value.find(candidate => candidate.id === viewedScrimSearch.value?.venueId);
-  return venue ? formatVenueLabel(venue) : null;
+// Our own search being changed, from its sheet: the search modal opens on it,
+// in place of the sheet
+const editedScrimSearch = ref<ScrimSearch | null>(null);
+
+// The venues of the search being changed first, then the ticked ones, as many as a search takes
+const editedSearchVenues = computed<Venue[]>(() => {
+  const search = editedScrimSearch.value;
+  if (!search) return [];
+  const ids = [...new Set([...searchVenueIds(search), ...matchmakingVenueIds.value])].slice(0, SCRIM_SEARCH_VENUES_MAX);
+  return ids.flatMap(id => venues.value.filter(venue => venue.id === id));
 });
+
+function editScrimSearch(search: ScrimSearch) {
+  viewedScrimSearch.value = null;
+  editedScrimSearch.value = search;
+  showScrimSearchModal.value = true;
+}
+
+function closeScrimSearchModal() {
+  showScrimSearchModal.value = false;
+  editedScrimSearch.value = null;
+}
+
+
+// A day listed whole, from the row of a cell that counts what the cell leaves
+// out. It reads the day as the calendar does: the searches alone in
+// matchmaking, what is planned besides in the team's view.
+const agendaDate = ref<string | null>(null);
+
+const agendaDay = computed<DayAgenda | null>(() => {
+  const date = agendaDate.value;
+  if (!date) return null;
+  const searches = scrimSearchesByDate.value[date] ?? [];
+  if (isMatchmaking.value) return { date, searches, events: [], renewals: [] };
+  return { date, searches, events: days.value[date]?.events ?? [], renewals: days.value[date]?.renewals ?? [] };
+});
+
+// What the team planned on the day of the search being looked at: an answer
+// picks its hours around it
+const viewedSearchPlans = computed(() =>
+  viewedScrimSearch.value ? days.value[viewedScrimSearch.value.date]?.events ?? [] : [],
+);
+
+// A row of the list opens what it shows, in place of the list
+function openSearchFromAgenda(search: ScrimSearch) {
+  agendaDate.value = null;
+  viewedScrimSearch.value = search;
+}
+
+function openEventsFromAgenda(events: CalendarEvent[], initialIndex: number) {
+  agendaDate.value = null;
+  openEventViewer(events, initialIndex);
+}
 
 // Initial load
 onMounted(async () => {
@@ -233,21 +309,24 @@ onMounted(async () => {
     <template v-else>
       <!-- Calendar controls -->
       <CalendarHeader
-        v-model:venue-id="matchmakingVenueId"
+        v-model:venue-ids="matchmakingVenueIds"
         :view-mode="viewMode"
         :calendar-mode="calendarMode"
         :navigation-title="navigationTitle"
-        :quick-venues="matchmakingVenues.quick"
-        :other-venues="matchmakingVenues.others"
+        :venues="matchmakingVenues"
+        :can-edit-favorites="canEditFavorites"
+        :favorites-full="favoritesFull"
+        :saving-favorites="savingFavorites"
         :can-search="canSearchScrims"
         @update:view-mode="viewMode = $event"
         @update:calendar-mode="calendarMode = $event"
+        @toggle-favorite="toggleFavoriteVenue"
         @prev="goToPrev"
         @next="goToNext"
       />
 
       <!-- Scrollable calendar content -->
-      <div class="calendar-content">
+      <div class="calendar-content" :class="{ 'has-selection-bar': selectedDates.length > 0 }">
         <CalendarBody
           :view-mode="viewMode"
           :year="currentYear"
@@ -259,7 +338,7 @@ onMounted(async () => {
           :scrim-searches="scrimSearchesByDate"
           :selectable="canSearchScrims"
           :selected-dates="selectedDates"
-          :player-labels="playerLabels"
+          :current-player-id="account?.playerId ?? undefined"
           @prev-month="goToPrevMonth"
           @next-month="goToNextMonth"
           @prev-week="goToPrevWeek"
@@ -269,6 +348,7 @@ onMounted(async () => {
           @open-create-event="openCreateEvent"
           @toggle-select="toggleSelectedDate"
           @open-search="viewedScrimSearch = $event"
+          @open-day="agendaDate = $event"
         />
       </div>
 
@@ -282,21 +362,34 @@ onMounted(async () => {
     <!-- Put the picked days up for an opponent -->
     <ScrimSearchModal
       :open="showScrimSearchModal"
-      :venue="matchmakingVenue"
+      :venues="editedScrimSearch ? editedSearchVenues : selectedVenues"
       :dates="selectedDates"
       :days="days"
-      :own-searches="ownScrimSearches"
-      @close="showScrimSearchModal = false"
+      :searches="scrimSearchesByDate"
+      :editing="editedScrimSearch"
+      @close="closeScrimSearchModal"
       @opened="handleScrimSearchesOpened"
+      @saved="loadScrimSearches"
+      @open-search="viewedScrimSearch = $event"
     />
 
-    <!-- A search picked in a cell -->
+    <!-- A day whose rows ran over, listed whole -->
+    <DayAgendaModal
+      :day="agendaDay"
+      @close="agendaDate = null"
+      @open-search="openSearchFromAgenda"
+      @open-event-viewer="openEventsFromAgenda"
+    />
+
+    <!-- A search picked in a cell, or answered from the search modal -->
     <ScrimSearchViewerModal
       :search="viewedScrimSearch"
-      :venue-label="viewedSearchVenueLabel"
-      :can-withdraw="(viewedScrimSearch?.isMine ?? false) && canCreateEvents"
+      :venues="venues"
+      :planned-events="viewedSearchPlans"
+      :can-act="canCreateEvents"
       @close="viewedScrimSearch = null"
-      @withdrawn="loadScrimSearches"
+      @changed="handleScrimSearchChanged"
+      @edit="editScrimSearch"
     />
 
     <!-- Event viewer modal -->
@@ -349,7 +442,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: linear-gradient(135deg, $color-bg-secondary 0%, $color-bg-tertiary 100%);
+  @include surface-gradient;
   overflow: hidden;
 }
 
@@ -382,7 +475,7 @@ onMounted(async () => {
 .btn-retry {
   padding: 0.75rem $spacing-lg;
   background: $color-bg-tertiary;
-  border: 1px solid $color-border-light;
+  border: $border-thin solid $color-border-light;
   border-radius: $radius-md;
   color: $color-text-muted;
   cursor: pointer;
@@ -402,6 +495,12 @@ onMounted(async () => {
   flex-direction: column;
   align-items: center;
   padding: 0 $spacing-xl $spacing-md;
+
+  // Room under the last week for the floating selection bar: the content
+  // scrolls clear of it, so the bar never hides a day
+  &.has-selection-bar {
+    padding-bottom: 5rem;
+  }
 
   // Hide scrollbar but keep scroll functionality
   scrollbar-width: none; // Firefox

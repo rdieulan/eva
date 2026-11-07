@@ -1,0 +1,104 @@
+// Theme « Ardoise »: natural, material tones that rest the eyes. Near-black
+// ground with a fine grain, moss, ochre, heather and brick instead of neon,
+// and relief in place of glow: what the team can do stands out from the
+// ground, what it cannot sinks into it.
+
+[data-theme='slate'] {
+  // Tighter cuts, like worked stone
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+
+  // Emphasis comes from relief, not from line weight
+  --border-thick: 1px;
+
+  // Ground: warm near-black to dark grey
+  --color-bg-primary: #121312;
+  --color-bg-secondary: #1a1b1a;
+  --color-bg-tertiary: #242624;
+
+  --color-border: #2e302e;
+  --color-border-light: #3a3d3a;
+
+  // Text: unbleached linen, never pure white
+  --color-text-primary: rgba(232, 228, 219, 0.88);
+  --color-text-secondary: #8a897f;
+  --color-text-muted: #b8b4a8;
+
+  // Accent: brass
+  --color-accent: #a68b5b;
+
+  // Statuses: moss, ochre, heather, brick
+  --color-success: #6f9c58;
+  --color-conditional: #c49c36;
+  --color-voice: #9a7cae;
+  --color-danger: #8f3a2a;
+
+  // Terracotta, slate blue
+  --color-warning: #b07543;
+  --color-info: #6b8698;
+
+  --color-star: #b3954a;
+  --color-edit: #b3954a;
+  --color-handle: #6f948c;
+  --color-voice-meeting: #7b80a3;
+  --color-renewal: #a25d54;
+
+  --color-overlay: rgba(0, 0, 0, 0.75);
+  --color-shadow: rgba(0, 0, 0, 0.5);
+
+  // Relief: no outline. A day the team can use is a plate standing on the
+  // ground, lighter, with a lit top edge and a cast shadow. A day of the
+  // month it cannot use is the ground itself: no plate, no tint, no shadow.
+  // A day outside the month is a hollow in the ground, shaded from above.
+  --surface-border-width: 0px;
+  --surface-raised-tint: rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.02);
+  --surface-idle-tint: transparent, transparent;
+  --surface-idle-fill: transparent;
+  // The day number is a denser patch of the day's own colour
+  --day-number-ink: rgba(232, 228, 219, 0.08);
+  --day-number-tint: 30%;
+  --surface-sunken-tint: rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.35);
+  --elevation-raised:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.45),
+    0 3px 4px rgba(0, 0, 0, 0.55),
+    0 14px 24px -10px rgba(0, 0, 0, 0.75);
+  --elevation-idle: 0 0 0 0 transparent;
+  --elevation-sunken:
+    inset 0 3px 8px rgba(0, 0, 0, 0.8),
+    inset 0 1px 2px rgba(0, 0, 0, 0.8),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.06);
+
+  // The corner of a day, a little larger than in a flat theme: a recess cut
+  // near the bottom-right of the day, plate or ground alike, set back from
+  // its edges by about a sixth of its leg (5px on desktop, five eighths of
+  // the padding), chamfered on its three edges under a light from the
+  // top-left. The bottom and right walls face it and are lit alike, so they
+  // draw one even band along the edges of the day, its vertex rounded like
+  // the day; the diagonal wall turns its back to the light and is in shadow,
+  // the floor is shaded just below it. The walls are the surface of the day
+  // under their gradient. The symbol in light.
+  --corner-size: 34px;
+  --corner-rim: 0.625;
+  --corner-bevel-width: 2px;
+  --corner-raised-wall-bottom: linear-gradient(rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.28));
+  --corner-raised-wall-right: var(--corner-raised-wall-bottom);
+  --corner-raised-wall-diagonal: linear-gradient(rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.42));
+  --corner-raised-face: linear-gradient(135deg, rgba(0, 0, 0, 0.33) 50%, rgba(0, 0, 0, 0.08) 75%, rgba(255, 255, 255, 0.03) 100%);
+  --corner-raised-face-filter: none;
+  --corner-raised-cast: none;
+  --corner-idle-wall-bottom: var(--corner-raised-wall-bottom);
+  --corner-idle-wall-right: var(--corner-raised-wall-right);
+  --corner-idle-wall-diagonal: var(--corner-raised-wall-diagonal);
+  --corner-idle-face: var(--corner-raised-face);
+  // On a day the team cannot use, the reader's colour is faded: their status
+  // recedes with the day
+  --corner-idle-face-filter: saturate(0.6);
+  --corner-idle-cast: none;
+  --corner-symbol-color: var(--color-text-primary);
+
+  // A warm stone grain, over the ground and over every relief surface
+  --texture-bg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.36 0 0 0 0 0.35 0 0 0 0 0.31 0 0 0 0.13 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}

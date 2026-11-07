@@ -1,7 +1,8 @@
-// Tests for the calendar event type display helpers
+// Tests for the calendar event helpers: how each kind of event shows, and the order of a day
 import { describe, it, expect } from 'vitest';
 import { EVENT_TYPES, VOICE_MEDIUMS } from '@shared/types';
-import { getEventTypeClass, getEventTypeTitle, getVoiceMediumLabel } from '@/utils/calendar';
+import type { CalendarEvent } from '@shared/types';
+import { getEventTypeClass, getEventTypeTitle, getVoiceMediumLabel, sortEventsByTime } from '@/utils/calendar';
 
 describe('event type display', () => {
   it('gives every event type an icon-prefixed title', () => {
@@ -32,5 +33,18 @@ describe('voice medium display', () => {
 
     expect(labels.every(label => label.length > 0)).toBe(true);
     expect(new Set(labels).size).toBe(VOICE_MEDIUMS.length);
+  });
+});
+
+describe('events of a day', () => {
+  it('come in the order they happen, in a new array', () => {
+    const at = (startTime: string): CalendarEvent => ({
+      id: startTime, date: '2030-06-10', startTime, endTime: '23:30', type: 'EVENT', title: startTime,
+      evaSlotIds: [], createdById: 'p0', createdAt: '',
+    });
+    const events = [at('21:00'), at('09:30'), at('14:00')];
+
+    expect(sortEventsByTime(events).map(event => event.startTime)).toEqual(['09:30', '14:00', '21:00']);
+    expect(events.map(event => event.startTime)).toEqual(['21:00', '09:30', '14:00']);
   });
 });

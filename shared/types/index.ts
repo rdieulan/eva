@@ -47,9 +47,15 @@ export type {
   ScrimSearchStatus,
   ScrimSearchTeam,
   ScrimSearch,
+  ScrimOfferedSlot,
+  ScrimVenueOffer,
   CreateScrimSearchRequest,
+  UpdateScrimSearchRequest,
+  ScrimProposalStatus,
+  ScrimProposal,
+  CreateScrimProposalRequest,
 } from './scrim.types';
-export { SCRIM_SEARCH_STATUSES } from './scrim.types';
+export { SCRIM_SEARCH_STATUSES, SCRIM_PROPOSAL_STATUSES } from './scrim.types';
 
 export type {
   SubscriptionTier,
@@ -108,7 +114,7 @@ export type {
   LoginCredentials,
 } from './auth.types';
 
-export type { Venue, VenueSlot, VenueLinks, VenueLinkKey } from './venue.types';
+export type { Venue, VenueSlot, SlotTokenType, VenueLinks, VenueLinkKey } from './venue.types';
 export { VENUE_LINK_KEYS } from './venue.types';
 
 export type { EvaAccountLink, LinkEvaAccountRequest } from './eva.types';

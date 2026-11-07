@@ -19,7 +19,7 @@ defineProps<{
   scrimSearches?: Record<string, ScrimSearch[]>;
   selectable?: boolean;
   selectedDates?: string[];
-  playerLabels?: Record<string, string>;
+  currentPlayerId?: string;
 }>();
 
 defineEmits<{
@@ -32,6 +32,7 @@ defineEmits<{
   'open-create-event': [date: string];
   'toggle-select': [date: string];
   'open-search': [search: ScrimSearch];
+  'open-day': [date: string];
 }>();
 </script>
 
@@ -48,7 +49,7 @@ defineEmits<{
       :scrim-searches="scrimSearches"
       :selectable="selectable"
       :selected-dates="selectedDates"
-      :player-labels="playerLabels"
+      :current-player-id="currentPlayerId"
       @prev-month="$emit('prev-month')"
       @next-month="$emit('next-month')"
       @set-availability="(date, status) => $emit('set-availability', date, status)"
@@ -56,6 +57,7 @@ defineEmits<{
       @open-create-event="(date) => $emit('open-create-event', date)"
       @toggle-select="(date) => $emit('toggle-select', date)"
       @open-search="(search) => $emit('open-search', search)"
+      @open-day="(date) => $emit('open-day', date)"
     />
 
     <!-- Week view -->
@@ -70,7 +72,7 @@ defineEmits<{
       :scrim-searches="scrimSearches"
       :selectable="selectable"
       :selected-dates="selectedDates"
-      :player-labels="playerLabels"
+      :current-player-id="currentPlayerId"
       @prev-week="$emit('prev-week')"
       @next-week="$emit('next-week')"
       @set-availability="(date, status) => $emit('set-availability', date, status)"
@@ -78,6 +80,7 @@ defineEmits<{
       @open-create-event="(date) => $emit('open-create-event', date)"
       @toggle-select="(date) => $emit('toggle-select', date)"
       @open-search="(search) => $emit('open-search', search)"
+      @open-day="(date) => $emit('open-day', date)"
     />
   </div>
 </template>

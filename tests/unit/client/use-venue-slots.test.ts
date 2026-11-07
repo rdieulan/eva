@@ -16,6 +16,7 @@ const SLOT = {
   arenaNumber: 1,
   availableSeats: 3,
   totalSeats: 10,
+    gameId: 1,
 };
 
 async function settle() {

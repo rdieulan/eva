@@ -633,7 +633,6 @@ function handleCancelLeave() {
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
 @use '@/styles/buttons' as *;
-@use 'sass:color';
 
 .planner-page {
   display: flex;
@@ -700,19 +699,19 @@ function handleCancelLeave() {
   min-width: 160px;
 
   &.is-saving {
-    background: rgba($color-accent, 0.15);
-    border-color: rgba($color-accent, 0.4);
+    background: with-alpha($color-accent, 0.15);
+    border-color: with-alpha($color-accent, 0.4);
   }
 
   &.is-success {
-    background: rgba($color-success, 0.15) !important;
-    border-color: rgba($color-success, 0.4) !important;
+    background: with-alpha($color-success, 0.15) !important;
+    border-color: with-alpha($color-success, 0.4) !important;
     animation: pulse-success 0.3s ease-out;
   }
 
   &.is-error {
-    background: rgba($color-danger, 0.15) !important;
-    border-color: rgba($color-danger, 0.4) !important;
+    background: with-alpha($color-danger, 0.15) !important;
+    border-color: with-alpha($color-danger, 0.4) !important;
     animation: shake 0.3s ease-out;
   }
 }
@@ -720,7 +719,7 @@ function handleCancelLeave() {
 .btn-spinner {
   width: 16px;
   height: 16px;
-  border: 2px solid rgba($color-white, 0.3);
+  border: $border-thick solid with-alpha($color-white, 0.3);
   border-top-color: $color-white;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;

@@ -254,8 +254,8 @@ onMounted(loadVenues);
 
 .message.success {
   padding: $spacing-md;
-  background: rgba($color-success, 0.1);
-  border: 1px solid rgba($color-success, 0.3);
+  background: with-alpha($color-success, 0.1);
+  border: $border-thin solid with-alpha($color-success, 0.3);
   color: $color-success;
   border-radius: $radius-md;
 }
@@ -278,7 +278,7 @@ onMounted(loadVenues);
   td {
     padding: $spacing-md;
     text-align: left;
-    border-bottom: 1px solid $color-border;
+    border-bottom: $border-thin solid $color-border;
   }
 
   th {
@@ -350,7 +350,7 @@ onMounted(loadVenues);
   input {
     padding: $spacing-sm $spacing-md;
     background: $color-bg-tertiary;
-    border: 1px solid $color-border;
+    border: $border-thin solid $color-border;
     border-radius: $radius-sm;
     color: $color-text-primary;
     font-size: $font-size-base;
@@ -368,7 +368,7 @@ onMounted(loadVenues);
   gap: $spacing-sm $spacing-md;
   margin: 0;
   padding: $spacing-md;
-  border: 1px solid $color-border;
+  border: $border-thin solid $color-border;
   border-radius: $radius-sm;
 
   legend {

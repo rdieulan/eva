@@ -43,7 +43,7 @@ function isMapBalanced(map: MapConfig): boolean {
   background: $color-bg-secondary;
   padding: $spacing-md;
   min-width: 180px;
-  border-right: 1px solid $color-border;
+  border-right: $border-thin solid $color-border;
 
   @include tablet {
     min-width: 150px;
@@ -55,7 +55,7 @@ function isMapBalanced(map: MapConfig): boolean {
     max-width: 100%;
     padding: $spacing-sm;
     border-right: none;
-    border-bottom: 1px solid $color-border;
+    border-bottom: $border-thin solid $color-border;
     overflow-x: auto;
   }
 
@@ -123,7 +123,7 @@ function isMapBalanced(map: MapConfig): boolean {
     }
 
     &.active {
-      background: rgba($color-accent, 0.4);
+      background: with-alpha($color-accent, 0.4);
       font-weight: 600;
 
       &.balanced {

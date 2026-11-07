@@ -4,41 +4,51 @@ import { TEAM_PLAYER_COUNT } from '@shared/constants/eva.constants';
 import type { AvailabilityStatus } from '@shared/types/calendar.types';
 
 /**
- * Can the team line up on a day?
- * - ready: at least a full lineup of players marked available
- * - shaky: a full lineup only by counting the players available under conditions
- * - short: not enough players, whatever the conditions
- * - unknown: nobody has said anything yet, which is not the same as a no
+ * What can the team do on a day, for sure, from the answers given so far?
+ * - ready: play, with a full lineup of players marked available
+ * - shaky: play, but the lineup counts players available under conditions
+ * - voice: no lineup in the arena yet, but a full table on voice chat
+ * - short: nothing, even if every player who has not answered said yes
+ * - unknown: nothing yet, and the players who have not answered could still change that
  */
-export type TeamAvailabilityStatus = 'ready' | 'shaky' | 'short' | 'unknown';
+export type TeamAvailabilityStatus = 'ready' | 'shaky' | 'voice' | 'short' | 'unknown';
 
 export interface TeamAvailability {
   status: TeamAvailabilityStatus;
   available: number;   // Players marked available
   conditional: number; // Players available under conditions
-  answered: number;    // Players who set any status
+  voice: number;       // Players on voice chat only
+  pending: number;     // Players who have not answered yet
 }
 
 /**
- * Assess whether a team can field a lineup from its players' statuses for a
- * day. Voice-only, unavailable and unset players do not count: none of them
- * will be in the arena.
+ * Assess what a team can do from its players' statuses for a day. The verdict
+ * is the floor the answers already guarantee: a day with four answers says
+ * something, even if the silent players could still lift it. Players in the
+ * arena can also join voice chat, so a voice table counts them too. An
+ * unavailable player is out of everything. A player who has not answered is
+ * neither in nor out: silence is not a no, so a day with nothing guaranteed
+ * stays open as long as the silent players could still fill a table.
  */
 export function assessTeamAvailability(statuses: Array<AvailabilityStatus | null>): TeamAvailability {
   let available = 0;
   let conditional = 0;
-  let answered = 0;
+  let voice = 0;
+  let pending = 0;
   for (const status of statuses) {
-    if (status !== null) answered++;
-    if (status === 'AVAILABLE') available++;
+    if (status === null) pending++;
+    else if (status === 'AVAILABLE') available++;
     else if (status === 'CONDITIONAL') conditional++;
+    else if (status === 'VOICE_ONLY') voice++;
   }
 
+  const arena = available + conditional;
   let status: TeamAvailabilityStatus;
   if (available >= TEAM_PLAYER_COUNT) status = 'ready';
-  else if (available + conditional >= TEAM_PLAYER_COUNT) status = 'shaky';
-  else if (answered === 0) status = 'unknown';
+  else if (arena >= TEAM_PLAYER_COUNT) status = 'shaky';
+  else if (arena + voice >= TEAM_PLAYER_COUNT) status = 'voice';
+  else if (arena + voice + pending >= TEAM_PLAYER_COUNT) status = 'unknown';
   else status = 'short';
 
-  return { status, available, conditional, answered };
+  return { status, available, conditional, voice, pending };
 }

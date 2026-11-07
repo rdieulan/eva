@@ -139,7 +139,6 @@ function goToLogin() {
 
 <style lang="scss" scoped>
 @use '@/styles/variables' as *;
-@use 'sass:color';
 
 .reset-page {
   display: flex;
@@ -152,7 +151,7 @@ function goToLogin() {
 
 .reset-card {
   background: $color-bg-tertiary;
-  border: 1px solid $color-border;
+  border: $border-thin solid $color-border;
   border-radius: $radius-lg;
   padding: $spacing-xl;
   width: 100%;
@@ -184,7 +183,7 @@ function goToLogin() {
   input {
     width: 100%;
     padding: $spacing-sm $spacing-md;
-    border: 1px solid $color-border;
+    border: $border-thin solid $color-border;
     border-radius: $radius-md;
     background: $color-bg-primary;
     color: $color-text-primary;
@@ -234,7 +233,7 @@ function goToLogin() {
   transition: background-color 0.2s;
 
   &:hover:not(:disabled) {
-    background: color.adjust($color-accent, $lightness: -10%);
+    background: shade($color-accent, 10%);
   }
 
   &:disabled {
@@ -246,8 +245,8 @@ function goToLogin() {
 .success-message {
   text-align: center;
   padding: $spacing-lg;
-  background: rgba($color-success, 0.1);
-  border: 1px solid $color-success;
+  background: with-alpha($color-success, 0.1);
+  border: $border-thin solid $color-success;
   border-radius: $radius-md;
   color: $color-success;
 }

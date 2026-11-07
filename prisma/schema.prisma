@@ -72,6 +72,7 @@ model Player {
   gamePlanPlayers         GamePlanPlayer[]
   createdInvites          TeamInvite[]
   openedScrimSearches     ScrimSearch[]
+  sentScrimProposals      ScrimProposal[]
 
   @@index([teamId])
 }
@@ -129,6 +130,7 @@ model Team {
   invites        TeamInvite[]
   favoriteVenues TeamFavoriteVenue[]
   scrimSearches  ScrimSearch[]
+  scrimProposals ScrimProposal[]
 
   @@index([venueId])
 }
@@ -147,29 +149,30 @@ model TeamFavoriteVenue {
 }
 
 model Venue {
-  id            String              @id @default(cuid())
-  externalId    Int?                @unique // Location id on eva.gg, for venues filled by scripts/sync-venues.ts
-  name          String
-  city          String
-  address       String
-  phone         String?
-  arenaCount    Int                 @default(1) // Arenas the venue runs for the competitive game
+  id         String              @id @default(cuid())
+  externalId Int?                @unique // Location id on eva.gg, for venues filled by scripts/sync-venues.ts
+  name       String
+  city       String
+  address    String
+  phone      String?
+  arenaCount Int                 @default(1) // Arenas the venue runs for the competitive game
   // Where the venue can be reached online, as eva.gg publishes them; hand-made venues fill them in the admin
-  website       String?
-  discord       String?
-  facebook      String?
-  instagram     String?
-  x             String?
-  tiktok        String?
-  youtube       String?
-  twitch        String?
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
-  teams         Team[]
-  managers      VenueManager[]
-  matches       CalendarEvent[]
-  favoredBy     TeamFavoriteVenue[]
-  scrimSearches ScrimSearch[]
+  website    String?
+  discord    String?
+  facebook   String?
+  instagram  String?
+  x          String?
+  tiktok     String?
+  youtube    String?
+  twitch     String?
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+  teams      Team[]
+  managers   VenueManager[]
+  matches    CalendarEvent[]
+  favoredBy  TeamFavoriteVenue[]
+  scrimSlots ScrimSearchSlot[]
+  scrimRuns  ScrimProposal[]
 }
 
 model VenueManager {
@@ -246,54 +249,109 @@ model Availability {
 }
 
 model CalendarEvent {
-  id          String       @id @default(cuid())
-  date        DateTime     @db.Date
-  startTime   String
-  endTime     String
-  type        EventType
-  title       String
-  description String?
-  teamId      String?
-  venueId     String? // Where a MATCH is played; other event types have none
-  arenaNumber Int? // Which arena of that venue, when the team knows it
-  evaSlotIds  String[]     @default([]) // The eva.gg slots the match runs on, consecutive on one arena, in order; empty when none picked
-  voiceMedium VoiceMedium? // Where a VOICE_MEETING is held; other event types have none
-  createdById String
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  gamePlan    Json?
-  team        Team?        @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  venue       Venue?       @relation(fields: [venueId], references: [id], onDelete: SetNull)
-  createdBy   Player       @relation(fields: [createdById], references: [id])
+  id            String       @id @default(cuid())
+  date          DateTime     @db.Date
+  startTime     String
+  endTime       String
+  type          EventType
+  title         String
+  description   String?
+  teamId        String?
+  venueId       String? // Where a MATCH is played; other event types have none
+  arenaNumber   Int? // Which arena of that venue, when the team knows it
+  evaSlotIds    String[]     @default([]) // The eva.gg slots the match runs on, consecutive on one arena, in order; empty when none picked
+  voiceMedium   VoiceMedium? // Where a VOICE_MEETING is held; other event types have none
+  scrimSearchId String? // The search this match came out of, when the matchmaking created it
+  createdById   String
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  gamePlan      Json?
+  team          Team?        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  venue         Venue?       @relation(fields: [venueId], references: [id], onDelete: SetNull)
+  createdBy     Player       @relation(fields: [createdById], references: [id])
+  scrimSearch   ScrimSearch? @relation(fields: [scrimSearchId], references: [id], onDelete: SetNull)
 
   @@index([date])
   @@index([teamId])
   @@index([venueId])
+  @@index([scrimSearchId])
 }
 
-// A team puts a run of consecutive slots of a venue (one arena) up for an
-// opponent. Times and arena are read from eva.gg when the search opens, so
-// it can be shown without asking eva.gg again. A withdrawn search is deleted.
+// A team's offer for a day: slots of one venue or more, and how many matches
+// it wants to play on them that day, wherever they are played, each on a run
+// of consecutive slots of one arena. A team plays one match at a time, so no
+// two matches of a search overlap. One open search per team and day; a
+// withdrawn search is deleted.
 model ScrimSearch {
   id              String            @id @default(cuid())
   teamId          String
-  venueId         String
   date            DateTime          @db.Date
-  arenaNumber     Int
-  evaSlotIds      String[] // The slots, consecutive, in order
-  startTime       String // HH:mm, first slot
-  endTime         String // HH:mm, last slot
-  convocationTime String // HH:mm, when eva.gg expects the players for the first slot
+  slotCount       Int               @default(2) // How many consecutive slots a match takes (see SCRIM_MATCH_SLOTS_DEFAULT)
+  matchCount      Int               @default(1) // How many matches the team wants that day (see SCRIM_MATCH_COUNT_DEFAULT)
+  startTime       String // HH:mm, earliest offered slot
+  endTime         String // HH:mm, end of the latest offered slot
+  convocationTime String // HH:mm, when eva.gg expects the players for the earliest slot
   status          ScrimSearchStatus @default(OPEN)
   createdById     String
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   team            Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  venue           Venue             @relation(fields: [venueId], references: [id], onDelete: Cascade)
   createdBy       Player            @relation(fields: [createdById], references: [id])
+  slots           ScrimSearchSlot[]
+  proposals       ScrimProposal[]
+  matches         CalendarEvent[] // The match events its accepted proposals created, two per match
 
-  @@index([venueId, date])
   @@index([teamId, date])
+}
+
+// A slot a search offers, with its venue, arena and times as eva.gg gave them
+// when the search opened: the offer reads, and counts the matches it still
+// holds, without asking eva.gg again
+model ScrimSearchSlot {
+  id              String      @id @default(cuid())
+  searchId        String
+  venueId         String
+  evaSlotId       String
+  arenaNumber     Int
+  startTime       String // HH:mm
+  endTime         String // HH:mm
+  convocationTime String // HH:mm
+  position        Int // Venue by venue in the team's order, arena by arena, then by time
+  search          ScrimSearch @relation(fields: [searchId], references: [id], onDelete: Cascade)
+  venue           Venue       @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@unique([searchId, evaSlotId])
+  @@index([venueId])
+}
+
+// A team answers another team's search with the run of one match, in one of
+// its venues. Accepting it creates the match in both calendars and declines
+// the pending proposals at the same time; the search closes, declining the
+// rest, once it has all its matches or its remaining slots no longer hold one.
+model ScrimProposal {
+  id              String              @id @default(cuid())
+  searchId        String
+  teamId          String // The team proposing, never the one that opened the search
+  createdById     String
+  message         String? // A word for the other team, optional
+  venueId         String // Where the run is played
+  evaSlotIds      String[] // The run to play: consecutive slots on one arena, among those the search offers
+  arenaNumber     Int
+  startTime       String // HH:mm, first slot of the run
+  endTime         String // HH:mm, last slot of the run
+  convocationTime String // HH:mm, for the first slot
+  status          ScrimProposalStatus @default(PENDING)
+  respondedAt     DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  search          ScrimSearch         @relation(fields: [searchId], references: [id], onDelete: Cascade)
+  team            Team                @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  venue           Venue               @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  createdBy       Player              @relation(fields: [createdById], references: [id])
+
+  @@index([searchId])
+  @@index([teamId])
+  @@index([venueId])
 }
 
 model TeamInvite {
@@ -375,4 +433,11 @@ enum BalanceSeverity {
 enum ScrimSearchStatus {
   OPEN
   MATCHED
+}
+
+enum ScrimProposalStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  WITHDRAWN
 }

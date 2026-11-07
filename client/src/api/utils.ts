@@ -69,10 +69,15 @@ export async function authFetch<T>(
   // If errorMessage provided, handle errors and return JSON
   if (errorMessage !== undefined) {
     if (!response.ok) {
-      const errorData = await response.json();
-      throw ApiError.fromResponse(errorData, errorMessage);
+      throw await ApiError.fromFailedResponse(response, errorMessage);
     }
-    return (await response.json()) as T;
+    try {
+      return (await response.json()) as T;
+    } catch {
+      // A success without a readable body is not an answer: the caller gets
+      // its own failure message, not a JSON parsing error
+      throw new ApiError([], errorMessage);
+    }
   }
 
   return response;

@@ -2,7 +2,9 @@
 import type { Venue } from '@shared/types';
 import { formatVenueLabel } from '@/utils/venues';
 
-// A list of venues to tick; the model holds the ticked ids in the order they were ticked
+// A list of venues to tick; the model holds the ticked ids in the order they
+// were ticked. Each row may carry more beside its box (the `trailing` slot),
+// and a venue that moves in the list slides to its new place.
 const props = withDefaults(defineProps<{
   venues: Venue[];
   legend: string;
@@ -14,6 +16,10 @@ const props = withDefaults(defineProps<{
 });
 
 const selected = defineModel<string[]>({ required: true });
+
+defineSlots<{
+  trailing?: (props: { venue: Venue }) => unknown;
+}>();
 
 function isChecked(venueId: string): boolean {
   return selected.value.includes(venueId);
@@ -34,20 +40,20 @@ function toggle(venueId: string) {
   <fieldset class="venue-checklist">
     <legend>{{ legend }}</legend>
     <p v-if="venues.length === 0" class="venue-checklist-empty">{{ emptyText }}</p>
-    <label
-      v-for="venue in venues"
-      :key="venue.id"
-      class="venue-check"
-      :class="{ 'venue-check--locked': isLocked(venue.id) }"
-    >
-      <input
-        type="checkbox"
-        :checked="isChecked(venue.id)"
-        :disabled="isLocked(venue.id)"
-        @change="toggle(venue.id)"
-      />
-      <span>{{ formatVenueLabel(venue) }}</span>
-    </label>
+    <TransitionGroup tag="div" name="venue-move" class="venue-rows">
+      <div v-for="venue in venues" :key="venue.id" class="venue-option">
+        <label class="venue-check" :class="{ 'venue-check--locked': isLocked(venue.id) }">
+          <input
+            type="checkbox"
+            :checked="isChecked(venue.id)"
+            :disabled="isLocked(venue.id)"
+            @change="toggle(venue.id)"
+          />
+          <span class="venue-name">{{ formatVenueLabel(venue) }}</span>
+        </label>
+        <slot name="trailing" :venue="venue" />
+      </div>
+    </TransitionGroup>
   </fieldset>
 </template>
 
@@ -58,12 +64,15 @@ function toggle(venueId: string) {
   display: flex;
   flex-direction: column;
   gap: $spacing-xs;
-  border: 1px solid $color-border;
+  border: $border-thin solid $color-border;
   border-radius: $radius-md;
   padding: $spacing-md;
   margin: 0;
-  // Sixty venues would otherwise push the rest of the form off the screen
-  max-height: 240px;
+  // A fieldset grows to its longest line by default; the names are cut short instead
+  min-width: 0;
+  // Sixty venues would otherwise push the rest of the form off the screen;
+  // a list in a menu may ask for more room
+  max-height: var(--venue-checklist-max-height, 240px);
   overflow-y: auto;
 
   legend {
@@ -79,7 +88,21 @@ function toggle(venueId: string) {
   font-style: italic;
 }
 
+.venue-rows {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+}
+
+.venue-option {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
 .venue-check {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -88,6 +111,7 @@ function toggle(venueId: string) {
   cursor: pointer;
 
   input[type="checkbox"] {
+    flex-shrink: 0;
     width: 16px;
     height: 16px;
     accent-color: $color-accent;
@@ -96,6 +120,21 @@ function toggle(venueId: string) {
   &--locked {
     color: $color-text-secondary;
     cursor: not-allowed;
+  }
+}
+
+.venue-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// A venue that changes place slides there
+.venue-move-move {
+  transition: transform 0.25s ease;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
   }
 }
 </style>

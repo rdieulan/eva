@@ -1,0 +1,88 @@
+// Theme « Nuit »: the look the app was drawn with. Every token has its value
+// here, so this file is also the complete list of what a theme can change.
+// Applied by default and whenever the theme attribute names it.
+
+:root,
+[data-theme='night'] {
+  // ===== Typeface =====
+  --font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+
+  // ===== Border radius =====
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  // ===== Border widths =====
+  --border-thin: 1px;
+  --border-thick: 2px;
+
+  // ===== Base colours =====
+  --color-white: #fff;
+  --color-black: #000;
+
+  // ===== Backgrounds (darkest to lightest) =====
+  --color-bg-primary: #0f0f1a;
+  --color-bg-secondary: #1a1a2e;
+  --color-bg-tertiary: #2a2a4a;
+
+  // ===== Borders =====
+  --color-border: #333;
+  --color-border-light: #3a3a5a;
+
+  // ===== Text =====
+  --color-text-primary: rgba(255, 255, 255, 0.87);
+  --color-text-secondary: #888;
+  --color-text-muted: #ccc;
+
+  // ===== Accent (primary actions, buttons, links) =====
+  --color-accent: #7a7aba;
+
+  // ===== Semantic =====
+  --color-success: #4ade80;
+  --color-danger: #981b1b;
+  --color-warning: #fb923c;
+  --color-info: #60a5fa;
+  --color-conditional: #facc15;
+
+  // ===== Special =====
+  --color-star: #fbbf24;
+  --color-edit: #fbbf24;
+  --color-handle: #4ecdc4;
+  --color-voice-meeting: #8891f2;
+  --color-renewal: #f87171;
+  --color-voice: #c084fc;
+
+  // ===== Overlay / shadow =====
+  --color-overlay: rgba(0, 0, 0, 0.7);
+  --color-shadow: rgba(0, 0, 0, 0.3);
+
+  // ===== Relief and texture: a flat theme =====
+  --elevation-raised: 0 0 0 0 transparent;
+  --elevation-idle: 0 0 0 0 transparent;
+  --elevation-sunken: 0 0 0 0 transparent;
+  --surface-border-width: 2px;
+  --surface-raised-tint: transparent, transparent;
+  --surface-idle-tint: transparent, transparent;
+  --surface-sunken-tint: transparent, transparent;
+  --surface-idle-fill: var(--color-bg-secondary);
+  --day-number-ink: rgba(255, 255, 255, 0.07);
+  --day-number-tint: 0%;
+  --corner-size: 30px;
+  --corner-rim: 0;
+  --corner-bevel-width: 0px;
+  --corner-raised-wall-bottom: none;
+  --corner-raised-wall-right: none;
+  --corner-raised-wall-diagonal: none;
+  --corner-raised-face: none;
+  --corner-raised-face-filter: none;
+  --corner-raised-cast: none;
+  --corner-idle-wall-bottom: none;
+  --corner-idle-wall-right: none;
+  --corner-idle-wall-diagonal: none;
+  --corner-idle-face: none;
+  --corner-idle-face-filter: none;
+  --corner-idle-cast: none;
+  --corner-symbol-color: var(--color-bg-primary);
+  --texture-bg: none;
+}

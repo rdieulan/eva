@@ -1,15 +1,18 @@
 <script setup lang="ts">
 import SvgIcon from '@/components/common/SvgIcon.vue';
+import SegmentedControl, { type SegmentedOption } from '@/components/common/SegmentedControl.vue';
 import MatchmakingVenuePicker from '@/components/calendar/MatchmakingVenuePicker.vue';
 import type { ViewMode, CalendarMode } from '@/composables/useCalendar';
-import type { Venue } from '@shared/types';
+import type { MatchmakingVenues } from '@/utils/venues';
 
 defineProps<{
   viewMode: ViewMode;
   calendarMode: CalendarMode;
   navigationTitle: string;
-  quickVenues: Venue[]; // Matchmaking: the team's own venues
-  otherVenues: Venue[]; // Matchmaking: the rest of the network
+  venues: MatchmakingVenues; // Matchmaking: the venues the menu lists
+  canEditFavorites?: boolean; // The reader may change the team's favorite venues
+  favoritesFull?: boolean;
+  savingFavorites?: boolean;
   canSearch?: boolean; // The reader may put days up for an opponent
 }>();
 
@@ -18,82 +21,77 @@ const emit = defineEmits<{
   'update:calendarMode': [mode: CalendarMode];
   prev: [];
   next: [];
+  'toggle-favorite': [venueId: string];
 }>();
 
-// Matchmaking: the venue whose slots the calendar shows
-const venueId = defineModel<string | null>('venueId', { required: true });
+// Matchmaking: the venues whose searches the calendar shows
+const venueIds = defineModel<string[]>('venueIds', { required: true });
 
 const weekdays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+
+const MODE_OPTIONS: SegmentedOption<CalendarMode>[] = [
+  { value: 'team', label: 'Équipe' },
+  { value: 'matchmaking', label: 'Matchmaking' },
+];
+
+const VIEW_OPTIONS: SegmentedOption<ViewMode>[] = [
+  { value: 'month', label: 'Mois' },
+  { value: 'week', label: 'Semaine' },
+];
 </script>
 
 <template>
   <div class="calendar-controls">
-    <div class="switches">
-      <!-- Team calendar, or the matchmaking view of the same days -->
-      <div class="view-switch" role="group" aria-label="Mode">
+    <!-- One row: what we look at (left), when (centre), how (right) -->
+    <div class="controls-row">
+      <SegmentedControl
+        class="mode-switch"
+        label="Mode"
+        :options="MODE_OPTIONS"
+        :model-value="calendarMode"
+        @update:model-value="mode => emit('update:calendarMode', mode)"
+      />
+
+      <div class="nav-header">
         <button
-          class="view-btn"
-          :class="{ active: calendarMode === 'team' }"
-          @click="$emit('update:calendarMode', 'team')"
+          class="nav-btn"
+          @click="$emit('prev')"
+          :title="viewMode === 'month' ? 'Mois précédent' : 'Semaine précédente'"
         >
-          👥 Équipe
+          <SvgIcon name="chevron-right" class="nav-icon nav-icon-left" />
         </button>
+        <h2 class="nav-title">{{ navigationTitle }}</h2>
         <button
-          class="view-btn"
-          :class="{ active: calendarMode === 'matchmaking' }"
-          @click="$emit('update:calendarMode', 'matchmaking')"
+          class="nav-btn"
+          @click="$emit('next')"
+          :title="viewMode === 'month' ? 'Mois suivant' : 'Semaine suivante'"
         >
-          🎯 Matchmaking
+          <SvgIcon name="chevron-right" class="nav-icon" />
         </button>
       </div>
 
-      <!-- View mode switch -->
-      <div class="view-switch" role="group" aria-label="Affichage">
-        <button
-          class="view-btn"
-          :class="{ active: viewMode === 'month' }"
-          @click="$emit('update:viewMode', 'month')"
-        >
-          📅 Mois
-        </button>
-        <button
-          class="view-btn"
-          :class="{ active: viewMode === 'week' }"
-          @click="$emit('update:viewMode', 'week')"
-        >
-          📆 Semaine
-        </button>
-      </div>
+      <SegmentedControl
+        class="view-switch"
+        label="Affichage"
+        :options="VIEW_OPTIONS"
+        :model-value="viewMode"
+        @update:model-value="mode => emit('update:viewMode', mode)"
+      />
     </div>
 
-    <!-- Matchmaking: which venue's slots the days show -->
-    <MatchmakingVenuePicker
-      v-if="calendarMode === 'matchmaking'"
-      v-model="venueId"
-      :quick-venues="quickVenues"
-      :other-venues="otherVenues"
-    />
-    <p v-if="calendarMode === 'matchmaking' && canSearch && venueId" class="search-hint">
-      Clique sur les jours où tu veux jouer, puis choisis les créneaux à proposer aux autres équipes.
-    </p>
-
-    <!-- Navigation header -->
-    <div class="nav-header">
-      <button
-        class="nav-btn"
-        @click="$emit('prev')"
-        :title="viewMode === 'month' ? 'Mois précédent' : 'Semaine précédente'"
-      >
-        <SvgIcon name="chevron-right" class="nav-icon nav-icon-left" />
-      </button>
-      <h2 class="nav-title">{{ navigationTitle }}</h2>
-      <button
-        class="nav-btn"
-        @click="$emit('next')"
-        :title="viewMode === 'month' ? 'Mois suivant' : 'Semaine suivante'"
-      >
-        <SvgIcon name="chevron-right" class="nav-icon" />
-      </button>
+    <!-- Matchmaking: which venues the days show, and what to do next -->
+    <div v-if="calendarMode === 'matchmaking'" class="venue-row">
+      <MatchmakingVenuePicker
+        v-model="venueIds"
+        :venues="venues"
+        :can-edit-favorites="canEditFavorites ?? false"
+        :favorites-full="favoritesFull ?? false"
+        :saving-favorites="savingFavorites ?? false"
+        @toggle-favorite="id => emit('toggle-favorite', id)"
+      />
+      <p v-if="canSearch && venueIds.length" class="search-hint">
+        Clique sur les jours où tu veux jouer, puis choisis les créneaux à proposer.
+      </p>
     </div>
 
     <!-- Weekdays header (only for month view) -->
@@ -115,7 +113,7 @@ const weekdays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
   gap: $spacing-sm;
   width: 100%;
   padding: $spacing-sm $spacing-xl;
-  background: linear-gradient(135deg, $color-bg-secondary 0%, $color-bg-tertiary 100%);
+  @include surface-gradient;
   flex-shrink: 0;
 
   @include tablet {
@@ -133,68 +131,47 @@ const weekdays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
   }
 }
 
-.switches {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+.controls-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
   gap: $spacing-md;
+  width: 100%;
+  max-width: 1200px;
 
   @include mobile-lg {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas: 'nav nav' 'mode view';
     gap: $spacing-sm;
+
+    .nav-header { grid-area: nav; }
+    .mode-switch { grid-area: mode; }
+    .view-switch { grid-area: view; }
   }
+}
+
+.mode-switch {
+  justify-self: start;
 }
 
 .view-switch {
-  display: flex;
-  gap: $spacing-sm;
-  padding: $spacing-xs;
-  background: rgba($color-bg-tertiary, 0.5);
-  border-radius: 10px;
-
-  @include mobile {
-    padding: 0.2rem;
-    border-radius: $radius-md;
-  }
+  justify-self: end;
 }
 
-.view-btn {
-  padding: 0.6rem 1.25rem;
-  background: transparent;
-  border: none;
-  border-radius: $radius-md;
-  color: $color-text-secondary;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover {
-    color: $color-text-muted;
-    background: rgba($color-border-light, 0.5);
-  }
-
-  &.active {
-    background: $color-accent;
-    color: $color-white;
-  }
-
-  @include mobile-lg {
-    padding: $spacing-sm $spacing-md;
-    font-size: 0.85rem;
-  }
-
-  @include mobile {
-    padding: 0.4rem 0.75rem;
-    font-size: 0.8rem;
-    border-radius: 6px;
-  }
+.venue-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-sm $spacing-md;
+  width: 100%;
+  max-width: 1200px;
 }
 
 .search-hint {
   margin: 0;
   color: $color-text-secondary;
   font-size: 0.8rem;
-  text-align: center;
 }
 
 .nav-header {
@@ -223,7 +200,7 @@ const weekdays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
   align-items: center;
   justify-content: center;
   background: $color-bg-tertiary;
-  border: 1px solid $color-border;
+  border: $border-thin solid $color-border;
   border-radius: $radius-md;
   cursor: pointer;
   transition: all 0.2s;
@@ -289,7 +266,7 @@ const weekdays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 
 .weekdays-header {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr)); // Same columns as the grid below
   gap: $spacing-sm;
   width: 100%;
   max-width: 1200px;

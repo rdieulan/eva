@@ -76,7 +76,7 @@ const emit = defineEmits<{
 .marker-edit-panel {
   position: fixed;
   background: $color-bg-secondary;
-  border: 1px solid $color-border;
+  border: $border-thin solid $color-border;
   border-radius: $radius-md;
   padding: $spacing-sm;
   z-index: 1001;
@@ -126,7 +126,7 @@ const emit = defineEmits<{
 
       .marker-icon-btn {
         background: $color-bg-primary;
-        border: 1px solid $color-border;
+        border: $border-thin solid $color-border;
         border-radius: $radius-sm;
         padding: 6px;
         cursor: pointer;
@@ -140,7 +140,7 @@ const emit = defineEmits<{
 
         &.active {
           border-color: $color-accent;
-          background: rgba($color-accent, 0.2);
+          background: with-alpha($color-accent, 0.2);
         }
 
         .marker-icon-svg {
@@ -158,7 +158,7 @@ const emit = defineEmits<{
       .marker-size-btn {
         flex: 1;
         background: $color-bg-primary;
-        border: 1px solid $color-border;
+        border: $border-thin solid $color-border;
         border-radius: $radius-sm;
         padding: 4px 8px;
         font-size: 12px;
@@ -171,7 +171,7 @@ const emit = defineEmits<{
 
         &.active {
           border-color: $color-accent;
-          background: rgba($color-accent, 0.2);
+          background: with-alpha($color-accent, 0.2);
         }
       }
     }

@@ -207,21 +207,6 @@ async function handleSwitchAccount(targetAccountId: string) {
 @use '@/styles/variables' as *;
 @use '@/styles/buttons' as *;
 
-.linked-accounts-section {
-  background: $color-bg-tertiary;
-  border: 1px solid $color-border-light;
-  border-radius: $radius-lg;
-  padding: $spacing-lg;
-  margin-bottom: $spacing-lg;
-
-  h2 {
-    color: $color-accent;
-    margin: 0 0 $spacing-md;
-    font-size: 1.1rem;
-    font-weight: 600;
-  }
-}
-
 .loading-state {
   color: $color-text-secondary;
   text-align: center;
@@ -241,14 +226,14 @@ async function handleSwitchAccount(targetAccountId: string) {
   align-items: center;
   padding: $spacing-sm $spacing-md;
   background: $color-bg-secondary;
-  border: 1px solid $color-border;
+  border: $border-thin solid $color-border;
   border-radius: $radius-md;
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover:not(.current) {
     border-color: $color-accent;
-    background: rgba($color-accent, 0.1);
+    background: with-alpha($color-accent, 0.1);
   }
 
   &.current {
@@ -322,7 +307,7 @@ async function handleSwitchAccount(targetAccountId: string) {
   input {
     padding: $spacing-sm $spacing-md;
     background: $color-bg-secondary;
-    border: 1px solid $color-border;
+    border: $border-thin solid $color-border;
     border-radius: $radius-md;
     color: $color-text-primary;
     font-size: $font-size-base;
@@ -349,8 +334,8 @@ async function handleSwitchAccount(targetAccountId: string) {
   text-align: center;
 
   &.success {
-    background: rgba($color-success, 0.1);
-    border: 1px solid $color-success;
+    background: with-alpha($color-success, 0.1);
+    border: $border-thin solid $color-success;
     color: $color-success;
   }
 }

@@ -28,9 +28,12 @@ const SLOT_20H = {
   endTime: '20:40',
   convocationTime: '19:50',
   arenaNumber: 1,
+  gameId: 1,
   takenSeats: 7,
   totalSeats: 10,
   isCompetitiveAvailable: true,
+  tokenType: 'peak' as const,
+  passQuotaLeft: 14,
 };
 
 beforeEach(async () => {
@@ -40,7 +43,7 @@ beforeEach(async () => {
 });
 
 describe('GET /api/venues/:id/slots', () => {
-  it('should list the slots eva.gg runs at the venue that day', async () => {
+  it('should list the slots eva.gg runs at the venue that day, with the token a pass holder spends and the pass quota left', async () => {
     const { token } = await createAuthenticatedUser();
     sessions.mockResolvedValue([SLOT_20H]);
 
@@ -56,9 +59,12 @@ describe('GET /api/venues/:id/slots', () => {
       endTime: '20:40',
       convocationTime: '19:50',
       arenaNumber: 1,
+      gameId: 1,
       takenSeats: 7,
       totalSeats: 10,
       isCompetitiveAvailable: true,
+      tokenType: 'peak',
+      passQuotaLeft: 14,
     }]);
     expect(sessions).toHaveBeenCalledWith(51, '2026-11-03');
   });

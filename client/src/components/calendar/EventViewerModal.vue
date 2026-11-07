@@ -320,7 +320,7 @@ function handleCreateEvent() {
 .nav-arrow {
   width: 36px;
   height: 36px;
-  border: 1px solid $color-border-light;
+  border: $border-thin solid $color-border-light;
   background: $color-bg-tertiary;
   border-radius: $radius-md;
   cursor: pointer;
@@ -367,7 +367,7 @@ function handleCreateEvent() {
   flex-direction: column;
   gap: 0.75rem;
   padding: $spacing-md;
-  background: rgba($color-bg-tertiary, 0.5);
+  background: with-alpha($color-bg-tertiary, 0.5);
   border-radius: $radius-md;
 }
 
@@ -421,8 +421,8 @@ function handleCreateEvent() {
   justify-content: center;
   gap: $spacing-sm;
   padding: 0.75rem;
-  background: rgba($color-accent, 0.15);
-  border: 1px solid $color-accent;
+  background: with-alpha($color-accent, 0.15);
+  border: $border-thin solid $color-accent;
   border-radius: $radius-md;
   color: $color-accent;
   font-size: 0.95rem;
@@ -431,7 +431,7 @@ function handleCreateEvent() {
   transition: background 0.2s;
 
   &:hover {
-    background: rgba($color-accent, 0.25);
+    background: with-alpha($color-accent, 0.25);
   }
 }
 
@@ -439,14 +439,14 @@ function handleCreateEvent() {
   margin-left: $spacing-sm;
   padding: 2px 8px;
   border-radius: $radius-sm;
-  background: rgba($color-accent, 0.2);
+  background: with-alpha($color-accent, 0.2);
   color: $color-accent;
   font-size: 0.75rem;
   font-weight: 600;
   text-decoration: none;
 
   &:hover {
-    background: rgba($color-accent, 0.35);
+    background: with-alpha($color-accent, 0.35);
   }
 }
 
@@ -454,7 +454,7 @@ function handleCreateEvent() {
   margin-left: $spacing-sm;
   padding: 2px 8px;
   border-radius: $radius-sm;
-  background: rgba($color-accent, 0.2);
+  background: with-alpha($color-accent, 0.2);
   color: $color-accent;
   font-size: 0.75rem;
   font-weight: 600;
@@ -462,7 +462,7 @@ function handleCreateEvent() {
 
 .event-description {
   padding: $spacing-md;
-  background: rgba($color-bg-tertiary, 0.5);
+  background: with-alpha($color-bg-tertiary, 0.5);
   border-radius: $radius-md;
 
   .detail-label {
@@ -479,7 +479,7 @@ function handleCreateEvent() {
 
 .game-plan-section {
   padding: $spacing-md;
-  background: rgba($color-bg-tertiary, 0.5);
+  background: with-alpha($color-bg-tertiary, 0.5);
   border-radius: $radius-md;
 }
 
@@ -497,7 +497,7 @@ function handleCreateEvent() {
 }
 
 .absent-badge {
-  background: rgba($color-danger, 0.2);
+  background: with-alpha($color-danger, 0.2);
   color: $color-danger;
   padding: $spacing-xs 0.75rem;
   border-radius: 20px;

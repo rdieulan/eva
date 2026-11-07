@@ -172,7 +172,7 @@ function handleSave() {
     margin: 0 0 $spacing-sm;
     font-size: $font-size-base;
     color: $color-accent;
-    border-bottom: 1px solid $color-border-light;
+    border-bottom: $border-thin solid $color-border-light;
     padding-bottom: $spacing-xs;
   }
 }

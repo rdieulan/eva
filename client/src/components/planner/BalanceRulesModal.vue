@@ -171,7 +171,6 @@ function hasParams(rule: BalanceRule): boolean {
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
 @use '@/styles/buttons' as *;
-@use 'sass:color';
 
 .modal-overlay {
   position: fixed;
@@ -198,7 +197,7 @@ function hasParams(rule: BalanceRule): boolean {
 
 .modal-header {
   padding: 16px 20px;
-  border-bottom: 1px solid $color-border;
+  border-bottom: $border-thin solid $color-border;
 
   h2 {
     margin: 0;
@@ -264,7 +263,7 @@ function hasParams(rule: BalanceRule): boolean {
       width: 60px;
       padding: 4px 8px;
       background: $color-bg-primary;
-      border: 1px solid $color-border;
+      border: $border-thin solid $color-border;
       border-radius: 4px;
       color: $color-text-primary;
       font-size: 0.9rem;
@@ -356,7 +355,7 @@ function hasParams(rule: BalanceRule): boolean {
   background: $color-bg-primary;
   border-radius: 6px;
   padding: 2px;
-  border: 1px solid $color-border;
+  border: $border-thin solid $color-border;
 
   &.disabled {
     opacity: 0.4;
@@ -379,21 +378,21 @@ function hasParams(rule: BalanceRule): boolean {
   }
 
   &.active {
-    border: 1px solid $color-border;
+    border: $border-thin solid $color-border;
   }
 
   // Error active state
   &:first-child.active {
     color: $color-danger;
-    background: rgba($color-danger, 0.15);
-    border-color: rgba($color-danger, 0.3);
+    background: with-alpha($color-danger, 0.15);
+    border-color: with-alpha($color-danger, 0.3);
   }
 
   // Warning active state
   &:last-child.active {
     color: $color-warning;
-    background: rgba($color-warning, 0.15);
-    border-color: rgba($color-warning, 0.3);
+    background: with-alpha($color-warning, 0.15);
+    border-color: with-alpha($color-warning, 0.3);
   }
 
   &:disabled {
@@ -411,7 +410,7 @@ function hasParams(rule: BalanceRule): boolean {
 
 .modal-footer {
   padding: 16px 20px;
-  border-top: 1px solid $color-border;
+  border-top: $border-thin solid $color-border;
   display: flex;
   justify-content: space-between;
   gap: 12px;

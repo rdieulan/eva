@@ -106,7 +106,6 @@ async function handleLogin() {
 
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
-@use 'sass:color';
 
 .login-page {
   min-height: 100%;
@@ -114,7 +113,7 @@ async function handleLogin() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, $color-bg-secondary 0%, $color-bg-tertiary 100%);
+  @include surface-gradient;
   padding: $spacing-xl;
 
   @include tablet {
@@ -135,7 +134,7 @@ async function handleLogin() {
 
 .login-card {
   background: $color-bg-tertiary;
-  border: 1px solid $color-border-light;
+  border: $border-thin solid $color-border-light;
   border-radius: $radius-xl;
   padding: 2.5rem;
   width: 100%;
@@ -196,7 +195,7 @@ input {
   width: 100%;
   padding: 0.75rem $spacing-md;
   background: $color-bg-secondary;
-  border: 2px solid $color-border-light;
+  border: $border-thick solid $color-border-light;
   border-radius: $radius-md;
   color: $color-white;
   font-size: 1rem;
@@ -256,7 +255,7 @@ input {
     text-decoration: underline;
 
     &:hover {
-      color: color.scale($color-accent, $lightness: 25%);
+      color: tint($color-accent, 25%);
     }
   }
 }

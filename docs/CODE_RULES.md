@@ -166,9 +166,13 @@ Composants génériques sans logique métier spécifique :
 
 ## 🎨 CSS/SCSS
 
-### Variables
-- Définir dans `client/src/styles/_variables.scss`
-- Utiliser les variables pour : couleurs, breakpoints, espacements
+### Variables et thèmes
+- Breakpoints, espacements, tailles de police : variables SCSS dans `client/src/styles/_variables.scss`
+- Tout ce qui fait l'habillage (couleurs, rayons, épaisseurs de bordure, police) est un **jeton de thème** : une custom property CSS définie dans `client/src/styles/themes/_<theme>.scss`, exposée sous son nom SCSS dans `_variables.scss`. Les composants n'utilisent que le nom SCSS.
+- Un jeton se résout dans le navigateur : pas de calcul de couleur SCSS dessus. Utiliser les helpers `with-alpha($color, 0.15)`, `shade($color, 10%)`, `tint($color, 25%)` à la place de `rgba()`, `color.scale()`, `darken()`.
+- Bordures : `$border-thin` (séparations discrètes) et `$border-thick` (emphase), jamais `1px` / `2px` en dur.
+- Relief et texture : trois types de case, jouable (`raised`), injouable dans le mois (`idle`), hors du mois (`sunken`), chacun avec `$elevation-<type>` (ombre, nulle dans un thème plat) et `$surface-<type>-tint` (teinte haut-bas, transparente dans un thème plat), plus `$surface-border-width` (contour, plein dans un thème plat), `$surface-idle-fill` (remplissage d'une case injouable, sa plaque ou `transparent` quand elle est le sol lui-même) et `$day-number-ink` / `$day-number-tint` (encre neutre du grand numéro de jour et part de la couleur de la case qui la remplace, 0 % dans un thème plat), `$corner-size` / `$corner-rim` / `$corner-bevel-width` / `$corner-raised-*` / `$corner-idle-*` / `$corner-symbol-color` (le coin d'une case : triangle chanfreiné sur ses trois arêtes, de `$corner-size` de côté, écarté des bords de `$corner-rim` fois la marge intérieure de la case, 0 pour le coller dans l'angle, 1 pour l'aligner sur le contenu ; parois en trapèzes de la surface de la case sous leur dégradé, un jeu de parois, face, filtre de la face et ombre portée par type de case (une case injouable peut délaver la couleur du lecteur), creux ou pastille au choix du thème ; écart et parois nuls, dégradés `none` dans un thème plat) et `$texture-bg` (image posée sur le fond, `none` sinon). Le fond dégradé des pages passe par `@include surface-gradient`.
+- Un nouveau thème = un fichier dans `styles/themes/` qui ne redéfinit que ce qu'il change, importé dans `themes/_index.scss`, plus son entrée dans `client/src/constants/themes.ts`. Le thème « Nuit » (`_night.scss`) porte toutes les valeurs par défaut et liste donc les jetons existants.
 
 ### Breakpoints
 ```scss
@@ -181,6 +185,7 @@ $breakpoint-large: 1440px;
 ### Organisation
 - Styles globaux : `client/src/style.scss`
 - Variables : `client/src/styles/_variables.scss`
+- Thèmes : `client/src/styles/themes/`
 - Styles composant : `<style scoped>` dans le `.vue`
 
 ---

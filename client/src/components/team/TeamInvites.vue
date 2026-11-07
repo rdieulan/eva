@@ -63,7 +63,7 @@ function formatExpiration(dateStr: string): string {
 .invites-section {
   margin-top: $spacing-lg;
   padding-top: $spacing-lg;
-  border-top: 1px solid $color-border-light;
+  border-top: $border-thin solid $color-border-light;
 
   h3 {
     margin: 0 0 $spacing-md;
@@ -84,7 +84,7 @@ function formatExpiration(dateStr: string): string {
   align-items: center;
   padding: $spacing-sm $spacing-md;
   background: $color-bg-secondary;
-  border: 1px solid $color-border-light;
+  border: $border-thin solid $color-border-light;
   border-radius: $radius-md;
 }
 

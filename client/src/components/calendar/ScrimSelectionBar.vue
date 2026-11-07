@@ -35,7 +35,7 @@ defineEmits<{
   gap: $spacing-md;
   padding: $spacing-sm $spacing-lg;
   background: $color-bg-secondary;
-  border: 1px solid $color-accent;
+  border: $border-thin solid $color-border-light;
   border-radius: 999px;
   box-shadow: 0 8px 24px $color-shadow;
 

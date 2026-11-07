@@ -1,6 +1,6 @@
 // Calendar utility functions
 
-import type { EventType, VoiceMedium } from '@shared/types';
+import type { CalendarEvent, EventType, VoiceMedium } from '@shared/types';
 
 /**
  * Get the Monday of the week for a given date
@@ -18,15 +18,16 @@ export function getMonday(date: Date): Date {
 
 export interface EventTypeDisplay {
   label: string;
-  icon: string;
+  emoji: string; // In the form, where the type is picked
+  icon: string;  // Name of the SvgIcon in the calendar, in the colour of the type
 }
 
 // Keyed by EventType: a new event type does not compile until it says how it is displayed.
 // Colours live alongside in $event-type-colors (styles/_variables.scss).
 const EVENT_TYPE_DISPLAY: Record<EventType, EventTypeDisplay> = {
-  MATCH: { label: 'Match', icon: '🎮' },
-  EVENT: { label: 'Événement', icon: '📅' },
-  VOICE_MEETING: { label: 'Réunion vocale', icon: '🎧' },
+  MATCH: { label: 'Match', emoji: '🎮', icon: 'sword' },
+  EVENT: { label: 'Événement', emoji: '📅', icon: 'flag' },
+  VOICE_MEETING: { label: 'Réunion vocale', emoji: '🎧', icon: 'headset' },
 };
 
 // Keyed by VoiceMedium: a new platform does not compile until it says how it is written.
@@ -51,22 +52,31 @@ export function getVoiceMediumLabel(medium: VoiceMedium): string {
 }
 
 /**
- * Get the icon and French label of an event type
+ * Get the emoji, icon and French label of an event type
  * @param type - The event type
- * @returns e.g. { icon: '🎮', label: 'Match' }
+ * @returns e.g. { emoji: '🎮', icon: 'sword', label: 'Match' }
  */
 export function getEventTypeDisplay(type: EventType): EventTypeDisplay {
   return EVENT_TYPE_DISPLAY[type];
 }
 
 /**
- * Get the French label of an event type prefixed with its icon
+ * Get the name of the icon of an event type, for SvgIcon
+ * @param type - The event type
+ * @returns e.g. "sword"
+ */
+export function getEventTypeIcon(type: EventType): string {
+  return EVENT_TYPE_DISPLAY[type].icon;
+}
+
+/**
+ * Get the French label of an event type prefixed with its emoji
  * @param type - The event type
  * @returns e.g. "🎮 Match"
  */
 export function getEventTypeTitle(type: EventType): string {
-  const { icon, label } = EVENT_TYPE_DISPLAY[type];
-  return `${icon} ${label}`;
+  const { emoji, label } = EVENT_TYPE_DISPLAY[type];
+  return `${emoji} ${label}`;
 }
 
 /**
@@ -76,6 +86,15 @@ export function getEventTypeTitle(type: EventType): string {
  */
 export function getEventTypeClass(type: EventType): string {
   return `event-type--${type.toLowerCase().replace(/_/g, '-')}`;
+}
+
+/**
+ * The events of a day in the order they happen, a new array
+ * @param events - The events, in any order
+ * @returns The events by start time
+ */
+export function sortEventsByTime(events: CalendarEvent[]): CalendarEvent[] {
+  return [...events].sort((a, b) => a.startTime.localeCompare(b.startTime));
 }
 
 /**

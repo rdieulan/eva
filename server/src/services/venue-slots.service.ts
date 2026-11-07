@@ -48,9 +48,12 @@ export async function getVenueSlots(venueId: string, date: string): Promise<Venu
     endTime: session.endTime,
     convocationTime: session.convocationTime,
     arenaNumber: session.arenaNumber,
+    gameId: session.gameId,
     takenSeats: session.takenSeats,
     totalSeats: session.totalSeats,
     isCompetitiveAvailable: session.isCompetitiveAvailable,
+    tokenType: session.tokenType,
+    passQuotaLeft: session.passQuotaLeft,
   }));
 
   cache.set(key, { slots, expiresAt: Date.now() + VENUE_SLOTS_CACHE_TTL_MS });

@@ -271,7 +271,7 @@ describe('EventFormModal Component - Match venue', () => {
     expect(select.exists()).toBe(true);
     expect((select.element as HTMLSelectElement).value).toBe('venue-1');
     expect(select.findAll('option').map(o => o.text()))
-      .toEqual(['Non définie', 'VR Arena - Lyon', 'Laser Dome - Paris']);
+      .toEqual(['Non définie', 'VR Arena', 'Laser Dome']);
 
     await wrapper.find('#event-title').setValue('Match vs TeamX');
     await wrapper.findAll('button').find(b => b.text() === 'Créer')!.trigger('click');
@@ -312,7 +312,7 @@ describe('EventFormModal Component - Match venue', () => {
         endTime: '22:00',
         type: 'MATCH' as const,
         title: 'Away game',
-        venue: { id: 'venue-2', name: 'Laser Dome', city: 'Paris', evaLocationId: null, discord: null },
+        venue: { id: 'venue-2', name: 'Laser Dome', evaLocationId: null, discord: null },
         evaSlotIds: [],
         createdById: 'player-1',
         createdAt: '2026-10-01T00:00:00Z',
@@ -335,7 +335,7 @@ describe('EventFormModal Component - Match venue', () => {
         endTime: '22:00',
         type: 'MATCH' as const,
         title: 'Away game',
-        venue: { id: 'venue-2', name: 'Laser Dome', city: 'Paris', evaLocationId: null, discord: null },
+        venue: { id: 'venue-2', name: 'Laser Dome', evaLocationId: null, discord: null },
         evaSlotIds: [],
         createdById: 'player-1',
         createdAt: '2026-10-01T00:00:00Z',
@@ -344,7 +344,7 @@ describe('EventFormModal Component - Match venue', () => {
     await wrapper.setProps({ open: true });
 
     const rows = wrapper.findAll('.event-view-row').map(r => r.text().replace(/\s+/g, ' '));
-    expect(rows.some(row => row.includes('Salle') && row.includes('Laser Dome - Paris'))).toBe(true);
+    expect(rows.some(row => row.includes('Salle') && row.includes('Laser Dome'))).toBe(true);
     expect(wrapper.find('#event-venue').exists()).toBe(false);
   });
 
@@ -386,7 +386,7 @@ describe('EventFormModal Component - Editing an existing event', () => {
     type: 'MATCH' as const,
     title: 'Match vs TeamX',
     description: 'On se retrouve 30 min avant',
-    venue: { id: 'venue-1', name: 'VR Arena', city: 'Lyon', evaLocationId: null, discord: null },
+    venue: { id: 'venue-1', name: 'VR Arena', evaLocationId: null, discord: null },
     arenaNumber: 2,
     evaSlotIds: [],
     createdById: 'player-1',
@@ -478,6 +478,7 @@ describe('EventFormModal Component - Venue slots', () => {
     arenaNumber: 2,
     takenSeats: 7,
     totalSeats: 10,
+    gameId: 1,
   };
   const SLOT_20H40 = { ...SLOT_20H, slotId: 'slot-20:40', startTime: '20:40', endTime: '21:20', convocationTime: '20:30' };
 
@@ -607,7 +608,7 @@ describe('EventFormModal Component - Venue slots', () => {
         endTime: '21:20',
         type: 'MATCH',
         title: 'Match vs TeamX',
-        venue: { id: 'venue-1', name: 'Nîmes', city: 'Nimes', evaLocationId: 51, discord: null },
+        venue: { id: 'venue-1', name: 'Nîmes', evaLocationId: 51, discord: null },
         arenaNumber: 2,
         evaSlotIds: ['slot-20:00', 'slot-20:40'],
         createdById: 'player-1',

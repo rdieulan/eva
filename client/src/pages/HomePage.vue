@@ -64,7 +64,7 @@ function goToTeam() {
   align-items: center;
   justify-content: center;
   padding: $spacing-xl;
-  background: linear-gradient(135deg, $color-bg-secondary 0%, $color-bg-tertiary 100%);
+  @include surface-gradient;
 
   @include tablet {
     padding: $spacing-lg;
@@ -151,7 +151,7 @@ function goToTeam() {
 
 .nav-card {
   background: $color-bg-tertiary;
-  border: 2px solid $color-border-light;
+  border: $border-thick solid $color-border-light;
   border-radius: $radius-xl;
   padding: $spacing-xl;
   width: 280px;
@@ -163,7 +163,7 @@ function goToTeam() {
   &:hover {
     transform: translateY(-8px);
     border-color: $color-accent;
-    box-shadow: 0 12px 40px rgba($color-accent, 0.2);
+    box-shadow: 0 12px 40px with-alpha($color-accent, 0.2);
   }
 
   @include tablet {

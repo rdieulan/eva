@@ -18,6 +18,10 @@ import settingsIcon from '@/assets/icons/settings.svg?raw';
 import editIcon from '@/assets/icons/edit.svg?raw';
 import trashIcon from '@/assets/icons/trash.svg?raw';
 import micIcon from '@/assets/icons/mic.svg?raw';
+import headsetIcon from '@/assets/icons/headset.svg?raw';
+import starIcon from '@/assets/icons/star.svg?raw';
+import starOutlineIcon from '@/assets/icons/star-outline.svg?raw';
+import placeIcon from '@/assets/icons/place.svg?raw';
 
 const icons: Record<string, string> = {
   home: homeIcon,
@@ -36,6 +40,10 @@ const icons: Record<string, string> = {
   edit: editIcon,
   trash: trashIcon,
   mic: micIcon,
+  headset: headsetIcon,
+  star: starIcon,
+  'star-outline': starOutlineIcon,
+  place: placeIcon,
 };
 
 const props = defineProps<{

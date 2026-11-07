@@ -354,8 +354,8 @@ onMounted(loadAdmins);
 
 .message.success {
   padding: $spacing-md;
-  background: rgba($color-success, 0.1);
-  border: 1px solid rgba($color-success, 0.3);
+  background: with-alpha($color-success, 0.1);
+  border: $border-thin solid with-alpha($color-success, 0.3);
   color: $color-success;
   border-radius: $radius-md;
 }
@@ -378,7 +378,7 @@ onMounted(loadAdmins);
   td {
     padding: $spacing-md;
     text-align: left;
-    border-bottom: 1px solid $color-border;
+    border-bottom: $border-thin solid $color-border;
   }
 
   th {
@@ -427,22 +427,22 @@ onMounted(loadAdmins);
   font-weight: 600;
 
   &--super {
-    background: rgba($color-star, 0.15);
+    background: with-alpha($color-star, 0.15);
     color: $color-star;
   }
 
   &--regular {
-    background: rgba($color-accent, 0.15);
+    background: with-alpha($color-accent, 0.15);
     color: $color-accent;
   }
 
   &--pending {
-    background: rgba($color-warning, 0.15);
+    background: with-alpha($color-warning, 0.15);
     color: $color-warning;
   }
 
   &--active {
-    background: rgba($color-success, 0.15);
+    background: with-alpha($color-success, 0.15);
     color: $color-success;
   }
 }
@@ -495,7 +495,7 @@ onMounted(loadAdmins);
   input[type='email'] {
     padding: $spacing-sm $spacing-md;
     background: $color-bg-tertiary;
-    border: 1px solid $color-border;
+    border: $border-thin solid $color-border;
     border-radius: $radius-sm;
     color: $color-text-primary;
     font-size: $font-size-base;
@@ -511,7 +511,7 @@ onMounted(loadAdmins);
   display: flex;
   flex-direction: column;
   gap: $spacing-xs;
-  border: 1px solid $color-border;
+  border: $border-thin solid $color-border;
   border-radius: $radius-md;
   padding: $spacing-md;
 
@@ -552,7 +552,7 @@ onMounted(loadAdmins);
     flex: 1;
     padding: $spacing-sm $spacing-md;
     background: $color-bg-tertiary;
-    border: 1px solid $color-border;
+    border: $border-thin solid $color-border;
     border-radius: $radius-sm;
     color: $color-text-primary;
     font-family: monospace;

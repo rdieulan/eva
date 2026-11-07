@@ -8,8 +8,17 @@ import {
   EVA_USERNAME_MAX_LENGTH,
   EVA_SLOT_ID_MAX_LENGTH,
   EVA_SLOTS_PER_MATCH_MAX,
+  SCRIM_OFFER_SLOTS_MAX,
+  SCRIM_PROPOSAL_MESSAGE_MAX_LENGTH,
 } from '@shared/constants/validation.constants';
 import { TEAM_LOGO_MAX_BYTES, TEAM_FAVORITE_VENUES_MAX } from '@shared/constants/team.constants';
+import {
+  SCRIM_MATCH_SLOTS_MIN,
+  SCRIM_MATCH_SLOTS_MAX,
+  SCRIM_MATCH_COUNT_MIN,
+  SCRIM_MATCH_COUNT_MAX,
+  SCRIM_SEARCH_VENUES_MAX,
+} from '@shared/constants/eva.constants';
 import { EVENT_TYPES, VOICE_MEDIUMS } from '@shared/types/calendar.types';
 import { SUBSCRIPTION_TIERS } from '@shared/types/subscription.types';
 
@@ -207,15 +216,35 @@ export const ERROR = {
 
   // Scrim searches
   scrimSearchNotFound: 'Recherche introuvable',
-  scrimSearchNotOpen: 'Cette recherche a déjà trouvé un adversaire',
+  scrimOfferSlotsInvalid: `Liste de créneaux invalide (identifiants distincts, ${SCRIM_OFFER_SLOTS_MAX} créneaux au plus)`,
+  scrimSearchNotOpen: 'Cette recherche est close, elle a déjà ses matchs',
   scrimSearchDateInPast: 'Impossible de chercher un adversaire sur un jour passé',
   scrimSearchSlotsUnknown: 'Un des créneaux n\'existe pas dans cette salle ce jour-là',
-  scrimSearchSlotsNotConsecutive: 'Les créneaux doivent se suivre sur la même arène',
+  scrimSlotsNotConsecutive: 'Les créneaux du match doivent se suivre sur la même arène',
+  scrimSearchSlotsOtherGame: 'Un des créneaux est réservé à un autre jeu',
   scrimSearchSlotsNotCompetitive: 'Un des créneaux n\'est pas ouvert au mode compétitif',
   scrimSearchSlotsNotFree: 'Un des créneaux a déjà des inscrits, il ne peut pas accueillir un match',
-  scrimSearchAlreadyOpen: 'Votre équipe cherche déjà un adversaire sur un de ces créneaux',
+  scrimSearchSlotsPassQuota: 'Un des créneaux est en heures pleines et la salle n\'en ouvre plus aux EVA Pass ce jour-là',
+  scrimSearchAlreadyOpen: 'Votre équipe cherche déjà un adversaire ce jour-là',
+  scrimSearchMatchCountTooLow: 'Une recherche cherche au moins un match de plus que ceux déjà calés',
+  scrimSearchVenuesInvalid: `Liste de salles invalide (salles distinctes, ${SCRIM_SEARCH_VENUES_MAX} au plus, chacune avec ses créneaux)`,
+  scrimSearchSlotCountInvalid: `La durée du match va de ${SCRIM_MATCH_SLOTS_MIN} à ${SCRIM_MATCH_SLOTS_MAX} créneaux`,
+  scrimSearchMatchCountInvalid: `Le nombre de matchs va de ${SCRIM_MATCH_COUNT_MIN} à ${SCRIM_MATCH_COUNT_MAX}`,
+  scrimSearchOfferTooShort: 'Les créneaux proposés ne laissent pas la place à tous les matchs demandés : chacun sur des créneaux qui se suivent sur une arène, sans que deux matchs tombent en même temps',
+  scrimProposalRunLength: 'Le match doit prendre exactement le nombre de créneaux demandé par la recherche',
   scrimSearchesFetchFailed: 'Erreur lors de la récupération des recherches',
+  scrimProposalNotFound: 'Proposition introuvable',
+  scrimProposalOwnSearch: 'Impossible de proposer un match sur la recherche de votre propre équipe',
+  scrimProposalAlreadySent: 'Votre équipe a déjà proposé un match sur cette recherche',
+  scrimProposalNotPending: 'Cette proposition a déjà reçu une réponse',
+  scrimProposalSlotsNotOffered: 'Un des créneaux n\'est pas proposé par cette recherche',
+  scrimProposalTimeTaken: 'Ce match tomberait en même temps qu\'un match déjà calé sur cette recherche',
+  scrimProposalMessageTooLong: `Le message ne peut pas dépasser ${SCRIM_PROPOSAL_MESSAGE_MAX_LENGTH} caractères`,
+  scrimProposalCreateFailed: 'Erreur lors de l\'envoi de la proposition',
+  scrimProposalRespondFailed: 'Erreur lors de la réponse à la proposition',
+  scrimProposalWithdrawFailed: 'Erreur lors du retrait de la proposition',
   scrimSearchCreateFailed: 'Erreur lors de l\'ouverture de la recherche',
+  scrimSearchUpdateFailed: 'Erreur lors de la modification de la recherche',
   scrimSearchDeleteFailed: 'Erreur lors du retrait de la recherche',
 
   // Planner / Maps

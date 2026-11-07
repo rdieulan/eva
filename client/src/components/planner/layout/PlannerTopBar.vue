@@ -352,8 +352,8 @@ function isMainRoleForSelectedPlayer(assignmentId: number): boolean {
   background: transparent;
   padding: 0 $spacing-md;
   border-radius: 8px;
-  border-left: 2px solid $color-border;
-  border-right: 2px solid $color-border;
+  border-left: $border-thick solid $color-border;
+  border-right: $border-thick solid $color-border;
   position: relative;
 
   // Variant for column layout (roles)
@@ -374,7 +374,7 @@ function isMainRoleForSelectedPlayer(assignmentId: number): boolean {
 .btn-calculator {
   width: 48px;
   height: 48px;
-  border: 1px solid $color-border;
+  border: $border-thin solid $color-border;
   background: $color-bg-tertiary;
   border-radius: $radius-md;
   cursor: pointer;
@@ -419,20 +419,20 @@ function isMainRoleForSelectedPlayer(assignmentId: number): boolean {
   border-radius: 15px;
 
   &.is-balanced {
-    background: rgba($color-success, 0.15);
-    border: 1px solid rgba($color-success, 0.3);
+    background: with-alpha($color-success, 0.15);
+    border: $border-thin solid with-alpha($color-success, 0.3);
     color: $color-success;
   }
 
   &.has-warnings {
-    background: rgba($color-warning, 0.15);
-    border: 1px solid rgba($color-warning, 0.3);
+    background: with-alpha($color-warning, 0.15);
+    border: $border-thin solid with-alpha($color-warning, 0.3);
     color: $color-warning;
   }
 
   &.is-unbalanced {
-    background: rgba($color-danger, 0.15);
-    border: 1px solid rgba($color-danger, 0.3);
+    background: with-alpha($color-danger, 0.15);
+    border: $border-thin solid with-alpha($color-danger, 0.3);
     color: $color-danger;
   }
 
@@ -465,7 +465,7 @@ function isMainRoleForSelectedPlayer(assignmentId: number): boolean {
   right: 0;
   margin-top: $spacing-xs;
   background: $color-bg-secondary;
-  border: 1px solid $color-border;
+  border: $border-thin solid $color-border;
   border-radius: $radius-md;
   padding: $spacing-sm;
   z-index: 1000;
@@ -494,7 +494,7 @@ function isMainRoleForSelectedPlayer(assignmentId: number): boolean {
   }
 
   &:not(:last-child) {
-    border-bottom: 1px solid $color-border;
+    border-bottom: $border-thin solid $color-border;
   }
 }
 
@@ -537,7 +537,7 @@ function isMainRoleForSelectedPlayer(assignmentId: number): boolean {
 .btn-balance {
   width: 48px;
   height: 48px;
-  border: 1px solid $color-border;
+  border: $border-thin solid $color-border;
   border-radius: $radius-md;
   display: flex;
   align-items: center;
@@ -579,7 +579,7 @@ function isMainRoleForSelectedPlayer(assignmentId: number): boolean {
 
   button {
     padding: 0.3rem 0.75rem;
-    border: 2px solid $color-border;
+    border: $border-thick solid $color-border;
     background: transparent;
     color: $color-text-muted;
     border-radius: $radius-sm;
@@ -595,17 +595,17 @@ function isMainRoleForSelectedPlayer(assignmentId: number): boolean {
     }
 
     &.active {
-      background: rgba($color-accent, 0.4);
+      background: with-alpha($color-accent, 0.4);
       border-color: $color-accent;
       color: $color-white;
-      box-shadow: 0 0 8px rgba($color-accent, 0.3);
+      box-shadow: 0 0 8px with-alpha($color-accent, 0.3);
     }
 
     &.highlighted {
       border-color: white;
 
       &.active {
-        background: linear-gradient(135deg, rgba($color-accent, 0.4) 0%, rgba($color-success, 0.3) 100%);
+        background: linear-gradient(135deg, with-alpha($color-accent, 0.4) 0%, with-alpha($color-success, 0.3) 100%);
         border-color: white;
         color: $color-white;
       }
@@ -641,7 +641,7 @@ function isMainRoleForSelectedPlayer(assignmentId: number): boolean {
 
   button {
     padding: $spacing-xs 0.7rem;
-    border: 2px solid var(--assignment-color);
+    border: $border-thick solid var(--assignment-color);
     background: transparent;
     color: var(--assignment-color);
     border-radius: $radius-sm;

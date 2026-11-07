@@ -14,6 +14,7 @@ import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import SvgIcon from '@/components/common/SvgIcon.vue';
 import LinkedAccountsSection from '@/components/profile/LinkedAccountsSection.vue';
 import EvaAccountSection from '@/components/profile/EvaAccountSection.vue';
+import ThemeSection from '@/components/profile/ThemeSection.vue';
 
 const router = useRouter();
 const { account, token, clearAuth } = useAuth();
@@ -242,6 +243,8 @@ async function handleLogout() {
       <!-- Linked accounts -->
       <LinkedAccountsSection />
 
+      <ThemeSection />
+
       <!-- Logout -->
       <section class="profile-section">
         <h2>Session</h2>
@@ -266,7 +269,7 @@ async function handleLogout() {
   align-items: flex-start;
   justify-content: center;
   padding: $spacing-xl;
-  background: linear-gradient(135deg, $color-bg-secondary 0%, $color-bg-tertiary 100%);
+  @include surface-gradient;
   overflow-y: auto;
 
   @include tablet {
@@ -310,7 +313,7 @@ h1 {
 
 .profile-section {
   background: $color-bg-tertiary;
-  border: 1px solid $color-border-light;
+  border: $border-thin solid $color-border-light;
   border-radius: $radius-lg;
   padding: $spacing-lg;
   margin-bottom: $spacing-lg;
@@ -326,7 +329,8 @@ h1 {
     margin-bottom: 0.75rem;
   }
 
-  h2 {
+  // The sections are child components: reach their heading through the scope
+  :deep(h2) {
     color: $color-accent;
     margin: 0 0 $spacing-md;
     font-size: 1.1rem;
@@ -383,12 +387,12 @@ h1 {
   text-transform: uppercase;
 
   &.leader {
-    background: rgba($color-success, 0.2);
+    background: with-alpha($color-success, 0.2);
     color: $color-success;
   }
 
   &.player {
-    background: rgba($color-accent, 0.2);
+    background: with-alpha($color-accent, 0.2);
     color: $color-accent;
   }
 }
@@ -417,7 +421,7 @@ h1 {
   select {
     padding: 0.75rem $spacing-md;
     background: $color-bg-secondary;
-    border: 2px solid $color-border-light;
+    border: $border-thick solid $color-border-light;
     border-radius: $radius-md;
     color: $color-white;
     font-size: 1rem;
@@ -458,8 +462,8 @@ h1 {
 
 
   &.success {
-    background: rgba($color-success, 0.1);
-    border: 1px solid rgba($color-success, 0.3);
+    background: with-alpha($color-success, 0.1);
+    border: $border-thin solid with-alpha($color-success, 0.3);
     color: $color-success;
   }
 

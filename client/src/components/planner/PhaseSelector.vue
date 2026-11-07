@@ -69,7 +69,7 @@ const isActive = (phase: GamePhase) => props.modelValue === phase;
   background: $color-bg-secondary;
   padding: $spacing-xs;
   border-radius: $radius-md;
-  border: 1px solid $color-border;
+  border: $border-thin solid $color-border;
 
   &.disabled {
     opacity: 0.5;
@@ -100,7 +100,7 @@ const isActive = (phase: GamePhase) => props.modelValue === phase;
   padding: $spacing-sm $spacing-md;
   min-width: 80px;
   background: transparent;
-  border: 1px solid transparent;
+  border: $border-thin solid transparent;
   border-radius: $radius-sm;
   color: $color-text-secondary;
   font-size: $font-size-sm;

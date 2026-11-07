@@ -129,7 +129,7 @@ async function exportToPng() {
 
 .export-content {
   background: $color-bg-secondary;
-  border: 1px solid $color-border;
+  border: $border-thin solid $color-border;
   border-radius: $radius-md;
   padding: $spacing-md;
 }
@@ -154,7 +154,7 @@ async function exportToPng() {
 }
 
 .absent-badge {
-  background: rgba($color-danger, 0.2);
+  background: with-alpha($color-danger, 0.2);
   color: $color-danger;
   padding: $spacing-xs 0.75rem;
   border-radius: 20px;
@@ -193,7 +193,7 @@ th,
 td {
   padding: $spacing-sm;
   text-align: center;
-  border-bottom: 1px solid $color-border-light;
+  border-bottom: $border-thin solid $color-border-light;
 
   @include tablet {
     padding: 0.4rem;
@@ -230,7 +230,7 @@ th {
 .assignment-badge {
   display: inline-block;
   padding: 0.2rem $spacing-sm;
-  border: 1px solid;
+  border: $border-thin solid;
   border-radius: $radius-sm;
   font-size: 0.75rem;
   font-weight: 600;
@@ -263,8 +263,8 @@ th {
 .btn-export-png {
   align-self: center;
   padding: 0.75rem 1.5rem;
-  background: rgba($color-success, 0.2);
-  border: 1px solid $color-success;
+  background: with-alpha($color-success, 0.2);
+  border: $border-thin solid $color-success;
   border-radius: $radius-md;
   color: $color-success;
   font-size: 0.9rem;
@@ -273,7 +273,7 @@ th {
   transition: all 0.2s;
 
   &:hover {
-    background: rgba($color-success, 0.3);
+    background: with-alpha($color-success, 0.3);
   }
 
   @include mobile-lg {

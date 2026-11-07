@@ -75,7 +75,7 @@ const showTopBar = computed(() => route.name !== 'login');
   flex-direction: column;
   height: 100vh;
   width: 100vw;
-  background: $color-bg-primary;
+  background: $texture-bg $color-bg-primary;
   overflow: hidden;
 }
 

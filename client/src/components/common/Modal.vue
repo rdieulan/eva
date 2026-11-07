@@ -1,5 +1,15 @@
+<script lang="ts">
+// The modals open across the app, the last opened on top: a modal can open
+// over another, a confirmation over a sheet, a search over the search modal.
+// Escape closes the top one alone, the page scrolls again once none is left
+// open, and each modal sits above the ones opened before it, wherever it is
+// mounted in the page.
+const openModals: { id: symbol; layer: number }[] = [];
+const MODAL_LAYER = 1000; // The z-index of a modal opened over none; one opened over another takes the next
+</script>
+
 <script setup lang="ts">
-import { watch, onMounted, onUnmounted } from 'vue';
+import { ref, watch, onMounted, onUnmounted } from 'vue';
 import SvgIcon from '@/components/common/SvgIcon.vue';
 
 const props = withDefaults(
@@ -21,9 +31,33 @@ const emit = defineEmits<{
   close: [];
 }>();
 
-// Close on Escape key
+const id = Symbol('modal');
+const layer = ref(MODAL_LAYER);
+
+function isOnTop(): boolean {
+  return openModals[openModals.length - 1]?.id === id;
+}
+
+// The page under a modal does not scroll
+function stack() {
+  if (openModals.some(open => open.id === id)) return;
+  const top = openModals[openModals.length - 1];
+  layer.value = top ? top.layer + 1 : MODAL_LAYER;
+  openModals.push({ id, layer: layer.value });
+  document.body.style.overflow = 'hidden';
+}
+
+function unstack() {
+  const index = openModals.findIndex(open => open.id === id);
+  if (index === -1) return;
+  openModals.splice(index, 1);
+  if (!openModals.length) document.body.style.overflow = '';
+}
+
+// Escape closes the modal on top; the ones under it stay. The modal leaves the
+// stack once its parent closes it, after every listener has read the key.
 function handleKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape' && props.open) {
+  if (e.key === 'Escape' && props.open && isOnTop()) {
     emit('close');
   }
 }
@@ -35,17 +69,7 @@ function handleBackdropClick() {
   }
 }
 
-// Prevent body scroll when modal is open
-watch(
-  () => props.open,
-  (isOpen) => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-  }
-);
+watch(() => props.open, isOpen => (isOpen ? stack() : unstack()), { immediate: true });
 
 onMounted(() => {
   document.addEventListener('keydown', handleKeydown);
@@ -53,14 +77,14 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('keydown', handleKeydown);
-  document.body.style.overflow = '';
+  unstack();
 });
 </script>
 
 <template>
   <Teleport to="body">
     <Transition name="modal">
-      <div v-if="open" class="modal-backdrop" @click.self="handleBackdropClick">
+      <div v-if="open" class="modal-backdrop" :style="{ zIndex: layer }" @click.self="handleBackdropClick">
         <div class="modal-container" :class="[`modal-${size}`]">
           <!-- Header -->
           <div v-if="title || $slots.header" class="modal-header">
@@ -97,7 +121,6 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
   padding: $spacing-md;
 
   @include mobile-lg {
@@ -108,7 +131,7 @@ onUnmounted(() => {
 
 .modal-container {
   background: $color-bg-secondary;
-  border: 1px solid $color-border;
+  border: $border-thin solid $color-border;
   border-radius: $radius-lg;
   max-height: 90vh;
   display: flex;
@@ -147,7 +170,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: $spacing-md $spacing-lg;
-  border-bottom: 1px solid $color-border;
+  border-bottom: $border-thin solid $color-border;
 
   @include tablet {
     padding: 0.875rem 1.25rem;
@@ -237,7 +260,7 @@ onUnmounted(() => {
   justify-content: flex-end;
   gap: 0.75rem;
   padding: $spacing-md $spacing-lg;
-  border-top: 1px solid $color-border;
+  border-top: $border-thin solid $color-border;
 
   @include tablet {
     padding: 0.875rem 1.25rem;

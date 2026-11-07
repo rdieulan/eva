@@ -20,6 +20,7 @@ const SLOT_20H = {
   arenaNumber: 1,
   takenSeats: 7,
   totalSeats: 10,
+    gameId: 1,
 };
 const SLOT_20H40 = { ...SLOT_20H, slotId: 'slot-20:40', startTime: '20:40', endTime: '21:20' };
 
@@ -31,7 +32,7 @@ function match(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
     endTime: '21:20',
     type: 'MATCH',
     title: 'Scrim vs TeamX',
-    venue: { id: 'venue-1', name: 'Nîmes', city: 'Nimes', evaLocationId: 51, discord: null },
+    venue: { id: 'venue-1', name: 'Nîmes', evaLocationId: 51, discord: null },
     arenaNumber: 1,
     evaSlotIds: ['slot-20:00', 'slot-20:40'],
     createdById: 'player-1',
@@ -66,7 +67,7 @@ describe('EventViewerModal - booking on eva.gg', () => {
 
   it('offers no booking link for a venue eva.gg does not run', async () => {
     const wrapper = mountViewer(match({
-      venue: { id: 'venue-2', name: 'Garage', city: 'Paris', evaLocationId: null, discord: null },
+      venue: { id: 'venue-2', name: 'Garage', evaLocationId: null, discord: null },
       evaSlotIds: [],
     }));
     await flushPromises();
@@ -76,7 +77,7 @@ describe('EventViewerModal - booking on eva.gg', () => {
 
   it('links to the Discord of the venue when it has one', async () => {
     const wrapper = mountViewer(match({
-      venue: { id: 'venue-1', name: 'Nîmes', city: 'Nimes', evaLocationId: 51, discord: 'https://discord.gg/evanimes' },
+      venue: { id: 'venue-1', name: 'Nîmes', evaLocationId: 51, discord: 'https://discord.gg/evanimes' },
     }));
     await flushPromises();
 

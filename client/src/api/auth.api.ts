@@ -17,8 +17,7 @@ export async function login(credentials: LoginCredentials): Promise<LoginRespons
   });
 
   if (!response.ok) {
-    const errorData = await response.json();
-    throw ApiError.fromResponse(errorData, ERROR.loginFailed);
+    throw await ApiError.fromFailedResponse(response, ERROR.loginFailed);
   }
 
   return response.json();
@@ -65,8 +64,7 @@ export async function activateAccount(activationToken: string, password: string)
   });
 
   if (!response.ok) {
-    const errorData = await response.json();
-    throw ApiError.fromResponse(errorData, ERROR.activationFailed);
+    throw await ApiError.fromFailedResponse(response, ERROR.activationFailed);
   }
 }
 
@@ -82,8 +80,7 @@ export async function resetPasswordWithToken(resetToken: string, password: strin
   });
 
   if (!response.ok) {
-    const errorData = await response.json();
-    throw ApiError.fromResponse(errorData, ERROR.passwordResetFailed);
+    throw await ApiError.fromFailedResponse(response, ERROR.passwordResetFailed);
   }
 }
 

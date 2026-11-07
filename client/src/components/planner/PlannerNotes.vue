@@ -135,7 +135,7 @@ const currentPhaseData = computed(() => PHASE_DISPLAY_DATA[props.currentPhase]);
   display: flex;
   gap: $spacing-xs;
   margin-bottom: $spacing-md;
-  border-bottom: 1px solid $color-border;
+  border-bottom: $border-thin solid $color-border;
   padding-bottom: $spacing-xs;
 }
 
@@ -158,12 +158,12 @@ const currentPhaseData = computed(() => PHASE_DISPLAY_DATA[props.currentPhase]);
 
   &:hover {
     color: $color-text-primary;
-    background: rgba($color-white, 0.05);
+    background: with-alpha($color-white, 0.05);
   }
 
   &.active {
     color: var(--tab-color, $color-accent);
-    background: rgba($color-white, 0.05)er;
+    background: with-alpha($color-white, 0.05)er;
 
     &::after {
       content: '';
@@ -213,7 +213,7 @@ const currentPhaseData = computed(() => PHASE_DISPLAY_DATA[props.currentPhase]);
   min-height: 100px;
   padding: $spacing-sm;
   background: $color-bg-tertiary;
-  border: 1px solid $color-border;
+  border: $border-thin solid $color-border;
   border-radius: $radius-sm;
   color: $color-text-primary;
   font-family: inherit;
