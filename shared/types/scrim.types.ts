@@ -20,9 +20,10 @@ export interface ScrimSearchTeam {
 
 /**
  * Where a proposal stands. Mirrors the ScrimProposalStatus enum in
- * prisma/schema.prisma.
+ * prisma/schema.prisma. CANCELLED: accepted, then the match called off by one
+ * of the two teams.
  */
-export const SCRIM_PROPOSAL_STATUSES = ['PENDING', 'ACCEPTED', 'DECLINED', 'WITHDRAWN'] as const;
+export const SCRIM_PROPOSAL_STATUSES = ['PENDING', 'ACCEPTED', 'DECLINED', 'WITHDRAWN', 'CANCELLED'] as const;
 
 export type ScrimProposalStatus = typeof SCRIM_PROPOSAL_STATUSES[number];
 

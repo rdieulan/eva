@@ -78,6 +78,7 @@ export function formatEventForFrontend(event: {
   arenaNumber?: number | null;
   evaSlotIds: string[];
   voiceMedium?: VoiceMedium | null;
+  scrimSearchId?: string | null;
   createdById: string;
   createdAt: Date;
 }): CalendarEvent {
@@ -101,6 +102,7 @@ export function formatEventForFrontend(event: {
     arenaNumber: event.arenaNumber ?? undefined,
     evaSlotIds: event.evaSlotIds,
     voiceMedium: event.voiceMedium ?? undefined,
+    scrimSearchId: event.scrimSearchId ?? undefined,
     createdById: event.createdById,
     createdAt: event.createdAt.toISOString(),
   };

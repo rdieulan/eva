@@ -27,6 +27,7 @@ import type {
 } from '@services/scrim-search.service';
 import * as scrimProposalService from '@services/scrim-proposal.service';
 import type {
+  CancelScrimMatchRefusal,
   CreateScrimProposalRefusal,
   RespondScrimProposalRefusal,
   WithdrawScrimProposalRefusal,
@@ -92,6 +93,12 @@ const RESPOND_REFUSALS: Record<RespondScrimProposalRefusal, { status: number; er
   searchNotOpen: { status: 409, error: ERROR.scrimSearchNotOpen },
   timeTaken: { status: 409, error: ERROR.scrimProposalTimeTaken },
   runTaken: { status: 409, error: ERROR.scrimProposalRunTaken },
+};
+
+const CANCEL_REFUSALS: Record<CancelScrimMatchRefusal, { status: number; error: string }> = {
+  notFound: { status: 404, error: ERROR.scrimMatchNotFound },
+  notYours: { status: 403, error: ERROR.accessDenied },
+  matchPast: { status: 400, error: ERROR.scrimMatchPast },
 };
 
 const WITHDRAW_REFUSALS: Record<WithdrawScrimProposalRefusal, { status: number; error: string }> = {
@@ -384,6 +391,30 @@ router.delete('/proposals/:id', authMiddleware, requirePermission('matchmaking',
   } catch (error) {
     apiLogger.error('Error withdrawing a scrim proposal:', error);
     res.status(500).json({ errors: [ERROR.scrimProposalWithdrawFailed] });
+  }
+});
+
+// ============================================
+// Matches made
+// ============================================
+
+// DELETE /api/scrims/matches/:eventId - Call off a match the matchmaking made, from the team's copy: both calendars lose it
+router.delete('/matches/:eventId', authMiddleware, requirePermission('matchmaking', 'canRespond'), async (req: AuthRequest, res: Response) => {
+  const teamId = req.account?.teamId;
+  if (!teamId) {
+    return res.status(403).json({ errors: [ERROR.teamRequiredForScrims] });
+  }
+
+  try {
+    const result = await scrimProposalService.cancelScrimMatch(req.params.eventId, teamId);
+    if (result.refusal) {
+      const { status, error } = CANCEL_REFUSALS[result.refusal];
+      return res.status(status).json({ errors: [error] });
+    }
+    res.status(204).end();
+  } catch (error) {
+    apiLogger.error('Error calling a scrim match off:', error);
+    res.status(500).json({ errors: [ERROR.scrimMatchCancelFailed] });
   }
 });
 

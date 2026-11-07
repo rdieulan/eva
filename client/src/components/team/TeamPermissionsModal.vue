@@ -135,7 +135,7 @@ function handleSave() {
             :checked="editingPermissions.matchmaking.canRespond"
             @change="togglePermission('matchmaking', 'canRespond')"
           />
-          Accepter ou refuser les propositions reçues
+          Accepter ou refuser les propositions reçues, annuler un match calé
         </label>
       </div>
 

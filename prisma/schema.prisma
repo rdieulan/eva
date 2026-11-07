@@ -441,4 +441,5 @@ enum ScrimProposalStatus {
   ACCEPTED
   DECLINED
   WITHDRAWN
+  CANCELLED // Accepted, then the match called off by one of the two teams
 }

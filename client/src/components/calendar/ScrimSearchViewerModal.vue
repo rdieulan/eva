@@ -107,6 +107,7 @@ const OWN_PROPOSAL_LABELS: Record<ScrimProposal['status'], string> = {
   ACCEPTED: 'Proposition acceptée',
   DECLINED: 'Proposition refusée par leur équipe',
   WITHDRAWN: 'Proposition retirée',
+  CANCELLED: 'Match annulé',
 };
 
 function offeredSummary(search: ScrimSearch): string {
@@ -436,7 +437,8 @@ function decline(proposal: ScrimProposal) {
   }
 
   &--declined,
-  &--withdrawn {
+  &--withdrawn,
+  &--cancelled {
     color: $color-text-secondary;
   }
 

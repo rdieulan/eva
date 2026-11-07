@@ -69,6 +69,7 @@ export interface CalendarEvent {
   arenaNumber?: number; // Arène de cette salle, quand elle est connue
   evaSlotIds: string[]; // Créneaux de cette salle sur lesquels le match se joue, consécutifs, dans l'ordre ; vide si aucun
   voiceMedium?: VoiceMedium; // Plateforme pour les VOICE_MEETING
+  scrimSearchId?: string; // Match fait par le matchmaking : la recherche dont il vient. Son heure et son lieu ne changent pas, il s'annule des deux côtés
   createdById: string;
   createdAt: string;
 }

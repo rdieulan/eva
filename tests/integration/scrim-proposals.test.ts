@@ -545,3 +545,111 @@ describe('DELETE /api/scrims/proposals/:id', () => {
     expect(await prisma.scrimProposal.count()).toBe(0);
   });
 });
+
+describe('DELETE /api/scrims/matches/:eventId', () => {
+  // A match made on the run, and the copy each team holds
+  async function made(searchBody: Record<string, unknown> = {}, run: string[] = RUN) {
+    const context = await setup(searchBody);
+    const proposal = await propose(context.proposer.token, context.searchId, { evaSlotIds: run }).expect(201);
+    const accepted = await accept(context.searcher.token, proposal.body.id).expect(200);
+    const events = accepted.body.events as { id: string; title: string }[];
+    return { ...context, proposalId: proposal.body.id, events };
+  }
+
+  function cancel(token: string, eventId: string) {
+    return request(app).delete(`/api/scrims/matches/${eventId}`).set('Authorization', `Bearer ${token}`);
+  }
+
+  it('should call the match off from either team: both calendars lose it, and its proposal says so', async () => {
+    const { proposer, proposalId, events } = await made();
+    const proposerCopy = events.find(event => event.title.startsWith('Scrim vs '))!;
+    const theirs = await prisma.calendarEvent.findMany({ where: { scrimSearchId: { not: null } } });
+    expect(theirs).toHaveLength(2);
+
+    const copy = theirs.find(event => event.teamId === proposer.team.id)!;
+    await cancel(proposer.token, copy.id).expect(204);
+
+    expect(proposerCopy).toBeDefined();
+    expect(await prisma.calendarEvent.count()).toBe(0);
+    expect(await statusOf(proposalId)).toBe('CANCELLED');
+  });
+
+  it('should give a search still open the time of the match back for another one', async () => {
+    // 19:20 to 20:40 leaves 20:40 to 22:00 for a second match: the search stays open
+    const { searcher, searchId } = await made({ matchCount: 2 }, ['a1-1920', 'a1-2000']);
+    const searcherCopy = (await prisma.calendarEvent.findMany()).find(event => event.teamId === searcher.team.id)!;
+
+    await cancel(searcher.token, searcherCopy.id).expect(204);
+
+    const listed = await listAtVenue(searcher.token).expect(200);
+    expect(listed.body[0]).toMatchObject({ id: searchId, matchedCount: 0, takenSlotIds: [], status: 'OPEN' });
+    const another = await createUserWithTeam();
+    const again = await propose(another.token, searchId, { evaSlotIds: ['a1-1920', 'a1-2000'] }).expect(201);
+    await accept(searcher.token, again.body.id).expect(200);
+  });
+
+  it('should keep a closed search closed', async () => {
+    const { searcher, searchId } = await made();
+    const searcherCopy = (await prisma.calendarEvent.findMany()).find(event => event.teamId === searcher.team.id)!;
+
+    await cancel(searcher.token, searcherCopy.id).expect(204);
+
+    expect((await prisma.scrimSearch.findUniqueOrThrow({ where: { id: searchId } })).status).toBe('MATCHED');
+  });
+
+  it('should leave a match whose day has passed in both calendars', async () => {
+    const { searcher, proposalId } = await made();
+    // The day went by since the match was made
+    await prisma.calendarEvent.updateMany({ data: { date: new Date('2020-01-01') } });
+    const searcherCopy = (await prisma.calendarEvent.findMany()).find(event => event.teamId === searcher.team.id)!;
+
+    const refused = await cancel(searcher.token, searcherCopy.id);
+
+    expect(refused.status).toBe(400);
+    expect(refused.body.errors).toContain(ERROR.scrimMatchPast);
+    expect(await prisma.calendarEvent.count()).toBe(2);
+    expect(await statusOf(proposalId)).toBe('ACCEPTED');
+  });
+
+  it('should refuse another team\'s copy, an event the matchmaking did not make, and a player without a team', async () => {
+    const { searcher } = await made();
+    const outsider = await createUserWithTeam();
+    const copy = (await prisma.calendarEvent.findMany()).find(event => event.teamId === searcher.team.id)!;
+    expect((await cancel(outsider.token, copy.id)).status).toBe(403);
+
+    const plain = await request(app)
+      .post('/api/calendar/events')
+      .set('Authorization', `Bearer ${searcher.token}`)
+      .send({ date: DATE, startTime: '14:00', endTime: '15:00', type: 'EVENT', title: 'Réunion' })
+      .expect(201);
+    expect((await cancel(searcher.token, plain.body.id)).status).toBe(404);
+    expect((await cancel(searcher.token, 'no-such-event')).status).toBe(404);
+
+    const loner = await createAuthenticatedUser();
+    expect((await cancel(loner.token, copy.id)).status).toBe(403);
+    expect(await prisma.calendarEvent.count({ where: { scrimSearchId: { not: null } } })).toBe(2);
+  });
+
+  it('should leave a match of the matchmaking to its calling off, and keep its time and place; its title may change', async () => {
+    const { searcher } = await made();
+    const copy = (await prisma.calendarEvent.findMany()).find(event => event.teamId === searcher.team.id)!;
+    const auth = { Authorization: `Bearer ${searcher.token}` };
+
+    const deleted = await request(app).delete(`/api/calendar/events/${copy.id}`).set(auth);
+    expect(deleted.status).toBe(409);
+    expect(deleted.body.errors).toContain(ERROR.eventFromMatchmaking);
+
+    const moved = await request(app).put(`/api/calendar/events/${copy.id}`).set(auth).send({ startTime: '21:20', endTime: '22:40' });
+    expect(moved.status).toBe(409);
+    expect(moved.body.errors).toContain(ERROR.eventFromMatchmakingPlace);
+
+    // The form sends everything back: what does not move goes through
+    const renamed = await request(app).put(`/api/calendar/events/${copy.id}`).set(auth).send({
+      date: DATE, startTime: copy.startTime, endTime: copy.endTime, type: 'MATCH', title: 'Scrim du jeudi', description: 'Bo3',
+      venueId: copy.venueId, arenaNumber: copy.arenaNumber, evaSlotIds: copy.evaSlotIds,
+    });
+    expect(renamed.status).toBe(200);
+    expect(renamed.body.title).toBe('Scrim du jeudi');
+    expect(renamed.body.scrimSearchId).toBe(copy.scrimSearchId);
+  });
+});

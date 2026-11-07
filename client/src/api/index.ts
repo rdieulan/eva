@@ -42,6 +42,7 @@ export {
   createScrimSearch,
   updateScrimSearch,
   deleteScrimSearch,
+  cancelScrimMatch,
   createScrimProposal,
   acceptScrimProposal,
   declineScrimProposal,

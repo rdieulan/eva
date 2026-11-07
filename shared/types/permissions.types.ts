@@ -26,7 +26,7 @@ export interface CalendarPermissions {
 export interface MatchmakingPermissions {
   canSearch: boolean;  // Open, change and withdraw the team's searches for an opponent
   canPropose: boolean; // Propose a match on another team's search, and take the proposal back
-  canRespond: boolean; // Accept or decline the proposals on the team's searches; an accepted one lands in the calendar
+  canRespond: boolean; // Accept or decline the proposals on the team's searches, an accepted one landing in the calendar; call off a match made
 }
 
 /**

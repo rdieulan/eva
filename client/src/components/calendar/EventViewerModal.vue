@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import Modal from '@/components/common/Modal.vue';
+import ConfirmModal from '@/components/common/ConfirmModal.vue';
 import GamePlanViewer from '@/components/common/GamePlanViewer.vue';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import { useErrors } from '@/composables/useErrors';
 import { useVenueSlots } from '@/composables/useVenueSlots';
+import { cancelScrimMatch } from '@/api';
 import type { CalendarEvent } from '@shared/types';
 import {
   formatLongDate,
@@ -15,7 +17,7 @@ import {
 } from '@/utils/calendar';
 import { formatVenueLabel } from '@/utils/venues';
 import { buildEvaBookingUrl, assessSlotHeadcount } from '@shared/utils';
-import { PLANNER_ENABLED } from '@shared/constants';
+import { ERROR, PLANNER_ENABLED } from '@shared/constants';
 
 const props = defineProps<{
   events: CalendarEvent[];
@@ -23,6 +25,7 @@ const props = defineProps<{
   canCreate?: boolean;
   canEdit?: boolean;
   canDelete?: boolean;
+  canCancelMatch?: boolean; // May call off a match the matchmaking made
   selectedDate?: string;
 }>();
 
@@ -31,10 +34,11 @@ const emit = defineEmits<{
   'edit-event': [event: CalendarEvent];
   'create-event': [date: string];
   'delete-event': [eventId: string];
+  'match-cancelled': []; // A match of the matchmaking called off: both calendars lost it
 }>();
 
 // Error handling
-const { errors, setError } = useErrors();
+const { errors, setError, setErrorFromException, clearErrors } = useErrors();
 
 // Current event index
 const currentIndex = ref(props.initialIndex ?? 0);
@@ -56,6 +60,28 @@ const isEventPast = computed(() => {
 // Permissions - check if not past date
 const canEditEvent = computed(() => props.canEdit && !isEventPast.value);
 const canCreateEvent = computed(() => props.canCreate && !isEventPast.value);
+
+// A match the matchmaking made is called off, from either team, rather than
+// deleted on one side: both calendars lose it
+const canCancelMatch = computed(() => !!currentEvent.value?.scrimSearchId && props.canCancelMatch && !isEventPast.value);
+const confirmCancel = ref(false);
+const isCancelling = ref(false);
+
+async function cancelMatch() {
+  confirmCancel.value = false;
+  const event = currentEvent.value;
+  if (!event || isCancelling.value) return;
+  isCancelling.value = true;
+  clearErrors();
+  try {
+    await cancelScrimMatch(event.id);
+    emit('match-cancelled');
+  } catch (error) {
+    setErrorFromException(error, ERROR.scrimMatchCancelFailed);
+  } finally {
+    isCancelling.value = false;
+  }
+}
 
 // Navigation
 const hasPrev = computed(() => currentIndex.value > 0);
@@ -267,7 +293,16 @@ function handleCreateEvent() {
     <template #footer>
       <div class="footer-actions">
         <!-- Admin buttons (only for non-past events) -->
-        <div v-if="canEditEvent || canCreateEvent" class="admin-actions">
+        <div v-if="canEditEvent || canCreateEvent || canCancelMatch" class="admin-actions">
+          <button
+            v-if="canCancelMatch"
+            class="btn btn-danger"
+            :disabled="isCancelling"
+            title="Retirer ce match des deux calendriers"
+            @click="confirmCancel = true"
+          >
+            Annuler le match
+          </button>
           <button v-if="canEditEvent" class="btn btn-primary" @click="handleEditEvent" title="Modifier cet événement">
             ✏️ Modifier
           </button>
@@ -281,6 +316,17 @@ function handleCreateEvent() {
       </div>
     </template>
   </Modal>
+
+  <ConfirmModal
+    :open="confirmCancel"
+    title="Annuler le match"
+    message="Le match sera retiré de votre calendrier et de celui de l'autre équipe. Les réservations faites sur eva.gg sont à annuler là-bas."
+    confirm-text="Annuler le match"
+    cancel-text="Garder le match"
+    :danger="true"
+    @confirm="cancelMatch"
+    @cancel="confirmCancel = false"
+  />
 </template>
 
 <style scoped lang="scss">
@@ -542,6 +588,22 @@ function handleCreateEvent() {
   }
 }
 
+// Same as the event form's delete button
+.btn-danger {
+  background: $color-danger;
+  color: $color-white;
+  border: $border-thin solid $color-danger;
+
+  &:hover:not(:disabled) {
+    background: tint($color-danger, 5%);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
 .footer-actions {
   display: flex;
   justify-content: space-between;
@@ -561,9 +623,15 @@ function handleCreateEvent() {
 
   @include mobile {
     width: 100%;
+    flex-wrap: wrap;
 
     .btn {
       flex: 1;
+    }
+
+    // Calling a match off takes a row of its own: three buttons side by side wrap their labels
+    .btn-danger {
+      flex-basis: 100%;
     }
   }
 }

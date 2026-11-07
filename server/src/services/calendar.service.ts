@@ -421,7 +421,8 @@ export async function getEventWithTeamCheck(eventId: string, teamId?: string): P
   | { notFound: true }
   | { accessDenied: true }
   | { event: { id: string; type: EventType; teamId: string | null; venueId: string | null;
-      voiceMedium: VoiceMedium | null; date: Date; startTime: string; endTime: string } }
+      voiceMedium: VoiceMedium | null; date: Date; startTime: string; endTime: string;
+      arenaNumber: number | null; evaSlotIds: string[]; scrimSearchId: string | null } }
 > {
   const event = await prisma.calendarEvent.findUnique({ where: { id: eventId } });
 
@@ -434,6 +435,24 @@ export async function getEventWithTeamCheck(eventId: string, teamId?: string): P
   }
 
   return { event };
+}
+
+/**
+ * Whether a change moves a match: another day, other times, another type,
+ * venue, arena or slots than it has. A field left out moves nothing.
+ */
+export function movesMatch(
+  current: { date: Date; startTime: string; endTime: string; type: EventType; venueId: string | null; arenaNumber: number | null; evaSlotIds: string[] },
+  change: { date?: string; startTime?: string; endTime?: string; type?: EventType; venueId?: string | null; arenaNumber?: number | null; evaSlotIds?: string[] | null },
+): boolean {
+  if (change.date !== undefined && change.date !== formatDateStr(current.date)) return true;
+  if (change.startTime !== undefined && change.startTime !== current.startTime) return true;
+  if (change.endTime !== undefined && change.endTime !== current.endTime) return true;
+  if (change.type !== undefined && change.type !== current.type) return true;
+  if (change.venueId !== undefined && change.venueId !== current.venueId) return true;
+  if (change.arenaNumber !== undefined && (change.arenaNumber ?? null) !== current.arenaNumber) return true;
+  if (change.evaSlotIds !== undefined && (change.evaSlotIds ?? []).join('|') !== current.evaSlotIds.join('|')) return true;
+  return false;
 }
 
 /**

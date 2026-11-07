@@ -189,6 +189,12 @@ router.delete('/events/:id', authMiddleware, requirePermission('calendar', 'canD
       return;
     }
 
+    // Both teams hold a copy of a match the matchmaking made: it is called off, not deleted on one side
+    if (result.event.scrimSearchId) {
+      res.status(409).json({ errors: [ERROR.eventFromMatchmaking] });
+      return;
+    }
+
     await calendarService.deleteEvent(id);
     res.json({ success: true });
   } catch (error) {
@@ -236,6 +242,12 @@ router.put('/events/:id', authMiddleware, requirePermission('calendar', 'canEdit
 
     if ('accessDenied' in result) {
       res.status(403).json({ errors: [ERROR.accessDenied] });
+      return;
+    }
+
+    // A match the matchmaking made keeps the time and place both teams agreed on
+    if (result.event.scrimSearchId && calendarService.movesMatch(result.event, { date, startTime, endTime, type, venueId, arenaNumber, evaSlotIds })) {
+      res.status(409).json({ errors: [ERROR.eventFromMatchmakingPlace] });
       return;
     }
 

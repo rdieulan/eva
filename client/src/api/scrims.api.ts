@@ -92,6 +92,18 @@ export async function withdrawScrimProposal(proposalId: string): Promise<void> {
 }
 
 /**
+ * Call off a match the matchmaking made, from the team's copy: both
+ * calendars lose it
+ */
+export async function cancelScrimMatch(eventId: string): Promise<void> {
+  // Answers 204 with no body, so the JSON-parsing form of authFetch does not apply
+  const response = await authFetch(`/api/scrims/matches/${eventId}`, { method: 'DELETE' });
+  if (!response.ok) {
+    throw await ApiError.fromFailedResponse(response, ERROR.scrimMatchCancelFailed);
+  }
+}
+
+/**
  * Withdraw one of the team's open searches
  */
 export async function deleteScrimSearch(id: string): Promise<void> {

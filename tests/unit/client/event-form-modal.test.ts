@@ -303,6 +303,30 @@ describe('EventFormModal Component - Match venue', () => {
     expect(wrapper.emitted('submit')?.[0]?.[0]).toMatchObject({ type: 'VOICE_MEETING', venueId: null });
   });
 
+  it('should keep the time and place of a match of the matchmaking, its title free, and no delete', async () => {
+    const wrapper = mountForm({
+      editEvent: {
+        id: 'event-1', date: '2026-11-03', startTime: '20:00', endTime: '21:20', type: 'MATCH' as const, title: 'Scrim vs Les Rivaux',
+        venue: { id: 'venue-1', name: 'VR Arena', evaLocationId: null, discord: null }, arenaNumber: 1, evaSlotIds: [],
+        scrimSearchId: 'search-1', createdById: 'player-1', createdAt: '2026-10-01T00:00:00Z',
+      },
+      canEdit: true,
+      canDelete: true,
+    });
+    await wrapper.setProps({ open: true });
+
+    expect(wrapper.find('.matchmaking-place-value').text()).toBe('VR Arena — arène 1 · 03/11/2026 · 20:00 – 21:20');
+    for (const field of ['#event-venue', '#event-date', '#event-start', '#event-end']) {
+      expect(wrapper.find(field).exists()).toBe(false);
+    }
+    expect(wrapper.find('.type-selector').exists()).toBe(false);
+    expect(wrapper.findAll('button').find(b => b.text() === 'Supprimer')).toBeUndefined();
+
+    await wrapper.find('#event-title').setValue('Scrim du jeudi');
+    await wrapper.findAll('button').find(b => b.text() === 'Enregistrer')!.trigger('click');
+    expect(wrapper.emitted('submit')?.[0]?.[0]).toMatchObject({ title: 'Scrim du jeudi', date: '2026-11-03', startTime: '20:00', venueId: 'venue-1' });
+  });
+
   it('should keep the venue the match is already played in when editing', async () => {
     const wrapper = mountForm({
       editEvent: {

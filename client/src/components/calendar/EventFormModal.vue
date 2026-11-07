@@ -78,7 +78,11 @@ const isViewOnly = computed(() => {
   return false;
 });
 
-const canShowDeleteButton = computed(() => props.canDelete && props.editEvent);
+// A match the matchmaking made keeps the time and place both teams agreed on,
+// and is called off from its sheet, not deleted on one side
+const isMatchmakingMatch = computed(() => !!props.editEvent?.scrimSearchId);
+
+const canShowDeleteButton = computed(() => props.canDelete && props.editEvent && !isMatchmakingMatch.value);
 
 // Reset form when modal opens
 watch(
@@ -358,8 +362,15 @@ const modalSize = computed(() => {
       <!-- Error message -->
       <ErrorDisplay :errors="errors" />
 
+      <!-- A match of the matchmaking: its time and place, fixed -->
+      <div v-if="isMatchmakingMatch" class="form-group matchmaking-place">
+        <span class="form-label">Match du matchmaking</span>
+        <p class="matchmaking-place-value">{{ eventVenueLabel ?? 'Salle non définie' }} · {{ formattedDate }} · {{ startTime }} – {{ endTime }}</p>
+        <p class="form-hint">Son heure et son lieu ne changent pas : pour en convenir d'autres, annule-le depuis sa fiche.</p>
+      </div>
+
       <!-- Event type -->
-      <div class="form-group">
+      <div v-if="!isMatchmakingMatch" class="form-group">
         <label class="form-label">Type</label>
         <div class="type-selector">
           <button
@@ -390,7 +401,7 @@ const modalSize = computed(() => {
       </div>
 
       <!-- Venue (only for MATCH type) -->
-      <div v-if="showVenue" class="form-group">
+      <div v-if="showVenue && !isMatchmakingMatch" class="form-group">
         <label class="form-label" for="event-venue">📍 Salle</label>
         <select id="event-venue" v-model="venueId" class="form-input form-select" @change="handleVenueChange">
           <option :value="null">Non définie</option>
@@ -401,7 +412,7 @@ const modalSize = computed(() => {
       </div>
 
       <!-- Arena (only when the venue runs several and no slot names it) -->
-      <div v-if="showVenue && arenaNumbers.length && !usesSlots" class="form-group">
+      <div v-if="showVenue && arenaNumbers.length && !usesSlots && !isMatchmakingMatch" class="form-group">
         <label class="form-label" for="event-arena">🏟️ Arène</label>
         <select id="event-arena" v-model="arenaNumber" class="form-input form-select">
           <option :value="null">Non définie</option>
@@ -412,7 +423,7 @@ const modalSize = computed(() => {
       </div>
 
       <!-- Date -->
-      <div class="form-group">
+      <div v-if="!isMatchmakingMatch" class="form-group">
         <label class="form-label" for="event-date">Date</label>
         <input
           id="event-date"
@@ -425,7 +436,7 @@ const modalSize = computed(() => {
 
       <!-- Slots of the venue (only when its slots are listed) -->
       <VenueSlotPicker
-        v-if="showSlotPicker"
+        v-if="showSlotPicker && !isMatchmakingMatch"
         :venue-id="venueId"
         :date="date"
         :model-value="evaSlotIds"
@@ -436,7 +447,7 @@ const modalSize = computed(() => {
       />
 
       <!-- Time range, typed by hand only when no slot grid gives it -->
-      <div v-if="!usesSlots" class="form-row">
+      <div v-if="!usesSlots && !isMatchmakingMatch" class="form-row">
         <div class="form-group">
           <label class="form-label" for="event-start">Début</label>
           <input
@@ -923,5 +934,18 @@ const modalSize = computed(() => {
     padding: 0.625rem;
     font-size: 0.85rem;
   }
+}
+
+// A match of the matchmaking: its time and place, read only
+.matchmaking-place-value {
+  margin: 0;
+  color: $color-white;
+  font-weight: 600;
+}
+
+.form-hint {
+  margin: 0;
+  color: $color-text-secondary;
+  font-size: 0.8rem;
 }
 </style>

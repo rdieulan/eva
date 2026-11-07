@@ -352,3 +352,40 @@ export async function withdrawScrimProposal(proposalId: string, teamId: string):
   });
   return {};
 }
+
+// ============================================
+// Calling a match off
+// ============================================
+
+export type CancelScrimMatchRefusal = 'notFound' | 'notYours' | 'matchPast';
+
+/**
+ * Call off a match the matchmaking made, from the copy of either team, up to
+ * its day: both calendars lose it, and its proposal says it was called off. A
+ * search still open gets the time of the match back for another one; a closed
+ * search stays closed. A match whose day has passed stays in both calendars:
+ * one team does not erase what the two played. Taken one at a time with the
+ * answers and changes on the search. The bookings the two teams made on
+ * eva.gg are theirs to cancel there: the matchmaking cannot see them.
+ */
+export async function cancelScrimMatch(eventId: string, teamId: string): Promise<{ refusal?: CancelScrimMatchRefusal }> {
+  const event = await prisma.calendarEvent.findUnique({
+    where: { id: eventId },
+    select: { teamId: true, scrimSearchId: true, date: true, startTime: true },
+  });
+  if (!event || !event.scrimSearchId) return { refusal: 'notFound' };
+  if (event.teamId !== teamId) return { refusal: 'notYours' };
+  if (formatDateStr(event.date) < formatDateStr(new Date())) return { refusal: 'matchPast' };
+  const searchId = event.scrimSearchId;
+
+  await prisma.$transaction(async tx => {
+    await tx.$queryRaw`SELECT 1 FROM "ScrimSearch" WHERE "id" = ${searchId} FOR UPDATE`;
+    // Two matches of a search never share a start: its time names the match
+    await tx.scrimProposal.updateMany({
+      where: { searchId, status: 'ACCEPTED', startTime: event.startTime },
+      data: { status: 'CANCELLED', respondedAt: new Date() },
+    });
+    await tx.calendarEvent.deleteMany({ where: { scrimSearchId: searchId, date: event.date, startTime: event.startTime } });
+  });
+  return {};
+}

@@ -197,6 +197,14 @@ function handleScrimSearchChanged({ matched }: { matched: boolean }) {
   if (matched) loadCalendarData();
 }
 
+// A match of the matchmaking called off from its sheet: both calendars lost
+// it, and a search still open got its time back
+function handleMatchCancelled() {
+  closeEventViewer();
+  loadCalendarData();
+  loadScrimSearches();
+}
+
 // The search being looked at, from a cell, or from the search modal over which it opens
 const viewedScrimSearch = ref<ScrimSearch | null>(null);
 
@@ -402,10 +410,12 @@ onMounted(async () => {
       :can-create="canCreateEvents"
       :can-edit="canEditEvents"
       :can-delete="canDeleteEvents"
+      :can-cancel-match="permissions.matchmaking.canRespond"
       :selected-date="viewerEvents[0]?.date"
       @close="closeEventViewer"
       @edit-event="editEventFromViewer"
       @create-event="createEventFromViewer"
+      @match-cancelled="handleMatchCancelled"
     />
 
     <!-- Event form modal -->
