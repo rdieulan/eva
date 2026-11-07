@@ -110,6 +110,35 @@ function handleSave() {
         </label>
       </div>
 
+      <!-- Matchmaking permissions: who speaks for the team to the other teams -->
+      <div class="perm-category">
+        <h4>Matchmaking</h4>
+        <label class="perm-item">
+          <input
+            type="checkbox"
+            :checked="editingPermissions.matchmaking.canSearch"
+            @change="togglePermission('matchmaking', 'canSearch')"
+          />
+          Chercher des adversaires (ouvrir, modifier, retirer les recherches)
+        </label>
+        <label class="perm-item">
+          <input
+            type="checkbox"
+            :checked="editingPermissions.matchmaking.canPropose"
+            @change="togglePermission('matchmaking', 'canPropose')"
+          />
+          Proposer des matchs aux autres équipes
+        </label>
+        <label class="perm-item">
+          <input
+            type="checkbox"
+            :checked="editingPermissions.matchmaking.canRespond"
+            @change="togglePermission('matchmaking', 'canRespond')"
+          />
+          Accepter ou refuser les propositions reçues
+        </label>
+      </div>
+
       <!-- Team permissions -->
       <div class="perm-category">
         <h4>Équipe</h4>

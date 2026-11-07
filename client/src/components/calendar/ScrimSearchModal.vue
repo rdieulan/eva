@@ -38,8 +38,10 @@ const props = withDefaults(defineProps<{
   days: Record<string, DayData>; // To tell whether the team can line up each day
   searches: Record<string, ScrimSearch[]>; // The open searches of each day: ours, and the other teams' in the ticked venues
   editing?: ScrimSearch | null; // A search of ours to change, in place of opening searches on the picked days
+  canPropose?: boolean; // The reader may propose a match to the teams already searching
 }>(), {
   editing: null,
+  canPropose: false,
 });
 
 const emit = defineEmits<{
@@ -341,7 +343,7 @@ async function submit() {
               <span class="rival-team">{{ rival.search.team.name }}</span>
               <span class="rival-offer">{{ rival.offer }}</span>
               <button type="button" class="btn btn-rival" :disabled="isSubmitting" @click="emit('open-search', rival.search)">
-                {{ rival.proposed ? 'Voir notre proposition' : 'Leur proposer un match' }}
+                {{ rival.proposed ? 'Voir notre proposition' : canPropose ? 'Leur proposer un match' : 'Voir leur recherche' }}
               </button>
             </li>
           </ul>

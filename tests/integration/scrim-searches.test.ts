@@ -445,7 +445,7 @@ describe('POST /api/scrims/searches', () => {
     expect(res.body.errors).toContain(ERROR.evaUnavailable);
   });
 
-  it('should refuse a member who cannot create events', async () => {
+  it('should refuse a member the leader did not allow to search', async () => {
     const { token: leaderToken, team } = await createUserWithTeam();
     const memberToken = await joinAsMember(leaderToken, team.id);
 
@@ -742,7 +742,7 @@ describe('PUT /api/scrims/searches/:id', () => {
     expect(past.body.errors).toContain(ERROR.scrimSearchDateInPast);
   });
 
-  it('should refuse a malformed offer, bad settings and a member who cannot create events', async () => {
+  it('should refuse a malformed offer, bad settings and a member the leader did not allow to search', async () => {
     const { token, team } = await createUserWithTeam();
     const opened = await open(token, {}).expect(201);
 

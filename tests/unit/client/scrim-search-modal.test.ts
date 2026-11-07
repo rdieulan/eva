@@ -358,6 +358,11 @@ describe('ScrimSearchModal', () => {
     // The other day picked meets nobody
     expect(wrapper.findAll('.day')[1]!.find('.day-rivals').exists()).toBe(false);
 
+    // A reader who may not propose sees their search, without the offer to answer it
+    expect(notice.find('button.btn-rival').text()).toBe('Voir leur recherche');
+    await wrapper.setProps({ canPropose: true });
+    expect(notice.find('button.btn-rival').text()).toBe('Leur proposer un match');
+
     await notice.find('button.btn-rival').trigger('click');
     expect(wrapper.emitted('open-search')).toEqual([[rivals]]);
     expect(submitButton(wrapper).attributes('disabled')).toBeUndefined();

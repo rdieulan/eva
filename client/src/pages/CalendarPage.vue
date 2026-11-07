@@ -165,7 +165,7 @@ const {
 });
 
 // Days picked for a search. Picking only makes sense with venues to pick slots in.
-const canSearchScrims = computed(() => canCreateEvents.value && matchmakingVenueIds.value.length > 0);
+const canSearchScrims = computed(() => permissions.value.matchmaking.canSearch && matchmakingVenueIds.value.length > 0);
 const selectedDates = ref<string[]>([]);
 const showScrimSearchModal = ref(false);
 
@@ -367,6 +367,7 @@ onMounted(async () => {
       :days="days"
       :searches="scrimSearchesByDate"
       :editing="editedScrimSearch"
+      :can-propose="permissions.matchmaking.canPropose"
       @close="closeScrimSearchModal"
       @opened="handleScrimSearchesOpened"
       @saved="loadScrimSearches"
@@ -386,7 +387,9 @@ onMounted(async () => {
       :search="viewedScrimSearch"
       :venues="venues"
       :planned-events="viewedSearchPlans"
-      :can-act="canCreateEvents"
+      :can-search="permissions.matchmaking.canSearch"
+      :can-propose="permissions.matchmaking.canPropose"
+      :can-respond="permissions.matchmaking.canRespond"
       @close="viewedScrimSearch = null"
       @changed="handleScrimSearchChanged"
       @edit="editScrimSearch"

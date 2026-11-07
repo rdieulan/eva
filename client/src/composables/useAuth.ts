@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue';
 import type { AccountPermissions, Account } from '@shared/types';
-import { DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
+import { normalizeAccountPermissions } from '@shared/utils';
 import { clearPlayersCache } from '@/api/players.api';
 import { getCurrentAccount } from '@/api/auth.api';
 import { clearBalanceRulesCache } from '@/composables/useBalanceRules';
@@ -128,10 +128,9 @@ async function doInitAuth(): Promise<void> {
   isInitialized.value = true;
 }
 
-// Get account permissions (with fallback to default)
-const permissions = computed<AccountPermissions>(() => {
-  return account.value?.permissions ?? DEFAULT_PLAYER_PERMISSIONS;
-});
+// The account's permissions, read against the full set: a category the
+// account never had reads as nothing granted
+const permissions = computed<AccountPermissions>(() => normalizeAccountPermissions(account.value?.permissions));
 
 // Exported composable
 export function useAuth() {

@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import { prisma } from '@db/prisma';
 import type { AccountPermissions, AccountType, AdminPermissions } from '@shared/types';
 import { DEFAULT_PLAYER_PERMISSIONS, LEADER_PERMISSIONS } from '@shared/types';
+import { normalizeAccountPermissions } from '@shared/utils';
 import { ERROR } from '@shared/constants';
 import { authLogger } from '@utils/logger';
 
@@ -75,7 +76,7 @@ export async function getAccountPermissions(userId: string): Promise<AccountPerm
     if (account.player.ledTeam) {
       return LEADER_PERMISSIONS;
     }
-    return (account.player.permissions as unknown as AccountPermissions) ?? DEFAULT_PLAYER_PERMISSIONS;
+    return normalizeAccountPermissions(account.player.permissions);
   }
 
   return DEFAULT_PLAYER_PERMISSIONS;

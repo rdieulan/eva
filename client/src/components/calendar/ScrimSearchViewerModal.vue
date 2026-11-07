@@ -28,7 +28,9 @@ import { formatVenueLabel } from '@/utils/venues';
 const props = withDefaults(defineProps<{
   search: ScrimSearch | null; // Open while set
   venues: Venue[]; // To name the venues of the search
-  canAct: boolean; // The reader may act for their team (create events)
+  canSearch: boolean; // The reader may change and withdraw the team's searches
+  canPropose: boolean; // The reader may propose a match on another team's search, and take it back
+  canRespond: boolean; // The reader may accept or decline the proposals on the team's searches
   plannedEvents?: CalendarEvent[]; // What the reader's team planned that day, to pick the hours of an answer around it
 }>(), {
   plannedEvents: () => [],
@@ -86,7 +88,7 @@ function pickedIn(venueId: string): string[] {
 const isMine = computed(() => props.search?.isMine ?? false);
 
 // Our own search changes until its day comes
-const canEdit = computed(() => isMine.value && props.canAct && !!props.search && !isPastDateStr(props.search.date));
+const canEdit = computed(() => isMine.value && props.canSearch && !!props.search && !isPastDateStr(props.search.date));
 
 // Another team's search: the proposal the reader's team sent, if any
 const ownProposal = computed<ScrimProposal | null>(() =>
@@ -98,7 +100,7 @@ const pendingProposals = computed(() =>
   props.search && isMine.value ? props.search.proposals.filter(proposal => proposal.status === 'PENDING') : [],
 );
 
-const canPropose = computed(() => props.canAct && !isMine.value && !sent.value && (!ownProposal.value || ownProposal.value.status !== 'PENDING'));
+const mayPropose = computed(() => props.canPropose && !isMine.value && !sent.value && (!ownProposal.value || ownProposal.value.status !== 'PENDING'));
 
 const OWN_PROPOSAL_LABELS: Record<ScrimProposal['status'], string> = {
   PENDING: 'Proposition envoyée, en attente de leur réponse',
@@ -236,7 +238,7 @@ function decline(proposal: ScrimProposal) {
       </section>
 
       <!-- Another team's search: pick the run to play and answer, or see what became of the answer -->
-      <section v-if="!isMine && canAct" class="propose">
+      <section v-if="!isMine && canPropose" class="propose">
         <p v-if="sent" class="status status--pending" role="status">{{ OWN_PROPOSAL_LABELS.PENDING }}</p>
         <template v-else-if="ownProposal && ownProposal.status === 'PENDING'">
           <p class="status status--pending">{{ OWN_PROPOSAL_LABELS.PENDING }}</p>
@@ -291,7 +293,7 @@ function decline(proposal: ScrimProposal) {
             </div>
             <p class="proposal-run">{{ runSummary(proposal) }}</p>
             <p v-if="proposal.message" class="proposal-message">« {{ proposal.message }} »</p>
-            <div v-if="canAct" class="proposal-actions">
+            <div v-if="canRespond" class="proposal-actions">
               <button type="button" class="btn btn-accept" :disabled="isBusy" @click="accept(proposal)">✅ Accepter</button>
               <button type="button" class="btn btn-decline" :disabled="isBusy" @click="decline(proposal)">Refuser</button>
             </div>
@@ -303,7 +305,7 @@ function decline(proposal: ScrimProposal) {
     <template #footer>
       <div class="footer-actions">
         <button
-          v-if="isMine && canAct"
+          v-if="isMine && canSearch"
           type="button"
           class="btn btn-danger"
           :disabled="isBusy"
@@ -321,7 +323,7 @@ function decline(proposal: ScrimProposal) {
           Modifier la recherche
         </button>
         <button
-          v-if="canPropose"
+          v-if="mayPropose"
           type="button"
           class="btn btn-primary"
           :disabled="isBusy || !run"

@@ -20,7 +20,7 @@ import {
 import { useTeamLogo } from '@/composables/useTeamLogo';
 import type { TeamWithMembers, TeamMember, TeamInvite } from '@/api';
 import type { AccountPermissions, Venue } from '@shared/types';
-import { DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
+import { normalizeAccountPermissions } from '@shared/utils';
 import { ERROR, TEAM_LOGO_MAX_BYTES, TEAM_LOGO_MIME_TYPES } from '@shared/constants';
 import { useErrors } from '@/composables/useErrors';
 import ConfirmModal from '@/components/common/ConfirmModal.vue';
@@ -47,7 +47,7 @@ const successMessage = ref<string | null>(null);
 // Permissions modal
 const showPermissionsModal = ref(false);
 const selectedMember = ref<TeamMember | null>(null);
-const editingPermissions = ref<AccountPermissions>({ ...DEFAULT_PLAYER_PERMISSIONS });
+const editingPermissions = ref<AccountPermissions>(normalizeAccountPermissions(null));
 
 // Remove member modal
 const showRemoveModal = ref(false);
@@ -192,9 +192,8 @@ async function handleLeaveTeam() {
 function openPermissionsModal(member: TeamMember) {
   if (member.isLeader) return;
   selectedMember.value = member;
-  editingPermissions.value = member.permissions
-    ? { ...member.permissions }
-    : { ...DEFAULT_PLAYER_PERMISSIONS };
+  // A copy of each category, read against the full set, so the window edits its own
+  editingPermissions.value = normalizeAccountPermissions(member.permissions);
   showPermissionsModal.value = true;
 }
 

@@ -73,6 +73,7 @@ export type {
 export type {
   PlannerPermissions,
   CalendarPermissions,
+  MatchmakingPermissions,
   TeamPermissions,
   AccountPermissions,
   ManagerPermissions,

@@ -3,6 +3,7 @@
 import { prisma } from '@db/prisma';
 import type { AccountPermissions } from '@shared/types';
 import { LEADER_PERMISSIONS, DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
+import { normalizeAccountPermissions } from '@shared/utils';
 import { DEFAULT_ASSIGNMENTS, DEFAULT_GAME_PLAN_NOTES, ERROR } from '@shared/constants';
 import { getPlayerWithTeam } from '@services/player.service';
 
@@ -348,7 +349,7 @@ export async function getTeamMembers(teamId: string): Promise<MemberWithRole[]> 
     id: player.user!.id,
     name: player.user!.name,
     email: player.user!.email,
-    permissions: player.permissions,
+    permissions: player.ledTeam ? LEADER_PERMISSIONS : normalizeAccountPermissions(player.permissions),
     isLeader: !!player.ledTeam,
   }));
 }
@@ -391,9 +392,10 @@ export async function updateMemberPermissions(
     return { success: false, error: ERROR.cannotModifyOwnPermissions };
   }
 
+  // Only the permissions the app knows, each granted or not
   await prisma.player.update({
     where: { id: targetUser.player.id },
-    data: { permissions: permissions as unknown as object },
+    data: { permissions: normalizeAccountPermissions(permissions) as unknown as object },
   });
 
   return { success: true };

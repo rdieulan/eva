@@ -72,6 +72,7 @@ describe('Permissions Tests', () => {
       expect(DEFAULT_PLAYER_PERMISSIONS.calendar.canEditEvents).toBe(false);
       expect(DEFAULT_PLAYER_PERMISSIONS.calendar.canDeleteEvents).toBe(false);
       expect(DEFAULT_PLAYER_PERMISSIONS.calendar.canAttachGamePlan).toBe(false);
+      expect(DEFAULT_PLAYER_PERMISSIONS.matchmaking).toEqual({ canSearch: false, canPropose: false, canRespond: false });
       expect(DEFAULT_PLAYER_PERMISSIONS.team.canManageTeam).toBe(false);
       expect(DEFAULT_PLAYER_PERMISSIONS.team.canInviteMembers).toBe(false);
       expect(DEFAULT_PLAYER_PERMISSIONS.team.canRemoveMembers).toBe(false);
@@ -88,6 +89,7 @@ describe('Permissions Tests', () => {
       expect(LEADER_PERMISSIONS.calendar.canEditEvents).toBe(true);
       expect(LEADER_PERMISSIONS.calendar.canDeleteEvents).toBe(true);
       expect(LEADER_PERMISSIONS.calendar.canAttachGamePlan).toBe(true);
+      expect(LEADER_PERMISSIONS.matchmaking).toEqual({ canSearch: true, canPropose: true, canRespond: true });
       expect(LEADER_PERMISSIONS.team.canManageTeam).toBe(true);
       expect(LEADER_PERMISSIONS.team.canInviteMembers).toBe(true);
       expect(LEADER_PERMISSIONS.team.canRemoveMembers).toBe(true);

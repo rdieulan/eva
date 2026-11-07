@@ -66,7 +66,7 @@ const ACROSS = { slots: [...OFFERED, offered('m-2200', '22:00', '22:40', MONTPEL
 
 function mountViewer(props: Record<string, unknown> = {}) {
   return mount(ScrimSearchViewerModal, {
-    props: { search: search(), venues: [NIMES, MONTPELLIER], canAct: true, ...props },
+    props: { search: search(), venues: [NIMES, MONTPELLIER], canSearch: true, canPropose: true, canRespond: true, ...props },
     global: { stubs: { Teleport: true } },
   });
 }
@@ -214,14 +214,21 @@ describe('ScrimSearchViewerModal on another team\'s search', () => {
     expect(createScrimProposal).toHaveBeenCalledWith('search-1', { evaSlotIds: ['m-2200', 'm-2240'] });
   });
 
-  it('offers nothing to a reader who cannot act for the team', async () => {
-    const wrapper = mountViewer({ canAct: false });
+  it('offers no answer to a reader who may not propose matches', async () => {
+    const wrapper = mountViewer({ canPropose: false });
     await flushPromises();
 
     expect(button(wrapper, 'Proposer un match')).toBeUndefined();
     expect(wrapper.find('textarea').exists()).toBe(false);
     expect(fetchVenueSlots).not.toHaveBeenCalled();
     expect(button(wrapper, 'Retirer la recherche')).toBeUndefined();
+  });
+
+  it('keeps the proposal sent out of reach of a reader who may not propose', async () => {
+    const wrapper = mountViewer({ canPropose: false, search: search({ proposals: [proposal('p1', { isMine: true })] }) });
+    await flushPromises();
+
+    expect(button(wrapper, 'Retirer la proposition')).toBeUndefined();
   });
 });
 
@@ -309,10 +316,20 @@ describe('ScrimSearchViewerModal on the team\'s own search', () => {
 
     const past = mountViewer({ search: search({ isMine: true, date: '2020-01-01' }) });
     expect(button(past, 'Modifier la recherche')).toBeUndefined();
-    const readOnly = mountViewer({ search: mine(), canAct: false });
+    const readOnly = mountViewer({ search: mine(), canSearch: false });
     expect(button(readOnly, 'Modifier la recherche')).toBeUndefined();
+    expect(button(readOnly, 'Retirer la recherche')).toBeUndefined();
     const theirs = mountViewer({ search: search() });
     expect(button(theirs, 'Modifier la recherche')).toBeUndefined();
+  });
+
+  it('leaves the answers to the proposals to a reader who may respond', () => {
+    const wrapper = mountViewer({ search: mine(), canRespond: false });
+
+    expect(wrapper.findAll('.proposal')).toHaveLength(2);
+    expect(button(wrapper, 'Accepter')).toBeUndefined();
+    expect(button(wrapper, 'Refuser')).toBeUndefined();
+    expect(button(wrapper, 'Modifier la recherche')).toBeDefined();
   });
 
   it('says when nobody answered yet', () => {

@@ -186,7 +186,7 @@ router.get('/searches', authMiddleware, async (req: AuthRequest, res: Response) 
 });
 
 // POST /api/scrims/searches - Offer slots of one venue or more, for a day, for one or more matches
-router.post('/searches', authMiddleware, requirePermission('calendar', 'canCreateEvents'), async (req: AuthRequest, res: Response) => {
+router.post('/searches', authMiddleware, requirePermission('matchmaking', 'canSearch'), async (req: AuthRequest, res: Response) => {
   const { date, venues: venuesInput, slotCount, matchCount } = req.body as CreateScrimSearchRequest;
   const teamId = req.account?.teamId;
 
@@ -227,7 +227,7 @@ router.post('/searches', authMiddleware, requirePermission('calendar', 'canCreat
 });
 
 // PUT /api/scrims/searches/:id - Change the slots, the match length or the number of matches of one of the team's open searches
-router.put('/searches/:id', authMiddleware, requirePermission('calendar', 'canCreateEvents'), async (req: AuthRequest, res: Response) => {
+router.put('/searches/:id', authMiddleware, requirePermission('matchmaking', 'canSearch'), async (req: AuthRequest, res: Response) => {
   const { venues: venuesInput, slotCount, matchCount } = (req.body ?? {}) as UpdateScrimSearchRequest;
   const teamId = req.account?.teamId;
 
@@ -264,7 +264,7 @@ router.put('/searches/:id', authMiddleware, requirePermission('calendar', 'canCr
 });
 
 // DELETE /api/scrims/searches/:id - Withdraw one of the team's open searches
-router.delete('/searches/:id', authMiddleware, requirePermission('calendar', 'canCreateEvents'), async (req: AuthRequest, res: Response) => {
+router.delete('/searches/:id', authMiddleware, requirePermission('matchmaking', 'canSearch'), async (req: AuthRequest, res: Response) => {
   const teamId = req.account?.teamId;
   if (!teamId) {
     return res.status(403).json({ errors: [ERROR.teamRequiredForScrims] });
@@ -288,7 +288,7 @@ router.delete('/searches/:id', authMiddleware, requirePermission('calendar', 'ca
 // ============================================
 
 // POST /api/scrims/searches/:id/proposals - Answer another team's search
-router.post('/searches/:id/proposals', authMiddleware, requirePermission('calendar', 'canCreateEvents'), async (req: AuthRequest, res: Response) => {
+router.post('/searches/:id/proposals', authMiddleware, requirePermission('matchmaking', 'canPropose'), async (req: AuthRequest, res: Response) => {
   const teamId = req.account?.teamId;
   if (!teamId) {
     return res.status(403).json({ errors: [ERROR.teamRequiredForScrims] });
@@ -325,7 +325,7 @@ router.post('/searches/:id/proposals', authMiddleware, requirePermission('calend
 });
 
 // PUT /api/scrims/proposals/:id/accept - Take the proposal: the match lands in both calendars
-router.put('/proposals/:id/accept', authMiddleware, requirePermission('calendar', 'canCreateEvents'), async (req: AuthRequest, res: Response) => {
+router.put('/proposals/:id/accept', authMiddleware, requirePermission('matchmaking', 'canRespond'), async (req: AuthRequest, res: Response) => {
   const teamId = req.account?.teamId;
   if (!teamId) {
     return res.status(403).json({ errors: [ERROR.teamRequiredForScrims] });
@@ -345,7 +345,7 @@ router.put('/proposals/:id/accept', authMiddleware, requirePermission('calendar'
 });
 
 // PUT /api/scrims/proposals/:id/decline - Turn the proposal down; the search stays open
-router.put('/proposals/:id/decline', authMiddleware, requirePermission('calendar', 'canCreateEvents'), async (req: AuthRequest, res: Response) => {
+router.put('/proposals/:id/decline', authMiddleware, requirePermission('matchmaking', 'canRespond'), async (req: AuthRequest, res: Response) => {
   const teamId = req.account?.teamId;
   if (!teamId) {
     return res.status(403).json({ errors: [ERROR.teamRequiredForScrims] });
@@ -365,7 +365,7 @@ router.put('/proposals/:id/decline', authMiddleware, requirePermission('calendar
 });
 
 // DELETE /api/scrims/proposals/:id - Take back one of the team's pending proposals
-router.delete('/proposals/:id', authMiddleware, requirePermission('calendar', 'canCreateEvents'), async (req: AuthRequest, res: Response) => {
+router.delete('/proposals/:id', authMiddleware, requirePermission('matchmaking', 'canPropose'), async (req: AuthRequest, res: Response) => {
   const teamId = req.account?.teamId;
   if (!teamId) {
     return res.status(403).json({ errors: [ERROR.teamRequiredForScrims] });

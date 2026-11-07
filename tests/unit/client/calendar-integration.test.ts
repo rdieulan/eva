@@ -21,6 +21,7 @@ vi.mock('@/api/calendar.api', () => ({
 const mockPermissions = {
   planner: { canCreate: true, canEdit: true, canDelete: true },
   calendar: { canCreateEvents: true, canEditEvents: true, canDeleteEvents: true, canAttachGamePlan: true },
+  matchmaking: { canSearch: true, canPropose: true, canRespond: true },
   team: { canManageTeam: true, canInviteMembers: true, canRemoveMembers: true, canManagePermissions: true },
 };
 

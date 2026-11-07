@@ -276,7 +276,7 @@ describe('POST /api/scrims/searches/:id/proposals', () => {
     expect(unknown.status).toBe(404);
   });
 
-  it('should refuse a member who cannot create events, and a player without a team', async () => {
+  it('should refuse a player without a team', async () => {
     const { searchId } = await setup();
     const loner = await createAuthenticatedUser();
 

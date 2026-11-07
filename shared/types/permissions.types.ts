@@ -21,6 +21,15 @@ export interface CalendarPermissions {
 }
 
 /**
+ * Matchmaking permissions - who speaks for the team to the other teams
+ */
+export interface MatchmakingPermissions {
+  canSearch: boolean;  // Open, change and withdraw the team's searches for an opponent
+  canPropose: boolean; // Propose a match on another team's search, and take the proposal back
+  canRespond: boolean; // Accept or decline the proposals on the team's searches; an accepted one lands in the calendar
+}
+
+/**
  * Team permissions - control access to team management
  */
 export interface TeamPermissions {
@@ -36,6 +45,7 @@ export interface TeamPermissions {
 export interface AccountPermissions {
   planner: PlannerPermissions;
   calendar: CalendarPermissions;
+  matchmaking: MatchmakingPermissions;
   team: TeamPermissions;
 }
 
@@ -54,6 +64,11 @@ export const DEFAULT_PLAYER_PERMISSIONS: AccountPermissions = {
     canEditEvents: false,
     canDeleteEvents: false,
     canAttachGamePlan: false,
+  },
+  matchmaking: {
+    canSearch: false,
+    canPropose: false,
+    canRespond: false,
   },
   team: {
     canManageTeam: false,
@@ -78,6 +93,11 @@ export const LEADER_PERMISSIONS: AccountPermissions = {
     canEditEvents: true,
     canDeleteEvents: true,
     canAttachGamePlan: true,
+  },
+  matchmaking: {
+    canSearch: true,
+    canPropose: true,
+    canRespond: true,
   },
   team: {
     canManageTeam: true,
