@@ -217,7 +217,7 @@ export const ERROR = {
   // Scrim searches
   scrimSearchNotFound: 'Recherche introuvable',
   scrimOfferSlotsInvalid: `Liste de créneaux invalide (identifiants distincts, ${SCRIM_OFFER_SLOTS_MAX} créneaux au plus)`,
-  scrimSearchNotOpen: 'Cette recherche est close, elle a déjà ses matchs',
+  scrimSearchNotOpen: 'Cette recherche est close : elle a ses matchs, ou plus de créneau libre pour en tenir un',
   scrimSearchDateInPast: 'Impossible de chercher un adversaire sur un jour passé',
   scrimSearchSlotsUnknown: 'Un des créneaux n\'existe pas dans cette salle ce jour-là',
   scrimSlotsNotConsecutive: 'Les créneaux du match doivent se suivre sur la même arène',
@@ -239,6 +239,7 @@ export const ERROR = {
   scrimProposalNotPending: 'Cette proposition a déjà reçu une réponse',
   scrimProposalSlotsNotOffered: 'Un des créneaux n\'est pas proposé par cette recherche',
   scrimProposalTimeTaken: 'Ce match tomberait en même temps qu\'un match déjà calé sur cette recherche',
+  scrimProposalRunTaken: 'Un des créneaux de ce match n\'est plus libre : quelqu\'un l\'a réservé depuis',
   scrimProposalMessageTooLong: `Le message ne peut pas dépasser ${SCRIM_PROPOSAL_MESSAGE_MAX_LENGTH} caractères`,
   scrimProposalCreateFailed: 'Erreur lors de l\'envoi de la proposition',
   scrimProposalRespondFailed: 'Erreur lors de la réponse à la proposition',

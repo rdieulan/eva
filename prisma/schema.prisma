@@ -432,7 +432,8 @@ enum BalanceSeverity {
 
 enum ScrimSearchStatus {
   OPEN
-  MATCHED
+  MATCHED // Closed with its matches made, or some made and no room left for another
+  EXPIRED // Closed with no match made: its day passed, or its slots no longer hold a match
 }
 
 enum ScrimProposalStatus {

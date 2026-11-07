@@ -80,6 +80,7 @@ const PROPOSE_REFUSALS: Record<CreateScrimProposalRefusal, { status: number; err
   timeTaken: { status: 409, error: ERROR.scrimProposalTimeTaken },
   slotsNotConsecutive: { status: 400, error: ERROR.scrimSlotsNotConsecutive },
   runLength: { status: 400, error: ERROR.scrimProposalRunLength },
+  runTaken: { status: 409, error: ERROR.scrimProposalRunTaken },
   venueNotFound: { status: 404, error: ERROR.venueNotFound },
   venueNotOnEva: { status: 409, error: ERROR.venueNotOnEva },
 };
@@ -90,6 +91,7 @@ const RESPOND_REFUSALS: Record<RespondScrimProposalRefusal, { status: number; er
   notPending: { status: 409, error: ERROR.scrimProposalNotPending },
   searchNotOpen: { status: 409, error: ERROR.scrimSearchNotOpen },
   timeTaken: { status: 409, error: ERROR.scrimProposalTimeTaken },
+  runTaken: { status: 409, error: ERROR.scrimProposalRunTaken },
 };
 
 const WITHDRAW_REFUSALS: Record<WithdrawScrimProposalRefusal, { status: number; error: string }> = {
@@ -340,7 +342,8 @@ router.put('/proposals/:id/accept', authMiddleware, requirePermission('matchmaki
     res.json(result);
   } catch (error) {
     apiLogger.error('Error accepting a scrim proposal:', error);
-    res.status(500).json({ errors: [ERROR.scrimProposalRespondFailed] });
+    const isUpstream = error instanceof EvaApiError || error instanceof TypeError;
+    res.status(isUpstream ? 502 : 500).json({ errors: [isUpstream ? ERROR.evaUnavailable : ERROR.scrimProposalRespondFailed] });
   }
 });
 

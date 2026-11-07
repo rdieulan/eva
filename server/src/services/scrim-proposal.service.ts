@@ -6,6 +6,7 @@ import { countMatches, isOneRun, orderRunSlots, runSpan, spansOverlap } from '@s
 import { logoUrlOf } from '@services/teams.service';
 import { getVenueSlots } from '@services/venue-slots.service';
 import { formatDateStr } from './helpers/date.helper';
+import { slotPlayability } from './helpers/slot.helper';
 import { EVENT_VENUE_INCLUDE, formatEventForFrontend } from './helpers/calendar.helper';
 
 // The team behind a proposal, as loaded with it
@@ -68,6 +69,7 @@ export type CreateScrimProposalRefusal =
   | 'timeTaken'            // At the time of a match the search already made
   | 'slotsNotConsecutive'  // Not one run on one arena of one venue
   | 'runLength'            // Not the number of slots the search asks for
+  | 'runTaken'             // A slot of the run no longer open to a match: booked by someone since, or the like
   | 'venueNotFound'        // The venue of the run is gone, or no longer on eva.gg
   | 'venueNotOnEva';
 
@@ -127,6 +129,8 @@ export async function createScrimProposal(input: {
   }
   run.sort((a, b) => a.startTime.localeCompare(b.startTime));
   if (!isOneRun(run)) return { refusal: 'slotsNotConsecutive' };
+  // Free when the search opened, not necessarily still: anyone can book a slot at the venue
+  if (run.some(slot => slotPlayability(slot) !== 'playable')) return { refusal: 'runTaken' };
 
   const pending = await prisma.scrimProposal.findFirst({
     where: { searchId: input.searchId, teamId: input.teamId, status: 'PENDING' },
@@ -164,7 +168,8 @@ export type RespondScrimProposalRefusal =
   | 'notYours'      // Only the team that opened the search answers
   | 'notPending'    // Already answered or withdrawn
   | 'searchNotOpen'
-  | 'timeTaken';    // Accepting: another match of the search took that time meanwhile
+  | 'timeTaken'     // Accepting: another match of the search took that time meanwhile
+  | 'runTaken';     // Accepting: a slot of the run is no longer open to a match; the proposal is declined
 
 export type AcceptScrimProposalResult =
   | { proposal: ScrimProposal; events: CalendarEvent[] }
@@ -190,6 +195,9 @@ async function loadProposalForResponse(proposalId: string) {
  * outnumber what the search asked for.
  */
 export async function acceptScrimProposal(proposalId: string, teamId: string): Promise<AcceptScrimProposalResult> {
+  const check = await checkRunStillFree(proposalId, teamId);
+  if (check) return { refusal: check };
+
   return prisma.$transaction(async tx => {
     const target = await tx.scrimProposal.findUnique({ where: { id: proposalId }, select: { searchId: true } });
     if (!target) return { refusal: 'notFound' as const };
@@ -265,6 +273,40 @@ export async function acceptScrimProposal(proposalId: string, teamId: string): P
       events: [formatEventForFrontend(searcherEvent), formatEventForFrontend(proposerEvent)],
     };
   });
+}
+
+/**
+ * Before a match is made: its run read again from eva.gg, since anyone can
+ * book a slot at the venue after the proposal was sent. A run no longer open
+ * to a match declines the proposal. Answers with the refusal, or null to go
+ * on; the acceptance checks the rest again under its lock. Read out of any
+ * transaction: eva.gg can take its time.
+ * Throws an EvaApiError when eva.gg cannot answer.
+ */
+async function checkRunStillFree(proposalId: string, teamId: string): Promise<RespondScrimProposalRefusal | null> {
+  const proposal = await prisma.scrimProposal.findUnique({
+    where: { id: proposalId },
+    select: { status: true, venueId: true, evaSlotIds: true, search: { select: { teamId: true, status: true, date: true } } },
+  });
+  if (!proposal) return 'notFound';
+  if (proposal.search.teamId !== teamId) return 'notYours';
+  if (proposal.status !== 'PENDING') return 'notPending';
+  if (proposal.search.status !== 'OPEN') return 'searchNotOpen';
+
+  const daySlots = await getVenueSlots(proposal.venueId, formatDateStr(proposal.search.date));
+  // A venue gone from eva.gg cannot be read again: the run keeps what it was
+  if ('refusal' in daySlots) return null;
+  const isFree = proposal.evaSlotIds.every(slotId => {
+    const slot = daySlots.slots.find(candidate => candidate.slotId === slotId);
+    return slot !== undefined && slotPlayability(slot) === 'playable';
+  });
+  if (isFree) return null;
+
+  await prisma.scrimProposal.updateMany({
+    where: { id: proposalId, status: 'PENDING' },
+    data: { status: 'DECLINED', respondedAt: new Date() },
+  });
+  return 'runTaken';
 }
 
 export type DeclineScrimProposalResult = { proposal: ScrimProposal } | { refusal: RespondScrimProposalRefusal };

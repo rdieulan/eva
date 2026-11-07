@@ -276,6 +276,18 @@ describe('POST /api/scrims/searches/:id/proposals', () => {
     expect(unknown.status).toBe(404);
   });
 
+  it('should refuse a run booked by someone at the venue since the search opened', async () => {
+    const { proposer, searchId } = await setup();
+    sessions.mockImplementation(async () => NIMES_SLOTS.map(item => (item.slotId === 'a1-2040' ? { ...item, takenSeats: 2 } : item)));
+    clearVenueSlotsCache();
+
+    const res = await propose(proposer.token, searchId);
+
+    expect(res.status).toBe(409);
+    expect(res.body.errors).toContain(ERROR.scrimProposalRunTaken);
+    expect(await prisma.scrimProposal.count()).toBe(0);
+  });
+
   it('should refuse a player without a team', async () => {
     const { searchId } = await setup();
     const loner = await createAuthenticatedUser();
@@ -430,6 +442,21 @@ describe('PUT /api/scrims/proposals/:id/accept', () => {
     expect(res.status).toBe(409);
     expect(res.body.errors).toContain(ERROR.scrimProposalTimeTaken);
     expect(await statusOf(second.body.id)).toBe('PENDING');
+  });
+
+  it('should decline a proposal whose run was booked meanwhile, and make no match', async () => {
+    const { searcher, proposer, searchId } = await setup();
+    const proposal = await propose(proposer.token, searchId).expect(201);
+    sessions.mockImplementation(async () => NIMES_SLOTS.map(item => (item.slotId === 'a1-2000' ? { ...item, takenSeats: 4 } : item)));
+    clearVenueSlotsCache();
+
+    const res = await accept(searcher.token, proposal.body.id);
+
+    expect(res.status).toBe(409);
+    expect(res.body.errors).toContain(ERROR.scrimProposalRunTaken);
+    expect(await statusOf(proposal.body.id)).toBe('DECLINED');
+    expect(await prisma.calendarEvent.count()).toBe(0);
+    expect((await prisma.scrimSearch.findUniqueOrThrow({ where: { id: searchId } })).status).toBe('OPEN');
   });
 
   it('should only let the searching team answer', async () => {

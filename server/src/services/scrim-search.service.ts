@@ -9,12 +9,12 @@ import type {
   ScrimVenueOffer,
   VenueSlot,
 } from '@shared/types';
-import { COMPETITIVE_GAME_ID } from '@shared/constants';
 import { countMatches, orderRunSlots, runSpan, spansOverlap } from '@shared/utils';
 import { logoUrlOf } from '@services/teams.service';
 import { getVenueSlots } from '@services/venue-slots.service';
 import { PROPOSAL_TEAM_INCLUDE, toScrimProposal, type ProposalRow } from '@services/scrim-proposal.service';
 import { formatDateStr, parseMonthRange } from './helpers/date.helper';
+import { slotPlayability } from './helpers/slot.helper';
 
 // The team behind a search, its offered slots and the proposals it received, as loaded with it
 export const SEARCH_INCLUDE = {
@@ -101,23 +101,6 @@ function toScrimSearch(row: SearchRow, readerTeamId: string): ScrimSearch {
     proposals: visibleProposals(row, readerTeamId),
     createdAt: row.createdAt.toISOString(),
   };
-}
-
-// ============================================
-// Slots a match can be played on
-// ============================================
-
-/**
- * Whether a slot can host a match: the competitive game, its competitive mode
- * open, nobody in yet, and, at peak hours, the venue still opening sessions to
- * EVA Pass holders that day: the players pay in tokens. Says which fails first.
- */
-export function slotPlayability(slot: VenueSlot): 'playable' | 'otherGame' | 'notCompetitive' | 'taken' | 'passQuotaReached' {
-  if (slot.gameId !== COMPETITIVE_GAME_ID) return 'otherGame';
-  if (!slot.isCompetitiveAvailable) return 'notCompetitive';
-  if (slot.takenSeats > 0) return 'taken';
-  if (slot.passQuotaLeft === 0) return 'passQuotaReached';
-  return 'playable';
 }
 
 // ============================================
@@ -273,7 +256,7 @@ export async function createScrimSearch(input: {
 
 // When an offer starts, ends, and when eva.gg expects the players for its
 // earliest slot
-function offerHours(offered: OfferedVenueSlot[]): { startTime: string; endTime: string; convocationTime: string } {
+function offerHours(offered: { startTime: string; endTime: string; convocationTime: string }[]): { startTime: string; endTime: string; convocationTime: string } {
   const earliest = [...offered].sort((a, b) => a.startTime.localeCompare(b.startTime))[0]!;
   const latest = [...offered].sort((a, b) => runSpan(b).end - runSpan(a).end)[0]!;
   return { startTime: earliest.startTime, endTime: latest.endTime, convocationTime: earliest.convocationTime };
@@ -413,4 +396,84 @@ export async function deleteScrimSearch(id: string, teamId: string): Promise<{ r
 
   await prisma.scrimSearch.delete({ where: { id } });
   return {};
+}
+
+// ============================================
+// Keeping a search in step with eva.gg
+// ============================================
+
+export type RefreshedOffer = {
+  lost: number;    // Offered slots no longer open to a match, out of the offer
+  closed: boolean; // The search no longer holds a match: closed, its pending proposals declined
+};
+
+/**
+ * Take out of an open search the slots eva.gg no longer opens to a match:
+ * booked by someone since, given to another game, closed to the competitive
+ * mode, past the venue's pass quota, or gone from the day. `daySlots` gives a
+ * venue's slots that day as just read, or null when they could not be: its
+ * offered slots are then kept. A slot at the time of a match the search made
+ * is left alone: the match's own players hold it. A pending proposal on a slot
+ * taken out is declined. A search that no longer holds a match closes, its
+ * pending proposals declined: as matched when it made some, as expired
+ * otherwise. Taken one at a time with the answers and changes on the search.
+ */
+export async function refreshSearchOffer(
+  searchId: string,
+  daySlots: (venueId: string) => VenueSlot[] | null,
+): Promise<RefreshedOffer> {
+  return prisma.$transaction(async tx => {
+    await tx.$queryRaw`SELECT 1 FROM "ScrimSearch" WHERE "id" = ${searchId} FOR UPDATE`;
+    const search = await tx.scrimSearch.findUnique({
+      where: { id: searchId },
+      select: {
+        status: true,
+        slotCount: true,
+        slots: { select: { id: true, venueId: true, evaSlotId: true, arenaNumber: true, startTime: true, endTime: true, convocationTime: true } },
+        proposals: {
+          where: { status: { in: ['ACCEPTED', 'PENDING'] } },
+          select: { id: true, status: true, evaSlotIds: true, startTime: true, endTime: true },
+        },
+      },
+    });
+    if (!search || search.status !== 'OPEN') return { lost: 0, closed: false };
+
+    const made = search.proposals.filter(proposal => proposal.status === 'ACCEPTED');
+    const busy = made.map(runSpan);
+    const isBusy = (slot: { startTime: string; endTime: string }) => busy.some(span => spansOverlap(span, runSpan(slot)));
+
+    const lost = search.slots.filter(slot => {
+      if (isBusy(slot)) return false;
+      const day = daySlots(slot.venueId);
+      if (!day) return false;
+      const live = day.find(candidate => candidate.slotId === slot.evaSlotId);
+      return !live || slotPlayability(live) !== 'playable';
+    });
+    if (!lost.length) return { lost: 0, closed: false };
+
+    const lostIds = new Set(lost.map(slot => slot.evaSlotId));
+    const remaining = search.slots.filter(slot => !lostIds.has(slot.evaSlotId));
+    const free = remaining.filter(slot => !isBusy(slot));
+    const closed = countMatches(orderRunSlots(free), search.slotCount, busy) === 0;
+
+    const pending = search.proposals.filter(proposal => proposal.status === 'PENDING');
+    const lapsed = closed ? pending : pending.filter(proposal => proposal.evaSlotIds.some(slotId => lostIds.has(slotId)));
+    if (lapsed.length) {
+      await tx.scrimProposal.updateMany({
+        where: { id: { in: lapsed.map(proposal => proposal.id) } },
+        data: { status: 'DECLINED', respondedAt: new Date() },
+      });
+    }
+
+    await tx.scrimSearchSlot.deleteMany({ where: { id: { in: lost.map(slot => slot.id) } } });
+    await tx.scrimSearch.update({
+      where: { id: searchId },
+      data: {
+        ...(remaining.length ? offerHours(remaining) : {}),
+        ...(closed ? { status: made.length ? 'MATCHED' as const : 'EXPIRED' as const } : {}),
+      },
+    });
+
+    return { lost: lost.length, closed };
+  });
 }
