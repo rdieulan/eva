@@ -1,5 +1,5 @@
 // Notifications put in words. One wording for every medium: the app's bell
-// shows it today, a mail or a chat message will reuse it.
+// shows it whole, a Discord card in pieces.
 
 import type {
   NotificationContent,

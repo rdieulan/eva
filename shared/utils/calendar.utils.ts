@@ -1,5 +1,5 @@
 // A day of the calendar to lead to, as an address of the app: the same for a
-// route inside it and for a link outside it (a chat message, a mail)
+// route inside it and for a link outside it (a chat message)
 
 import type { CalendarTarget } from '@shared/types/calendar.types';
 

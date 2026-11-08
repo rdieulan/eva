@@ -12,7 +12,8 @@ Ce document définit les règles de fonctionnement de l'agent de code pour le pr
 | [REVIEW_CRITERIA.md](REVIEW_CRITERIA.md) | Critères de review pour l'analyse des fichiers |
 | [SCRIPTS.md](SCRIPTS.md) | Scripts d'automatisation disponibles |
 | [EVA_API.md](EVA_API.md) | Ce qu'on sait de l'API eva.gg et la règle « pas de sonde en live » |
-| [ROADMAP.md](../ROADMAP.md) | État d'avancement et tâches en cours |
+| [PRODUIT.md](PRODUIT.md) | Ce que fait l'application et pourquoi : les règles du produit |
+| [ROADMAP.md](../ROADMAP.md) | Ce qui reste à faire |
 
 ---
 
@@ -26,7 +27,7 @@ Ce document définit les règles de fonctionnement de l'agent de code pour le pr
    - Attendre la validation explicite avant de procéder
 
 2. **Validation systématique**
-   - Ne JAMAIS valider/cocher la roadmap sans accord explicite de l'utilisateur
+   - Ne JAMAIS retirer une tâche de la roadmap comme livrée sans accord explicite de l'utilisateur
    - Ne JAMAIS commit/push sans demander
    - Ne JAMAIS passer à l'étape suivante sans validation
 
@@ -152,7 +153,7 @@ npm run script:dry -- <script-name> [args]
 
 | Étape | Description | Validation requise |
 |-------|-------------|-------------------|
-| 5.1 | **Mettre à jour la ROADMAP** : Cocher les tâches terminées | ✅ |
+| 5.1 | **Mettre à jour la ROADMAP** : Retirer ce qui est livré (git en garde l'historique), reporter dans PRODUIT.md les règles décidées en route | ✅ |
 | 5.2 | **Mettre à jour la documentation** : Si nouveau pattern/règle | ✅ |
 | 5.3 | **Commit/Push** : Attendre l'instruction explicite | ✅ |
 

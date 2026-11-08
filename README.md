@@ -146,8 +146,8 @@ eva/
 │   ├── unit/            # Vitest unit (client + server + shared)
 │   └── integration/     # Supertest contre une vraie DB
 ├── scripts/             # Outils CLI (create-admin, rename-file, refactor)
-├── docs/                # CODE_RULES, CODE_AGENT, REVIEW_CRITERIA
-└── ROADMAP.md           # État des features en cours / terminées
+├── docs/                # PRODUIT, EVA_API, CODE_RULES, CODE_AGENT, REVIEW_CRITERIA, SCRIPTS
+└── ROADMAP.md           # Ce qui reste à faire
 ```
 
 ## Modèle d'auth
@@ -192,4 +192,4 @@ npm run create-admin    # créer le premier super admin
 
 ## Roadmap
 
-Voir `ROADMAP.md` pour l'état des features (en cours / terminées / à faire).
+Ce qui reste à faire : `ROADMAP.md`. Ce que fait l'application et pourquoi : `docs/PRODUIT.md`.

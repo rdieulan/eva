@@ -29,7 +29,7 @@ export interface NotificationDelivery {
   notificationId: string;
   content: NotificationContent;
   teamId: string;      // The team it is told to: a team-wide medium (a chat channel) would post once for it
-  playerIds: string[]; // The players it is for: a personal medium (the bell, a mail) reaches each of them
+  playerIds: string[]; // The players it is for: a personal medium (the bell, a WhatsApp message) reaches each of them
 }
 
 // A medium that tells notifications
@@ -38,10 +38,10 @@ export interface NotificationChannel {
   deliver(delivery: NotificationDelivery): Promise<void>;
 }
 
-//TODO The bell and the team's Discord channel deliver today. Mail waits for a
-// sending provider (none yet, the domain name decides it), WhatsApp for a Meta
-// business account and its framing: each will implement NotificationChannel
-// and join this list, with nothing to change in the services that notify.
+//TODO The bell and the team's Discord channel deliver today; WhatsApp waits for
+// a Meta business account and its framing. It will implement
+// NotificationChannel and join this list, with nothing to change in the
+// services that notify. No mail: the players do not read it.
 const CHANNELS: NotificationChannel[] = [inboxChannel, discordChannel];
 
 // The members of the team the audience names, minus the one who did it

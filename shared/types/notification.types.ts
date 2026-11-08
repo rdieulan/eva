@@ -1,5 +1,5 @@
 // Notifications: what happened, told to the players of a team. Information
-// only: each medium (the app's bell today; mail, Discord or WhatsApp later)
+// only: each medium (the app's bell and the team's Discord channel today)
 // tells it its own way, from the same facts and in the same words
 // (describeNotification, shared/utils).
 
