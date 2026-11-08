@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import SvgIcon from '@/components/common/SvgIcon.vue';
 import NotificationBell from '@/components/common/layout/NotificationBell.vue';
 
@@ -11,13 +11,15 @@ defineProps<{
 }>();
 
 const router = useRouter();
+const route = useRoute();
 
 function goToHome() {
   router.push('/');
 }
 
+// A page read without an account (a venue's board) is where signing in comes back to
 function goToLogin() {
-  router.push('/login');
+  router.push(route.meta.returnAfterLogin ? { name: 'login', query: { redirect: route.fullPath } } : '/login');
 }
 
 function goToProfile() {
@@ -52,7 +54,7 @@ function goToProfile() {
       <template v-else>
         <button class="btn-login" @click="goToLogin">
           <SvgIcon name="user" class="login-icon" />
-          <span>Login</span>
+          <span>Se connecter</span>
         </button>
       </template>
     </div>

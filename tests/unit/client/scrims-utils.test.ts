@@ -3,7 +3,9 @@ import { describe, it, expect } from 'vitest';
 import type { ScrimOfferedSlot, VenueSlot } from '@shared/types';
 import {
   coveredStretches,
+  describeMatchesWanted,
   formatMatchCount,
+  formatOfferRange,
   formatSlotCount,
   formatSlotsDuration,
   keepWholeMatches,
@@ -28,6 +30,18 @@ describe('scrim formatting', () => {
     expect(formatSlotCount(2)).toBe('2 créneaux (1h20)');
     expect(formatMatchCount(1)).toBe('1 match');
     expect(formatMatchCount(3)).toBe('3 matchs');
+  });
+
+  it('says what a search wants, and how many matches it already has', () => {
+    expect(describeMatchesWanted({ matchCount: 1, slotCount: 2, matchedCount: 0 })).toBe('1 match de 1h20');
+    expect(describeMatchesWanted({ matchCount: 2, slotCount: 1, matchedCount: 1 })).toBe('2 matchs de 40 min, 1 déjà calé');
+    expect(describeMatchesWanted({ matchCount: 4, slotCount: 3, matchedCount: 2 })).toBe('4 matchs de 2h, 2 déjà calés');
+  });
+
+  it('writes a stretch of an offer, its arena only when the venue has several', () => {
+    const range = { arenaNumber: 2, startTime: '20:40', endTime: '22:00' };
+    expect(formatOfferRange(range, 1)).toBe('20:40 – 22:00');
+    expect(formatOfferRange(range, 2)).toBe('20:40 – 22:00 · arène 2');
   });
 });
 

@@ -20,12 +20,17 @@ const getFutureDate = () => {
   return date.toISOString().split('T')[0];
 };
 
+// Venues made here each need a public board name of their own
+let venuesMade = 0;
+
 // Create a venue, and optionally affiliate a team with it
 async function createVenue(
   overrides: { name?: string; city?: string; teamId?: string; arenaCount?: number } = {},
 ) {
+  venuesMade += 1;
   const venue = await prisma.venue.create({
     data: {
+      slug: `venue-${venuesMade}`,
       name: overrides.name ?? `Venue ${Date.now()}`,
       city: overrides.city ?? 'Lyon',
       address: '12 rue des Lasers',

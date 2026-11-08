@@ -42,16 +42,25 @@ Le planificateur de postes est **parqué** (`PLANNER_ENABLED`, `shared/constants
 - *Avant d'ouvrir une recherche* : un jour où d'autres équipes cherchent déjà aux heures cochées, dans la même salle, le dit dans la fenêtre (« Déjà en recherche aux mêmes heures ») : leur nom, leur salle et leurs plages, ce qu'elles veulent encore jouer, et un bouton « Leur proposer un match » (« Voir notre proposition » quand elle est partie) qui ouvre leur recherche par-dessus la fenêtre. Ce n'est pas bloquant : le jour part quand même. Ce qu'un match déjà calé a pris, ou qui est trop court pour un de leurs matchs, ne compte pas.
 - *Prévenir* : notification dans l'application d'abord ; le courriel quand un fournisseur d'envoi existe (aucun aujourd'hui, le nom de domaine le conditionne) ; Discord et WhatsApp après, quand l'intégration existe. Rien ne part quand quelqu'un s'inscrit sur un créneau d'un match calé : ce sont ses joueurs (voir *Cycle de vie*). Une notification est une information, pas un message : ce qui s'est passé, à quelle équipe, et les faits pour le dire ; chaque canal la livre à sa façon, la cloche aujourd'hui, et les mots viennent d'une seule fonction partagée (`describeNotification`), que le courriel ou un message Discord reprendront.
 
-- *Page publique par salle* : le tableau des recherches d'une salle se lit sans compte (nom et logo de l'équipe, jour, créneaux), pour être partagé sur le Discord de la salle et amorcer le marché. Proposer demande un compte et une équipe.
+- *Page publique par salle* (décidé le 2026-11-08) : le tableau des recherches d'une salle se lit sans compte, pour être partagé sur le Discord de la salle et amorcer le marché. Son adresse lisible, `/salles/nimes`, est fixée une fois pour toutes : une salle renommée garde les liens déjà postés. « Scrims à Nîmes » : les jours à venir où une équipe cherche dans la salle ; pour chacune, son logo et son nom, les plages de la salle où un match tient encore (l'arène nommée quand la salle en a plusieurs ; les heures des matchs calés et les bouts trop courts n'y sont pas) et ce qu'elle veut. Ni joueurs, ni propositions. « Proposer un match » ouvre la fiche de la recherche dans le calendrier, après la connexion pour un visiteur ; sans équipe, l'accueil en demande une ; notre propre recherche se lit « Voir notre recherche ». La page ne lit que nos données, jamais eva.gg. Un lien posté montre une carte « Scrims à Nîmes » avec une phrase fixe, sans compte d'équipes que l'aperçu garderait faux. Le lien se trouve sur la page équipe, à côté du Discord de la salle, et dans l'administration des salles. Pas de page qui liste toutes les salles.
 
 **Découpe (ordre de construction, ce qui reste).**
 
 1. Prévenir par courriel, Discord et WhatsApp : le courriel attend un fournisseur d'envoi, lui-même suspendu au nom de domaine (l'application n'envoie aucun mail aujourd'hui, même pas d'activation), Discord et WhatsApp leur intégration. Chacun se branche comme un canal de plus sur l'envoi des notifications, sans rien changer à ce qui les déclenche.
-2. Page publique du tableau d'une salle.
+2. La carte d'un lien de tableau, là où il est posté.
+3. Les liens vers le tableau d'une salle : page équipe, administration des salles.
 
 ---
 
 ## ✅ Terminé
+
+### Feature : Page publique du tableau d'une salle
+
+**Périmètre livré** :
+- Page `/salles/<adresse>`, lisible sans compte, connecté ou non (voir *Page publique par salle*) : « Scrims à Nîmes », les recherches jour par jour, un bouton « Copier le lien ». Une salle inconnue dit « Salle introuvable ». Le bouton de connexion du haut ramène au tableau, et dit « Se connecter ».
+- Chaque salle a son adresse (`Venue.slug`, migration 0034) : son nom sans accents, en minuscules, des tirets entre les mots, `-2`, `-3`… après un nom déjà pris (`freeVenueSlug`, `shared/utils`), donnée à la création par l'administration comme par la synchronisation eva.gg, et gardée quand la salle est renommée.
+- `GET /api/public/venues/:slug/board` : sans compte, les recherches ouvertes à venir où un match tient encore dans la salle, lues dans nos données seules.
+- Le logo d'une équipe, ou ses initiales quand elle n'en a pas, est un composant partagé (`TeamLogo`) par la page équipe et le tableau. Le lien vers un jour du calendrier aussi (`calendarRoute`), partagé par la cloche et le tableau.
 
 ### Correctif : la fiche d'une recherche montre notre dernière proposition
 
@@ -345,6 +354,7 @@ Le planificateur de postes est **parqué** (`PLANNER_ENABLED`, `shared/constants
 | Découper `DayCell.vue` | ⬜ | Près de 1000 lignes : extraire le coin du lecteur (triangle, symbole, horaires) en sous-composant, et l'appui qui ouvre la roue des réponses en composable. |
 | Proposer un match hors des dispos de l'équipe | ⬜ | La fiche d'une autre recherche ne dit rien des dispos de sa propre équipe : une suite choisie là où l'équipe n'est pas au complet part sans avertissement. Reprendre les créneaux en jaune de « Chercher un adversaire » (`teamHours` de `VenueSlotPicker`). |
 | Origine des icônes | ⬜ | Les icônes de `client/src/assets/icons/` reprennent des tracés Material Icons (Apache 2.0), dont seules la cloche et l'horloge sont déclarées dans `THIRD_PARTY_NOTICES.md`. Vérifier les autres une à une et les y déclarer. |
+| Règles d'équilibrage demandées pour un compte sans équipe | ⬜ | L'application les demande pour tout compte connecté, alors que le serveur répond 404 à qui n'a pas d'équipe : un administrateur, un gérant ou un joueur sans équipe laisse une erreur dans la console du navigateur à chaque chargement. Ne les demander qu'à un joueur qui a une équipe. |
 | Les tests ne passent pas la vérification de types | ⬜ | `vue-tsc -p tests/tsconfig.json` relève une quarantaine d'erreurs, toutes dans des tests anciens : jours sans `renewals`, créneaux sans `isCompetitiveAvailable`, salles incomplètes, `userId` dans `PlayerAssignment`, `UserPermissions` disparu, alias `@routes` et `@utils` inconnus de ce tsconfig. Vitest ne vérifie pas les types, donc rien ne casse, mais les fixtures dérivent des types sans que personne le voie. Les corriger, puis brancher cette vérification avec les autres. |
 | Prévenir d'une annulation qui n'a pas eu lieu | ⬜ | Accepter relit la suite chez eva.gg avant de prendre le verrou de la recherche (`checkRunStillFree`). Si pendant cette lecture la proposition est retirée, refusée ou acceptée par ailleurs, et que la suite n'est plus libre, rien ne change en base, mais l'équipe qui proposait reçoit quand même « Proposition annulée » et la réponse dit que le créneau est pris. Ne prévenir et ne répondre ainsi que si la proposition a bien été annulée. |
 

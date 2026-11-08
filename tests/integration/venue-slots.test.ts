@@ -19,8 +19,8 @@ vi.mock('../../server/src/integrations/eva/eva-sessions', () => ({
 
 const sessions = vi.mocked(fetchLocationSessions);
 
-const NIMES = { id: 'venue-nimes', name: 'Nîmes', city: 'Nimes', address: '1 rue', externalId: 51 };
-const HAND_MADE = { id: 'venue-hand', name: 'Garage', city: 'Paris', address: '2 rue' };
+const NIMES = { id: 'venue-nimes', slug: 'nimes', name: 'Nîmes', city: 'Nimes', address: '1 rue', externalId: 51 };
+const HAND_MADE = { id: 'venue-hand', slug: 'garage', name: 'Garage', city: 'Paris', address: '2 rue' };
 
 const SLOT_20H = {
   slotId: 'slot-20:00',

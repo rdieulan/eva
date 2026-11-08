@@ -15,6 +15,7 @@ describe('Account Activation API', () => {
     await prisma.venue.create({
       data: {
         id: TEST_VENUE_ID,
+        slug: 'test-venue-activation',
         name: 'Test Venue Activation',
         city: 'Test City',
         address: '123 Test Street',

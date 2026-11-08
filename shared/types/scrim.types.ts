@@ -101,6 +101,33 @@ export interface ScrimSearch {
   createdAt: string;
 }
 
+// A stretch of a search's offer in one venue: consecutive slots on one arena,
+// long enough for a match and at no time of a match already made
+export interface ScrimOfferRange {
+  arenaNumber: number;
+  startTime: string; // HH:mm, start of the first slot
+  endTime: string;   // HH:mm, end of the last slot
+}
+
+// A search as the public board of a venue shows it to anyone: the team, the
+// day, where a match still fits in that venue, and what the team wants
+export interface PublicScrimSearch {
+  id: string;
+  date: string;              // YYYY-MM-DD
+  team: ScrimSearchTeam;
+  ranges: ScrimOfferRange[]; // In the board's venue, by start, then by arena
+  slotCount: number;         // How many consecutive slots a match takes
+  matchCount: number;        // How many matches the team wants that day
+  matchedCount: number;      // How many it already has
+}
+
+// The public board of a venue, readable without an account: the open
+// searches to come where a match still fits there
+export interface VenueBoard {
+  venue: { id: string; slug: string; name: string; arenaCount: number };
+  searches: PublicScrimSearch[]; // By day, then by their first stretch
+}
+
 // What a team sends to answer a search: the run it wants to play, and a word
 export interface CreateScrimProposalRequest {
   evaSlotIds: string[];

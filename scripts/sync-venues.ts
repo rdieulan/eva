@@ -11,6 +11,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
 import { fetchEvaLocations, toVenues, type VenueInput } from '../server/src/integrations/eva/eva-locations';
 import { VENUE_LINK_KEYS } from '../shared/types/venue.types';
+import { freeVenueSlug } from '../shared/utils/venue.utils';
 
 const databaseUrl = process.env.DATABASE_URL || 'postgresql://eva_user:eva_secret_password@localhost:5432/eva_db';
 const pool = new pg.Pool({ connectionString: databaseUrl });
@@ -55,6 +56,8 @@ async function main() {
     },
   });
   const byExternalId = new Map(known.map(venue => [venue.externalId!, venue]));
+  // The names of the public boards already given, hand-made venues included
+  const takenSlugs = new Set((await prisma.venue.findMany({ select: { slug: true } })).map(venue => venue.slug));
 
   let created = 0;
   let updated = 0;
@@ -63,7 +66,9 @@ async function main() {
     const current = byExternalId.get(venue.externalId);
 
     if (!current) {
-      await prisma.venue.create({ data: venue });
+      const slug = freeVenueSlug(venue.name, takenSlugs);
+      takenSlugs.add(slug);
+      await prisma.venue.create({ data: { ...venue, slug } });
       created++;
       console.log(`  + ${venue.name} — ${venue.city} (${venue.arenaCount} arène${venue.arenaCount > 1 ? 's' : ''})`);
       continue;

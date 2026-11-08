@@ -45,7 +45,14 @@ export {
 
 export { describeProposalDecline, type ProposalDeclineDescription } from './scrim-proposal.utils';
 
-export { normalizeLinkUrl, isAcceptableLinkInput, formatVenuePlace } from './venue.utils';
+export {
+  normalizeLinkUrl,
+  isAcceptableLinkInput,
+  formatVenuePlace,
+  slugifyVenueName,
+  freeVenueSlug,
+  describeVenueBoard,
+} from './venue.utils';
 
 export { detectImageType } from './image.utils';
 

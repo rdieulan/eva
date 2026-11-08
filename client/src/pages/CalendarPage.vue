@@ -291,9 +291,10 @@ function openEventsFromAgenda(events: CalendarEvent[], initialIndex: number) {
   openEventViewer(events, initialIndex);
 }
 
-// A notification leads here with the day to show, the mode, a venue to tick
-// and what to open (see notificationRoute). The link is followed once the
-// venues are known; what it opens, once the calendar has loaded that day.
+// A notification or a venue's public board leads here with the day to show,
+// the mode, a venue to tick and what to open (see calendarRoute). The link is
+// followed once the venues are known; what it opens, once the calendar has
+// loaded that day.
 const DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const pendingOpen = ref<{ date: string; kind: 'scrimSearch' | 'event'; id: string } | null>(null);
 

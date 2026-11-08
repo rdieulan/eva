@@ -104,6 +104,19 @@ export interface DayData {
 }
 
 // Monthly calendar data response
+/**
+ * A day of the calendar to lead to, whatever leads there (a notification, the
+ * public board of a venue) and whatever the medium: the app turns it into a
+ * route, a mail or a chat message would turn it into a link
+ */
+export interface CalendarTarget {
+  page: 'calendar';
+  date: string;                   // YYYY-MM-DD, the day to show
+  mode: 'team' | 'matchmaking';
+  venueId?: string;               // In matchmaking, a venue to tick: where the search is
+  open?: { kind: 'scrimSearch' | 'event'; id: string }; // What to open on that day, when it is still there
+}
+
 export interface MonthData {
   month: string; // Format "YYYY-MM"
   days: Record<string, DayData>; // Key = date string (YYYY-MM-DD)

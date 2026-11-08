@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import type { Venue } from '@shared/types';
 import { TEAM_LOGO_MIME_TYPES, TEAM_FAVORITE_VENUES_MAX } from '@shared/constants';
 import SvgIcon from '@/components/common/SvgIcon.vue';
+import TeamLogo from '@/components/common/TeamLogo.vue';
 import VenueChecklist from '@/components/common/VenueChecklist.vue';
 import { formatVenueLabel } from '@/utils/venues';
 
@@ -32,16 +33,6 @@ const emit = defineEmits<{
 
 // What the file picker offers by default; the server checks the real content anyway
 const LOGO_ACCEPT = TEAM_LOGO_MIME_TYPES.join(',');
-
-// Letters standing in for a team without a logo
-const teamInitials = computed(() =>
-  props.team.name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map(word => word[0]!.toUpperCase())
-    .join(''),
-);
 
 const logoInput = ref<HTMLInputElement | null>(null);
 
@@ -116,8 +107,7 @@ function saveChanges() {
 
     <!-- Logo: shown to everyone, changed by whoever manages the team -->
     <div class="team-logo">
-      <img v-if="team.logoUrl" class="team-logo-image" :src="team.logoUrl" :alt="`Logo de ${team.name}`" />
-      <div v-else class="team-logo-placeholder" aria-hidden="true">{{ teamInitials }}</div>
+      <TeamLogo :name="team.name" :logo-url="team.logoUrl" :size="72" />
 
       <div v-if="canManageTeam" class="team-logo-actions">
         <input
@@ -230,30 +220,6 @@ function saveChanges() {
   align-items: center;
   gap: $spacing-md;
   margin-bottom: $spacing-md;
-}
-
-.team-logo-image,
-.team-logo-placeholder {
-  width: 72px;
-  height: 72px;
-  border-radius: $radius-md;
-  border: $border-thin solid $color-border-light;
-  flex-shrink: 0;
-}
-
-.team-logo-image {
-  object-fit: cover;
-  background: $color-bg-secondary;
-}
-
-.team-logo-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: with-alpha($color-accent, 0.15);
-  color: $color-accent;
-  font-size: 1.5rem;
-  font-weight: 700;
 }
 
 .team-logo-actions {

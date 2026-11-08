@@ -1,7 +1,5 @@
-// Notifications in the app: where one leads, and how long ago it came
+// Notifications in the app: how long ago one came (where it leads: calendarRoute)
 
-import type { RouteLocationRaw } from 'vue-router';
-import type { NotificationTarget } from '@shared/types';
 import { formatShortDay } from '@shared/utils';
 import { formatDateStr } from '@/utils/calendar';
 
@@ -9,17 +7,6 @@ const MINUTE_MS = 60 * 1000;
 const MINUTES_PER_HOUR = 60;
 const HOURS_PER_DAY = 24;
 const DAYS_PER_WEEK = 7;
-
-/**
- * Where a notification leads, as a route of the app: the calendar reads the
- * day, the mode, the venue to tick and what to open from its query
- */
-export function notificationRoute(target: NotificationTarget): RouteLocationRaw {
-  const query: Record<string, string> = { date: target.date, mode: target.mode };
-  if (target.venueId) query.venue = target.venueId;
-  if (target.open) query[target.open.kind === 'scrimSearch' ? 'search' : 'event'] = target.open.id;
-  return { path: '/calendar', query };
-}
 
 /**
  * How long ago something came, in a few words: minutes, hours, days, then the

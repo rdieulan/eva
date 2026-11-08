@@ -11,9 +11,14 @@ import { DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
 
 const VALID_PASSWORD = 'A' + '1' + 'a'.repeat(PASSWORD_MIN_LENGTH - 2);
 
+// Venues made here each need a public board name of their own
+let venuesMade = 0;
+
 async function createTestVenue(overrides: Partial<{ name: string; city: string; address: string; phone: string }> = {}) {
+  venuesMade += 1;
   return prisma.venue.create({
     data: {
+      slug: `venue-${venuesMade}`,
       name: overrides.name ?? `Venue ${Date.now()}`,
       city: overrides.city ?? 'Paris',
       address: overrides.address ?? '1 rue de la VR',
@@ -80,6 +85,26 @@ describe('Admin API', () => {
       const persisted = await prisma.venue.findUnique({ where: { id: res.body.id } });
       expect(persisted).not.toBeNull();
       expect(persisted!.city).toBe('Lyon');
+    });
+
+    it('names the public board of a new venue after it, apart from the names already taken, for good', async () => {
+      const { token } = await createAuthenticatedAdmin();
+      const create = (name: string) => request(app)
+        .post('/api/admin/venues')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ name, city: 'Nîmes', address: '1 rue' });
+
+      const first = await create('Nîmes');
+      const second = await create('NÎMES');
+      expect(first.body.slug).toBe('nimes');
+      expect(second.body.slug).toBe('nimes-2');
+
+      // Renamed, a venue keeps the address already shared
+      const renamed = await request(app)
+        .put(`/api/admin/venues/${first.body.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ name: 'Nîmes Centre' });
+      expect(renamed.body).toMatchObject({ name: 'Nîmes Centre', slug: 'nimes' });
     });
 
     it('trims whitespace and treats empty phone as null', async () => {

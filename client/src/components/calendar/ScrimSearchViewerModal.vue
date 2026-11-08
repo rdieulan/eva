@@ -17,7 +17,7 @@ import type { CalendarEvent, ScrimProposal, ScrimProposalStatus, ScrimSearch, Ve
 import { ERROR, SCRIM_PROPOSAL_MESSAGE_MAX_LENGTH } from '@shared/constants';
 import { describeProposalDecline } from '@shared/utils';
 import { formatLongDate, isPastDateStr } from '@/utils/calendar';
-import { formatMatchCount, formatSlotsDuration, searchVenueIds } from '@/utils/scrims';
+import { describeMatchesWanted, searchVenueIds } from '@/utils/scrims';
 import { formatVenueLabel } from '@/utils/venues';
 
 // A search as the calendar shows it: its day, who offers which slots, when, in
@@ -138,13 +138,6 @@ function offeredSummary(search: ScrimSearch): string {
   return `${count} entre ${search.startTime} et ${search.endTime}${arena}`;
 }
 
-// How many matches the search wants, of which length, and how many are set:
-// "1 match de 1h20", "2 matchs de 40 min, 1 déjà calé"
-function matchesWanted(search: ScrimSearch): string {
-  const set = search.matchedCount === 0 ? '' : search.matchedCount > 1 ? `, ${search.matchedCount} déjà calés` : ', 1 déjà calé';
-  return `${formatMatchCount(search.matchCount)} de ${formatSlotsDuration(search.slotCount)}${set}`;
-}
-
 // Our own offer in a venue: the slots still open to a match, those at the time
 // of a match made apart
 function openIn(venueId: string): string[] {
@@ -227,7 +220,7 @@ function decline(proposal: ScrimProposal) {
       <dl class="facts">
         <div class="fact">
           <dt>Matchs</dt>
-          <dd>{{ matchesWanted(search) }}</dd>
+          <dd>{{ describeMatchesWanted(search) }}</dd>
         </div>
         <template v-if="!isMine">
           <div class="fact">

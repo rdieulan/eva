@@ -3,10 +3,11 @@
 import { prisma } from '@db/prisma';
 import type { Venue, VenueLinks } from '@shared/types';
 import { VENUE_LINK_KEYS } from '@shared/types';
-import { normalizeLinkUrl } from '@shared/utils';
+import { freeVenueSlug, normalizeLinkUrl, slugifyVenueName } from '@shared/utils';
 
 const PUBLIC_VENUE_SELECT = {
   id: true,
+  slug: true,
   name: true,
   city: true,
   address: true,
@@ -25,6 +26,7 @@ const PUBLIC_VENUE_SELECT = {
 
 type VenueRow = VenueLinks & {
   id: string;
+  slug: string;
   name: string;
   city: string;
   address: string;
@@ -91,12 +93,15 @@ export async function getVenueById(venueId: string): Promise<Venue | null> {
 // ============================================
 
 /**
- * Create a venue
+ * Create a venue, and the name its public board goes by (freeVenueSlug)
  */
 export async function createVenue(input: VenueInput): Promise<Venue> {
+  const name = input.name.trim();
+  const taken = await prisma.venue.findMany({ where: { slug: { startsWith: slugifyVenueName(name) } }, select: { slug: true } });
   const venue = await prisma.venue.create({
     data: {
-      name: input.name.trim(),
+      name,
+      slug: freeVenueSlug(name, new Set(taken.map(row => row.slug))),
       city: input.city.trim(),
       address: input.address.trim(),
       phone: input.phone?.trim() || null,

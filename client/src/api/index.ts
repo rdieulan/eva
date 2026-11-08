@@ -47,6 +47,7 @@ export {
   acceptScrimProposal,
   declineScrimProposal,
   withdrawScrimProposal,
+  fetchVenueBoard,
 } from '@/api/scrims.api';
 
 // Notifications API

@@ -137,11 +137,15 @@ describe('Teams API', () => {
   });
 
   describe('PUT /api/teams/current (favorite venues)', () => {
+    // Each venue needs a public board name of its own
+    let venuesMade = 0;
+
     async function createVenues(count: number): Promise<string[]> {
       const ids: string[] = [];
       for (let index = 0; index < count; index++) {
+        venuesMade += 1;
         const venue = await prisma.venue.create({
-          data: { name: `Salle ${index} ${Date.now()}`, city: 'Lyon', address: '12 rue des Lasers' },
+          data: { slug: `salle-${venuesMade}`, name: `Salle ${index} ${Date.now()}`, city: 'Lyon', address: '12 rue des Lasers' },
         });
         ids.push(venue.id);
       }

@@ -153,6 +153,7 @@ model TeamFavoriteVenue {
 model Venue {
   id         String              @id @default(cuid())
   externalId Int?                @unique // Location id on eva.gg, for venues filled by scripts/sync-venues.ts
+  slug       String              @unique // Its name in the address of its public board, set once: renamed, it keeps the links already shared
   name       String
   city       String
   address    String

@@ -2,14 +2,17 @@
 
 import { prisma } from '@db/prisma';
 import type {
+  PublicScrimSearch,
+  ScrimOfferRange,
   ScrimOfferedSlot,
   ScrimProposal,
   ScrimSearch,
   ScrimSearchStatus,
   ScrimVenueOffer,
+  VenueBoard,
   VenueSlot,
 } from '@shared/types';
-import { countMatches, orderRunSlots, runSpan, spansOverlap } from '@shared/utils';
+import { countMatches, orderRunSlots, runSpan, slotStreaks, spansOverlap } from '@shared/utils';
 import { logoUrlOf } from '@services/teams.service';
 import { getVenueSlots } from '@services/venue-slots.service';
 import { PROPOSAL_TEAM_INCLUDE, declineProposals, toScrimProposal, type ProposalRow } from '@services/scrim-proposal.service';
@@ -140,6 +143,64 @@ export async function listScrimSearches(input: {
   });
 
   return rows.map(row => toScrimSearch(row, input.teamId));
+}
+
+// The stretches of an offer where a match fits: consecutive free slots on one
+// arena, as many as a match takes at least; by start, then by arena
+function offerRanges(
+  slots: { arenaNumber: number; startTime: string; endTime: string }[],
+  slotCount: number,
+  matches: { startTime: string; endTime: string }[],
+): ScrimOfferRange[] {
+  const busy = matches.map(runSpan);
+  const isFree = (slot: { startTime: string; endTime: string }) => !busy.some(span => spansOverlap(span, runSpan(slot)));
+  return slotStreaks(orderRunSlots(slots), isFree)
+    .filter(streak => streak.length >= slotCount)
+    .map(streak => ({ arenaNumber: streak[0]!.arenaNumber, startTime: streak[0]!.startTime, endTime: streak[streak.length - 1]!.endTime }))
+    .sort((a, b) => a.startTime.localeCompare(b.startTime) || a.arenaNumber - b.arenaNumber);
+}
+
+/**
+ * The public board of a venue, readable without an account: the open searches
+ * to come where a match still fits in that venue. Each says the team, the day,
+ * the stretches of its offer there where a match fits, out of the times of
+ * the matches it made wherever they are played, and what it wants. Nothing
+ * else: no player, no proposal. Read from our data alone, never from eva.gg,
+ * so that a crowd of visitors never reaches it. Null for a venue unknown.
+ */
+export async function getVenueBoard(slug: string): Promise<VenueBoard | null> {
+  const venue = await prisma.venue.findUnique({ where: { slug }, select: { id: true, slug: true, name: true, arenaCount: true } });
+  if (!venue) return null;
+
+  const rows = await prisma.scrimSearch.findMany({
+    where: { status: 'OPEN', date: { gte: new Date(formatDateStr(new Date())) }, slots: { some: { venueId: venue.id } } },
+    select: {
+      id: true,
+      date: true,
+      slotCount: true,
+      matchCount: true,
+      team: { select: { id: true, name: true, logoType: true, logoUpdatedAt: true } },
+      slots: { where: { venueId: venue.id }, select: { arenaNumber: true, startTime: true, endTime: true } },
+      proposals: { where: { status: 'ACCEPTED' }, select: { startTime: true, endTime: true } },
+    },
+  });
+
+  const searches = rows.flatMap((row): PublicScrimSearch[] => {
+    const ranges = offerRanges(row.slots, row.slotCount, row.proposals);
+    if (!ranges.length) return [];
+    return [{
+      id: row.id,
+      date: formatDateStr(row.date),
+      team: { id: row.team.id, name: row.team.name, logoUrl: logoUrlOf(row.team) },
+      ranges,
+      slotCount: row.slotCount,
+      matchCount: row.matchCount,
+      matchedCount: row.proposals.length,
+    }];
+  });
+  searches.sort((a, b) => a.date.localeCompare(b.date) || a.ranges[0]!.startTime.localeCompare(b.ranges[0]!.startTime));
+
+  return { venue: { id: venue.id, slug: venue.slug, name: venue.name.trim(), arenaCount: venue.arenaCount }, searches };
 }
 
 // ============================================

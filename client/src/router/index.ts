@@ -15,6 +15,7 @@ const ALLOWED_WITHOUT_TEAM = [
   'register',
   'activate',
   'reset-password',
+  'venue-board',
   'admin',
   'admin-venues',
   'admin-managers',
@@ -58,6 +59,7 @@ const LoginPage = () => import('@/pages/LoginPage.vue');
 const RegisterPage = () => import('@/pages/RegisterPage.vue');
 const ActivatePage = () => import('@/pages/ActivatePage.vue');
 const ResetPasswordPage = () => import('@/pages/ResetPasswordPage.vue');
+const VenueBoardPage = () => import('@/pages/VenueBoardPage.vue');
 const AdminLayout = () => import('@/pages/AdminLayout.vue');
 const AdminVenuesPage = () => import('@/pages/AdminVenuesPage.vue');
 const AdminManagersPage = () => import('@/pages/AdminManagersPage.vue');
@@ -134,6 +136,14 @@ const routes: RouteRecordRaw[] = [
     name: 'reset-password',
     component: ResetPasswordPage,
     meta: { title: 'Réinitialiser le mot de passe', requiresAuth: false }
+  },
+  {
+    // A venue's board, shared on its own channels: anyone reads it, signed in or not,
+    // and signing in from it comes back to it
+    path: '/salles/:slug',
+    name: 'venue-board',
+    component: VenueBoardPage,
+    meta: { title: 'Scrims', requiresAuth: false, returnAfterLogin: true }
   },
   {
     path: '/admin',

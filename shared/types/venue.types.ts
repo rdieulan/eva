@@ -16,6 +16,7 @@ export type VenueLinks = Record<VenueLinkKey, string | null>;
  */
 export interface Venue extends VenueLinks {
   id: string;
+  slug: string; // Its name in the address of its public board, /salles/<slug>
   name: string;
   city: string;
   address: string;

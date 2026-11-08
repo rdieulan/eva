@@ -8,7 +8,8 @@ import { useErrors } from '@/composables/useErrors';
 import { describeNotification } from '@shared/utils';
 import { ERROR } from '@shared/constants';
 import type { InboxNotification } from '@shared/types';
-import { formatRelativeTime, notificationRoute } from '@/utils/notifications';
+import { formatRelativeTime } from '@/utils/notifications';
+import { calendarRoute } from '@/utils/calendar';
 
 // Above this many, the badge stops counting
 const BADGE_MAX = 9;
@@ -53,7 +54,7 @@ async function toggle() {
 
 function follow(notification: InboxNotification) {
   isOpen.value = false;
-  router.push(notificationRoute(describeNotification(notification).target));
+  router.push(calendarRoute(describeNotification(notification).target));
 }
 
 // A click anywhere else, or Escape, closes the list

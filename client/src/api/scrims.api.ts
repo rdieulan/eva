@@ -7,12 +7,21 @@ import type {
   CreateScrimProposalRequest,
   CreateScrimSearchRequest,
   UpdateScrimSearchRequest,
+  VenueBoard,
 } from '@shared/types';
 import { ERROR } from '@shared/constants';
 import { authFetch } from '@/api/utils';
 import { ApiError } from '@/api/error';
 
 const API_BASE = '/api/scrims/searches';
+
+/**
+ * The public board of a venue, readable without an account: the open
+ * searches to come where a match still fits there
+ */
+export async function fetchVenueBoard(slug: string): Promise<VenueBoard> {
+  return authFetch<VenueBoard>(`/api/public/venues/${encodeURIComponent(slug)}/board`, undefined, ERROR.venueBoardFetchFailed);
+}
 
 /**
  * The open searches of a month (YYYY-MM): the reader's team's wherever they

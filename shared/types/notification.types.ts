@@ -3,6 +3,7 @@
 // tells it its own way, from the same facts and in the same words
 // (describeNotification, shared/utils).
 
+import type { CalendarTarget } from './calendar.types';
 import type { ScrimDeclineReason } from './scrim.types';
 
 /**
@@ -57,17 +58,8 @@ export interface MarkNotificationsReadRequest {
   ids: string[];
 }
 
-/**
- * Where a notification leads, whatever the medium: the bell turns it into a
- * route of the app, a mail or a chat message would turn it into a link
- */
-export interface NotificationTarget {
-  page: 'calendar';
-  date: string;                   // YYYY-MM-DD, the day to show
-  mode: 'team' | 'matchmaking';
-  venueId?: string;               // In matchmaking, a venue to tick: where the search is
-  open?: { kind: 'scrimSearch' | 'event'; id: string }; // What to open on that day, when it is still there
-}
+/** Where a notification leads, whatever the medium: a day of the calendar */
+export type NotificationTarget = CalendarTarget;
 
 /** A notification put in words, for any medium */
 export interface NotificationDescription {

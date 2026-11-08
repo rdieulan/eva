@@ -10,6 +10,7 @@ import { ERROR } from '@shared/constants/error.constants';
 // Test venue data
 const TEST_VENUE = {
   id: 'test-venue-1',
+  slug: 'eva-paris',
   name: 'EVA Paris',
   city: 'Paris',
   address: '123 Rue de la VR',

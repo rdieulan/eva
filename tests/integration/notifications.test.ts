@@ -22,7 +22,7 @@ vi.mock('../../server/src/integrations/eva/eva-sessions', () => ({
 
 const sessions = vi.mocked(fetchLocationSessions);
 
-const NIMES = { id: 'venue-nimes', name: 'Nîmes', city: 'Nimes', address: '1 rue', externalId: 51, arenaCount: 2 };
+const NIMES = { id: 'venue-nimes', slug: 'nimes', name: 'Nîmes', city: 'Nimes', address: '1 rue', externalId: 51, arenaCount: 2 };
 const DATE = '2030-06-10';
 const BEFORE_THE_DAY = new Date('2030-06-01T12:00:00Z');
 const AFTER_THE_DAY = new Date('2030-06-12T12:00:00Z');

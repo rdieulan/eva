@@ -21,8 +21,8 @@ vi.mock('../../server/src/integrations/eva/eva-sessions', () => ({
 
 const sessions = vi.mocked(fetchLocationSessions);
 
-const NIMES = { id: 'venue-nimes', name: 'Nîmes', city: 'Nimes', address: '1 rue', externalId: 51, arenaCount: 1 };
-const MONTPELLIER = { id: 'venue-montpellier', name: 'Montpellier', city: 'Montpellier', address: '3 rue', externalId: 52, arenaCount: 1 };
+const NIMES = { id: 'venue-nimes', slug: 'nimes', name: 'Nîmes', city: 'Nimes', address: '1 rue', externalId: 51, arenaCount: 1 };
+const MONTPELLIER = { id: 'venue-montpellier', slug: 'montpellier', name: 'Montpellier', city: 'Montpellier', address: '3 rue', externalId: 52, arenaCount: 1 };
 const DATE = '2030-06-10';
 
 function slot(slotId: string, startTime: string, endTime: string, takenSeats = 0) {

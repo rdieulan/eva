@@ -1,6 +1,29 @@
-// Tests for the venue link rules shared by the sync and the admin screens
+// Tests for the venue rules shared by the sync, the server and the admin screens
 import { describe, it, expect } from 'vitest';
-import { normalizeLinkUrl, isAcceptableLinkInput } from '@shared/utils';
+import { normalizeLinkUrl, isAcceptableLinkInput, slugifyVenueName, freeVenueSlug } from '@shared/utils';
+
+describe('slugifyVenueName', () => {
+  it('reads a name as it goes in an address: lowercase, accents dropped, a dash between words', () => {
+    expect(slugifyVenueName('Nîmes')).toBe('nimes');
+    expect(slugifyVenueName('Toulouse Blagnac')).toBe('toulouse-blagnac');
+    expect(slugifyVenueName('Saint-Étienne')).toBe('saint-etienne');
+    expect(slugifyVenueName('Béthune / Bruay')).toBe('bethune-bruay');
+    expect(slugifyVenueName('  Lançon-Provence  ')).toBe('lancon-provence');
+    expect(slugifyVenueName('Cœur de Ville')).toBe('coeur-de-ville');
+  });
+
+  it('reads "salle" when nothing of the name is left', () => {
+    expect(slugifyVenueName('—')).toBe('salle');
+  });
+});
+
+describe('freeVenueSlug', () => {
+  it('takes the name read for an address, or the first number after it no venue holds yet', () => {
+    expect(freeVenueSlug('Nîmes', new Set())).toBe('nimes');
+    expect(freeVenueSlug('Nîmes', new Set(['nimes']))).toBe('nimes-2');
+    expect(freeVenueSlug('Nîmes', new Set(['nimes', 'nimes-2', 'nimes-3']))).toBe('nimes-4');
+  });
+});
 
 describe('normalizeLinkUrl', () => {
   it('keeps an absolute http(s) URL, trimmed', () => {

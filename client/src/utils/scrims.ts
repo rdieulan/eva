@@ -1,6 +1,6 @@
 // Scrim display and selection helpers
 
-import type { ScrimSearch } from '@shared/types';
+import type { ScrimOfferRange, ScrimSearch } from '@shared/types';
 import { EVA_SLOT_DURATION_MINUTES } from '@shared/constants';
 import { orderRunSlots, runSpan, slotStreaks, spansOverlap, type RunSlot } from '@shared/utils';
 
@@ -28,6 +28,24 @@ export function formatSlotCount(slotCount: number): string {
  */
 export function formatMatchCount(matchCount: number): string {
   return matchCount > 1 ? `${matchCount} matchs` : `${matchCount} match`;
+}
+
+/**
+ * How many matches a search wants, of which length, and how many are set:
+ * "1 match de 1h20", "2 matchs de 40 min, 1 déjà calé"
+ */
+export function describeMatchesWanted(search: Pick<ScrimSearch, 'matchCount' | 'slotCount' | 'matchedCount'>): string {
+  const set = search.matchedCount === 0 ? '' : search.matchedCount > 1 ? `, ${search.matchedCount} déjà calés` : ', 1 déjà calé';
+  return `${formatMatchCount(search.matchCount)} de ${formatSlotsDuration(search.slotCount)}${set}`;
+}
+
+/**
+ * A stretch of an offer, its arena named when the venue has several:
+ * "17:20 – 18:40", "17:20 – 18:40 · arène 2"
+ */
+export function formatOfferRange(range: ScrimOfferRange, arenaCount: number): string {
+  const hours = `${range.startTime} – ${range.endTime}`;
+  return arenaCount > 1 ? `${hours} · arène ${range.arenaNumber}` : hours;
 }
 
 /**

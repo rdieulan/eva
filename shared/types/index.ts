@@ -39,6 +39,7 @@ export type {
   PlayerAvailability,
   DayData,
   MonthData,
+  CalendarTarget,
   SetAvailabilityRequest,
   CreateEventRequest,
 } from './calendar.types';
@@ -57,6 +58,9 @@ export type {
   ScrimProposalOutcome,
   ScrimProposal,
   CreateScrimProposalRequest,
+  ScrimOfferRange,
+  PublicScrimSearch,
+  VenueBoard,
 } from './scrim.types';
 export { SCRIM_SEARCH_STATUSES, SCRIM_PROPOSAL_STATUSES, SCRIM_DECLINE_REASONS } from './scrim.types';
 export type {

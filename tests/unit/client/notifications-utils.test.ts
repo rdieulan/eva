@@ -1,18 +1,6 @@
-// Tests for notifications in the app: where one leads, and how long ago it came
+// Tests for notifications in the app: how long ago one came
 import { describe, it, expect } from 'vitest';
-import { formatRelativeTime, notificationRoute } from '@/utils/notifications';
-
-describe('notificationRoute', () => {
-  it('turns a target into a calendar route: the day, the mode, the venue to tick, what to open', () => {
-    expect(notificationRoute({ page: 'calendar', date: '2026-11-25', mode: 'team' }))
-      .toEqual({ path: '/calendar', query: { date: '2026-11-25', mode: 'team' } });
-    expect(notificationRoute({ page: 'calendar', date: '2026-11-25', mode: 'team', open: { kind: 'event', id: 'event-1' } }))
-      .toEqual({ path: '/calendar', query: { date: '2026-11-25', mode: 'team', event: 'event-1' } });
-    expect(notificationRoute({
-      page: 'calendar', date: '2026-11-25', mode: 'matchmaking', venueId: 'venue-nimes', open: { kind: 'scrimSearch', id: 'search-1' },
-    })).toEqual({ path: '/calendar', query: { date: '2026-11-25', mode: 'matchmaking', venue: 'venue-nimes', search: 'search-1' } });
-  });
-});
+import { formatRelativeTime } from '@/utils/notifications';
 
 describe('formatRelativeTime', () => {
   const now = new Date(2026, 10, 25, 20, 0).getTime();
