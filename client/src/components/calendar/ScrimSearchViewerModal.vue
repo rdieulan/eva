@@ -49,6 +49,13 @@ const message = ref('');
 const run = ref<{ venueId: string; slots: VenueSlot[] } | null>(null); // The run the reader's team wants to play, in one venue
 const sent = ref(false); // A proposal just left, before the calendar reloads
 
+// The matches already made stay in both calendars: withdrawing only stops the search for more
+const withdrawMessage = computed(() => {
+  const made = props.search?.matchedCount ?? 0;
+  const kept = made === 0 ? '' : made > 1 ? ' Les matchs déjà calés restent.' : ' Le match déjà calé reste.';
+  return `Les autres équipes ne verront plus ces créneaux, et leurs propositions en attente tomberont.${kept} Retirer la recherche ?`;
+});
+
 watch(() => props.search, () => {
   clearErrors();
   confirmWithdraw.value = false;
@@ -341,7 +348,7 @@ function decline(proposal: ScrimProposal) {
   <ConfirmModal
     :open="confirmWithdraw"
     title="Retirer la recherche"
-    message="Les autres équipes ne verront plus ces créneaux et leurs propositions seront perdues. Retirer la recherche ?"
+    :message="withdrawMessage"
     confirm-text="Retirer"
     :danger="true"
     @confirm="withdrawSearch"

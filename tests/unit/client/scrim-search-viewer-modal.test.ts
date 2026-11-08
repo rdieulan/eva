@@ -373,4 +373,12 @@ describe('ScrimSearchViewerModal on the team\'s own search', () => {
     expect(wrapper.emitted('changed')![0]).toEqual([{ matched: false }]);
     expect(wrapper.emitted('close')).toHaveLength(1);
   });
+
+  it('says the matches already made stay when the search is withdrawn', async () => {
+    const wrapper = mountViewer({ search: search({ isMine: true, matchCount: 2, matchedCount: 1 }) });
+
+    await button(wrapper, 'Retirer la recherche')!.trigger('click');
+
+    expect(wrapper.text()).toContain('Le match déjà calé reste.');
+  });
 });

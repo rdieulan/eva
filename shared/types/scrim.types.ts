@@ -4,8 +4,9 @@
 /**
  * Where a search stands. Mirrors the ScrimSearchStatus enum in
  * prisma/schema.prisma. A search stays open until it has all its matches, its
- * remaining slots no longer hold one, or its day passes: MATCHED when it made
- * matches, EXPIRED when it made none. A withdrawn search is deleted, not kept.
+ * remaining slots no longer hold one, its day passes or its team withdraws it:
+ * MATCHED when it made matches, EXPIRED when it made none. A search withdrawn
+ * before its first match is deleted, not kept.
  */
 export const SCRIM_SEARCH_STATUSES = ['OPEN', 'MATCHED', 'EXPIRED'] as const;
 

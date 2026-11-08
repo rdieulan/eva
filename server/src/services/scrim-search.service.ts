@@ -381,21 +381,35 @@ export async function updateScrimSearch(input: {
 export type DeleteScrimSearchRefusal = 'notFound' | 'notYours' | 'notOpen';
 
 /**
- * Withdraw an open search of the team, with the matches it still looks for;
- * the matches it already made stay in both calendars. A closed search stays:
- * its matches are the things to cancel then.
+ * Withdraw an open search of the team, with the matches it still looks for:
+ * the proposals pending on it fall. A search that made no match yet is
+ * deleted. One that made matches closes as matched instead: its matches stay
+ * in both calendars, still tied to it, so that either team can call them off.
+ * A closed search stays: its matches are the things to cancel then. Taken one
+ * at a time with the answers and changes on the search.
  */
 export async function deleteScrimSearch(id: string, teamId: string): Promise<{ refusal?: DeleteScrimSearchRefusal }> {
-  const search = await prisma.scrimSearch.findUnique({
-    where: { id },
-    select: { teamId: true, status: true },
-  });
-  if (!search) return { refusal: 'notFound' };
-  if (search.teamId !== teamId) return { refusal: 'notYours' };
-  if (search.status !== 'OPEN') return { refusal: 'notOpen' };
+  return prisma.$transaction(async tx => {
+    await tx.$queryRaw`SELECT 1 FROM "ScrimSearch" WHERE "id" = ${id} FOR UPDATE`;
+    const search = await tx.scrimSearch.findUnique({
+      where: { id },
+      select: { teamId: true, status: true, _count: { select: { proposals: { where: { status: 'ACCEPTED' } } } } },
+    });
+    if (!search) return { refusal: 'notFound' as const };
+    if (search.teamId !== teamId) return { refusal: 'notYours' as const };
+    if (search.status !== 'OPEN') return { refusal: 'notOpen' as const };
 
-  await prisma.scrimSearch.delete({ where: { id } });
-  return {};
+    if (!search._count.proposals) {
+      await tx.scrimSearch.delete({ where: { id } });
+      return {};
+    }
+    await tx.scrimProposal.updateMany({
+      where: { searchId: id, status: 'PENDING' },
+      data: { status: 'DECLINED', respondedAt: new Date() },
+    });
+    await tx.scrimSearch.update({ where: { id }, data: { status: 'MATCHED' } });
+    return {};
+  });
 }
 
 // ============================================

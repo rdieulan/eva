@@ -597,6 +597,25 @@ describe('DELETE /api/scrims/matches/:eventId', () => {
     expect((await prisma.scrimSearch.findUniqueOrThrow({ where: { id: searchId } })).status).toBe('MATCHED');
   });
 
+  it('should keep the match a withdrawn search made, still to be called off from either side', async () => {
+    // 19:20 to 20:40 leaves 20:40 to 22:00 for a second match: the search stays open
+    const { searcher, proposer, searchId } = await made({ matchCount: 2 }, ['a1-1920', 'a1-2000']);
+    const waiting = await propose((await createUserWithTeam()).token, searchId, { evaSlotIds: ['a1-2040', 'a1-2120'] }).expect(201);
+
+    await request(app).delete(`/api/scrims/searches/${searchId}`).set('Authorization', `Bearer ${searcher.token}`).expect(204);
+
+    // Out of the market, its pending proposal fallen, its match still tied to it
+    expect((await prisma.scrimSearch.findUniqueOrThrow({ where: { id: searchId } })).status).toBe('MATCHED');
+    expect(await statusOf(waiting.body.id)).toBe('DECLINED');
+    expect((await listAtVenue(searcher.token).expect(200)).body).toHaveLength(0);
+    const copies = await prisma.calendarEvent.findMany({ where: { scrimSearchId: searchId } });
+    expect(copies).toHaveLength(2);
+
+    const proposerCopy = copies.find(event => event.teamId === proposer.team.id)!;
+    await cancel(proposer.token, proposerCopy.id).expect(204);
+    expect(await prisma.calendarEvent.count()).toBe(0);
+  });
+
   it('should leave a match whose day has passed in both calendars', async () => {
     const { searcher, proposalId } = await made();
     // The day went by since the match was made
