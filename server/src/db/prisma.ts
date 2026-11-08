@@ -101,6 +101,10 @@ export const prisma = new PrismaClient({
   ],
 });
 
+// The client an interactive transaction hands its callback, for helpers that
+// take part in the caller's transaction
+export type PrismaTransaction = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
 // Prisma event listeners
 prisma.$on('error' as never, (e: unknown) => {
   dbLogger.error('Prisma error event:', e);

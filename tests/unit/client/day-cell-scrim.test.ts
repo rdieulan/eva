@@ -27,8 +27,10 @@ const EVENT: CalendarEvent = {
 const RENEWAL = [{ playerId: 'p1', playerName: 'Lune', tier: null }];
 
 function proposal(id: string, status: ScrimProposal['status'] = 'PENDING'): ScrimProposal {
+  const outcome = status === 'DECLINED' ? { status, declineReason: 'BY_TEAM' as const } : { status, declineReason: null };
   return {
-    id, searchId: 'search-mine', team: { id: `team-${id}`, name: `Équipe ${id}`, logoUrl: null }, message: null, status,
+    ...outcome,
+    id, searchId: 'search-mine', team: { id: `team-${id}`, name: `Équipe ${id}`, logoUrl: null }, message: null,
     venueId: 'v', evaSlotIds: ['a', 'b'], arenaNumber: 1, startTime: '20:00', endTime: '21:20', convocationTime: '19:50',
     isMine: false, createdAt: '',
   };

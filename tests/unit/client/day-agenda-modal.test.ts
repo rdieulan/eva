@@ -81,7 +81,7 @@ describe('DayAgendaModal', () => {
   it('counts the teams waiting for our answer at the end of our row', () => {
     const proposal = {
       id: 'p1', searchId: 'search-mine', team: { id: 't1', name: 'Équipe 1', logoUrl: null }, message: null, status: 'PENDING' as const,
-      venueId: 'v', evaSlotIds: ['a', 'b'], arenaNumber: 1, startTime: '20:00', endTime: '21:20', convocationTime: '19:50', isMine: false, createdAt: '',
+      declineReason: null, venueId: 'v', evaSlotIds: ['a', 'b'], arenaNumber: 1, startTime: '20:00', endTime: '21:20', convocationTime: '19:50', isMine: false, createdAt: '',
     };
     const wrapper = mountAgenda({ ...DAY, searches: [{ ...SEARCH_MINE, proposals: [proposal] }] });
 

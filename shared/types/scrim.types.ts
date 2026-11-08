@@ -28,15 +28,37 @@ export const SCRIM_PROPOSAL_STATUSES = ['PENDING', 'ACCEPTED', 'DECLINED', 'WITH
 
 export type ScrimProposalStatus = typeof SCRIM_PROPOSAL_STATUSES[number];
 
+/**
+ * Why a proposal was declined: by the team that searches, or by the app once
+ * the proposal no longer held. Mirrors the ScrimDeclineReason enum in
+ * prisma/schema.prisma.
+ */
+export const SCRIM_DECLINE_REASONS = [
+  'BY_TEAM',          // The team that searches said no
+  'TIME_TAKEN',       // It accepted another match at that time
+  'SEARCH_FILLED',    // Its search found all its matches
+  'SEARCH_CLOSED',    // Its search closed: the slots left no longer hold a match
+  'RUN_TAKEN',        // A slot of the run was booked at the venue meanwhile
+  'SEARCH_CHANGED',   // Its search changed and no longer holds the run
+  'SEARCH_WITHDRAWN', // Its search was withdrawn
+  'DAY_PASSED',       // The day passed with no answer
+] as const;
+
+export type ScrimDeclineReason = typeof SCRIM_DECLINE_REASONS[number];
+
+// Where a proposal stands, and why when it was declined
+export type ScrimProposalOutcome =
+  | { status: 'DECLINED'; declineReason: ScrimDeclineReason }
+  | { status: Exclude<ScrimProposalStatus, 'DECLINED'>; declineReason: null };
+
 // A team's answer to a search, naming the run it wants to play among the
 // offered slots, in one of the venues. The searching team sees every proposal
 // on its search; another team only sees its own.
-export interface ScrimProposal {
+export type ScrimProposal = ScrimProposalOutcome & {
   id: string;
   searchId: string;
   team: ScrimSearchTeam; // The team proposing
   message: string | null;
-  status: ScrimProposalStatus;
   venueId: string;         // Where the run is played
   evaSlotIds: string[];    // The run: consecutive slots on one arena, in order
   arenaNumber: number;
@@ -45,7 +67,7 @@ export interface ScrimProposal {
   convocationTime: string; // HH:mm, for the first slot
   isMine: boolean; // Sent by the reader's own team
   createdAt: string;
-}
+};
 
 // A slot a search offers: where and when, as eva.gg gave it when the search opened
 export interface ScrimOfferedSlot {

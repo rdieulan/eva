@@ -3,6 +3,8 @@
 // tells it its own way, from the same facts and in the same words
 // (describeNotification, shared/utils).
 
+import type { ScrimDeclineReason } from './scrim.types';
+
 /**
  * What a notification tells. Mirrors the NotificationKind enum in
  * prisma/schema.prisma.
@@ -17,14 +19,6 @@ export const NOTIFICATION_KINDS = [
 ] as const;
 
 export type NotificationKind = typeof NOTIFICATION_KINDS[number];
-
-/** Why a proposal was turned down */
-export type ScrimDeclineReason =
-  | 'byTeam'         // The team that searches said no
-  | 'timeTaken'      // Another match of the search took that time
-  | 'searchClosed'   // The search closed: it has its matches, or no room left for another
-  | 'runTaken'       // A slot of the run was booked at the venue meanwhile
-  | 'searchChanged'; // The search changed and no longer holds the run
 
 /** Where and when a match is, or would be, played */
 export interface ScrimMatchFacts {

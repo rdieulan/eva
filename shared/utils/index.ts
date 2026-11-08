@@ -43,6 +43,8 @@ export {
   type TimeSpan,
 } from './scrim.utils';
 
+export { describeProposalDecline, type ProposalDeclineDescription } from './scrim-proposal.utils';
+
 export { normalizeLinkUrl, isAcceptableLinkInput, formatVenuePlace } from './venue.utils';
 
 export { detectImageType } from './image.utils';

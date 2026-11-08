@@ -73,8 +73,10 @@ async function searchOf(id: string) {
   return prisma.scrimSearch.findUniqueOrThrow({ where: { id }, include: { slots: { orderBy: { position: 'asc' } } } });
 }
 
-async function statusOf(proposalId: string) {
-  return (await prisma.scrimProposal.findUniqueOrThrow({ where: { id: proposalId } })).status;
+// Where a proposal stands, and why when it was declined
+async function outcomeOf(proposalId: string) {
+  const { status, declineReason } = await prisma.scrimProposal.findUniqueOrThrow({ where: { id: proposalId } });
+  return { status, declineReason };
 }
 
 const BEFORE_THE_DAY = new Date('2030-06-01T12:00:00');
@@ -96,8 +98,8 @@ describe('Scrim upkeep: the slots booked since a search opened', () => {
     expect(search.status).toBe('OPEN');
     expect(search.slots.map(item => item.evaSlotId)).toEqual(['a1-2000', 'a1-2040', 'a1-2120']);
     expect(search.endTime).toBe('22:00');
-    expect(await statusOf(onBooked)).toBe('DECLINED');
-    expect(await statusOf(onFree)).toBe('PENDING');
+    expect(await outcomeOf(onBooked)).toEqual({ status: 'DECLINED', declineReason: 'RUN_TAKEN' });
+    expect(await outcomeOf(onFree)).toEqual({ status: 'PENDING', declineReason: null });
   });
 
   it('closes a search whose slots no longer hold a match, as expired, declining what is pending', async () => {
@@ -111,7 +113,7 @@ describe('Scrim upkeep: the slots booked since a search opened', () => {
 
     expect(report).toMatchObject({ slotsLost: 2, closedLost: 1 });
     expect((await searchOf(searchId)).status).toBe('EXPIRED');
-    expect(await statusOf(pending)).toBe('DECLINED');
+    expect(await outcomeOf(pending)).toEqual({ status: 'DECLINED', declineReason: 'RUN_TAKEN' });
   });
 
   it('leaves alone the slots of a match made, its own players booking them, and closes as matched what holds no other', async () => {
@@ -165,7 +167,7 @@ describe('Scrim upkeep: the days gone by', () => {
     expect(report).toMatchObject({ closedPast: 2, daysRead: 0 });
     expect((await searchOf(withMatch)).status).toBe('MATCHED');
     expect((await searchOf(withoutMatch)).status).toBe('EXPIRED');
-    expect(await statusOf(left)).toBe('DECLINED');
+    expect(await outcomeOf(left)).toEqual({ status: 'DECLINED', declineReason: 'DAY_PASSED' });
     expect(sessions).not.toHaveBeenCalled();
   });
 

@@ -1,7 +1,14 @@
 // Scrim proposals - a team answers another team's search with the run it wants to play
 
-import { prisma } from '@db/prisma';
-import type { CalendarEvent, ScrimDeclineReason, ScrimProposal, ScrimProposalStatus, VenueSlot } from '@shared/types';
+import { prisma, type PrismaTransaction } from '@db/prisma';
+import type {
+  CalendarEvent,
+  ScrimDeclineReason,
+  ScrimProposal,
+  ScrimProposalOutcome,
+  ScrimProposalStatus,
+  VenueSlot,
+} from '@shared/types';
 import { countMatches, isOneRun, orderRunSlots, runSpan, spansOverlap } from '@shared/utils';
 import { logoUrlOf } from '@services/teams.service';
 import { getVenueSlots } from '@services/venue-slots.service';
@@ -10,6 +17,7 @@ import { slotPlayability } from './helpers/slot.helper';
 import { EVENT_VENUE_INCLUDE, formatEventForFrontend } from './helpers/calendar.helper';
 import {
   PROPOSAL_FACTS_SELECT,
+  type DeclinedProposal,
   notifyMatchCancelled,
   notifyMatchMade,
   notifyProposalReceived,
@@ -27,6 +35,7 @@ export type ProposalRow = {
   teamId: string;
   message: string | null;
   status: ScrimProposalStatus;
+  declineReason: ScrimDeclineReason | null;
   venueId: string;
   evaSlotIds: string[];
   arenaNumber: number;
@@ -37,13 +46,19 @@ export type ProposalRow = {
   team: { id: string; name: string; logoType: string | null; logoUpdatedAt: Date | null };
 };
 
+// Where a proposal stands: a declined one always says why, the database refuses it otherwise
+function outcomeOf(row: ProposalRow): ScrimProposalOutcome {
+  if (row.status !== 'DECLINED') return { status: row.status, declineReason: null };
+  return { status: row.status, declineReason: row.declineReason! };
+}
+
 export function toScrimProposal(row: ProposalRow, readerTeamId: string): ScrimProposal {
   return {
+    ...outcomeOf(row),
     id: row.id,
     searchId: row.searchId,
     team: { id: row.team.id, name: row.team.name, logoUrl: logoUrlOf(row.team) },
     message: row.message,
-    status: row.status,
     venueId: row.venueId,
     evaSlotIds: row.evaSlotIds,
     arenaNumber: row.arenaNumber,
@@ -61,6 +76,19 @@ const MATCHMAKING_DESCRIPTION = 'Match trouvé par le matchmaking.';
 // When a search's matches are already played, as loaded with it: the team
 // plays one at a time, so no other match of the search can fall then
 const ACCEPTED_RUNS = { where: { status: 'ACCEPTED' as const }, select: { startTime: true, endTime: true } } as const;
+
+/**
+ * Decline pending proposals, each for its reason, within the caller's
+ * transaction
+ */
+export async function declineProposals(tx: PrismaTransaction, declined: DeclinedProposal[], at: Date): Promise<void> {
+  for (const reason of new Set(declined.map(item => item.reason))) {
+    await tx.scrimProposal.updateMany({
+      where: { id: { in: declined.filter(item => item.reason === reason).map(item => item.id) }, status: 'PENDING' },
+      data: { status: 'DECLINED', declineReason: reason, respondedAt: at },
+    });
+  }
+}
 
 // ============================================
 // Proposing
@@ -185,7 +213,7 @@ type AcceptOutcome =
   | {
     accepted: { proposal: ScrimProposal; events: CalendarEvent[] };
     eventIds: { searcher: string; proposer: string };
-    declined: { id: string; reason: ScrimDeclineReason }[];
+    declined: DeclinedProposal[];
   };
 
 export type AcceptScrimProposalResult =
@@ -213,7 +241,7 @@ async function loadProposalForResponse(proposalId: string) {
  */
 export async function acceptScrimProposal(proposalId: string, teamId: string, acceptedBy?: string): Promise<AcceptScrimProposalResult> {
   const check = await checkRunStillFree(proposalId, teamId);
-  if (check === 'runTaken') await notifyProposalsDeclined([{ id: proposalId, reason: 'runTaken' }]);
+  if (check === 'runTaken') await notifyProposalsDeclined([{ id: proposalId, reason: 'RUN_TAKEN' }]);
   if (check) return { refusal: check };
 
   const outcome = await prisma.$transaction(async (tx): Promise<AcceptOutcome> => {
@@ -244,8 +272,8 @@ export async function acceptScrimProposal(proposalId: string, teamId: string, ac
     const busy = search.proposals.map(runSpan);
     if (busy.some(taken => spansOverlap(taken, span))) return { refusal: 'timeTaken' as const };
     busy.push(span);
-    const closes = search.proposals.length + 1 >= search.matchCount
-      || countMatches(orderRunSlots(search.slots), search.slotCount, busy) === 0;
+    const filled = search.proposals.length + 1 >= search.matchCount;
+    const closes = filled || countMatches(orderRunSlots(search.slots), search.slotCount, busy) === 0;
 
     const now = new Date();
     const accepted = await tx.scrimProposal.update({
@@ -258,14 +286,12 @@ export async function acceptScrimProposal(proposalId: string, teamId: string, ac
       select: { id: true, startTime: true, endTime: true },
     });
     // At the same time as the match, or anything left once the search closes
-    const declined = pending.flatMap((other): { id: string; reason: ScrimDeclineReason }[] => {
-      if (spansOverlap(runSpan(other), span)) return [{ id: other.id, reason: 'timeTaken' }];
-      return closes ? [{ id: other.id, reason: 'searchClosed' }] : [];
+    const declined = pending.flatMap((other): DeclinedProposal[] => {
+      if (spansOverlap(runSpan(other), span)) return [{ id: other.id, reason: 'TIME_TAKEN' }];
+      if (!closes) return [];
+      return [{ id: other.id, reason: filled ? 'SEARCH_FILLED' : 'SEARCH_CLOSED' }];
     });
-    await tx.scrimProposal.updateMany({
-      where: { id: { in: declined.map(other => other.id) } },
-      data: { status: 'DECLINED', respondedAt: now },
-    });
+    await declineProposals(tx, declined, now);
     if (closes) {
       await tx.scrimSearch.update({ where: { id: search.id }, data: { status: 'MATCHED' } });
     }
@@ -335,7 +361,7 @@ async function checkRunStillFree(proposalId: string, teamId: string): Promise<Re
 
   await prisma.scrimProposal.updateMany({
     where: { id: proposalId, status: 'PENDING' },
-    data: { status: 'DECLINED', respondedAt: new Date() },
+    data: { status: 'DECLINED', declineReason: 'RUN_TAKEN', respondedAt: new Date() },
   });
   return 'runTaken';
 }
@@ -353,10 +379,10 @@ export async function declineScrimProposal(proposalId: string, teamId: string): 
 
   const declined = await prisma.scrimProposal.update({
     where: { id: proposal.id },
-    data: { status: 'DECLINED', respondedAt: new Date() },
+    data: { status: 'DECLINED', declineReason: 'BY_TEAM', respondedAt: new Date() },
     include: PROPOSAL_TEAM_INCLUDE,
   });
-  await notifyProposalsDeclined([{ id: proposal.id, reason: 'byTeam' }]);
+  await notifyProposalsDeclined([{ id: proposal.id, reason: 'BY_TEAM' }]);
   return { proposal: toScrimProposal(declined, teamId) };
 }
 

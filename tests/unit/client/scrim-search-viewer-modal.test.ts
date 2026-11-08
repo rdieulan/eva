@@ -48,9 +48,9 @@ const OFFERED = [offered('s-2000', '20:00', '20:40'), offered('s-2040', '20:40',
 function proposal(id: string, overrides: Partial<ScrimProposal> = {}): ScrimProposal {
   return {
     id, searchId: 'search-1', team: { id: `team-${id}`, name: `Équipe ${id}`, logoUrl: null },
-    message: null, status: 'PENDING', venueId: NIMES.id, evaSlotIds: ['s-2000', 's-2040'], arenaNumber: 1,
+    message: null, status: 'PENDING', declineReason: null, venueId: NIMES.id, evaSlotIds: ['s-2000', 's-2040'], arenaNumber: 1,
     startTime: '20:00', endTime: '21:20', convocationTime: '19:50', isMine: false, createdAt: '', ...overrides,
-  };
+  } as ScrimProposal;
 }
 
 function search(overrides: Partial<ScrimSearch> = {}): ScrimSearch {
@@ -184,12 +184,31 @@ describe('ScrimSearchViewerModal on another team\'s search', () => {
     expect(wrapper.emitted('close')).toHaveLength(1);
   });
 
-  it('lets the team propose again after a declined proposal, and says it was declined', async () => {
-    const wrapper = mountViewer({ search: search({ proposals: [proposal('p1', { isMine: true, status: 'DECLINED' })] }) });
+  it('lets the team propose again after a declined proposal, and says their team refused it', async () => {
+    const wrapper = mountViewer({ search: search({ proposals: [proposal('p1', { isMine: true, status: 'DECLINED', declineReason: 'BY_TEAM' })] }) });
     await flushPromises();
 
-    expect(wrapper.text()).toContain('refusée');
+    expect(wrapper.find('.outcome .status').text()).toBe('Proposition refusée');
+    expect(wrapper.find('.outcome-detail').text()).toBe('Leur équipe a dit non.');
     expect(button(wrapper, 'Proposer un match')).toBeDefined();
+  });
+
+  it('says a proposal the app declined was cancelled, and why, without calling it refused', async () => {
+    const wrapper = mountViewer({ search: search({ proposals: [proposal('p1', { isMine: true, status: 'DECLINED', declineReason: 'RUN_TAKEN' })] }) });
+    await flushPromises();
+
+    expect(wrapper.find('.outcome .status').text()).toBe('Proposition annulée');
+    expect(wrapper.find('.outcome-detail').text()).toBe('Un des créneaux a été réservé à la salle entre-temps.');
+    expect(wrapper.text()).not.toContain('refusée');
+    expect(button(wrapper, 'Proposer un match')).toBeDefined();
+  });
+
+  it('says what became of a proposal that was not declined, with no reason under it', async () => {
+    const wrapper = mountViewer({ search: search({ proposals: [proposal('p1', { isMine: true, status: 'CANCELLED' })] }) });
+    await flushPromises();
+
+    expect(wrapper.find('.outcome .status').text()).toBe('Match annulé');
+    expect(wrapper.find('.outcome-detail').exists()).toBe(false);
   });
 
   it('shows each venue of the search under its name, one run at a time across them', async () => {
@@ -257,7 +276,7 @@ describe('ScrimSearchViewerModal on the team\'s own search', () => {
     team: { id: 'us', name: 'Nous', logoUrl: null },
     isMine: true,
     slots: [...OFFERED, offered('a2-2000', '20:00', '20:40', NIMES.id, 2)],
-    proposals: [proposal('p1', { message: 'Go ?' }), proposal('p2'), proposal('p3', { status: 'DECLINED' })],
+    proposals: [proposal('p1', { message: 'Go ?' }), proposal('p2'), proposal('p3', { status: 'DECLINED', declineReason: 'BY_TEAM' })],
   });
 
   it('heads the sheet with its day, and leaves our name out: we know who we are', () => {
@@ -350,7 +369,7 @@ describe('ScrimSearchViewerModal on the team\'s own search', () => {
   });
 
   it('declines a proposal and stays open for the others', async () => {
-    vi.mocked(declineScrimProposal).mockResolvedValue(proposal('p2', { status: 'DECLINED' }));
+    vi.mocked(declineScrimProposal).mockResolvedValue(proposal('p2', { status: 'DECLINED', declineReason: 'BY_TEAM' }));
     const wrapper = mountViewer({ search: mine() });
 
     await wrapper.findAll('.proposal')[1]!.findAll('button').find(b => b.text().includes('Refuser'))!.trigger('click');

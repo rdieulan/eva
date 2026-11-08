@@ -50,7 +50,7 @@ export async function upkeepScrimSearches(options: { now?: Date; pauseMs?: numbe
   if (report.closedPast) {
     await prisma.scrimProposal.updateMany({
       where: { status: 'PENDING', search: { status: { in: ['MATCHED', 'EXPIRED'] }, date: { lt: today } } },
-      data: { status: 'DECLINED', respondedAt: new Date() },
+      data: { status: 'DECLINED', declineReason: 'DAY_PASSED', respondedAt: new Date() },
     });
   }
 

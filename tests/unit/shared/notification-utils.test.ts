@@ -1,7 +1,7 @@
 // Tests for notifications put in words: one wording and one target per kind, whatever the medium
 import { describe, it, expect } from 'vitest';
-import { describeNotification, formatShortDay, formatVenuePlace } from '@shared/utils';
-import type { ScrimMatchFacts } from '@shared/types';
+import { describeNotification, describeProposalDecline, formatShortDay, formatVenuePlace } from '@shared/utils';
+import { SCRIM_DECLINE_REASONS, type ScrimDeclineReason, type ScrimMatchFacts } from '@shared/types';
 
 const FACTS: ScrimMatchFacts = {
   date: '2026-11-25', startTime: '19:20', endTime: '20:40', venueId: 'venue-nimes', venueName: 'Nîmes', arenaNumber: 1,
@@ -52,22 +52,27 @@ describe('describeNotification', () => {
     });
   });
 
-  it('tells why a proposal fell, and opens their search in its venue to propose again', () => {
-    const declined = (reason: 'byTeam' | 'timeTaken' | 'searchClosed' | 'runTaken' | 'searchChanged') => describeNotification({
+  it('tells what became of a declined proposal and why, and opens their search in its venue to propose again', () => {
+    const declined = (reason: ScrimDeclineReason) => describeNotification({
       kind: 'SCRIM_PROPOSAL_DECLINED',
       data: { ...FACTS, searchId: 'search-1', teamName: 'Les Rivaux', reason },
     });
 
-    expect(declined('byTeam')).toEqual({
+    expect(declined('BY_TEAM')).toEqual({
       title: 'Proposition refusée',
       body: MATCH_LINE,
       detail: 'Leur équipe a dit non.',
       target: { page: 'calendar', date: '2026-11-25', mode: 'matchmaking', venueId: 'venue-nimes', open: { kind: 'scrimSearch', id: 'search-1' } },
     });
-    expect(declined('timeTaken').detail).toBe('Un autre de leurs matchs a pris cette heure.');
-    expect(declined('searchClosed').detail).toBe('Leur recherche est close.');
-    expect(declined('runTaken').detail).toBe('Un des créneaux a été réservé à la salle entre-temps.');
-    expect(declined('searchChanged').detail).toBe('Leur recherche a changé et ne tient plus ce match.');
+    // Nobody refused a run booked meanwhile: the words of the sheet of their search
+    expect(declined('RUN_TAKEN')).toMatchObject({
+      title: 'Proposition annulée',
+      detail: 'Un des créneaux a été réservé à la salle entre-temps.',
+    });
+    for (const reason of SCRIM_DECLINE_REASONS) {
+      const { title, detail } = describeProposalDecline(reason);
+      expect(declined(reason)).toMatchObject({ title, body: MATCH_LINE, detail });
+    }
   });
 
   it('tells a search withdrawn, and shows the market of its venue that day', () => {

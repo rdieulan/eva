@@ -13,8 +13,9 @@ import {
   withdrawScrimProposal,
 } from '@/api';
 import { useErrors } from '@/composables/useErrors';
-import type { CalendarEvent, ScrimProposal, ScrimSearch, Venue, VenueSlot } from '@shared/types';
+import type { CalendarEvent, ScrimProposal, ScrimProposalStatus, ScrimSearch, Venue, VenueSlot } from '@shared/types';
 import { ERROR, SCRIM_PROPOSAL_MESSAGE_MAX_LENGTH } from '@shared/constants';
+import { describeProposalDecline } from '@shared/utils';
 import { formatLongDate, isPastDateStr } from '@/utils/calendar';
 import { formatMatchCount, formatSlotsDuration, searchVenueIds } from '@/utils/scrims';
 import { formatVenueLabel } from '@/utils/venues';
@@ -109,13 +110,21 @@ const pendingProposals = computed(() =>
 
 const mayPropose = computed(() => props.canPropose && !isMine.value && !sent.value && (!ownProposal.value || ownProposal.value.status !== 'PENDING'));
 
-const OWN_PROPOSAL_LABELS: Record<ScrimProposal['status'], string> = {
+const OWN_PROPOSAL_LABELS: Record<Exclude<ScrimProposalStatus, 'DECLINED'>, string> = {
   PENDING: 'Proposition envoyée, en attente de leur réponse',
   ACCEPTED: 'Proposition acceptée',
-  DECLINED: 'Proposition refusée par leur équipe',
   WITHDRAWN: 'Proposition retirée',
   CANCELLED: 'Match annulé',
 };
+
+// What became of the team's proposal; a declined one says why, in the words of
+// the notification the team received
+const ownOutcome = computed<{ title: string; detail: string | null } | null>(() => {
+  const proposal = ownProposal.value;
+  if (!proposal) return null;
+  if (proposal.status === 'DECLINED') return describeProposalDecline(proposal.declineReason);
+  return { title: OWN_PROPOSAL_LABELS[proposal.status], detail: null };
+});
 
 function offeredSummary(search: ScrimSearch): string {
   const count = search.slots.length > 1 ? `${search.slots.length} créneaux proposés` : '1 créneau proposé';
@@ -254,9 +263,10 @@ function decline(proposal: ScrimProposal) {
           <button type="button" class="btn btn-text" :disabled="isBusy" @click="withdrawProposal">Retirer la proposition</button>
         </template>
         <template v-else>
-          <p v-if="ownProposal" class="status" :class="`status--${ownProposal.status.toLowerCase()}`">
-            {{ OWN_PROPOSAL_LABELS[ownProposal.status] }}
-          </p>
+          <div v-if="ownProposal && ownOutcome" class="outcome">
+            <p class="status" :class="`status--${ownProposal.status.toLowerCase()}`">{{ ownOutcome.title }}</p>
+            <p v-if="ownOutcome.detail" class="outcome-detail">{{ ownOutcome.detail }}</p>
+          </div>
           <PlannedEventsNote :events="plannedEvents" />
           <div v-for="venueId in offeredVenueIds" :key="venueId" class="venue-run">
             <VenueSlotPicker
@@ -452,6 +462,19 @@ function decline(proposal: ScrimProposal) {
   &--accepted {
     color: $color-success;
   }
+}
+
+// What became of our proposal, and why under it
+.outcome {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.outcome-detail {
+  margin: 0;
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
 }
 
 .own-run,

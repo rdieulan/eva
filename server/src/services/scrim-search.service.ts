@@ -6,14 +6,13 @@ import type {
   ScrimProposal,
   ScrimSearch,
   ScrimSearchStatus,
-  ScrimDeclineReason,
   ScrimVenueOffer,
   VenueSlot,
 } from '@shared/types';
 import { countMatches, orderRunSlots, runSpan, spansOverlap } from '@shared/utils';
 import { logoUrlOf } from '@services/teams.service';
 import { getVenueSlots } from '@services/venue-slots.service';
-import { PROPOSAL_TEAM_INCLUDE, toScrimProposal, type ProposalRow } from '@services/scrim-proposal.service';
+import { PROPOSAL_TEAM_INCLUDE, declineProposals, toScrimProposal, type ProposalRow } from '@services/scrim-proposal.service';
 import { formatDateStr, parseMonthRange } from './helpers/date.helper';
 import { slotPlayability } from './helpers/slot.helper';
 import {
@@ -21,6 +20,7 @@ import {
   notifyProposalsDeclined,
   notifySearchExpired,
   notifySearchWithdrawn,
+  type DeclinedProposal,
   type ProposalFacts,
 } from '@services/scrim-notification.service';
 
@@ -331,7 +331,7 @@ export async function updateScrimSearch(input: {
   if ('refusal' in offer) return offer;
   const offered = offer.slots;
 
-  const outcome = await prisma.$transaction(async (tx): Promise<{ refusal: UpdateScrimSearchRefusal } | { search: ScrimSearch; lapsedIds: string[] }> => {
+  const outcome = await prisma.$transaction(async (tx): Promise<{ refusal: UpdateScrimSearchRefusal } | { search: ScrimSearch; lapsed: DeclinedProposal[] }> => {
     await tx.$queryRaw`SELECT 1 FROM "ScrimSearch" WHERE "id" = ${input.id} FOR UPDATE`;
     const search = await tx.scrimSearch.findUnique({
       where: { id: input.id },
@@ -355,16 +355,13 @@ export async function updateScrimSearch(input: {
 
     // A pending proposal stays while the offer holds its whole run, in its venue, at the length asked
     const venueOfSlot = new Map(offered.map(slot => [slot.slotId, slot.venueId]));
-    const lapsed = search.proposals.filter(proposal => proposal.status === 'PENDING' && (
-      proposal.evaSlotIds.length !== input.slotCount
-      || proposal.evaSlotIds.some(slotId => venueOfSlot.get(slotId) !== proposal.venueId)
-    ));
-    if (lapsed.length) {
-      await tx.scrimProposal.updateMany({
-        where: { id: { in: lapsed.map(proposal => proposal.id) } },
-        data: { status: 'DECLINED', respondedAt: new Date() },
-      });
-    }
+    const lapsed = search.proposals
+      .filter(proposal => proposal.status === 'PENDING' && (
+        proposal.evaSlotIds.length !== input.slotCount
+        || proposal.evaSlotIds.some(slotId => venueOfSlot.get(slotId) !== proposal.venueId)
+      ))
+      .map((proposal): DeclinedProposal => ({ id: proposal.id, reason: 'SEARCH_CHANGED' }));
+    await declineProposals(tx, lapsed, new Date());
 
     await tx.scrimSearchSlot.deleteMany({ where: { searchId: input.id } });
     const row = await tx.scrimSearch.update({
@@ -378,11 +375,11 @@ export async function updateScrimSearch(input: {
       include: SEARCH_INCLUDE,
     });
 
-    return { search: toScrimSearch(row, input.teamId), lapsedIds: lapsed.map(proposal => proposal.id) };
+    return { search: toScrimSearch(row, input.teamId), lapsed };
   });
   if ('refusal' in outcome) return outcome;
 
-  await notifyProposalsDeclined(outcome.lapsedIds.map(id => ({ id, reason: 'searchChanged' as const })));
+  await notifyProposalsDeclined(outcome.lapsed);
   return { search: outcome.search };
 }
 
@@ -417,10 +414,7 @@ export async function deleteScrimSearch(id: string, teamId: string): Promise<{ r
       await tx.scrimSearch.delete({ where: { id } });
       return { pending };
     }
-    await tx.scrimProposal.updateMany({
-      where: { searchId: id, status: 'PENDING' },
-      data: { status: 'DECLINED', respondedAt: new Date() },
-    });
+    await declineProposals(tx, pending.map(proposal => ({ id: proposal.id, reason: 'SEARCH_WITHDRAWN' })), new Date());
     await tx.scrimSearch.update({ where: { id }, data: { status: 'MATCHED' } });
     return { pending };
   });
@@ -492,16 +486,11 @@ export async function refreshSearchOffer(
 
     // A proposal on a slot taken out falls for it; the others when the search closes
     const pending = search.proposals.filter(proposal => proposal.status === 'PENDING');
-    const declined = pending.flatMap((proposal): { id: string; reason: ScrimDeclineReason }[] => {
-      if (proposal.evaSlotIds.some(slotId => lostIds.has(slotId))) return [{ id: proposal.id, reason: 'runTaken' }];
-      return closed ? [{ id: proposal.id, reason: 'searchClosed' }] : [];
+    const declined = pending.flatMap((proposal): DeclinedProposal[] => {
+      if (proposal.evaSlotIds.some(slotId => lostIds.has(slotId))) return [{ id: proposal.id, reason: 'RUN_TAKEN' }];
+      return closed ? [{ id: proposal.id, reason: 'SEARCH_CLOSED' }] : [];
     });
-    if (declined.length) {
-      await tx.scrimProposal.updateMany({
-        where: { id: { in: declined.map(proposal => proposal.id) } },
-        data: { status: 'DECLINED', respondedAt: new Date() },
-      });
-    }
+    await declineProposals(tx, declined, new Date());
 
     await tx.scrimSearchSlot.deleteMany({ where: { id: { in: lost.map(slot => slot.id) } } });
     await tx.scrimSearch.update({

@@ -53,13 +53,14 @@ export type {
   CreateScrimSearchRequest,
   UpdateScrimSearchRequest,
   ScrimProposalStatus,
+  ScrimDeclineReason,
+  ScrimProposalOutcome,
   ScrimProposal,
   CreateScrimProposalRequest,
 } from './scrim.types';
-export { SCRIM_SEARCH_STATUSES, SCRIM_PROPOSAL_STATUSES } from './scrim.types';
+export { SCRIM_SEARCH_STATUSES, SCRIM_PROPOSAL_STATUSES, SCRIM_DECLINE_REASONS } from './scrim.types';
 export type {
   NotificationKind,
-  ScrimDeclineReason,
   ScrimMatchFacts,
   NotificationContent,
   InboxNotification,

@@ -91,6 +91,12 @@ async function statusOf(proposalId: string) {
   return (await prisma.scrimProposal.findUnique({ where: { id: proposalId } }))!.status;
 }
 
+// Where a proposal stands, and why when it was declined
+async function outcomeOf(proposalId: string) {
+  const { status, declineReason } = await prisma.scrimProposal.findUniqueOrThrow({ where: { id: proposalId } });
+  return { status, declineReason };
+}
+
 describe('POST /api/scrims/searches/:id/proposals', () => {
   it('should send a proposal naming its run and its venue, with a trimmed message', async () => {
     const { proposer, searchId } = await setup();
@@ -364,7 +370,7 @@ describe('PUT /api/scrims/proposals/:id/accept', () => {
     await accept(searcher.token, first.body.id).expect(200);
 
     const other = await prisma.scrimProposal.findUnique({ where: { id: second.body.id } });
-    expect(other!.status).toBe('DECLINED');
+    expect(other).toMatchObject({ status: 'DECLINED', declineReason: 'TIME_TAKEN' });
     expect(other!.respondedAt).not.toBeNull();
   });
 
@@ -386,11 +392,11 @@ describe('PUT /api/scrims/proposals/:id/accept', () => {
     expect(res.status).toBe(200);
     expect(res.body.events).toHaveLength(2);
     expect((await prisma.scrimSearch.findUnique({ where: { id: searchId } }))!.status).toBe('OPEN');
-    expect(await statusOf(overlapping.body.id)).toBe('DECLINED');
-    expect(await statusOf(sideBySide.body.id)).toBe('DECLINED');
-    expect(await statusOf(elsewhere.body.id)).toBe('DECLINED');
+    for (const declined of [overlapping, sideBySide, elsewhere]) {
+      expect(await outcomeOf(declined.body.id)).toEqual({ status: 'DECLINED', declineReason: 'TIME_TAKEN' });
+    }
     // Starting when the match ends, it can still be played
-    expect(await statusOf(rightAfter.body.id)).toBe('PENDING');
+    expect(await outcomeOf(rightAfter.body.id)).toEqual({ status: 'PENDING', declineReason: null });
 
     // Still on the venue board, with the match it already has and every slot at its time
     const board = await listAtVenue(later.token);
@@ -411,9 +417,21 @@ describe('PUT /api/scrims/proposals/:id/accept', () => {
     await accept(searcher.token, last.body.id).expect(200);
 
     expect((await prisma.scrimSearch.findUnique({ where: { id: searchId } }))!.status).toBe('MATCHED');
-    expect(await statusOf(late.body.id)).toBe('DECLINED');
+    expect(await outcomeOf(late.body.id)).toEqual({ status: 'DECLINED', declineReason: 'TIME_TAKEN' });
     expect(await prisma.calendarEvent.count({ where: { scrimSearchId: searchId } })).toBe(4);
     expect((await listAtVenue(searcher.token)).body).toEqual([]);
+  });
+
+  it('should say a proposal at another time was left out because the search found all its matches', async () => {
+    const { searcher, proposer, searchId } = await setup({ slotCount: 1 });
+    const other = await createUserWithTeam();
+    const first = await propose(proposer.token, searchId, { evaSlotIds: ['a1-2000'] }).expect(201);
+    const later = await propose(other.token, searchId, { evaSlotIds: ['a1-2120'] }).expect(201);
+
+    await accept(searcher.token, first.body.id).expect(200);
+
+    expect((await prisma.scrimSearch.findUnique({ where: { id: searchId } }))!.status).toBe('MATCHED');
+    expect(await outcomeOf(later.body.id)).toEqual({ status: 'DECLINED', declineReason: 'SEARCH_FILLED' });
   });
 
   it('should close the search early when its remaining slots no longer hold a match', async () => {
@@ -426,7 +444,7 @@ describe('PUT /api/scrims/proposals/:id/accept', () => {
     await accept(searcher.token, middle.body.id).expect(200);
 
     expect((await prisma.scrimSearch.findUnique({ where: { id: searchId } }))!.status).toBe('MATCHED');
-    expect(await statusOf(other.body.id)).toBe('DECLINED');
+    expect(await outcomeOf(other.body.id)).toEqual({ status: 'DECLINED', declineReason: 'TIME_TAKEN' });
   });
 
   it('should refuse a proposal whose time another match took meanwhile', async () => {
@@ -454,7 +472,7 @@ describe('PUT /api/scrims/proposals/:id/accept', () => {
 
     expect(res.status).toBe(409);
     expect(res.body.errors).toContain(ERROR.scrimProposalRunTaken);
-    expect(await statusOf(proposal.body.id)).toBe('DECLINED');
+    expect(await outcomeOf(proposal.body.id)).toEqual({ status: 'DECLINED', declineReason: 'RUN_TAKEN' });
     expect(await prisma.calendarEvent.count()).toBe(0);
     expect((await prisma.scrimSearch.findUniqueOrThrow({ where: { id: searchId } })).status).toBe('OPEN');
   });
@@ -495,13 +513,23 @@ describe('PUT /api/scrims/proposals/:id/decline', () => {
       .set('Authorization', `Bearer ${searcher.token}`);
 
     expect(res.status).toBe(200);
-    expect(res.body.status).toBe('DECLINED');
+    expect(res.body).toMatchObject({ status: 'DECLINED', declineReason: 'BY_TEAM' });
     expect((await prisma.scrimSearch.findUnique({ where: { id: searchId } }))!.status).toBe('OPEN');
     expect(await prisma.calendarEvent.count()).toBe(0);
 
-    // The searching team no longer sees it; the proposer sees what became of it
+    // The searching team no longer sees it; the proposer sees what became of it, and why
     expect((await listAtVenue(searcher.token)).body[0].proposals).toEqual([]);
-    expect((await listAtVenue(proposer.token)).body[0].proposals[0].status).toBe('DECLINED');
+    expect((await listAtVenue(proposer.token)).body[0].proposals[0]).toMatchObject({ status: 'DECLINED', declineReason: 'BY_TEAM' });
+  });
+
+  it('should keep a reason with a declined proposal and with no other: the database refuses anything else', async () => {
+    const { proposer, searchId } = await setup();
+    const proposal = await propose(proposer.token, searchId).expect(201);
+
+    expect(await outcomeOf(proposal.body.id)).toEqual({ status: 'PENDING', declineReason: null });
+    await expect(prisma.scrimProposal.update({ where: { id: proposal.body.id }, data: { status: 'DECLINED' } })).rejects.toThrow();
+    await expect(prisma.scrimProposal.update({ where: { id: proposal.body.id }, data: { declineReason: 'BY_TEAM' } })).rejects.toThrow();
+    expect(await outcomeOf(proposal.body.id)).toEqual({ status: 'PENDING', declineReason: null });
   });
 
   it('should only let the searching team decline', async () => {
@@ -606,7 +634,7 @@ describe('DELETE /api/scrims/matches/:eventId', () => {
 
     // Out of the market, its pending proposal fallen, its match still tied to it
     expect((await prisma.scrimSearch.findUniqueOrThrow({ where: { id: searchId } })).status).toBe('MATCHED');
-    expect(await statusOf(waiting.body.id)).toBe('DECLINED');
+    expect(await outcomeOf(waiting.body.id)).toEqual({ status: 'DECLINED', declineReason: 'SEARCH_WITHDRAWN' });
     expect((await listAtVenue(searcher.token).expect(200)).body).toHaveLength(0);
     const copies = await prisma.calendarEvent.findMany({ where: { scrimSearchId: searchId } });
     expect(copies).toHaveLength(2);

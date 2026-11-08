@@ -345,6 +345,7 @@ model ScrimProposal {
   endTime         String // HH:mm, last slot of the run
   convocationTime String // HH:mm, for the first slot
   status          ScrimProposalStatus @default(PENDING)
+  declineReason   ScrimDeclineReason? // Why it was declined: set on a declined proposal, on no other (a check in the database says so)
   respondedAt     DateTime?
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
@@ -480,10 +481,23 @@ enum ScrimProposalStatus {
   CANCELLED // Accepted, then the match called off by one of the two teams
 }
 
+// Why a proposal was declined: by the team that searches, or by the app once
+// the proposal no longer held
+enum ScrimDeclineReason {
+  BY_TEAM // The team that searches said no
+  TIME_TAKEN // It accepted another match at that time
+  SEARCH_FILLED // Its search found all its matches
+  SEARCH_CLOSED // Its search closed: the slots left no longer hold a match
+  RUN_TAKEN // A slot of the run was booked at the venue meanwhile
+  SEARCH_CHANGED // Its search changed and no longer holds the run
+  SEARCH_WITHDRAWN // Its search was withdrawn
+  DAY_PASSED // The day passed with no answer
+}
+
 enum NotificationKind {
   SCRIM_PROPOSAL_RECEIVED // Another team proposed a match on the team's search
   SCRIM_MATCH_MADE // A proposal was accepted: the match is in both calendars
-  SCRIM_PROPOSAL_DECLINED // The team's proposal was turned down, by the other team or by the app
+  SCRIM_PROPOSAL_DECLINED // The team's proposal was declined, by the other team or by the app, and why (ScrimDeclineReason)
   SCRIM_SEARCH_WITHDRAWN // A search the team had a proposal pending on was withdrawn
   SCRIM_MATCH_CANCELLED // A match of the matchmaking was called off
   SCRIM_SEARCH_EXPIRED // The team's search closed with no match: its slots were booked

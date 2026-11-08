@@ -675,7 +675,7 @@ describe('PUT /api/scrims/searches/:id', () => {
     expect(res.status).toBe(200);
     expect(res.body.proposals.map((proposal: { id: string }) => proposal.id)).toEqual([kept.body.id]);
     expect((await prisma.scrimProposal.findUniqueOrThrow({ where: { id: kept.body.id } })).status).toBe('PENDING');
-    expect((await prisma.scrimProposal.findUniqueOrThrow({ where: { id: lost.body.id } })).status).toBe('DECLINED');
+    expect(await prisma.scrimProposal.findUniqueOrThrow({ where: { id: lost.body.id } })).toMatchObject({ status: 'DECLINED', declineReason: 'SEARCH_CHANGED' });
   });
 
   it('should decline the pending proposals when a match changes length', async () => {
@@ -686,7 +686,7 @@ describe('PUT /api/scrims/searches/:id', () => {
 
     await change(mine, opened.body.id, { venues: [EVENING], slotCount: 1 }).expect(200);
 
-    expect((await prisma.scrimProposal.findUniqueOrThrow({ where: { id: sent.body.id } })).status).toBe('DECLINED');
+    expect(await prisma.scrimProposal.findUniqueOrThrow({ where: { id: sent.body.id } })).toMatchObject({ status: 'DECLINED', declineReason: 'SEARCH_CHANGED' });
   });
 
   it('should keep the matches made, want one more at least, and hold the next ones beside them', async () => {

@@ -4,20 +4,11 @@
 import type {
   NotificationContent,
   NotificationDescription,
-  ScrimDeclineReason,
   ScrimMatchFacts,
 } from '@shared/types/notification.types';
 import { formatShortDay } from '@shared/utils/date.utils';
+import { describeProposalDecline } from '@shared/utils/scrim-proposal.utils';
 import { formatVenuePlace } from '@shared/utils/venue.utils';
-
-// Why a proposal was turned down, said to the team that sent it
-const DECLINE_REASONS: Record<ScrimDeclineReason, string> = {
-  byTeam: 'Leur équipe a dit non.',
-  timeTaken: 'Un autre de leurs matchs a pris cette heure.',
-  searchClosed: 'Leur recherche est close.',
-  runTaken: 'Un des créneaux a été réservé à la salle entre-temps.',
-  searchChanged: 'Leur recherche a changé et ne tient plus ce match.',
-};
 
 // The other team, the day, the hours and the place of a match
 function matchLine(teamName: string, facts: ScrimMatchFacts): string {
@@ -51,10 +42,11 @@ export function describeNotification(content: NotificationContent): Notification
     }
     case 'SCRIM_PROPOSAL_DECLINED': {
       const { data } = content;
+      const { title, detail } = describeProposalDecline(data.reason);
       return {
-        title: 'Proposition refusée',
+        title,
         body: matchLine(data.teamName, data),
-        detail: DECLINE_REASONS[data.reason],
+        detail,
         target: {
           page: 'calendar', date: data.date, mode: 'matchmaking', venueId: data.venueId,
           open: { kind: 'scrimSearch', id: data.searchId },

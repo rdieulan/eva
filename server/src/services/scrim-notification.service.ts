@@ -23,6 +23,9 @@ export const PROPOSAL_FACTS_SELECT = {
 
 export type ProposalFacts = Prisma.ScrimProposalGetPayload<{ select: typeof PROPOSAL_FACTS_SELECT }>;
 
+// A proposal declined, and why
+export type DeclinedProposal = { id: string; reason: ScrimDeclineReason };
+
 const CAN_SEARCH: PermissionRef = { category: 'matchmaking', name: 'canSearch' };
 const CAN_PROPOSE: PermissionRef = { category: 'matchmaking', name: 'canPropose' };
 const CAN_RESPOND: PermissionRef = { category: 'matchmaking', name: 'canRespond' };
@@ -79,8 +82,8 @@ export async function notifyMatchMade(
   );
 }
 
-/** Proposals turned down: those who propose for each team hear of it, and why */
-export async function notifyProposalsDeclined(declined: { id: string; reason: ScrimDeclineReason }[]): Promise<void> {
+/** Proposals declined: those who propose for each team hear of it, and why */
+export async function notifyProposalsDeclined(declined: DeclinedProposal[]): Promise<void> {
   const reasons = new Map(declined.map(item => [item.id, item.reason]));
   for (const proposal of await loadFacts([...reasons.keys()])) {
     await notify(

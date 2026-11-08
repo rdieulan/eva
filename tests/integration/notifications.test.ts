@@ -148,13 +148,13 @@ describe('Notifications of the matchmaking', () => {
 
     for (const member of [proposer, allowed]) {
       expect(await told(member.token)).toMatchObject([
-        { kind: 'SCRIM_PROPOSAL_DECLINED', data: { searchId, teamName: searcher.team.name, reason: 'byTeam', startTime: '20:00' } },
+        { kind: 'SCRIM_PROPOSAL_DECLINED', data: { searchId, teamName: searcher.team.name, reason: 'BY_TEAM', startTime: '20:00' } },
       ]);
     }
     expect(await kinds(teammate.token)).toEqual([]);
   });
 
-  it('says why the proposals an acceptance turned down fell: the time taken, or the search closed', async () => {
+  it('says why the proposals an acceptance left out fell: the time taken, or the search filled', async () => {
     const searcher = await createUserWithTeam();
     const [first, overlapping, later] = [await createUserWithTeam(), await createUserWithTeam(), await createUserWithTeam()];
     const searchId = await open(searcher.token);
@@ -164,8 +164,8 @@ describe('Notifications of the matchmaking', () => {
 
     await accept(searcher.token, accepted).expect(200);
 
-    expect(await told(overlapping.token)).toMatchObject([{ kind: 'SCRIM_PROPOSAL_DECLINED', data: { reason: 'timeTaken' } }]);
-    expect(await told(later.token)).toMatchObject([{ kind: 'SCRIM_PROPOSAL_DECLINED', data: { reason: 'searchClosed' } }]);
+    expect(await told(overlapping.token)).toMatchObject([{ kind: 'SCRIM_PROPOSAL_DECLINED', data: { reason: 'TIME_TAKEN' } }]);
+    expect(await told(later.token)).toMatchObject([{ kind: 'SCRIM_PROPOSAL_DECLINED', data: { reason: 'SEARCH_FILLED' } }]);
   });
 
   it('says a proposal fell when a slot of its run was booked before the answer', async () => {
@@ -177,7 +177,7 @@ describe('Notifications of the matchmaking', () => {
 
     expect((await accept(searcher.token, proposalId)).status).toBe(409);
 
-    expect(await told(proposer.token)).toMatchObject([{ kind: 'SCRIM_PROPOSAL_DECLINED', data: { reason: 'runTaken' } }]);
+    expect(await told(proposer.token)).toMatchObject([{ kind: 'SCRIM_PROPOSAL_DECLINED', data: { reason: 'RUN_TAKEN' } }]);
   });
 
   it('says a proposal fell when the search changed and no longer holds its run', async () => {
@@ -192,7 +192,7 @@ describe('Notifications of the matchmaking', () => {
       .send({ venues: [{ venueId: NIMES.id, evaSlotIds: ['a1-2120', 'a1-2200'] }], slotCount: 2, matchCount: 1 })
       .expect(200);
 
-    expect(await told(proposer.token)).toMatchObject([{ kind: 'SCRIM_PROPOSAL_DECLINED', data: { reason: 'searchChanged' } }]);
+    expect(await told(proposer.token)).toMatchObject([{ kind: 'SCRIM_PROPOSAL_DECLINED', data: { reason: 'SEARCH_CHANGED' } }]);
   });
 
   it('tells the teams waiting on a search that it was withdrawn, whether it made a match or not', async () => {
@@ -247,7 +247,7 @@ describe('Notifications of the matchmaking', () => {
       expect((await told(member.token))[0]).toMatchObject({ kind: 'SCRIM_SEARCH_EXPIRED', data: { searchId, date: DATE } });
     }
     expect(await kinds(bystander.token)).toEqual([]);
-    expect(await told(proposer.token)).toMatchObject([{ kind: 'SCRIM_PROPOSAL_DECLINED', data: { reason: 'runTaken' } }]);
+    expect(await told(proposer.token)).toMatchObject([{ kind: 'SCRIM_PROPOSAL_DECLINED', data: { reason: 'RUN_TAKEN' } }]);
   });
 
   it('says nothing of a booking on the slots of a match made: its own players are taken to hold them', async () => {
