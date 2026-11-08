@@ -47,11 +47,16 @@ Le planificateur de postes est **parqué** (`PLANNER_ENABLED`, `shared/constants
 **Découpe (ordre de construction, ce qui reste).**
 
 1. Prévenir par courriel, Discord et WhatsApp : le courriel attend un fournisseur d'envoi, lui-même suspendu au nom de domaine (l'application n'envoie aucun mail aujourd'hui, même pas d'activation), Discord et WhatsApp leur intégration. Chacun se branche comme un canal de plus sur l'envoi des notifications, sans rien changer à ce qui les déclenche.
-2. Les liens vers le tableau d'une salle : page équipe, administration des salles.
 
 ---
 
 ## ✅ Terminé
+
+### Feature : Les liens vers le tableau d'une salle
+
+**Périmètre livré** :
+- Page équipe : « Scrims » à côté du Discord de la salle affiliée mène à son tableau.
+- Administration des salles : une colonne « Page publique » donne l'adresse du tableau de chaque salle, à lui envoyer ; elle s'ouvre dans un nouvel onglet.
 
 ### Feature : La carte d'un lien de tableau
 

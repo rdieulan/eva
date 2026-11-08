@@ -156,6 +156,7 @@ onMounted(loadVenues);
           <th>Adresse</th>
           <th>Téléphone</th>
           <th>Arènes</th>
+          <th title="Le tableau des recherches de la salle, lisible sans compte : le lien à lui envoyer">Page publique</th>
           <th class="col-actions"></th>
         </tr>
       </thead>
@@ -166,6 +167,11 @@ onMounted(loadVenues);
           <td>{{ venue.address }}</td>
           <td>{{ venue.phone || '—' }}</td>
           <td>{{ venue.arenaCount }}</td>
+          <td>
+            <RouterLink class="board-link" :to="{ name: 'venue-board', params: { slug: venue.slug } }" target="_blank">
+              /salles/{{ venue.slug }}
+            </RouterLink>
+          </td>
           <td class="col-actions">
             <button class="btn-link" @click="openEdit(venue)">Modifier</button>
             <button class="btn-link btn-link--danger" @click="openDelete(venue)">Supprimer</button>
@@ -295,6 +301,19 @@ onMounted(loadVenues);
 
   tr:last-child td {
     border-bottom: none;
+  }
+}
+
+// The address a venue shares its board at, as it is copied
+.board-link {
+  color: $color-accent;
+  font-family: monospace;
+  font-size: $font-size-sm;
+  text-decoration: none;
+  white-space: nowrap;
+
+  &:hover {
+    text-decoration: underline;
   }
 }
 

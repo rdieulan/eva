@@ -168,6 +168,12 @@ function saveChanges() {
             target="_blank"
             rel="noopener noreferrer"
           >Discord</a>
+          <RouterLink
+            v-if="teamVenue"
+            class="venue-link"
+            :to="{ name: 'venue-board', params: { slug: teamVenue.slug } }"
+            title="Le tableau public des recherches de la salle, à partager"
+          >Scrims</RouterLink>
         </span>
       </div>
       <div class="info-item">
