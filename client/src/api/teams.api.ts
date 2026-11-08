@@ -1,6 +1,6 @@
 // Teams API client
 
-import type { AccountPermissions, Team, Venue, VenueSlot } from '@shared/types';
+import type { AccountPermissions, Team, TeamDiscordStatus, Venue, VenueSlot } from '@shared/types';
 import { ERROR } from '@shared/constants';
 import { authFetch } from '@/api/utils';
 import { ApiError } from '@/api/error';
@@ -20,6 +20,7 @@ export interface TeamWithMembers extends Team {
   leader: { id: string; name: string; email: string } | null;
   members: TeamMember[];
   isLeader: boolean;
+  discord: TeamDiscordStatus; // Whether its notifications go to a Discord channel; never the webhook itself
 }
 
 /**
@@ -112,6 +113,29 @@ export async function deleteTeamLogo(): Promise<void> {
   const response = await authFetch(`${API_BASE}/current/logo`, { method: 'DELETE' });
   if (!response.ok) {
     throw await ApiError.fromFailedResponse(response, ERROR.teamLogoDeleteFailed);
+  }
+}
+
+/**
+ * Post the team's notifications in a Discord channel, through the webhook
+ * Discord gave for it: Discord takes a first message there before it is kept
+ */
+export async function linkTeamDiscord(webhookUrl: string): Promise<void> {
+  await authFetch<{ discord: 'linked' }>(
+    `${API_BASE}/current/discord`,
+    { method: 'PUT', body: JSON.stringify({ webhookUrl }) },
+    ERROR.discordLinkFailed
+  );
+}
+
+/**
+ * Stop posting the team's notifications on Discord
+ */
+export async function unlinkTeamDiscord(): Promise<void> {
+  // Answers 204 with no body, so the JSON-parsing form of authFetch does not apply
+  const response = await authFetch(`${API_BASE}/current/discord`, { method: 'DELETE' });
+  if (!response.ok) {
+    throw await ApiError.fromFailedResponse(response, ERROR.discordUnlinkFailed);
   }
 }
 

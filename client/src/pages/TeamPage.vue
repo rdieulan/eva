@@ -26,6 +26,7 @@ import { useErrors } from '@/composables/useErrors';
 import ConfirmModal from '@/components/common/ConfirmModal.vue';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import TeamInfo from '@/components/team/TeamInfo.vue';
+import TeamDiscord from '@/components/team/TeamDiscord.vue';
 import TeamMembers from '@/components/team/TeamMembers.vue';
 import TeamInvites from '@/components/team/TeamInvites.vue';
 import TeamPermissionsModal from '@/components/team/TeamPermissionsModal.vue';
@@ -300,18 +301,22 @@ onMounted(loadData);
       <ErrorDisplay :errors="errors" />
       <div v-if="successMessage" class="message success">{{ successMessage }}</div>
 
-      <!-- Team info section -->
-      <TeamInfo
-        :team="team"
-        :venues="venues"
-        :can-manage-team="canManageTeam"
-        :is-leader="isLeader"
-        @save="handleSaveTeam"
-        @upload-logo="handleUploadLogo"
-        @remove-logo="handleRemoveLogo"
-        @delete-team="showDeleteTeamModal = true"
-        @leave-team="showLeaveTeamModal = true"
-      />
+      <!-- Left column: the team, and where its notifications go -->
+      <div class="left-column">
+        <TeamInfo
+          :team="team"
+          :venues="venues"
+          :can-manage-team="canManageTeam"
+          :is-leader="isLeader"
+          @save="handleSaveTeam"
+          @upload-logo="handleUploadLogo"
+          @remove-logo="handleRemoveLogo"
+          @delete-team="showDeleteTeamModal = true"
+          @leave-team="showLeaveTeamModal = true"
+        />
+
+        <TeamDiscord :status="team.discord" :can-manage="canManageTeam" @changed="status => team && (team.discord = status)" />
+      </div>
 
       <!-- Right column: Members + Invites -->
       <div class="right-column">
@@ -465,6 +470,7 @@ h1 {
   }
 }
 
+.left-column,
 .right-column {
   display: flex;
   flex-direction: column;

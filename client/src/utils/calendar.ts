@@ -2,16 +2,14 @@
 
 import type { RouteLocationRaw } from 'vue-router';
 import type { CalendarEvent, CalendarTarget, EventType, VoiceMedium } from '@shared/types';
+import { calendarTargetQuery } from '@shared/utils';
 
 /**
  * A day of the calendar as a route of the app: the calendar reads the day,
  * the mode, the venue to tick and what to open from its query
  */
 export function calendarRoute(target: CalendarTarget): RouteLocationRaw {
-  const query: Record<string, string> = { date: target.date, mode: target.mode };
-  if (target.venueId) query.venue = target.venueId;
-  if (target.open) query[target.open.kind === 'scrimSearch' ? 'search' : 'event'] = target.open.id;
-  return { path: '/calendar', query };
+  return { path: '/calendar', query: calendarTargetQuery(target) };
 }
 
 /**

@@ -107,8 +107,10 @@ describe('Notifications of the matchmaking', () => {
       kind: 'SCRIM_PROPOSAL_RECEIVED',
       isRead: false,
       data: {
-        searchId, teamName: proposer.team.name, message: 'On est chauds',
+        searchId, teamName: proposer.team.name, teamId: proposer.team.id, message: 'On est chauds',
         date: DATE, startTime: '20:00', endTime: '21:20', venueId: NIMES.id, venueName: 'Nîmes', arenaNumber: 1,
+        // Where to book on eva.gg, for the media that lead there
+        evaLocationId: NIMES.externalId,
       },
     });
     expect(await kinds(responder.token)).toEqual(['SCRIM_PROPOSAL_RECEIVED']);
@@ -131,7 +133,7 @@ describe('Notifications of the matchmaking', () => {
 
     expect(made(await told(responder.token))).toEqual([]);
     for (const member of [searcher, bystander]) {
-      expect(made(await told(member.token))).toMatchObject([{ data: { eventId: searcherCopy.id, opponentName: proposer.team.name } }]);
+      expect(made(await told(member.token))).toMatchObject([{ data: { eventId: searcherCopy.id, opponentName: proposer.team.name, opponentId: proposer.team.id } }]);
     }
     for (const member of [proposer, teammate]) {
       expect(made(await told(member.token))).toMatchObject([{ data: { eventId: proposerCopy.id, opponentName: searcher.team.name } }]);

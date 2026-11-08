@@ -68,6 +68,8 @@ export {
   fetchVenueSlots,
   uploadTeamLogo,
   deleteTeamLogo,
+  linkTeamDiscord,
+  unlinkTeamDiscord,
   updateTeam,
   fetchTeamMembers,
   updateMemberPermissions,

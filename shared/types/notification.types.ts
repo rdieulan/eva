@@ -29,16 +29,27 @@ export interface ScrimMatchFacts {
   venueId: string;
   venueName: string;
   arenaNumber: number | null; // Named when the venue has more than one arena
+  evaLocationId?: number | null; // The venue on eva.gg, where to book a seat; missing from the notifications told before
 }
 
 /** What a notification tells, kind by kind: the facts it needs, as they were when it happened */
 export type NotificationContent =
-  | { kind: 'SCRIM_PROPOSAL_RECEIVED'; data: ScrimMatchFacts & { searchId: string; teamName: string; message: string | null } }
-  | { kind: 'SCRIM_MATCH_MADE'; data: ScrimMatchFacts & { eventId: string; opponentName: string } }
-  | { kind: 'SCRIM_PROPOSAL_DECLINED'; data: ScrimMatchFacts & { searchId: string; teamName: string; reason: ScrimDeclineReason } }
-  | { kind: 'SCRIM_SEARCH_WITHDRAWN'; data: ScrimMatchFacts & { teamName: string } }
-  | { kind: 'SCRIM_MATCH_CANCELLED'; data: ScrimMatchFacts & { opponentName: string; byOpponent: boolean } }
+  | { kind: 'SCRIM_PROPOSAL_RECEIVED'; data: ScrimMatchFacts & OtherTeam<'team'> & { searchId: string; message: string | null } }
+  | { kind: 'SCRIM_MATCH_MADE'; data: ScrimMatchFacts & OtherTeam<'opponent'> & { eventId: string } }
+  | { kind: 'SCRIM_PROPOSAL_DECLINED'; data: ScrimMatchFacts & OtherTeam<'team'> & { searchId: string; reason: ScrimDeclineReason } }
+  | { kind: 'SCRIM_SEARCH_WITHDRAWN'; data: ScrimMatchFacts & OtherTeam<'team'> }
+  | { kind: 'SCRIM_MATCH_CANCELLED'; data: ScrimMatchFacts & OtherTeam<'opponent'> & { byOpponent: boolean } }
   | { kind: 'SCRIM_SEARCH_EXPIRED'; data: { searchId: string; date: string } };
+
+/**
+ * The other team of a notification, its name and its id (for the media that
+ * show its logo; missing from the notifications told before), under the name
+ * the notification gives it: "team" (teamName, teamId) or "opponent"
+ * (opponentName, opponentId). The team told is the notification's own.
+ */
+export type OtherTeam<Role extends 'team' | 'opponent'> =
+  & { [K in `${Role}Name`]: string }
+  & { [K in `${Role}Id`]?: string };
 
 /** A notification in the app's bell */
 export type InboxNotification = NotificationContent & {
@@ -61,10 +72,19 @@ export interface MarkNotificationsReadRequest {
 /** Where a notification leads, whatever the medium: a day of the calendar */
 export type NotificationTarget = CalendarTarget;
 
-/** A notification put in words, for any medium */
+/**
+ * A notification put in words, for any medium: whole lines for a list (the
+ * bell), the same words in pieces for a card (a Discord message)
+ */
 export interface NotificationDescription {
   title: string;         // What happened, in a few words
-  body: string;          // Who, when and where
+  body: string;          // Who, when and where, in one line
   detail: string | null; // A word more: the reason, the message, what to do next
   target: NotificationTarget;
+  who: { name: string; teamId: string | null } | null; // The other team, when there is one: its id, for its logo
+  when: string;          // The day, and the hours of the match when there is one
+  where: string | null;  // The venue, and its arena when it is named
+  quote: string | null;  // The other team's own words
+  action: string;        // What following the target does, for a medium that shows the link
+  elsewhere: { label: string; url: string } | null; // A step to take outside the app: booking on eva.gg
 }

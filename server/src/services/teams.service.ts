@@ -6,6 +6,8 @@ import { LEADER_PERMISSIONS, DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
 import { normalizeAccountPermissions } from '@shared/utils';
 import { DEFAULT_ASSIGNMENTS, DEFAULT_GAME_PLAN_NOTES, ERROR } from '@shared/constants';
 import { getPlayerWithTeam } from '@services/player.service';
+import { teamDiscordStatus } from '@services/team-discord.service';
+import type { TeamDiscordStatus } from '@shared/types';
 
 // ============================================
 // Types
@@ -61,6 +63,7 @@ export interface TeamView {
   leader: { id: string; name: string; email: string } | null;
   members: MemberWithRole[];
   isLeader: boolean;
+  discord: TeamDiscordStatus; // Whether its notifications go to a Discord channel; never the webhook itself
 }
 
 /**
@@ -98,6 +101,7 @@ export async function getTeamViewForPlayer(playerId: string): Promise<TeamView |
         isLeader: member.id === team.leaderId,
       })),
     isLeader: !!playerData!.ledTeam,
+    discord: await teamDiscordStatus(team.id),
   };
 }
 

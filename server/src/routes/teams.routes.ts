@@ -9,6 +9,7 @@ import { validateTeamName, detectImageType } from '@shared/utils';
 import { ERROR, TEAM_LOGO_MAX_BYTES, TEAM_LOGO_MIME_TYPES, TEAM_FAVORITE_VENUES_MAX } from '@shared/constants';
 import { apiLogger } from '@utils/logger';
 import * as teamsService from '@services/teams.service';
+import { linkTeamDiscord, unlinkTeamDiscord, type LinkTeamDiscordRefusal } from '@services/team-discord.service';
 
 const router = Router();
 
@@ -291,6 +292,59 @@ router.delete(
     } catch (error) {
       apiLogger.error('Error removing team logo:', error);
       res.status(500).json({ errors: [ERROR.teamLogoDeleteFailed] });
+    }
+  },
+);
+
+// How each refused Discord channel is answered
+const DISCORD_LINK_REFUSALS: Record<LinkTeamDiscordRefusal, { status: number; error: string }> = {
+  webhookInvalid: { status: 400, error: ERROR.discordWebhookInvalid },
+  webhookRefused: { status: 422, error: ERROR.discordWebhookRefused },
+  discordUnreachable: { status: 502, error: ERROR.discordUnreachable },
+};
+
+// PUT /api/teams/current/discord - Post the team's notifications in a Discord channel, through its webhook
+router.put(
+  '/current/discord',
+  authMiddleware,
+  requirePermission('team', 'canManageTeam'),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const team = await teamsService.getPlayerTeam(req.account!.playerId!);
+      if (!team) {
+        return res.status(404).json({ errors: [ERROR.teamNotFound] });
+      }
+
+      const result = await linkTeamDiscord(team.id, req.body?.webhookUrl);
+      if (result.refusal) {
+        const { status, error } = DISCORD_LINK_REFUSALS[result.refusal];
+        return res.status(status).json({ errors: [error] });
+      }
+      res.json({ discord: 'linked' });
+    } catch (error) {
+      apiLogger.error('Error linking the team Discord channel:', error);
+      res.status(500).json({ errors: [ERROR.discordLinkFailed] });
+    }
+  },
+);
+
+// DELETE /api/teams/current/discord - Stop posting the team's notifications on Discord
+router.delete(
+  '/current/discord',
+  authMiddleware,
+  requirePermission('team', 'canManageTeam'),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const team = await teamsService.getPlayerTeam(req.account!.playerId!);
+      if (!team) {
+        return res.status(404).json({ errors: [ERROR.teamNotFound] });
+      }
+
+      await unlinkTeamDiscord(team.id);
+      res.status(204).end();
+    } catch (error) {
+      apiLogger.error('Error unlinking the team Discord channel:', error);
+      res.status(500).json({ errors: [ERROR.discordUnlinkFailed] });
     }
   },
 );

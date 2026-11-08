@@ -7,13 +7,17 @@ import type {
   ScrimMatchFacts,
 } from '@shared/types/notification.types';
 import { formatShortDay } from '@shared/utils/date.utils';
+import { buildEvaBookingUrl } from '@shared/utils/eva.utils';
 import { describeProposalDecline } from '@shared/utils/scrim-proposal.utils';
 import { formatVenuePlace } from '@shared/utils/venue.utils';
 
-// The other team, the day, the hours and the place of a match
-function matchLine(teamName: string, facts: ScrimMatchFacts): string {
-  const place = formatVenuePlace(facts.venueName, facts.arenaNumber);
-  return `${teamName} · ${formatShortDay(facts.date)} · ${facts.startTime} – ${facts.endTime} · ${place}`;
+type Pieces = Pick<NotificationDescription, 'body' | 'who' | 'when' | 'where'>;
+
+// The other team, the day, the hours and the place of a match, in pieces and in one line
+function matchPieces(teamName: string, teamId: string | undefined, facts: ScrimMatchFacts): Pieces {
+  const when = `${formatShortDay(facts.date)} · ${facts.startTime} – ${facts.endTime}`;
+  const where = formatVenuePlace(facts.venueName, facts.arenaNumber);
+  return { body: `${teamName} · ${when} · ${where}`, who: { name: teamName, teamId: teamId ?? null }, when, where };
 }
 
 /**
@@ -26,18 +30,25 @@ export function describeNotification(content: NotificationContent): Notification
       const { data } = content;
       return {
         title: 'Match proposé',
-        body: matchLine(data.teamName, data),
+        ...matchPieces(data.teamName, data.teamId, data),
         detail: data.message ? `« ${data.message} »` : null,
+        quote: data.message,
         target: { page: 'calendar', date: data.date, mode: 'matchmaking', open: { kind: 'scrimSearch', id: data.searchId } },
+        action: 'Répondre',
+        elsewhere: null,
       };
     }
     case 'SCRIM_MATCH_MADE': {
       const { data } = content;
+      const booking = buildEvaBookingUrl(data.evaLocationId ?? null, data.date);
       return {
         title: 'Match calé',
-        body: matchLine(data.opponentName, data),
+        ...matchPieces(data.opponentName, data.opponentId, data),
         detail: 'Chacun réserve sa place sur eva.gg.',
+        quote: null,
         target: { page: 'calendar', date: data.date, mode: 'team', open: { kind: 'event', id: data.eventId } },
+        action: 'Voir le match',
+        elsewhere: booking ? { label: 'Réserver ma place sur eva.gg', url: booking } : null,
       };
     }
     case 'SCRIM_PROPOSAL_DECLINED': {
@@ -45,21 +56,27 @@ export function describeNotification(content: NotificationContent): Notification
       const { title, detail } = describeProposalDecline(data.reason);
       return {
         title,
-        body: matchLine(data.teamName, data),
+        ...matchPieces(data.teamName, data.teamId, data),
         detail,
+        quote: null,
         target: {
           page: 'calendar', date: data.date, mode: 'matchmaking', venueId: data.venueId,
           open: { kind: 'scrimSearch', id: data.searchId },
         },
+        action: 'Voir leur recherche',
+        elsewhere: null,
       };
     }
     case 'SCRIM_SEARCH_WITHDRAWN': {
       const { data } = content;
       return {
         title: 'Recherche retirée',
-        body: matchLine(data.teamName, data),
+        ...matchPieces(data.teamName, data.teamId, data),
         detail: 'Votre proposition tombe avec elle.',
+        quote: null,
         target: { page: 'calendar', date: data.date, mode: 'matchmaking', venueId: data.venueId },
+        action: 'Voir les autres recherches',
+        elsewhere: null,
       };
     }
     case 'SCRIM_MATCH_CANCELLED': {
@@ -67,9 +84,12 @@ export function describeNotification(content: NotificationContent): Notification
       const by = data.byOpponent ? 'leur équipe' : 'votre équipe';
       return {
         title: 'Match annulé',
-        body: matchLine(data.opponentName, data),
+        ...matchPieces(data.opponentName, data.opponentId, data),
         detail: `Annulé par ${by}. Les réservations faites sur eva.gg sont à annuler là-bas.`,
+        quote: null,
         target: { page: 'calendar', date: data.date, mode: 'team' },
+        action: 'Ouvrir le calendrier',
+        elsewhere: null,
       };
     }
     case 'SCRIM_SEARCH_EXPIRED': {
@@ -77,8 +97,14 @@ export function describeNotification(content: NotificationContent): Notification
       return {
         title: 'Recherche close sans match',
         body: `Votre recherche du ${formatShortDay(data.date)}`,
+        who: null,
+        when: formatShortDay(data.date),
+        where: null,
         detail: 'Ses créneaux ont été réservés à la salle : il n\'en reste plus pour un match.',
+        quote: null,
         target: { page: 'calendar', date: data.date, mode: 'matchmaking' },
+        action: 'Ouvrir le calendrier',
+        elsewhere: null,
       };
     }
   }

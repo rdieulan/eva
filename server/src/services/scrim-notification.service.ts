@@ -8,6 +8,9 @@ import type { ScrimDeclineReason, ScrimMatchFacts } from '@shared/types';
 import { notify, type PermissionRef } from '@services/notification.service';
 import { formatDateStr } from './helpers/date.helper';
 
+// A team as the notifications name it: its name, and its id for the media that show its logo
+const TEAM_FACTS_SELECT = { id: true, name: true } as const;
+
 // What the notifications about a proposal are told from
 export const PROPOSAL_FACTS_SELECT = {
   id: true,
@@ -16,9 +19,9 @@ export const PROPOSAL_FACTS_SELECT = {
   endTime: true,
   arenaNumber: true,
   message: true,
-  team: { select: { name: true } },
-  venue: { select: { id: true, name: true, arenaCount: true } },
-  search: { select: { id: true, date: true, teamId: true, team: { select: { name: true } } } },
+  team: { select: TEAM_FACTS_SELECT },
+  venue: { select: { id: true, name: true, arenaCount: true, externalId: true } },
+  search: { select: { id: true, date: true, teamId: true, team: { select: TEAM_FACTS_SELECT } } },
 } satisfies Prisma.ScrimProposalSelect;
 
 export type ProposalFacts = Prisma.ScrimProposalGetPayload<{ select: typeof PROPOSAL_FACTS_SELECT }>;
@@ -39,6 +42,7 @@ function matchFacts(proposal: ProposalFacts): ScrimMatchFacts {
     venueId: proposal.venue.id,
     venueName: proposal.venue.name.trim(),
     arenaNumber: proposal.venue.arenaCount > 1 ? proposal.arenaNumber : null,
+    evaLocationId: proposal.venue.externalId,
   };
 }
 
@@ -54,7 +58,10 @@ export async function notifyProposalReceived(proposalId: string): Promise<void> 
   await notify(
     {
       kind: 'SCRIM_PROPOSAL_RECEIVED',
-      data: { ...matchFacts(proposal), searchId: proposal.search.id, teamName: proposal.team.name, message: proposal.message },
+      data: {
+        ...matchFacts(proposal), searchId: proposal.search.id, message: proposal.message,
+        teamName: proposal.team.name, teamId: proposal.team.id,
+      },
     },
     { teamId: proposal.search.teamId, permission: CAN_RESPOND },
   );
@@ -73,11 +80,17 @@ export async function notifyMatchMade(
   if (!proposal) return;
   const facts = matchFacts(proposal);
   await notify(
-    { kind: 'SCRIM_MATCH_MADE', data: { ...facts, eventId: eventIds.searcher, opponentName: proposal.team.name } },
+    {
+      kind: 'SCRIM_MATCH_MADE',
+      data: { ...facts, eventId: eventIds.searcher, opponentName: proposal.team.name, opponentId: proposal.team.id },
+    },
     { teamId: proposal.search.teamId, exceptPlayerId: acceptedBy },
   );
   await notify(
-    { kind: 'SCRIM_MATCH_MADE', data: { ...facts, eventId: eventIds.proposer, opponentName: proposal.search.team.name } },
+    {
+      kind: 'SCRIM_MATCH_MADE',
+      data: { ...facts, eventId: eventIds.proposer, opponentName: proposal.search.team.name, opponentId: proposal.search.team.id },
+    },
     { teamId: proposal.teamId },
   );
 }
@@ -89,7 +102,10 @@ export async function notifyProposalsDeclined(declined: DeclinedProposal[]): Pro
     await notify(
       {
         kind: 'SCRIM_PROPOSAL_DECLINED',
-        data: { ...matchFacts(proposal), searchId: proposal.search.id, teamName: proposal.search.team.name, reason: reasons.get(proposal.id)! },
+        data: {
+          ...matchFacts(proposal), searchId: proposal.search.id, reason: reasons.get(proposal.id)!,
+          teamName: proposal.search.team.name, teamId: proposal.search.team.id,
+        },
       },
       { teamId: proposal.teamId, permission: CAN_PROPOSE },
     );
@@ -104,7 +120,10 @@ export async function notifyProposalsDeclined(declined: DeclinedProposal[]): Pro
 export async function notifySearchWithdrawn(pending: ProposalFacts[]): Promise<void> {
   for (const proposal of pending) {
     await notify(
-      { kind: 'SCRIM_SEARCH_WITHDRAWN', data: { ...matchFacts(proposal), teamName: proposal.search.team.name } },
+      {
+        kind: 'SCRIM_SEARCH_WITHDRAWN',
+        data: { ...matchFacts(proposal), teamName: proposal.search.team.name, teamId: proposal.search.team.id },
+      },
       { teamId: proposal.teamId, permission: CAN_PROPOSE },
     );
   }
@@ -118,13 +137,13 @@ export async function notifyMatchCancelled(
 ): Promise<void> {
   const facts = matchFacts(proposal);
   const sides = [
-    { teamId: proposal.search.teamId, opponentName: proposal.team.name },
-    { teamId: proposal.teamId, opponentName: proposal.search.team.name },
+    { teamId: proposal.search.teamId, opponent: proposal.team },
+    { teamId: proposal.teamId, opponent: proposal.search.team },
   ];
-  for (const { teamId, opponentName } of sides) {
+  for (const { teamId, opponent } of sides) {
     const byOpponent = teamId !== cancelledByTeamId;
     await notify(
-      { kind: 'SCRIM_MATCH_CANCELLED', data: { ...facts, opponentName, byOpponent } },
+      { kind: 'SCRIM_MATCH_CANCELLED', data: { ...facts, opponentName: opponent.name, opponentId: opponent.id, byOpponent } },
       { teamId, exceptPlayerId: byOpponent ? undefined : cancelledBy },
     );
   }

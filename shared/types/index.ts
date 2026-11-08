@@ -107,6 +107,7 @@ export {
 export type {
   Team,
   TeamWithMembers,
+  TeamDiscordStatus,
   TeamLocation,
 } from './team.types';
 export { TEAM_LOCATIONS } from './team.types';

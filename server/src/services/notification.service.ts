@@ -10,6 +10,7 @@ import type { AccountPermissions, NotificationContent } from '@shared/types';
 import { normalizeAccountPermissions } from '@shared/utils';
 import { logger } from '@utils/logger';
 import { inboxChannel } from '@services/notification-inbox.service';
+import { discordChannel } from '@services/notification-discord.service';
 
 // A permission of a member, named by its category and its name
 export type PermissionRef = {
@@ -37,11 +38,11 @@ export interface NotificationChannel {
   deliver(delivery: NotificationDelivery): Promise<void>;
 }
 
-//TODO Only the app's bell delivers today. Mail waits for a sending provider
-// (none yet, the domain name decides it), Discord and WhatsApp for their
-// integration: each will implement NotificationChannel and join this list,
-// with nothing to change in the services that notify.
-const CHANNELS: NotificationChannel[] = [inboxChannel];
+//TODO The bell and the team's Discord channel deliver today. Mail waits for a
+// sending provider (none yet, the domain name decides it), WhatsApp for a Meta
+// business account and its framing: each will implement NotificationChannel
+// and join this list, with nothing to change in the services that notify.
+const CHANNELS: NotificationChannel[] = [inboxChannel, discordChannel];
 
 // The members of the team the audience names, minus the one who did it
 async function audiencePlayers(audience: NotificationAudience): Promise<string[]> {
