@@ -53,6 +53,11 @@ Le planificateur de postes est **parqué** (`PLANNER_ENABLED`, `shared/constants
 
 ## ✅ Terminé
 
+### Correctif : la fiche d'une recherche montre notre dernière proposition
+
+**Périmètre livré** :
+- Une équipe qui propose de nouveau après une proposition écartée lit, sur la fiche de la recherche, sa nouvelle proposition et de quoi la retirer. La fiche montrait la plus ancienne, avec ce qu'elle était devenue, et offrait d'en envoyer une autre, que le serveur refusait puisqu'une attendait déjà.
+
 ### Correctif : les mots d'une proposition qui tombe
 
 **Périmètre livré** :

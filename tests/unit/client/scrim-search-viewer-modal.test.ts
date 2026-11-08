@@ -203,6 +203,19 @@ describe('ScrimSearchViewerModal on another team\'s search', () => {
     expect(button(wrapper, 'Proposer un match')).toBeDefined();
   });
 
+  it('shows the latest proposal of the team once it sent another after one was declined', async () => {
+    const declined = proposal('p1', { isMine: true, status: 'DECLINED', declineReason: 'BY_TEAM', createdAt: '2030-06-01T18:00:00.000Z' });
+    const pending = proposal('p2', { isMine: true, evaSlotIds: ['s-2040', 's-2120'], startTime: '20:40', endTime: '22:00', createdAt: '2030-06-02T09:00:00.000Z' });
+    const wrapper = mountViewer({ search: search({ proposals: [declined, pending] }) });
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('Proposition envoyée');
+    expect(wrapper.text()).toContain('20:40 – 22:00 (2 créneaux), arène 1');
+    expect(wrapper.text()).not.toContain('refusée');
+    expect(button(wrapper, 'Retirer la proposition')).toBeDefined();
+    expect(button(wrapper, 'Proposer un match')).toBeUndefined();
+  });
+
   it('says what became of a proposal that was not declined, with no reason under it', async () => {
     const wrapper = mountViewer({ search: search({ proposals: [proposal('p1', { isMine: true, status: 'CANCELLED' })] }) });
     await flushPromises();

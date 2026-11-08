@@ -98,10 +98,15 @@ const isMine = computed(() => props.search?.isMine ?? false);
 // Our own search changes until its day comes
 const canEdit = computed(() => isMine.value && props.canSearch && !!props.search && !isPastDateStr(props.search.date));
 
-// Another team's search: the proposal the reader's team sent, if any
-const ownProposal = computed<ScrimProposal | null>(() =>
-  props.search && !isMine.value ? props.search.proposals.find(proposal => proposal.isMine) ?? null : null,
-);
+// Another team's search: the latest proposal the reader's team sent, if any.
+// Once one is answered the team may send another, so the older ones only say
+// what they once became.
+const ownProposal = computed<ScrimProposal | null>(() => {
+  if (!props.search || isMine.value) return null;
+  return props.search.proposals
+    .filter(proposal => proposal.isMine)
+    .reduce<ScrimProposal | null>((latest, proposal) => (!latest || proposal.createdAt > latest.createdAt ? proposal : latest), null);
+});
 
 // The reader's own search: the proposals waiting for an answer
 const pendingProposals = computed(() =>
