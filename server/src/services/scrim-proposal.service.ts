@@ -1,13 +1,20 @@
 // Scrim proposals - a team answers another team's search with the run it wants to play
 
 import { prisma } from '@db/prisma';
-import type { CalendarEvent, ScrimProposal, ScrimProposalStatus, VenueSlot } from '@shared/types';
+import type { CalendarEvent, ScrimDeclineReason, ScrimProposal, ScrimProposalStatus, VenueSlot } from '@shared/types';
 import { countMatches, isOneRun, orderRunSlots, runSpan, spansOverlap } from '@shared/utils';
 import { logoUrlOf } from '@services/teams.service';
 import { getVenueSlots } from '@services/venue-slots.service';
 import { formatDateStr } from './helpers/date.helper';
 import { slotPlayability } from './helpers/slot.helper';
 import { EVENT_VENUE_INCLUDE, formatEventForFrontend } from './helpers/calendar.helper';
+import {
+  PROPOSAL_FACTS_SELECT,
+  notifyMatchCancelled,
+  notifyMatchMade,
+  notifyProposalReceived,
+  notifyProposalsDeclined,
+} from '@services/scrim-notification.service';
 
 // The team behind a proposal, as loaded with it
 export const PROPOSAL_TEAM_INCLUDE = {
@@ -156,6 +163,7 @@ export async function createScrimProposal(input: {
     include: PROPOSAL_TEAM_INCLUDE,
   });
 
+  await notifyProposalReceived(row.id);
   return { proposal: toScrimProposal(row, input.teamId) };
 }
 
@@ -170,6 +178,15 @@ export type RespondScrimProposalRefusal =
   | 'searchNotOpen'
   | 'timeTaken'     // Accepting: another match of the search took that time meanwhile
   | 'runTaken';     // Accepting: a slot of the run is no longer open to a match; the proposal is declined
+
+// What accepting did, before it is told: the match made and the proposals it turned down
+type AcceptOutcome =
+  | { refusal: RespondScrimProposalRefusal }
+  | {
+    accepted: { proposal: ScrimProposal; events: CalendarEvent[] };
+    eventIds: { searcher: string; proposer: string };
+    declined: { id: string; reason: ScrimDeclineReason }[];
+  };
 
 export type AcceptScrimProposalResult =
   | { proposal: ScrimProposal; events: CalendarEvent[] }
@@ -194,11 +211,12 @@ async function loadProposalForResponse(proposalId: string) {
  * on one search are taken one at a time, so two matches never overlap nor
  * outnumber what the search asked for.
  */
-export async function acceptScrimProposal(proposalId: string, teamId: string): Promise<AcceptScrimProposalResult> {
+export async function acceptScrimProposal(proposalId: string, teamId: string, acceptedBy?: string): Promise<AcceptScrimProposalResult> {
   const check = await checkRunStillFree(proposalId, teamId);
+  if (check === 'runTaken') await notifyProposalsDeclined([{ id: proposalId, reason: 'runTaken' }]);
   if (check) return { refusal: check };
 
-  return prisma.$transaction(async tx => {
+  const outcome = await prisma.$transaction(async (tx): Promise<AcceptOutcome> => {
     const target = await tx.scrimProposal.findUnique({ where: { id: proposalId }, select: { searchId: true } });
     if (!target) return { refusal: 'notFound' as const };
     await tx.$queryRaw`SELECT 1 FROM "ScrimSearch" WHERE "id" = ${target.searchId} FOR UPDATE`;
@@ -239,7 +257,11 @@ export async function acceptScrimProposal(proposalId: string, teamId: string): P
       where: { searchId: search.id, status: 'PENDING' },
       select: { id: true, startTime: true, endTime: true },
     });
-    const declined = closes ? pending : pending.filter(other => spansOverlap(runSpan(other), span));
+    // At the same time as the match, or anything left once the search closes
+    const declined = pending.flatMap((other): { id: string; reason: ScrimDeclineReason }[] => {
+      if (spansOverlap(runSpan(other), span)) return [{ id: other.id, reason: 'timeTaken' }];
+      return closes ? [{ id: other.id, reason: 'searchClosed' }] : [];
+    });
     await tx.scrimProposal.updateMany({
       where: { id: { in: declined.map(other => other.id) } },
       data: { status: 'DECLINED', respondedAt: now },
@@ -269,10 +291,19 @@ export async function acceptScrimProposal(proposalId: string, teamId: string): P
     });
 
     return {
-      proposal: toScrimProposal(accepted, teamId),
-      events: [formatEventForFrontend(searcherEvent), formatEventForFrontend(proposerEvent)],
+      accepted: {
+        proposal: toScrimProposal(accepted, teamId),
+        events: [formatEventForFrontend(searcherEvent), formatEventForFrontend(proposerEvent)],
+      },
+      eventIds: { searcher: searcherEvent.id, proposer: proposerEvent.id },
+      declined,
     };
   });
+  if ('refusal' in outcome) return outcome;
+
+  await notifyMatchMade(proposalId, outcome.eventIds, acceptedBy);
+  await notifyProposalsDeclined(outcome.declined);
+  return outcome.accepted;
 }
 
 /**
@@ -325,6 +356,7 @@ export async function declineScrimProposal(proposalId: string, teamId: string): 
     data: { status: 'DECLINED', respondedAt: new Date() },
     include: PROPOSAL_TEAM_INCLUDE,
   });
+  await notifyProposalsDeclined([{ id: proposal.id, reason: 'byTeam' }]);
   return { proposal: toScrimProposal(declined, teamId) };
 }
 
@@ -368,7 +400,7 @@ export type CancelScrimMatchRefusal = 'notFound' | 'notYours' | 'matchPast';
  * answers and changes on the search. The bookings the two teams made on
  * eva.gg are theirs to cancel there: the matchmaking cannot see them.
  */
-export async function cancelScrimMatch(eventId: string, teamId: string): Promise<{ refusal?: CancelScrimMatchRefusal }> {
+export async function cancelScrimMatch(eventId: string, teamId: string, cancelledBy?: string): Promise<{ refusal?: CancelScrimMatchRefusal }> {
   const event = await prisma.calendarEvent.findUnique({
     where: { id: eventId },
     select: { teamId: true, scrimSearchId: true, date: true, startTime: true },
@@ -378,14 +410,20 @@ export async function cancelScrimMatch(eventId: string, teamId: string): Promise
   if (formatDateStr(event.date) < formatDateStr(new Date())) return { refusal: 'matchPast' };
   const searchId = event.scrimSearchId;
 
-  await prisma.$transaction(async tx => {
+  const cancelled = await prisma.$transaction(async tx => {
     await tx.$queryRaw`SELECT 1 FROM "ScrimSearch" WHERE "id" = ${searchId} FOR UPDATE`;
     // Two matches of a search never share a start: its time names the match
-    await tx.scrimProposal.updateMany({
+    const proposal = await tx.scrimProposal.findFirst({
       where: { searchId, status: 'ACCEPTED', startTime: event.startTime },
-      data: { status: 'CANCELLED', respondedAt: new Date() },
+      select: PROPOSAL_FACTS_SELECT,
     });
-    await tx.calendarEvent.deleteMany({ where: { scrimSearchId: searchId, date: event.date, startTime: event.startTime } });
+    if (proposal) {
+      await tx.scrimProposal.update({ where: { id: proposal.id }, data: { status: 'CANCELLED', respondedAt: new Date() } });
+    }
+    const removed = await tx.calendarEvent.deleteMany({ where: { scrimSearchId: searchId, date: event.date, startTime: event.startTime } });
+    // Called off from the other side meanwhile: already told
+    return removed.count ? proposal : null;
   });
+  if (cancelled) await notifyMatchCancelled(cancelled, teamId, cancelledBy);
   return {};
 }

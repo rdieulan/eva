@@ -54,25 +54,26 @@ model Session {
 // ============================================
 
 model Player {
-  id                      String            @id @default(cuid())
+  id                      String                   @id @default(cuid())
   permissions             Json? // Granular permissions JSON
   teamId                  String?
   subscriptionTier        SubscriptionTier?
-  subscriptionRenewalDate DateTime?         @db.Date // Renews every 30 days from this date
-  evaUserId               Int?              @unique // User id on eva.gg, stable across renames; one eva.gg account per player
+  subscriptionRenewalDate DateTime?                @db.Date // Renews every 30 days from this date
+  evaUserId               Int?                     @unique // User id on eva.gg, stable across renames; one eva.gg account per player
   evaUsername             String? // eva.gg tag (Pseudo#123456) as it was when the player linked it; display only
   evaLinkedAt             DateTime?
-  createdAt               DateTime          @default(now())
-  updatedAt               DateTime          @updatedAt
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
   user                    User?
-  team                    Team?             @relation("TeamMembers", fields: [teamId], references: [id])
-  ledTeam                 Team?             @relation("TeamLeader")
+  team                    Team?                    @relation("TeamMembers", fields: [teamId], references: [id])
+  ledTeam                 Team?                    @relation("TeamLeader")
   availabilities          Availability[]
   createdEvents           CalendarEvent[]
   gamePlanPlayers         GamePlanPlayer[]
   createdInvites          TeamInvite[]
   openedScrimSearches     ScrimSearch[]
   sentScrimProposals      ScrimProposal[]
+  notificationInbox       NotificationInboxEntry[]
 
   @@index([teamId])
 }
@@ -131,6 +132,7 @@ model Team {
   favoriteVenues TeamFavoriteVenue[]
   scrimSearches  ScrimSearch[]
   scrimProposals ScrimProposal[]
+  notifications  Notification[]
 
   @@index([venueId])
 }
@@ -392,6 +394,38 @@ model BalanceRule {
 }
 
 // ============================================
+// Notifications
+// ============================================
+
+// Something worth telling the players of a team, as information only: what
+// happened and the facts to tell it, never a text or a medium. Each medium
+// delivers it its own way; the app's bell through NotificationInboxEntry.
+model Notification {
+  id           String                   @id @default(cuid())
+  kind         NotificationKind
+  data         Json // The facts its kind needs, see shared/types/notification.types.ts
+  teamId       String // The team it is told to
+  createdAt    DateTime                 @default(now())
+  team         Team                     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  inboxEntries NotificationInboxEntry[]
+
+  @@index([createdAt])
+  @@index([teamId])
+}
+
+// The app's bell: a notification delivered to one player, and when they saw it
+model NotificationInboxEntry {
+  notificationId String
+  playerId       String
+  readAt         DateTime?
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  player         Player       @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@id([notificationId, playerId])
+  @@index([playerId, readAt])
+}
+
+// ============================================
 // Enums
 // ============================================
 
@@ -442,4 +476,13 @@ enum ScrimProposalStatus {
   DECLINED
   WITHDRAWN
   CANCELLED // Accepted, then the match called off by one of the two teams
+}
+
+enum NotificationKind {
+  SCRIM_PROPOSAL_RECEIVED // Another team proposed a match on the team's search
+  SCRIM_MATCH_MADE // A proposal was accepted: the match is in both calendars
+  SCRIM_PROPOSAL_DECLINED // The team's proposal was turned down, by the other team or by the app
+  SCRIM_SEARCH_WITHDRAWN // A search the team had a proposal pending on was withdrawn
+  SCRIM_MATCH_CANCELLED // A match of the matchmaking was called off
+  SCRIM_SEARCH_EXPIRED // The team's search closed with no match: its slots were booked
 }

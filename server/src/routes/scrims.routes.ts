@@ -341,7 +341,7 @@ router.put('/proposals/:id/accept', authMiddleware, requirePermission('matchmaki
   }
 
   try {
-    const result = await scrimProposalService.acceptScrimProposal(req.params.id, teamId);
+    const result = await scrimProposalService.acceptScrimProposal(req.params.id, teamId, req.account?.playerId);
     if ('refusal' in result) {
       const { status, error } = RESPOND_REFUSALS[result.refusal];
       return res.status(status).json({ errors: [error] });
@@ -406,7 +406,7 @@ router.delete('/matches/:eventId', authMiddleware, requirePermission('matchmakin
   }
 
   try {
-    const result = await scrimProposalService.cancelScrimMatch(req.params.eventId, teamId);
+    const result = await scrimProposalService.cancelScrimMatch(req.params.eventId, teamId, req.account?.playerId);
     if (result.refusal) {
       const { status, error } = CANCEL_REFUSALS[result.refusal];
       return res.status(status).json({ errors: [error] });

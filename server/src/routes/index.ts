@@ -13,6 +13,7 @@ import invitesRoutes from '@routes/invites.routes';
 import playersRoutes from '@routes/players.routes';
 import venuesRoutes from '@routes/venues.routes';
 import scrimsRoutes from '@routes/scrims.routes';
+import notificationsRoutes from '@routes/notifications.routes';
 import adminRoutes from '@routes/admin.routes';
 import { prisma, pool } from '@db/prisma';
 import { logger } from '@utils/logger';
@@ -87,6 +88,7 @@ router.use('/balance-rules', balanceRulesRoutes);
 router.use('/players', playersRoutes);
 router.use('/venues', venuesRoutes);
 router.use('/scrims', scrimsRoutes);
+router.use('/notifications', notificationsRoutes);
 router.use('/admin', adminRoutes);
 router.use('/', invitesRoutes); // Handles /teams/:teamId/invites and /invites/:code
 

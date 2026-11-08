@@ -22,6 +22,7 @@ import headsetIcon from '@/assets/icons/headset.svg?raw';
 import starIcon from '@/assets/icons/star.svg?raw';
 import starOutlineIcon from '@/assets/icons/star-outline.svg?raw';
 import placeIcon from '@/assets/icons/place.svg?raw';
+import bellIcon from '@/assets/icons/bell.svg?raw';
 
 const icons: Record<string, string> = {
   home: homeIcon,
@@ -44,6 +45,7 @@ const icons: Record<string, string> = {
   star: starIcon,
   'star-outline': starOutlineIcon,
   place: placeIcon,
+  bell: bellIcon,
 };
 
 const props = defineProps<{

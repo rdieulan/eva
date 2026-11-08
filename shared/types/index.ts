@@ -56,6 +56,18 @@ export type {
   CreateScrimProposalRequest,
 } from './scrim.types';
 export { SCRIM_SEARCH_STATUSES, SCRIM_PROPOSAL_STATUSES } from './scrim.types';
+export type {
+  NotificationKind,
+  ScrimDeclineReason,
+  ScrimMatchFacts,
+  NotificationContent,
+  InboxNotification,
+  NotificationInbox,
+  MarkNotificationsReadRequest,
+  NotificationTarget,
+  NotificationDescription,
+} from './notification.types';
+export { NOTIFICATION_KINDS } from './notification.types';
 
 export type {
   SubscriptionTier,

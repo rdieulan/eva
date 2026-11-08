@@ -5,6 +5,8 @@ import { app } from '../../../server/src/app';
 import { prisma } from './db';
 import type { User } from '@prisma/client';
 import { PASSWORD_MIN_LENGTH, NAME_MIN_LENGTH, TEAM_NAME_MIN_LENGTH } from '@shared/constants/validation.constants';
+import { DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
+import type { AccountPermissions, MatchmakingPermissions } from '@shared/types';
 
 // Generate valid test data based on validation rules
 const DEFAULT_TEST_PASSWORD = 'A' + '1' + 'a'.repeat(PASSWORD_MIN_LENGTH - 2); // Uppercase + digit + filler
@@ -120,6 +122,44 @@ export async function createUserWithTeam(options: CreateUserOptions = {}): Promi
     token,
     team,
   };
+}
+
+/**
+ * A member joining the leader's team through an invite, given by the leader
+ * these matchmaking permissions and nothing else
+ */
+export async function createTeamMember(
+  leaderToken: string,
+  teamId: string,
+  matchmaking: Partial<MatchmakingPermissions> = {},
+): Promise<{ user: User; token: string; playerId: string }> {
+  const invite = await request(app)
+    .post(`/api/teams/${teamId}/invites`)
+    .set('Authorization', `Bearer ${leaderToken}`)
+    .send({ expiresInHours: 24, maxUses: 1 });
+  if (invite.status !== 201) {
+    throw new Error(`Failed to invite a member: ${JSON.stringify(invite.body)}`);
+  }
+  const { token, user } = await createAuthenticatedUser();
+  const joined = await request(app).post(`/api/invites/${invite.body.code}/join`).set('Authorization', `Bearer ${token}`);
+  if (joined.status !== 200) {
+    throw new Error(`Failed to join the team: ${JSON.stringify(joined.body)}`);
+  }
+
+  const permissions: AccountPermissions = {
+    ...DEFAULT_PLAYER_PERMISSIONS,
+    matchmaking: { ...DEFAULT_PLAYER_PERMISSIONS.matchmaking, ...matchmaking },
+  };
+  const granted = await request(app)
+    .put(`/api/teams/current/members/${user.id}/permissions`)
+    .set('Authorization', `Bearer ${leaderToken}`)
+    .send({ permissions });
+  if (granted.status !== 200) {
+    throw new Error(`Failed to set the member's permissions: ${JSON.stringify(granted.body)}`);
+  }
+
+  const { playerId } = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+  return { user, token, playerId: playerId! };
 }
 
 /**

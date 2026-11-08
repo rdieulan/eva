@@ -31,3 +31,12 @@ export function isAcceptableLinkInput(value: unknown): boolean {
   if (typeof value !== 'string') return false;
   return !value.trim() || normalizeLinkUrl(value) !== null;
 }
+
+/**
+ * Where a match is played: the venue, and its arena when it is named (a venue
+ * with several arenas). Takes the venue's name as shown (formatVenueLabel on
+ * the client, the stored name on the server).
+ */
+export function formatVenuePlace(venueLabel: string, arenaNumber: number | null | undefined): string {
+  return arenaNumber ? `${venueLabel} — arène ${arenaNumber}` : venueLabel;
+}

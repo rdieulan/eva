@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, provide, watch } from 'vue';
+import { ref, computed, nextTick, onMounted, provide, watch } from 'vue';
+import { useRoute, useRouter, type LocationQuery } from 'vue-router';
 import CalendarTopBar from '@/components/calendar/layout/CalendarTopBar.vue';
 import CalendarHeader from '@/components/calendar/layout/CalendarHeader.vue';
 import CalendarBody from '@/components/calendar/layout/CalendarBody.vue';
@@ -24,6 +25,8 @@ import { ERROR, SCRIM_SEARCH_VENUES_MAX, TEAM_FAVORITE_VENUES_MAX } from '@share
 import type { CalendarEvent, MapConfig, Player, Venue, ScrimSearch } from '@shared/types';
 
 const { permissions, account } = useAuth();
+const route = useRoute();
+const router = useRouter();
 
 // Error handling
 const { errors, setErrors, setErrorFromException } = useErrors();
@@ -61,6 +64,7 @@ const {
   goToNextMonth,
   goToPrevWeek,
   goToNextWeek,
+  goToDate,
   loadCalendarData,
   setAvailability,
 } = useCalendar({
@@ -157,6 +161,7 @@ async function toggleFavoriteVenue(venueId: string) {
 // every other team's in the ticked venues
 const {
   byDate: scrimSearchesByDate,
+  status: scrimSearchesStatus,
   load: loadScrimSearches,
 } = useScrimSearches({
   month: monthString,
@@ -262,6 +267,62 @@ function openEventsFromAgenda(events: CalendarEvent[], initialIndex: number) {
   openEventViewer(events, initialIndex);
 }
 
+// A notification leads here with the day to show, the mode, a venue to tick
+// and what to open (see notificationRoute). The link is followed once the
+// venues are known; what it opens, once the calendar has loaded that day.
+const DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const pendingOpen = ref<{ date: string; kind: 'scrimSearch' | 'event'; id: string } | null>(null);
+
+function queryText(value: LocationQuery[string] | undefined): string | null {
+  return typeof value === 'string' && value ? value : null;
+}
+
+async function followLink(query: LocationQuery) {
+  const date = queryText(query.date);
+  if (!date || !DAY_PATTERN.test(date)) return;
+  // Followed once: a reload of the page stays where the reader is
+  router.replace({ query: {} });
+
+  calendarMode.value = query.mode === 'matchmaking' ? 'matchmaking' : 'team';
+  const venueId = queryText(query.venue);
+  if (venueId && venues.value.some(venue => venue.id === venueId) && !matchmakingVenueIds.value.includes(venueId)) {
+    matchmakingVenueIds.value = [...matchmakingVenueIds.value, venueId].slice(-SCRIM_SEARCH_VENUES_MAX);
+  }
+  goToDate(date);
+
+  const searchId = queryText(query.search);
+  const eventId = queryText(query.event);
+  pendingOpen.value = searchId
+    ? { date, kind: 'scrimSearch', id: searchId }
+    : eventId ? { date, kind: 'event', id: eventId } : null;
+  // The reloads the month, the mode or the venues set off start with the watchers
+  await nextTick();
+  openPending();
+}
+
+// Open what a link asked for once its day is loaded; gone since, nothing opens
+function openPending() {
+  const target = pendingOpen.value;
+  if (!target) return;
+  if (target.kind === 'scrimSearch') {
+    if (scrimSearchesStatus.value === 'loading') return;
+    pendingOpen.value = null;
+    const search = scrimSearchesByDate.value[target.date]?.find(candidate => candidate.id === target.id);
+    if (search) viewedScrimSearch.value = search;
+    return;
+  }
+  if (isLoading.value || !days.value[target.date]) return;
+  pendingOpen.value = null;
+  const events = days.value[target.date]!.events;
+  const index = events.findIndex(event => event.id === target.id);
+  if (index >= 0) openEventViewer(events, index);
+}
+
+watch([scrimSearchesStatus, isLoading], openPending);
+watch(() => route.query, query => {
+  void followLink(query);
+});
+
 // Initial load
 onMounted(async () => {
   // Load what the event form and the RotationCalculator need (in parallel with calendar)
@@ -283,6 +344,7 @@ onMounted(async () => {
     showErrorModal.value = true;
   }
 
+  await followLink(route.query);
   loadCalendarData();
 });
 </script>

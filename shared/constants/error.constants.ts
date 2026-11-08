@@ -253,6 +253,11 @@ export const ERROR = {
   scrimSearchUpdateFailed: 'Erreur lors de la modification de la recherche',
   scrimSearchDeleteFailed: 'Erreur lors du retrait de la recherche',
 
+  // Notifications
+  notificationsLoadFailed: 'Erreur lors du chargement des notifications',
+  notificationsReadInvalid: 'Liste de notifications invalide',
+  notificationsReadFailed: 'Erreur lors de la mise à jour des notifications',
+
   // Planner / Maps
   mapsLoadFailed: 'Erreur lors du chargement des cartes',
   mapLoadFailed: 'Erreur lors du chargement de la carte',

@@ -6,6 +6,13 @@ import type { MonthData, CalendarEvent, ScrimSearch, Venue } from '@shared/types
 
 import { ref } from 'vue';
 
+// The calendar reads where a notification leads from its route
+const routing = vi.hoisted(() => ({ route: { query: {} as Record<string, string> }, replace: vi.fn() }));
+vi.mock('vue-router', () => ({
+  useRoute: () => routing.route,
+  useRouter: () => ({ replace: routing.replace, push: vi.fn() }),
+}));
+
 // Mock the API module
 vi.mock('@/api/calendar.api', () => ({
   fetchMonthData: vi.fn(),
@@ -91,6 +98,8 @@ describe('Calendar Integration Tests', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    routing.route.query = {};
+    (api.fetchScrimSearches as any).mockResolvedValue([]);
     (calendarApi.fetchMonthData as any).mockResolvedValue(mockMonthData);
     (api.fetchAllMaps as any).mockResolvedValue([]);
     (api.fetchPlayers as any).mockResolvedValue([
@@ -194,6 +203,48 @@ describe('Calendar Integration Tests', () => {
 
     expect(wrapper.findComponent({ name: 'ScrimSearchViewerModal' }).props('search')).toEqual(search);
     expect(searchModal.props('open')).toBe(true);
+  });
+
+  describe('where a notification leads', () => {
+    const venueNimes: Venue = {
+      id: 'nimes', name: 'Nîmes', city: 'Nîmes', address: '', phone: null, arenaCount: 1, hasEvaSlots: true,
+      website: null, discord: null, facebook: null, instagram: null, x: null, tiktok: null, youtube: null, twitch: null,
+    };
+
+    it('opens the search it names, in matchmaking, on its day', async () => {
+      const search: ScrimSearch = {
+        id: 'search-9', team: { id: 'us', name: 'Nous', logoUrl: null }, date: '2026-01-20',
+        slots: [{ slotId: 'a', venueId: 'nimes', arenaNumber: 1, startTime: '20:00', endTime: '20:40', convocationTime: '19:50' }],
+        slotCount: 1, matchCount: 1, matchedCount: 0, takenSlotIds: [], startTime: '20:00', endTime: '20:40', convocationTime: '19:50',
+        status: 'OPEN', isMine: true, proposals: [], createdAt: '',
+      };
+      (api.fetchVenues as any).mockResolvedValueOnce([venueNimes]);
+      (api.fetchCurrentTeam as any).mockResolvedValueOnce({ venueId: 'nimes', favoriteVenueIds: [] });
+      (api.fetchScrimSearches as any).mockResolvedValue([search]);
+      routing.route.query = { date: '2026-01-20', mode: 'matchmaking', search: 'search-9' };
+
+      const wrapper = mount(CalendarPage);
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      expect(wrapper.findComponent({ name: 'CalendarHeader' }).props('calendarMode')).toBe('matchmaking');
+      expect(api.fetchScrimSearches).toHaveBeenLastCalledWith('2026-01', ['nimes']);
+      expect(wrapper.findComponent({ name: 'ScrimSearchViewerModal' }).props('search')).toEqual(search);
+      // Followed once: the link leaves the address
+      expect(routing.replace).toHaveBeenCalledWith({ query: {} });
+    });
+
+    it('opens the match it names in the team\'s view, and nothing once it is gone', async () => {
+      routing.route.query = { date: '2026-01-20', mode: 'team', event: 'event-1' };
+      const wrapper = mount(CalendarPage);
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      expect(wrapper.findComponent({ name: 'EventViewerModal' }).props('events')).toEqual(mockMonthData.days['2026-01-20']!.events);
+
+      routing.route.query = { date: '2026-01-20', mode: 'team', event: 'event-gone' };
+      const again = mount(CalendarPage);
+      await new Promise(resolve => setTimeout(resolve, 50));
+      expect(again.findComponent({ name: 'EventViewerModal' }).props('events')).toEqual([]);
+    });
   });
 
   describe('matchmaking venues', () => {

@@ -10,6 +10,7 @@ import type { VenueSlotsStatus } from '@/composables/useVenueSlots';
 import { useErrors } from '@/composables/useErrors';
 import { ERROR, PLANNER_ENABLED } from '@shared/constants';
 import { EVENT_TYPES, VOICE_MEDIUMS } from '@shared/types';
+import { formatVenuePlace } from '@shared/utils';
 import { getEventTypeClass, getEventTypeDisplay, getEventTypeTitle, getVoiceMediumLabel } from '@/utils/calendar';
 import { formatVenueLabel } from '@/utils/venues';
 import type {
@@ -209,7 +210,7 @@ const eventVenueLabel = computed(() => {
   const venue = props.editEvent?.venue;
   if (!venue) return null;
   const arena = props.editEvent?.arenaNumber;
-  return arena ? `${formatVenueLabel(venue)} — arène ${arena}` : formatVenueLabel(venue);
+  return formatVenuePlace(formatVenueLabel(venue), arena);
 });
 
 // Format date for display (DD/MM/YYYY)

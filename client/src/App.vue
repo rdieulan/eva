@@ -36,6 +36,9 @@ watch(() => account.value?.teamId ?? null, async (teamId) => {
 // Account name for the TopBar
 const userName = computed(() => account.value?.name);
 
+// The bell tells a team what happened: only a player in a team has one
+const showNotifications = computed(() => account.value?.accountType === 'player' && !!account.value.teamId);
+
 // Determine if TopBar should be displayed (not on login page)
 const showTopBar = computed(() => route.name !== 'login');
 </script>
@@ -54,6 +57,7 @@ const showTopBar = computed(() => route.name !== 'login');
         :isAuthenticated="isAuthenticated"
         :userName="userName"
         :teamLogoUrl="teamLogoUrl"
+        :showNotifications="showNotifications"
       >
         <!-- Dynamic content will be injected by each page via teleport -->
         <div id="topbar-dynamic-content" class="dynamic-content"></div>

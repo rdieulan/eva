@@ -6,10 +6,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
 import { app } from '../../server/src/app';
-import { createAuthenticatedUser, createUserWithTeam } from './helpers/auth';
+import { createAuthenticatedUser, createTeamMember, createUserWithTeam } from './helpers/auth';
 import { prisma } from './helpers/db';
 import { DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
-import type { AccountPermissions, MatchmakingPermissions } from '@shared/types';
+import type { MatchmakingPermissions } from '@shared/types';
 import { fetchLocationSessions } from '../../server/src/integrations/eva/eva-sessions';
 import { clearVenueSlotsCache } from '../../server/src/services/venue-slots.service';
 
@@ -38,24 +38,7 @@ beforeEach(async () => {
 
 // A member of the leader's team, given these matchmaking permissions by the leader, and nothing else
 async function memberWith(leaderToken: string, teamId: string, matchmaking: Partial<MatchmakingPermissions>): Promise<string> {
-  const invite = await request(app)
-    .post(`/api/teams/${teamId}/invites`)
-    .set('Authorization', `Bearer ${leaderToken}`)
-    .send({ expiresInHours: 24, maxUses: 1 })
-    .expect(201);
-  const { token, user } = await createAuthenticatedUser();
-  await request(app).post(`/api/invites/${invite.body.code}/join`).set('Authorization', `Bearer ${token}`).expect(200);
-
-  const permissions: AccountPermissions = {
-    ...DEFAULT_PLAYER_PERMISSIONS,
-    matchmaking: { ...DEFAULT_PLAYER_PERMISSIONS.matchmaking, ...matchmaking },
-  };
-  await request(app)
-    .put(`/api/teams/current/members/${user.id}/permissions`)
-    .set('Authorization', `Bearer ${leaderToken}`)
-    .send({ permissions })
-    .expect(200);
-  return token;
+  return (await createTeamMember(leaderToken, teamId, matchmaking)).token;
 }
 
 function open(token: string) {

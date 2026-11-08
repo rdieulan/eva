@@ -16,7 +16,7 @@ import {
   isPastDateStr,
 } from '@/utils/calendar';
 import { formatVenueLabel } from '@/utils/venues';
-import { buildEvaBookingUrl, assessSlotHeadcount } from '@shared/utils';
+import { buildEvaBookingUrl, assessSlotHeadcount, formatVenuePlace } from '@shared/utils';
 import { ERROR, PLANNER_ENABLED } from '@shared/constants';
 
 const props = defineProps<{
@@ -146,7 +146,7 @@ const venueLabel = computed(() => {
   if (!venue) return 'Non définie';
 
   const arena = currentEvent.value.arenaNumber;
-  return arena ? `${formatVenueLabel(venue)} — arène ${arena}` : formatVenueLabel(venue);
+  return formatVenuePlace(formatVenueLabel(venue), arena);
 });
 
 // Platform the meeting is held on, once the event is a voice meeting

@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
 import SvgIcon from '@/components/common/SvgIcon.vue';
+import NotificationBell from '@/components/common/layout/NotificationBell.vue';
 
 defineProps<{
   isAuthenticated?: boolean;
   userName?: string;
   teamLogoUrl?: string | null; // Logo of the player's team, next to the home button when it has one
+  showNotifications?: boolean; // The bell, for a player in a team: what the matchmaking tells the team
 }>();
 
 const router = useRouter();
@@ -41,6 +43,7 @@ function goToProfile() {
     <!-- Section Login/Profile - tout à droite (immuable) -->
     <div class="section-auth">
       <template v-if="isAuthenticated">
+        <NotificationBell v-if="showNotifications" />
         <button class="btn-user" @click="goToProfile" title="Mon profil">
           <span>{{ userName || 'Mon compte' }}</span>
           <SvgIcon name="user" class="user-icon" />
@@ -162,6 +165,7 @@ function goToProfile() {
 .section-auth {
   display: flex;
   align-items: center;
+  gap: $spacing-sm;
   padding: $spacing-sm $spacing-md;
   border-left: $border-thin solid $color-border;
 

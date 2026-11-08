@@ -58,6 +58,7 @@ export interface UseCalendarReturn {
   goToNextMonth: () => void;
   goToPrevWeek: () => void;
   goToNextWeek: () => void;
+  goToDate: (date: string) => void;
 
   // Data methods
   loadCalendarData: () => Promise<void>;
@@ -136,20 +137,26 @@ export function useCalendar(options: UseCalendarOptions): UseCalendarReturn {
     return viewMode.value === 'month' ? monthDisplay.value : weekDisplay.value;
   });
 
-  // Load calendar data
+  // Load calendar data. An answer that arrives after another month was asked
+  // for is dropped: it would show the wrong month.
+  let loadRequestId = 0;
+
   async function loadCalendarData() {
+    const requestId = ++loadRequestId;
     isLoading.value = true;
     clearErrors();
 
     try {
       const data = await fetchMonthData(monthString.value);
+      if (requestId !== loadRequestId) return;
       days.value = data.days;
       noTeam.value = data.noTeam === true;
     } catch (err) {
+      if (requestId !== loadRequestId) return;
       console.error('Error loading calendar:', err);
       setErrorFromException(err, ERROR.serverError);
     } finally {
-      isLoading.value = false;
+      if (requestId === loadRequestId) isLoading.value = false;
     }
   }
 
@@ -218,6 +225,18 @@ export function useCalendar(options: UseCalendarOptions): UseCalendarReturn {
       const firstOfMonth = new Date(currentYear.value, currentMonth.value - 1, 1);
       currentWeekStart.value = getMonday(firstOfMonth);
     }
+  }
+
+  // Show the month of a day (YYYY-MM-DD), or its week in the week view
+  function goToDate(date: string) {
+    const [year, month, day] = date.split('-').map(Number);
+    if (viewMode.value === 'week') {
+      currentWeekStart.value = getMonday(new Date(year!, month! - 1, day!));
+      updateMonthFromWeek();
+      return;
+    }
+    currentYear.value = year!;
+    currentMonth.value = month!;
   }
 
   // Generic navigation based on view mode
@@ -315,6 +334,7 @@ export function useCalendar(options: UseCalendarOptions): UseCalendarReturn {
     goToNextMonth,
     goToPrevWeek,
     goToNextWeek,
+    goToDate,
 
     // Data methods
     loadCalendarData,

@@ -27,6 +27,8 @@ export {
 
 export { addMinutesToTime } from './time.utils';
 
+export { formatShortDay } from './date.utils';
+
 export { buildEvaBookingUrl, assessSlotHeadcount, type SlotHeadcount, type SlotHeadcountStatus } from './eva.utils';
 
 export {
@@ -41,10 +43,12 @@ export {
   type TimeSpan,
 } from './scrim.utils';
 
-export { normalizeLinkUrl, isAcceptableLinkInput } from './venue.utils';
+export { normalizeLinkUrl, isAcceptableLinkInput, formatVenuePlace } from './venue.utils';
 
 export { detectImageType } from './image.utils';
 
 export { assessTeamAvailability, type TeamAvailability, type TeamAvailabilityStatus } from './availability.utils';
 
 export { normalizeAccountPermissions } from './permissions.utils';
+
+export { describeNotification } from './notification.utils';

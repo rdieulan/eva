@@ -49,6 +49,13 @@ export {
   withdrawScrimProposal,
 } from '@/api/scrims.api';
 
+// Notifications API
+export {
+  fetchNotifications,
+  fetchUnreadNotificationCount,
+  markNotificationsRead,
+} from '@/api/notifications.api';
+
 // Balance Rules
 export { clearBalanceRulesCache } from '@/composables/useBalanceRules';
 

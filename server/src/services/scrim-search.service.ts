@@ -6,6 +6,7 @@ import type {
   ScrimProposal,
   ScrimSearch,
   ScrimSearchStatus,
+  ScrimDeclineReason,
   ScrimVenueOffer,
   VenueSlot,
 } from '@shared/types';
@@ -15,6 +16,13 @@ import { getVenueSlots } from '@services/venue-slots.service';
 import { PROPOSAL_TEAM_INCLUDE, toScrimProposal, type ProposalRow } from '@services/scrim-proposal.service';
 import { formatDateStr, parseMonthRange } from './helpers/date.helper';
 import { slotPlayability } from './helpers/slot.helper';
+import {
+  PROPOSAL_FACTS_SELECT,
+  notifyProposalsDeclined,
+  notifySearchExpired,
+  notifySearchWithdrawn,
+  type ProposalFacts,
+} from '@services/scrim-notification.service';
 
 // The team behind a search, its offered slots and the proposals it received, as loaded with it
 export const SEARCH_INCLUDE = {
@@ -323,7 +331,7 @@ export async function updateScrimSearch(input: {
   if ('refusal' in offer) return offer;
   const offered = offer.slots;
 
-  return prisma.$transaction(async tx => {
+  const outcome = await prisma.$transaction(async (tx): Promise<{ refusal: UpdateScrimSearchRefusal } | { search: ScrimSearch; lapsedIds: string[] }> => {
     await tx.$queryRaw`SELECT 1 FROM "ScrimSearch" WHERE "id" = ${input.id} FOR UPDATE`;
     const search = await tx.scrimSearch.findUnique({
       where: { id: input.id },
@@ -370,8 +378,12 @@ export async function updateScrimSearch(input: {
       include: SEARCH_INCLUDE,
     });
 
-    return { search: toScrimSearch(row, input.teamId) };
+    return { search: toScrimSearch(row, input.teamId), lapsedIds: lapsed.map(proposal => proposal.id) };
   });
+  if ('refusal' in outcome) return outcome;
+
+  await notifyProposalsDeclined(outcome.lapsedIds.map(id => ({ id, reason: 'searchChanged' as const })));
+  return { search: outcome.search };
 }
 
 // ============================================
@@ -389,7 +401,7 @@ export type DeleteScrimSearchRefusal = 'notFound' | 'notYours' | 'notOpen';
  * at a time with the answers and changes on the search.
  */
 export async function deleteScrimSearch(id: string, teamId: string): Promise<{ refusal?: DeleteScrimSearchRefusal }> {
-  return prisma.$transaction(async tx => {
+  const outcome = await prisma.$transaction(async (tx): Promise<{ refusal: DeleteScrimSearchRefusal } | { pending: ProposalFacts[] }> => {
     await tx.$queryRaw`SELECT 1 FROM "ScrimSearch" WHERE "id" = ${id} FOR UPDATE`;
     const search = await tx.scrimSearch.findUnique({
       where: { id },
@@ -399,17 +411,23 @@ export async function deleteScrimSearch(id: string, teamId: string): Promise<{ r
     if (search.teamId !== teamId) return { refusal: 'notYours' as const };
     if (search.status !== 'OPEN') return { refusal: 'notOpen' as const };
 
+    // Read before they go: a search deleted takes its proposals with it
+    const pending = await tx.scrimProposal.findMany({ where: { searchId: id, status: 'PENDING' }, select: PROPOSAL_FACTS_SELECT });
     if (!search._count.proposals) {
       await tx.scrimSearch.delete({ where: { id } });
-      return {};
+      return { pending };
     }
     await tx.scrimProposal.updateMany({
       where: { searchId: id, status: 'PENDING' },
       data: { status: 'DECLINED', respondedAt: new Date() },
     });
     await tx.scrimSearch.update({ where: { id }, data: { status: 'MATCHED' } });
-    return {};
+    return { pending };
   });
+  if ('refusal' in outcome) return outcome;
+
+  await notifySearchWithdrawn(outcome.pending);
+  return {};
 }
 
 // ============================================
@@ -436,11 +454,13 @@ export async function refreshSearchOffer(
   searchId: string,
   daySlots: (venueId: string) => VenueSlot[] | null,
 ): Promise<RefreshedOffer> {
-  return prisma.$transaction(async tx => {
+  const outcome = await prisma.$transaction(async tx => {
     await tx.$queryRaw`SELECT 1 FROM "ScrimSearch" WHERE "id" = ${searchId} FOR UPDATE`;
     const search = await tx.scrimSearch.findUnique({
       where: { id: searchId },
       select: {
+        teamId: true,
+        date: true,
         status: true,
         slotCount: true,
         slots: { select: { id: true, venueId: true, evaSlotId: true, arenaNumber: true, startTime: true, endTime: true, convocationTime: true } },
@@ -450,7 +470,7 @@ export async function refreshSearchOffer(
         },
       },
     });
-    if (!search || search.status !== 'OPEN') return { lost: 0, closed: false };
+    if (!search || search.status !== 'OPEN') return { lost: 0, closed: false, declined: [], expired: null };
 
     const made = search.proposals.filter(proposal => proposal.status === 'ACCEPTED');
     const busy = made.map(runSpan);
@@ -463,18 +483,22 @@ export async function refreshSearchOffer(
       const live = day.find(candidate => candidate.slotId === slot.evaSlotId);
       return !live || slotPlayability(live) !== 'playable';
     });
-    if (!lost.length) return { lost: 0, closed: false };
+    if (!lost.length) return { lost: 0, closed: false, declined: [], expired: null };
 
     const lostIds = new Set(lost.map(slot => slot.evaSlotId));
     const remaining = search.slots.filter(slot => !lostIds.has(slot.evaSlotId));
     const free = remaining.filter(slot => !isBusy(slot));
     const closed = countMatches(orderRunSlots(free), search.slotCount, busy) === 0;
 
+    // A proposal on a slot taken out falls for it; the others when the search closes
     const pending = search.proposals.filter(proposal => proposal.status === 'PENDING');
-    const lapsed = closed ? pending : pending.filter(proposal => proposal.evaSlotIds.some(slotId => lostIds.has(slotId)));
-    if (lapsed.length) {
+    const declined = pending.flatMap((proposal): { id: string; reason: ScrimDeclineReason }[] => {
+      if (proposal.evaSlotIds.some(slotId => lostIds.has(slotId))) return [{ id: proposal.id, reason: 'runTaken' }];
+      return closed ? [{ id: proposal.id, reason: 'searchClosed' }] : [];
+    });
+    if (declined.length) {
       await tx.scrimProposal.updateMany({
-        where: { id: { in: lapsed.map(proposal => proposal.id) } },
+        where: { id: { in: declined.map(proposal => proposal.id) } },
         data: { status: 'DECLINED', respondedAt: new Date() },
       });
     }
@@ -488,6 +512,11 @@ export async function refreshSearchOffer(
       },
     });
 
-    return { lost: lost.length, closed };
+    const expired = closed && !made.length ? { id: searchId, teamId: search.teamId, date: search.date } : null;
+    return { lost: lost.length, closed, declined, expired };
   });
+
+  await notifyProposalsDeclined(outcome.declined);
+  if (outcome.expired) await notifySearchExpired(outcome.expired);
+  return { lost: outcome.lost, closed: outcome.closed };
 }
