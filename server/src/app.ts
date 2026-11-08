@@ -3,10 +3,12 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import routes from "@routes/index";
 import { logger } from '@utils/logger';
+import { venueBoardPage } from '@services/venue-board-page.service';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -41,8 +43,11 @@ app.use('/api', routes);
 // independent of where the compiled JS ends up under dist-server/.
 if (isProduction) {
   const distPath = path.join(process.cwd(), 'dist');
+  const indexPath = path.join(distPath, 'index.html');
   app.use(express.static(distPath));
+  // A venue's public board, shared on Discord and the like: its link shows the venue
+  app.get('/salles/:slug', venueBoardPage(fs.readFileSync(indexPath, 'utf8')));
   app.use((_req, res) => {
-    res.sendFile(path.join(distPath, 'index.html'));
+    res.sendFile(indexPath);
   });
 }

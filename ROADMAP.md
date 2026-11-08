@@ -47,12 +47,16 @@ Le planificateur de postes est **parqué** (`PLANNER_ENABLED`, `shared/constants
 **Découpe (ordre de construction, ce qui reste).**
 
 1. Prévenir par courriel, Discord et WhatsApp : le courriel attend un fournisseur d'envoi, lui-même suspendu au nom de domaine (l'application n'envoie aucun mail aujourd'hui, même pas d'activation), Discord et WhatsApp leur intégration. Chacun se branche comme un canal de plus sur l'envoi des notifications, sans rien changer à ce qui les déclenche.
-2. La carte d'un lien de tableau, là où il est posté.
-3. Les liens vers le tableau d'une salle : page équipe, administration des salles.
+2. Les liens vers le tableau d'une salle : page équipe, administration des salles.
 
 ---
 
 ## ✅ Terminé
+
+### Feature : La carte d'un lien de tableau
+
+**Périmètre livré** :
+- En production, le serveur sert la page d'un tableau avec la salle écrite dedans : son titre et les balises que lisent les aperçus de lien (Discord, messageries, réseaux), « Scrims à Nîmes » et la phrase du tableau, mêmes mots que la page (`describeVenueBoard`). Une salle inconnue reçoit la page telle quelle, en 404. Ces lecteurs n'exécutent pas l'application : sans cela, un lien posté ne montrait que le titre générique.
 
 ### Feature : Page publique du tableau d'une salle
 
