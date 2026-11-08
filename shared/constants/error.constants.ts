@@ -204,6 +204,7 @@ export const ERROR = {
   titleRequired: 'Titre requis',
   eventTypeInvalid: `Type d'événement invalide (valeurs acceptées : ${EVENT_TYPES.join(', ')})`,
   statusInvalid: 'Status invalide',
+  availabilityHoursInvalid: 'Horaires invalides : une heure de début, une heure de fin ou les deux, la fin après le début, et seulement pour une dispo partielle',
   matchOnlyGamePlan: 'Seuls les MATCH peuvent avoir un plan de jeu',
   matchOnlyVenue: 'Seuls les matchs peuvent avoir une salle',
   arenaRequiresVenue: 'Le numéro d\'arène demande une salle',

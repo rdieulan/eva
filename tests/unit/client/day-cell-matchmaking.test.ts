@@ -6,7 +6,7 @@ import { TEAM_PLAYER_COUNT } from '@shared/constants';
 import type { AvailabilityStatus, CalendarEvent, PlayerAvailability } from '@shared/types';
 
 function roster(...statuses: Array<AvailabilityStatus | null>): PlayerAvailability[] {
-  return statuses.map((status, index) => ({ playerId: `p${index}`, playerName: `Joueur ${index}`, status }));
+  return statuses.map((status, index) => ({ playerId: `p${index}`, playerName: `Joueur ${index}`, status, hours: null }));
 }
 
 const EVENT: CalendarEvent = {
@@ -47,11 +47,13 @@ describe('DayCell in matchmaking mode', () => {
     expect(wrapper.find('.corner').text()).toBe('✗');
   });
 
-  it('turns shaky when the lineup leans on a conditional player', () => {
-    const statuses: Array<AvailabilityStatus | null> = Array(TEAM_PLAYER_COUNT - 1).fill('AVAILABLE');
-    statuses.push('CONDITIONAL');
-    const wrapper = mountCell({ playerAvailabilities: roster(...statuses) });
+  it('turns shaky when the lineup leans on a player available at given hours, and says when it meets', () => {
+    const players = roster(...Array<AvailabilityStatus>(TEAM_PLAYER_COUNT - 1).fill('AVAILABLE'));
+    players.push({ playerId: 'p9', playerName: 'Joueur 9', status: 'PARTIAL', hours: { startTime: '21:00', endTime: '23:00' } });
+    const wrapper = mountCell({ playerAvailabilities: players });
     expect(wrapper.classes()).toContain('team-availability--shaky');
+    expect(wrapper.attributes('title')).toBe(`${TEAM_PLAYER_COUNT} joueurs ensemble de 21:00 à 23:00 seulement`);
+    expect(wrapper.find('.window-mark').text()).toBe('21:00 – 23:00');
   });
 
   it('turns voice when only a voice table can meet', () => {
@@ -79,7 +81,7 @@ describe('DayCell in matchmaking mode', () => {
   it('reads the same in team mode: the lineup on the cell', () => {
     const wrapper = mountCell({ matchmaking: false });
     expect(wrapper.classes()).toContain('team-availability--ready');
-    expect(wrapper.attributes('title')).toContain('disponibles');
+    expect(wrapper.attributes('title')).toContain('dispos toute la journée');
   });
 
   it('switches to the reader\'s own status and the roster in edit mode', () => {
@@ -109,7 +111,7 @@ describe('DayCell in matchmaking mode', () => {
     const wrapper = mountCell();
     await wrapper.trigger('click');
     expect(wrapper.emitted('open-create-event')).toBeFalsy();
-    expect(wrapper.emitted('set-availability')).toBeFalsy();
+    expect(wrapper.emitted('open-availability')).toBeFalsy();
   });
 
   it('leaves the events of the day to the team\'s view: neither shown nor opened', async () => {

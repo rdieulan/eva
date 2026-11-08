@@ -6,6 +6,7 @@ import { authMiddleware, requirePermission } from '@middleware/auth.middleware';
 import type { AuthRequest } from '@middleware/auth.middleware';
 import type { SetAvailabilityRequest, CreateEventRequest } from '@shared/types';
 import { ERROR } from '@shared/constants';
+import { isValidAvailabilityHours } from '@shared/utils';
 import { apiLogger } from '@utils/logger';
 import * as calendarService from '@services/calendar.service';
 import { formatDateStr } from '@services/helpers/date.helper';
@@ -43,7 +44,7 @@ router.get('/availability', authMiddleware, async (req: AuthRequest, res: Respon
 
 // POST /api/calendar/availability
 router.post('/availability', authMiddleware, async (req: AuthRequest, res: Response) => {
-  const { date, status } = req.body as SetAvailabilityRequest;
+  const { date, status, hours } = req.body as SetAvailabilityRequest;
   const playerId = req.account!.playerId!;
 
   if (!calendarService.isValidDate(date)) {
@@ -56,8 +57,15 @@ router.post('/availability', authMiddleware, async (req: AuthRequest, res: Respo
     return;
   }
 
+  // Hours belong to a partial availability, and to it alone
+  const isPartial = status === 'PARTIAL';
+  if (isPartial ? !isValidAvailabilityHours(hours) : hours != null) {
+    res.status(400).json({ errors: [ERROR.availabilityHoursInvalid] });
+    return;
+  }
+
   try {
-    const result = await calendarService.setAvailability(playerId, date, status);
+    const result = await calendarService.setAvailability(playerId, date, status, isPartial ? hours! : null);
 
     if (result.deleted) {
       res.json({ success: true, deleted: true });

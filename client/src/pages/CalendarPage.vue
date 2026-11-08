@@ -10,6 +10,8 @@ import ScrimSelectionBar from '@/components/calendar/ScrimSelectionBar.vue';
 import ScrimSearchModal from '@/components/calendar/ScrimSearchModal.vue';
 import ScrimSearchViewerModal from '@/components/calendar/ScrimSearchViewerModal.vue';
 import DayAgendaModal, { type DayAgenda } from '@/components/calendar/DayAgendaModal.vue';
+import AvailabilityWheel, { type WheelOpening } from '@/components/calendar/AvailabilityWheel.vue';
+import AvailabilityHoursModal from '@/components/calendar/AvailabilityHoursModal.vue';
 import NoTeamMessage from '@/components/common/NoTeamMessage.vue';
 import ErrorModal from '@/components/common/error/ErrorModal.vue';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
@@ -22,7 +24,7 @@ import { fetchAllMaps, fetchPlayers, fetchVenues, fetchCurrentTeam, updateTeam }
 import { groupMatchmakingVenues } from '@/utils/venues';
 import { searchVenueIds } from '@/utils/scrims';
 import { ERROR, SCRIM_SEARCH_VENUES_MAX, TEAM_FAVORITE_VENUES_MAX } from '@shared/constants';
-import type { CalendarEvent, MapConfig, Player, Venue, ScrimSearch } from '@shared/types';
+import type { AvailabilityHours, AvailabilityStatus, CalendarEvent, MapConfig, Player, Venue, ScrimSearch } from '@shared/types';
 
 const { permissions, account } = useAuth();
 const route = useRoute();
@@ -101,6 +103,28 @@ const {
 // Provide editMode and toggle function for TopBar
 provide('calendarEditMode', editMode);
 provide('toggleCalendarEditMode', toggleEditMode);
+
+// Edit mode: the wheel of the reader's answer for a day, then, from its hub,
+// the hours of a partial availability
+const wheel = ref<WheelOpening | null>(null);
+const hoursDate = ref<string | null>(null);
+
+function pickAvailability(status: AvailabilityStatus | null) {
+  const date = wheel.value?.date;
+  wheel.value = null;
+  if (date) setAvailability(date, status);
+}
+
+function openHours() {
+  hoursDate.value = wheel.value?.date ?? null;
+  wheel.value = null;
+}
+
+function saveHours(hours: AvailabilityHours) {
+  const date = hoursDate.value;
+  hoursDate.value = null;
+  if (date) setAvailability(date, 'PARTIAL', hours);
+}
 
 // Maps and players for RotationCalculator
 const maps = ref<MapConfig[]>([]);
@@ -413,7 +437,7 @@ onMounted(async () => {
           @next-month="goToNextMonth"
           @prev-week="goToPrevWeek"
           @next-week="goToNextWeek"
-          @set-availability="setAvailability"
+          @open-availability="wheel = $event"
           @open-event-viewer="openEventViewer"
           @open-create-event="openCreateEvent"
           @toggle-select="toggleSelectedDate"
@@ -442,6 +466,24 @@ onMounted(async () => {
       @opened="handleScrimSearchesOpened"
       @saved="loadScrimSearches"
       @open-search="viewedScrimSearch = $event"
+    />
+
+    <!-- The reader's answer for a day, picked on a wheel; its hours from the hub -->
+    <AvailabilityWheel
+      v-if="wheel"
+      :opening="wheel"
+      :status="days[wheel.date]?.currentPlayerStatus ?? null"
+      :hours="days[wheel.date]?.currentPlayerHours ?? null"
+      @pick="pickAvailability"
+      @hours="openHours"
+      @close="wheel = null"
+    />
+    <AvailabilityHoursModal
+      :open="hoursDate !== null"
+      :date="hoursDate"
+      :hours="hoursDate ? days[hoursDate]?.currentPlayerHours ?? null : null"
+      @save="saveHours"
+      @close="hoursDate = null"
     />
 
     <!-- A day whose rows ran over, listed whole -->

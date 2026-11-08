@@ -107,7 +107,7 @@ $color-danger: var(--color-danger);
 $color-warning: var(--color-warning);
 // Info: information, help
 $color-info: var(--color-info);
-// Conditional: conditional availability (yellow)
+// Yellow: a partial availability, a lineup on part of the day, what is pending
 $color-conditional: var(--color-conditional);
 
 // ===== Special =====
@@ -235,7 +235,7 @@ $texture-bg: var(--texture-bg);
 // `.availability--<key>` modifiers (see getAvailabilityClass in utils/availability.ts).
 $availability-colors: (
   available: $color-success,
-  conditional: $color-conditional,
+  partial: $color-conditional,
   voice-only: $color-voice,
   unavailable: $color-danger,
 );

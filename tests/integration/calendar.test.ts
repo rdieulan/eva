@@ -177,7 +177,65 @@ describe('Calendar API', () => {
         playerId: user.playerId,
         playerName: user.name,
         status: 'VOICE_ONLY',
+        hours: null,
       });
+    });
+
+    it('should keep the hours of a partial availability, and give them with the month', async () => {
+      const { token, user } = await createUserWithTeam();
+      const date = getFutureDate();
+
+      const res = await request(app)
+        .post('/api/calendar/availability')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ date, status: 'PARTIAL', hours: { startTime: '21:00', endTime: null } });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({ status: 'PARTIAL', hours: { startTime: '21:00', endTime: null } });
+      const month = await request(app)
+        .get(`/api/calendar/availability?month=${date.substring(0, 7)}`)
+        .set('Authorization', `Bearer ${token}`);
+      expect(month.body.days[date].currentPlayerHours).toEqual({ startTime: '21:00', endTime: null });
+      expect(month.body.days[date].playerAvailabilities).toContainEqual({
+        playerId: user.playerId,
+        playerName: user.name,
+        status: 'PARTIAL',
+        hours: { startTime: '21:00', endTime: null },
+      });
+    });
+
+    it('should drop the hours once the answer is no longer partial', async () => {
+      const { token, user } = await createUserWithTeam();
+      const date = getFutureDate();
+      const auth = { Authorization: `Bearer ${token}` };
+      await request(app).post('/api/calendar/availability').set(auth).send({ date, status: 'PARTIAL', hours: { startTime: '20:00', endTime: '23:00' } }).expect(200);
+
+      await request(app).post('/api/calendar/availability').set(auth).send({ date, status: 'AVAILABLE' }).expect(200);
+
+      const stored = await prisma.availability.findFirstOrThrow({ where: { playerId: user.playerId!, date: new Date(date) } });
+      expect(stored).toMatchObject({ status: 'AVAILABLE', startTime: null, endTime: null });
+    });
+
+    it('should refuse a partial availability without valid hours, and hours on any other answer', async () => {
+      const { token, user } = await createUserWithTeam();
+      const date = getFutureDate();
+      const send = (body: Record<string, unknown>) => request(app)
+        .post('/api/calendar/availability')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ date, ...body });
+
+      for (const body of [
+        { status: 'PARTIAL' },
+        { status: 'PARTIAL', hours: { startTime: null, endTime: null } },
+        { status: 'PARTIAL', hours: { startTime: '23:00', endTime: '20:00' } },
+        { status: 'PARTIAL', hours: { startTime: '24:30', endTime: null } },
+        { status: 'AVAILABLE', hours: { startTime: '20:00', endTime: null } },
+      ]) {
+        const res = await send(body);
+        expect(res.status).toBe(400);
+        expect(res.body.errors).toContain(ERROR.availabilityHoursInvalid);
+      }
+      expect(await prisma.availability.count({ where: { playerId: user.playerId! } })).toBe(0);
     });
 
     it('should reject without authentication', async () => {

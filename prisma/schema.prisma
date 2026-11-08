@@ -240,11 +240,13 @@ model GamePlanPlayer {
 // ============================================
 
 model Availability {
-  id       String             @id @default(cuid())
-  playerId String
-  date     DateTime           @db.Date
-  status   AvailabilityStatus
-  player   Player             @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  id        String             @id @default(cuid())
+  playerId  String
+  date      DateTime           @db.Date
+  status    AvailabilityStatus
+  startTime String? // HH:mm, PARTIAL only: available to play from then; none means from the start of the day
+  endTime   String? // HH:mm, PARTIAL only: available to play until then; none means until the end of the day
+  player    Player             @relation(fields: [playerId], references: [id], onDelete: Cascade)
 
   @@unique([playerId, date])
   @@index([date])
@@ -432,7 +434,7 @@ model NotificationInboxEntry {
 enum AvailabilityStatus {
   AVAILABLE
   UNAVAILABLE
-  CONDITIONAL
+  PARTIAL // Available to play on part of the day only: its hours in startTime and endTime
   VOICE_ONLY
 }
 

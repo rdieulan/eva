@@ -6,7 +6,7 @@ import VenueSlotPicker from '@/components/calendar/VenueSlotPicker.vue';
 import PlannedEventsNote from '@/components/calendar/PlannedEventsNote.vue';
 import { createScrimSearch, updateScrimSearch } from '@/api';
 import { ApiError } from '@/api/error';
-import type { DayData, ScrimSearch, Venue, VenueSlot } from '@shared/types';
+import type { AvailabilityHours, DayData, ScrimSearch, Venue, VenueSlot } from '@shared/types';
 import {
   ERROR,
   SCRIM_MATCH_SLOTS_DEFAULT,
@@ -17,10 +17,10 @@ import {
   SCRIM_MATCH_COUNT_MAX,
 } from '@shared/constants';
 import { formatMatchCount, formatSlotsDuration, keepWholeMatches, searchOverlap, type ClockStretch } from '@/utils/scrims';
-import { assessTeamAvailability, countMatches, orderRunSlots, runSpan } from '@shared/utils';
+import { assessTeamAvailability, countMatches, orderRunSlots, runSpan, windowCovers } from '@shared/utils';
 import { formatLongDate } from '@/utils/calendar';
 import { formatVenueLabel } from '@/utils/venues';
-import { getTeamAvailabilityDisplay } from '@/utils/availability';
+import { describeTeamAvailability } from '@/utils/availability';
 
 // One search per picked day, across the ticked venues: the captain says how
 // long a match is and how many the team wants that day, then ticks the slots
@@ -122,12 +122,23 @@ watch(slotCount, length => {
   );
 });
 
-// What the day's colour said in the calendar, in words
-function lineupNote(date: string): { tone: 'warning' | 'note'; text: string } | null {
-  const players = props.days[date]?.playerAvailabilities ?? [];
-  const { status } = assessTeamAvailability(players.map(player => player.status));
-  if (status === 'ready') return null;
-  return { tone: status === 'shaky' ? 'note' : 'warning', text: getTeamAvailabilityDisplay(status).title };
+// What the team can do that day, from its players' answers, against the slots
+// picked: a full lineup covers a slot all day long on a day it is ready, inside
+// the hours it meets on a day it only meets on part of, and nowhere on a day it
+// does not meet at all. The slots it does not cover are the conflict, and the
+// day says so loud; without one, the lineup is a quiet line.
+function lineup(date: string): { text: string; hours: AvailabilityHours | null; uncovered: number } | null {
+  const team = assessTeamAvailability(props.days[date]?.playerAvailabilities ?? []);
+  if (team.status === 'ready') return null;
+  const hours = team.status === 'shaky' ? team.window : null;
+  const uncovered = dayPicks(date).filter(slot => !hours || !windowCovers(hours, slot)).length;
+  return { text: describeTeamAvailability(team), hours, uncovered };
+}
+
+function conflictText(uncovered: number): string {
+  return uncovered > 1
+    ? `${uncovered} créneaux choisis tombent hors des dispos de l'équipe`
+    : '1 créneau choisi tombe hors des dispos de l\'équipe';
 }
 
 // One search per team and day: its matches are counted together. The search
@@ -304,13 +315,15 @@ async function submit() {
     </div>
 
     <div class="days">
-      <section v-for="date in pendingDates" :key="date" class="day">
+      <section v-for="date in pendingDates" :key="date" class="day" :class="{ 'day--conflict': lineup(date)?.uncovered }">
         <header class="day-header">
           <h3 class="day-title">{{ formatLongDate(date) }}</h3>
-          <span v-if="lineupNote(date)" class="lineup-note" :class="`lineup-note--${lineupNote(date)!.tone}`">
-            {{ lineupNote(date)!.tone === 'warning' ? '⚠️' : 'ℹ️' }} {{ lineupNote(date)!.text }}
-          </span>
+          <span v-if="lineup(date) && !lineup(date)!.uncovered" class="lineup-note">{{ lineup(date)!.text }}</span>
         </header>
+        <p v-if="lineup(date)?.uncovered" class="lineup-conflict" role="status">
+          <strong>{{ conflictText(lineup(date)!.uncovered) }}.</strong>
+          {{ lineup(date)!.text }}.
+        </p>
 
         <p v-if="isAlreadySearched(date)" class="day-searched">
           Ton équipe cherche déjà un adversaire ce jour-là : retire cette recherche pour en ouvrir une autre.
@@ -328,6 +341,7 @@ async function submit() {
               :run-length="slotCount"
               playable-only
               select-all
+              :team-hours="lineup(date) ? lineup(date)!.hours : undefined"
               :disabled="isSubmitting"
               @select="slots => setPick(date, venue.id, slots)"
             />
@@ -453,15 +467,30 @@ async function submit() {
   text-transform: capitalize;
 }
 
+// The lineup of a day the slots picked agree with: a quiet line
 .lineup-note {
   font-size: 0.8rem;
-  font-weight: 600;
+  color: $color-text-secondary;
+}
 
-  &--warning {
-    color: $color-danger;
-  }
+// Slots picked where no full lineup is guaranteed: the whole day says it,
+// framed in the yellow of a partial lineup
+.day--conflict {
+  border: $border-thick solid $color-conditional;
+  background: linear-gradient(with-alpha($color-conditional, 0.1), with-alpha($color-conditional, 0.04)), $color-bg-secondary;
+  box-shadow: 0 0 0 3px with-alpha($color-conditional, 0.18);
+}
 
-  &--note {
+.lineup-conflict {
+  margin: 0;
+  padding: $spacing-sm 0.75rem;
+  border-radius: $radius-sm;
+  background: with-alpha($color-conditional, 0.16);
+  color: $color-white;
+  font-size: $font-size-sm;
+  line-height: 1.4;
+
+  strong {
     color: $color-conditional;
   }
 }

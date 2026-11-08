@@ -47,7 +47,15 @@ export { normalizeLinkUrl, isAcceptableLinkInput, formatVenuePlace } from './ven
 
 export { detectImageType } from './image.utils';
 
-export { assessTeamAvailability, type TeamAvailability, type TeamAvailabilityStatus } from './availability.utils';
+export {
+  assessTeamAvailability,
+  windowCovers,
+  isValidAvailabilityHours,
+  formatAvailabilityHours,
+  describeAvailabilityHours,
+  type TeamAvailability,
+  type TeamAvailabilityStatus,
+} from './availability.utils';
 
 export { normalizeAccountPermissions } from './permissions.utils';
 

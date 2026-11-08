@@ -48,7 +48,7 @@ function day(date: string, statuses: Array<DayData['playerAvailabilities'][numbe
   return {
     date,
     currentPlayerStatus: null,
-    playerAvailabilities: statuses.map((status, index) => ({ playerId: `p${index}`, playerName: `J${index}`, status })),
+    playerAvailabilities: statuses.map((status, index) => ({ playerId: `p${index}`, playerName: `J${index}`, status, hours: null })),
     events: [],
     renewals: [],
   };
@@ -151,13 +151,43 @@ describe('ScrimSearchModal', () => {
     expect(days[1]!.find('.planned').exists()).toBe(false);
   });
 
-  it('warns on a day the team cannot line up, says nothing on a ready day', async () => {
+  it('says quietly what the team can do that day, and frames the day once a slot picked falls outside it', async () => {
     const wrapper = mountModal();
     await flushPromises();
 
-    const days = wrapper.findAll('.day');
+    let days = wrapper.findAll('.day');
     expect(days[0]!.find('.lineup-note').exists()).toBe(false);
-    expect(days[1]!.find('.lineup-note').text()).toContain(`Moins de ${TEAM_PLAYER_COUNT}`);
+    expect(days[1]!.find('.lineup-note').text()).toBe(`Moins de ${TEAM_PLAYER_COUNT} joueurs mobilisables`);
+    expect(days[1]!.classes()).not.toContain('day--conflict');
+
+    await slotAt(wrapper, 1, 0, '20:00').trigger('click');
+
+    days = wrapper.findAll('.day');
+    expect(days[1]!.classes()).toContain('day--conflict');
+    expect(days[1]!.find('.lineup-conflict').text())
+      .toBe(`2 créneaux choisis tombent hors des dispos de l'équipe. Moins de ${TEAM_PLAYER_COUNT} joueurs mobilisables.`);
+    expect(days[1]!.find('.lineup-note').exists()).toBe(false);
+    // A ready day covers whatever is picked on it
+    await slotAt(wrapper, 0, 0, '20:00').trigger('click');
+    expect(wrapper.findAll('.day')[0]!.classes()).not.toContain('day--conflict');
+  });
+
+  it('lets the slots inside the hours a partial lineup meets go quietly, and frames the day for the others', async () => {
+    const shaky = day('2030-06-10', Array(TEAM_PLAYER_COUNT - 1).fill('AVAILABLE'));
+    shaky.playerAvailabilities.push({ playerId: 'p9', playerName: 'J9', status: 'PARTIAL', hours: { startTime: '20:40', endTime: '22:00' } });
+    const wrapper = mountModal({ dates: ['2030-06-10'], days: { '2030-06-10': shaky } });
+    await flushPromises();
+    await segment(wrapper, 'Durée d\'un match', '40 min').trigger('click');
+
+    await slotAt(wrapper, 0, 0, '20:40').trigger('click');
+    const dayBlock = () => wrapper.findAll('.day')[0]!;
+    expect(dayBlock().classes()).not.toContain('day--conflict');
+    expect(dayBlock().find('.lineup-note').text()).toBe(`${TEAM_PLAYER_COUNT} joueurs ensemble de 20:40 à 22:00 seulement`);
+
+    await slotAt(wrapper, 0, 0, '20:00').trigger('click');
+    expect(dayBlock().classes()).toContain('day--conflict');
+    expect(dayBlock().find('.lineup-conflict').text())
+      .toBe(`1 créneau choisi tombe hors des dispos de l'équipe. ${TEAM_PLAYER_COUNT} joueurs ensemble de 20:40 à 22:00 seulement.`);
   });
 
   it('offers nothing more on a day the team already searches: one search per day', async () => {

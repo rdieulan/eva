@@ -1,15 +1,15 @@
 // Availability display helpers
 
-import type { AvailabilityStatus, PlayerAvailability } from '@shared/types';
+import type { AvailabilityHours, AvailabilityStatus, PlayerAvailability } from '@shared/types';
 import { AVAILABILITY_STATUSES } from '@shared/types';
 import { TEAM_PLAYER_COUNT } from '@shared/constants';
-import type { TeamAvailabilityStatus } from '@shared/utils';
+import { describeAvailabilityHours, type TeamAvailability, type TeamAvailabilityStatus } from '@shared/utils';
 
 // Shown behind a day in edit mode: a text glyph, or an icon of SvgIcon
 export type AvailabilitySymbol = { text: string } | { icon: string };
 
 export interface AvailabilityDisplay {
-  label: string; // Short label of the legend
+  label: string; // Short label, on the wheel of answers
   title: string; // Full meaning, for tooltips
   symbol: AvailabilitySymbol;
 }
@@ -17,19 +17,44 @@ export interface AvailabilityDisplay {
 // Keyed by AvailabilityStatus: a new status does not compile until it says how it is displayed.
 // Colours live alongside in $availability-styles (styles/_variables.scss).
 const AVAILABILITY_DISPLAY: Record<AvailabilityStatus, AvailabilityDisplay> = {
-  AVAILABLE: { label: 'Dispo', title: 'Disponible', symbol: { text: '✓' } },
-  CONDITIONAL: { label: 'Possible', title: 'Disponibilité possible', symbol: { text: '~' } },
-  VOICE_ONLY: { label: 'Vocal', title: 'Dispo pour le vocal uniquement', symbol: { icon: 'mic' } },
+  AVAILABLE: { label: 'Dispo', title: 'Dispo pour jouer', symbol: { text: '✓' } },
+  PARTIAL: { label: 'Horaires', title: 'Dispo pour jouer sur une partie de la journée', symbol: { icon: 'clock' } },
+  VOICE_ONLY: { label: 'En ligne', title: 'Dispo en ligne seulement, pas en salle', symbol: { icon: 'mic' } },
   UNAVAILABLE: { label: 'Indispo', title: 'Indisponible', symbol: { text: '✗' } },
 };
 
-const UNSET_DISPLAY: AvailabilityDisplay = { label: '?', title: 'Non renseigné', symbol: { text: '?' } };
+const UNSET_DISPLAY: AvailabilityDisplay = { label: 'Indéfini', title: 'Non renseigné', symbol: { text: '?' } };
 
 /**
  * Get the label, meaning and symbol of an availability status (null = not set)
  */
 export function getAvailabilityDisplay(status: AvailabilityStatus | null): AvailabilityDisplay {
   return status ? AVAILABILITY_DISPLAY[status] : UNSET_DISPLAY;
+}
+
+// An hour in a few characters: "21h", "21h30"
+function shortHour(time: string): string {
+  const [hours, minutes] = time.split(':');
+  return `${Number(hours)}h${minutes === '00' ? '' : minutes}`;
+}
+
+/**
+ * A partial availability in a few characters, for a corner with room for it,
+ * a line per bound, the dash on the side the hours run: "20h" over "–23h",
+ * "21h–" from then on, "–22h" until then
+ */
+export function getHoursMark(hours: AvailabilityHours): string[] {
+  if (hours.startTime && hours.endTime) return [shortHour(hours.startTime), `–${shortHour(hours.endTime)}`];
+  if (hours.startTime) return [`${shortHour(hours.startTime)}–`];
+  return [`–${shortHour(hours.endTime!)}`];
+}
+
+/**
+ * The full meaning of an answer, with its hours when it is partial
+ */
+export function describeAvailability(status: AvailabilityStatus | null, hours: AvailabilityHours | null): string {
+  const { title } = getAvailabilityDisplay(status);
+  return status === 'PARTIAL' && hours ? `Dispo pour jouer ${describeAvailabilityHours(hours)}` : title;
 }
 
 /**
@@ -43,8 +68,8 @@ export function getAvailabilityClass(status: AvailabilityStatus | null): string 
 // Keyed by TeamAvailabilityStatus, what a day's colour means in matchmaking mode.
 // Colours live alongside in $team-availability-colors (styles/_variables.scss).
 const TEAM_AVAILABILITY_DISPLAY: Record<TeamAvailabilityStatus, Pick<AvailabilityDisplay, 'label' | 'title'>> = {
-  ready: { label: `${TEAM_PLAYER_COUNT} dispos`, title: `Au moins ${TEAM_PLAYER_COUNT} joueurs disponibles` },
-  shaky: { label: `${TEAM_PLAYER_COUNT} possibles`, title: `${TEAM_PLAYER_COUNT} joueurs en comptant les disponibilités possibles` },
+  ready: { label: `${TEAM_PLAYER_COUNT} dispos`, title: `Au moins ${TEAM_PLAYER_COUNT} joueurs dispos toute la journée` },
+  shaky: { label: `${TEAM_PLAYER_COUNT} sur une plage`, title: `${TEAM_PLAYER_COUNT} joueurs ensemble sur une partie de la journée seulement` },
   voice: { label: `${TEAM_PLAYER_COUNT} en vocal`, title: `Au moins ${TEAM_PLAYER_COUNT} joueurs en vocal, pas d'alignement en salle pour l'instant` },
   short: { label: `Moins de ${TEAM_PLAYER_COUNT}`, title: `Moins de ${TEAM_PLAYER_COUNT} joueurs mobilisables` },
   unknown: { label: '?', title: 'Rien d\'acquis pour l\'instant, des joueurs n\'ont pas encore répondu' },
@@ -60,20 +85,23 @@ export function getTeamAvailabilityDisplay(status: TeamAvailabilityStatus): Pick
 }
 
 /**
+ * The meaning of what the team can do on a day, with the hours a full lineup
+ * meets when it is only part of the day
+ */
+export function describeTeamAvailability(team: TeamAvailability): string {
+  if (team.status === 'shaky' && team.window) {
+    return `${TEAM_PLAYER_COUNT} joueurs ensemble ${describeAvailabilityHours(team.window)} seulement`;
+  }
+  return TEAM_AVAILABILITY_DISPLAY[team.status].title;
+}
+
+/**
  * Get the CSS modifier of a team-level availability, matching the keys of
  * $team-availability-colors. A day nobody answered for looks like a day the
  * player has not set: the same neutral style.
  */
 export function getTeamAvailabilityClass(status: TeamAvailabilityStatus): string {
   return status === 'unknown' ? getAvailabilityClass(null) : `team-availability--${status}`;
-}
-
-/**
- * Get the status that follows in the click cycle: through AVAILABILITY_STATUSES, then back to not set
- */
-export function getNextAvailabilityStatus(current: AvailabilityStatus | null): AvailabilityStatus | null {
-  if (current === null) return AVAILABILITY_STATUSES[0];
-  return AVAILABILITY_STATUSES[AVAILABILITY_STATUSES.indexOf(current) + 1] ?? null;
 }
 
 // Rank in AVAILABILITY_STATUSES order, "not set" last

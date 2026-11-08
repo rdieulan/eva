@@ -9,7 +9,7 @@ import { getMonday } from '@/utils/calendar';
 import { useErrors } from '@/composables/useErrors';
 import { MONTH_NAMES } from '@/constants/calendar';
 import { ERROR } from '@shared/constants';
-import type { DayData, AvailabilityStatus } from '@shared/types';
+import type { DayData, AvailabilityHours, AvailabilityStatus } from '@shared/types';
 
 
 export type ViewMode = 'month' | 'week';
@@ -62,7 +62,7 @@ export interface UseCalendarReturn {
 
   // Data methods
   loadCalendarData: () => Promise<void>;
-  setAvailability: (date: string, status: AvailabilityStatus | null) => Promise<void>;
+  setAvailability: (date: string, status: AvailabilityStatus | null, hours?: AvailabilityHours | null) => Promise<void>;
 }
 
 export function useCalendar(options: UseCalendarOptions): UseCalendarReturn {
@@ -256,46 +256,39 @@ export function useCalendar(options: UseCalendarOptions): UseCalendarReturn {
     }
   }
 
-  // Set availability with optimistic update
-  async function setAvailability(date: string, newStatus: AvailabilityStatus | null) {
-    // Store previous status for rollback
-    const previousStatus = days.value[date]?.currentPlayerStatus ?? null;
-
-    // Optimistic update
-    if (days.value[date]) {
-      days.value[date].currentPlayerStatus = newStatus;
-
-      // Also update in playerAvailabilities
-      const currentPlayerId = playerId.value;
-      if (currentPlayerId) {
-        const playerAvail = days.value[date].playerAvailabilities.find(
-          p => p.playerId === currentPlayerId
-        );
-        if (playerAvail) {
-          playerAvail.status = newStatus;
-        }
-      }
+  // The reader's answer for a day, in the day itself and in its roster
+  function applyAvailability(date: string, status: AvailabilityStatus | null, hours: AvailabilityHours | null) {
+    const day = days.value[date];
+    if (!day) return;
+    day.currentPlayerStatus = status;
+    day.currentPlayerHours = hours;
+    const own = day.playerAvailabilities.find(player => player.playerId === playerId.value);
+    if (own) {
+      own.status = status;
+      own.hours = hours;
     }
+  }
+
+  // A refused answer is told on its own: the errors of the calendar are those
+  // of its loading, which put an error screen in place of the days
+  const answerErrors = useErrors();
+
+  // Set availability with optimistic update: the day shows the answer at once,
+  // and goes back to the one before when the server refuses it. Hours go with
+  // a partial availability only.
+  async function setAvailability(date: string, newStatus: AvailabilityStatus | null, hours: AvailabilityHours | null = null) {
+    const previousStatus = days.value[date]?.currentPlayerStatus ?? null;
+    const previousHours = days.value[date]?.currentPlayerHours ?? null;
+    const newHours = newStatus === 'PARTIAL' ? hours : null;
+    applyAvailability(date, newStatus, newHours);
 
     try {
-      await setAvailabilityApi(date, newStatus);
+      await setAvailabilityApi(date, newStatus, newHours);
     } catch (err) {
       console.error('Error setting availability:', err);
-      // Revert on error
-      if (days.value[date]) {
-        days.value[date].currentPlayerStatus = previousStatus;
-        const currentPlayerId = playerId.value;
-        if (currentPlayerId) {
-          const playerAvail = days.value[date].playerAvailabilities.find(
-            p => p.playerId === currentPlayerId
-          );
-          if (playerAvail) {
-            playerAvail.status = previousStatus;
-          }
-        }
-      }
-      setErrorFromException(err, ERROR.serverError);
-      onError?.(errors.value);
+      applyAvailability(date, previousStatus, previousHours);
+      answerErrors.setErrorFromException(err, ERROR.availabilityUpdateFailed);
+      onError?.(answerErrors.errors.value);
     }
   }
 

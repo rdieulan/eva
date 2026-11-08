@@ -6,6 +6,7 @@ import type {
   CalendarEvent,
   SetAvailabilityRequest,
   CreateEventRequest,
+  AvailabilityHours,
   AvailabilityStatus,
   MatchGamePlan,
 } from '@shared/types';
@@ -28,12 +29,14 @@ export async function fetchMonthData(month: string): Promise<MonthData> {
  * Set availability for a specific date
  * @param date Format YYYY-MM-DD
  * @param status The availability status, or null to remove it
+ * @param hours The hours of a partial availability (PARTIAL); none for the other statuses
  */
 export async function setAvailability(
   date: string,
-  status: AvailabilityStatus | null
+  status: AvailabilityStatus | null,
+  hours: AvailabilityHours | null = null,
 ): Promise<Availability | { success: true; deleted: true }> {
-  const body: SetAvailabilityRequest = { date, status };
+  const body: SetAvailabilityRequest = { date, status, hours };
   return authFetch<Availability | { success: true; deleted: true }>(
     '/api/calendar/availability',
     { method: 'POST', body: JSON.stringify(body) },

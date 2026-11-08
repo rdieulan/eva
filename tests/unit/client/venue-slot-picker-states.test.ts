@@ -332,4 +332,26 @@ describe('VenueSlotPicker tokens of EVA Pass holders', () => {
     expect(row(wrapper, '13:20').text()).toContain('Quota HP atteint');
     expect(row(wrapper, '13:20').attributes('disabled')).toBeUndefined();
   });
+
+  it('tints the slots no full lineup of the team covers, before they are picked', async () => {
+    const wrapper = mountPicker({ playableOnly: true, teamHours: { startTime: '19:20', endTime: null } });
+    await flushPromises();
+
+    // Before 19:20 the lineup is not there yet
+    expect(row(wrapper, '18:40').classes()).toContain('outside-lineup');
+    expect(row(wrapper, '18:40').attributes('title')).toBe("18:40 – 19:20, hors des dispos de l'équipe");
+    expect(row(wrapper, '19:20').classes()).not.toContain('outside-lineup');
+    // A slot nobody can book stays flat, whatever the lineup
+    expect(row(wrapper, '17:20').classes()).not.toContain('outside-lineup');
+
+    const never = mountPicker({ playableOnly: true, teamHours: null });
+    await flushPromises();
+    const open = never.findAll('button.slot-row--open');
+    expect(open.length).toBeGreaterThan(0);
+    expect(open.every(tile => tile.classes().includes('outside-lineup'))).toBe(true);
+
+    const unsaid = mountPicker({ playableOnly: true });
+    await flushPromises();
+    expect(unsaid.findAll('.outside-lineup')).toHaveLength(0);
+  });
 });

@@ -1,19 +1,28 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import type { AvailabilityStatus, PlayerAvailability, CalendarEvent, SubscriptionRenewal, ScrimSearch } from '@shared/types';
+import { computed, onBeforeUnmount, ref } from 'vue';
+import type {
+  AvailabilityHours,
+  AvailabilityStatus,
+  PlayerAvailability,
+  CalendarEvent,
+  SubscriptionRenewal,
+  ScrimSearch,
+} from '@shared/types';
 import {
+  describeAvailability,
+  describeTeamAvailability,
   getAvailabilityClass,
   getAvailabilityDisplay,
-  getNextAvailabilityStatus,
+  getHoursMark,
   getTeamAvailabilityClass,
-  getTeamAvailabilityDisplay,
   sortPlayersByAvailability,
 } from '@/utils/availability';
 import { sortEventsByTime } from '@/utils/calendar';
-import { assessTeamAvailability } from '@shared/utils';
+import { assessTeamAvailability, formatAvailabilityHours } from '@shared/utils';
 import SvgIcon from '@/components/common/SvgIcon.vue';
 import DayItems from '@/components/calendar/DayItems.vue';
 import OwnSearchMark from '@/components/calendar/OwnSearchMark.vue';
+import type { WheelOpening } from '@/components/calendar/AvailabilityWheel.vue';
 import { useCornerClearance } from '@/composables/useCornerClearance';
 
 // A day of the calendar, in two readings.
@@ -22,8 +31,8 @@ import { useCornerClearance } from '@/composables/useCornerClearance';
 // looking for an opponent in matchmaking, nothing of ours there: our events
 // stay in the team's view. Bottom left is ours, in both views: the mark of a
 // day picked for a search, or of our own search that day.
-// Edit mode: the colour is the reader's own status, the thing a click changes,
-// and the whole card lists who said what, name by name.
+// Edit mode: the day opens the wheel of the reader's answer, and the whole
+// card lists who said what, name by name.
 interface Props {
   date: string; // YYYY-MM-DD
   dayNumber: number;
@@ -31,6 +40,7 @@ interface Props {
   isToday: boolean;
   isPast: boolean;
   currentPlayerStatus: AvailabilityStatus | null;
+  currentPlayerHours?: AvailabilityHours | null; // The reader's hours, when available on part of the day
   currentPlayerId?: string; // Leaves the reader out of the roster: the cell already shows their status
   playerAvailabilities: PlayerAvailability[];
   events: CalendarEvent[];
@@ -44,6 +54,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  currentPlayerHours: null,
   currentPlayerId: undefined,
   renewals: () => [],
   showDayNumber: true,
@@ -55,7 +66,7 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const emit = defineEmits<{
-  'set-availability': [status: AvailabilityStatus | null];
+  'open-availability': [opening: WheelOpening]; // Edit mode: the wheel of the reader's answer for the day
   'open-event-viewer': [events: CalendarEvent[], initialIndex: number];
   'open-create-event': [date: string];
   'toggle-select': [date: string];
@@ -90,14 +101,24 @@ const canPick = computed(() => props.matchmaking && props.selectable && !props.i
 // the whole day.
 const ROW_LIMIT = 5;
 
-const rowLimit = computed(() => (canPick.value || ownSearch.value ? ROW_LIMIT - 1 : ROW_LIMIT));
+// Can the team line up that day, and when? The one colour of the cell in normal reading.
+const teamAvailability = computed(() => assessTeamAvailability(props.playerAvailabilities));
 
-// Can the team line up that day? The one colour of the cell in normal reading.
-const teamAvailability = computed(() =>
-  assessTeamAvailability(props.playerAvailabilities.map(player => player.status)),
-);
+const lineupTitle = computed(() => describeTeamAvailability(teamAvailability.value));
 
-const lineupTitle = computed(() => getTeamAvailabilityDisplay(teamAvailability.value.status).title);
+// A lineup on part of the day only: the hours it meets, bottom left, unless
+// something of ours already holds that place. The end of the hours goes first
+// on a narrow day, then the hours, leaving the clock (see below).
+const windowMark = computed(() => {
+  const { status, window } = teamAvailability.value;
+  if (props.editMode || props.isPast || !props.isCurrentMonth || props.selected || ownSearch.value) return null;
+  if (status !== 'shaky' || !window) return null;
+  return window.startTime && window.endTime
+    ? { main: window.startTime, end: ` – ${window.endTime}` }
+    : { main: formatAvailabilityHours(window), end: null };
+});
+
+const rowLimit = computed(() => (canPick.value || ownSearch.value || windowMark.value ? ROW_LIMIT - 1 : ROW_LIMIT));
 
 // The cell, fill and border, is the team's lineup, in both readings; neutral
 // while the lineup hangs on players who have not answered. The reader's own
@@ -110,9 +131,17 @@ const cellStatusClass = computed(() => {
   return teamAvailability.value.status === 'unknown' ? 'availability--unset' : getTeamAvailabilityClass(teamAvailability.value.status);
 });
 
-// The corner: the reader's own status, colour and symbol
+// The corner: the reader's own status, colour and symbol. A partial one also
+// carries when it starts, shown in place of its clock where the corner has room.
 const ownStatusClass = computed(() => getAvailabilityClass(props.currentPlayerStatus));
-const ownStatusDisplay = computed(() => getAvailabilityDisplay(props.currentPlayerStatus));
+const ownSymbol = computed(() => getAvailabilityDisplay(props.currentPlayerStatus).symbol);
+const ownHoursMark = computed(() =>
+  props.currentPlayerStatus === 'PARTIAL' && props.currentPlayerHours ? getHoursMark(props.currentPlayerHours) : null,
+);
+const ownSymbolKey = computed(() => `${ownStatusClass.value}-${ownHoursMark.value?.join('') ?? ''}`);
+// Hours with minutes, "21h30": a smaller size, so the lines stay inside the triangle
+const isLongHoursMark = computed(() => ownHoursMark.value?.some(line => line.replace('–', '').length > 3) ?? false);
+const ownTitle = computed(() => `Ma disponibilité : ${describeAvailability(props.currentPlayerStatus, props.currentPlayerHours)}`);
 
 // Edit mode: the teammates, from the most to the least available, then by name.
 // The reader is not listed: the corner of the cell already says where they stand.
@@ -120,14 +149,10 @@ const roster = computed(() =>
   sortPlayersByAvailability(props.playerAvailabilities.filter(player => player.playerId !== props.currentPlayerId)),
 );
 
-// Click on cell
+// Click on cell. In edit mode the press opens the wheel instead (below).
 function handleCellClick() {
-  if (props.editMode) {
-    // Edit mode: cycle through availability states (not for past days)
-    if (!props.isPast) {
-      cycleAvailability();
-    }
-  } else if (props.matchmaking) {
+  if (props.editMode) return;
+  if (props.matchmaking) {
     // Matchmaking: a day we already search opens our search; another day joins
     // (or leaves) the days to put up for an opponent. Our events are read in
     // the team's view.
@@ -147,11 +172,57 @@ function handleCellClick() {
 const cellRef = ref<HTMLElement | null>(null);
 useCornerClearance(cellRef);
 
-// Cycle availability through the statuses, then back to not set
-function cycleAvailability() {
-  if (props.isPast) return;
-  emit('set-availability', getNextAvailabilityStatus(props.currentPlayerStatus ?? null));
+// Edit mode: a day to come opens the wheel of the reader's answer. A tap opens
+// it where it lands, for a second tap. A press held still, or dragged with a
+// mouse, opens it under the pointer, and the release picks the answer it ends
+// on. A finger that moves before the hold is scrolling the page: nothing opens.
+const HOLD_MS = 300;
+const MOVE_TOLERANCE_PX = 10;
+const HOLD_BUZZ_MS = 10; // A short vibration where the device has one, when the hold opens the wheel
+
+let press: { x: number; y: number; pointerType: string; timer: ReturnType<typeof setTimeout> } | null = null;
+
+function endPress() {
+  if (press) clearTimeout(press.timer);
+  press = null;
+  window.removeEventListener('pointermove', onPressMove);
+  window.removeEventListener('pointerup', onPressUp);
+  window.removeEventListener('pointercancel', endPress);
 }
+
+function openWheel(x: number, y: number, dragging: boolean) {
+  endPress();
+  emit('open-availability', { date: props.date, x, y, dragging });
+}
+
+function onPressStart(event: PointerEvent) {
+  if (!props.editMode || props.isPast || !props.isCurrentMonth || event.button !== 0) return;
+  endPress();
+  const { clientX: x, clientY: y, pointerType } = event;
+  press = {
+    x, y, pointerType,
+    timer: setTimeout(() => {
+      navigator.vibrate?.(HOLD_BUZZ_MS);
+      openWheel(x, y, true);
+    }, HOLD_MS),
+  };
+  window.addEventListener('pointermove', onPressMove);
+  window.addEventListener('pointerup', onPressUp);
+  window.addEventListener('pointercancel', endPress);
+}
+
+function onPressMove(event: PointerEvent) {
+  if (!press || Math.hypot(event.clientX - press.x, event.clientY - press.y) <= MOVE_TOLERANCE_PX) return;
+  if (press.pointerType === 'mouse') openWheel(press.x, press.y, true);
+  else endPress();
+}
+
+function onPressUp(event: PointerEvent) {
+  if (!press) return;
+  openWheel(event.clientX, event.clientY, false);
+}
+
+onBeforeUnmount(endPress);
 </script>
 
 <template>
@@ -173,6 +244,7 @@ function cycleAvailability() {
     ]"
     :title="!editMode && !isPast && isCurrentMonth ? lineupTitle : undefined"
     @click="handleCellClick"
+    @pointerdown="onPressStart"
   >
     <!-- The day, large and faint, behind everything -->
     <span v-if="props.showDayNumber" class="day-number" aria-hidden="true">{{ dayNumber }}</span>
@@ -184,7 +256,7 @@ function cycleAvailability() {
       v-if="!isPast && isCurrentMonth"
       class="corner"
       :class="ownStatusClass"
-      :title="`Ma disponibilité : ${ownStatusDisplay.title}`"
+      :title="ownTitle"
     >
       <span class="corner-relief" aria-hidden="true">
         <span class="corner-notch">
@@ -194,11 +266,17 @@ function cycleAvailability() {
           <span class="corner-face"></span>
         </span>
       </span>
-      <!-- A click sets another status: the new symbol springs in over the old -->
+      <!-- Another answer: the new symbol springs in over the old -->
       <Transition name="symbol">
-        <span :key="ownStatusClass" class="corner-symbol">
-          <SvgIcon v-if="'icon' in ownStatusDisplay.symbol" :name="ownStatusDisplay.symbol.icon" />
-          <template v-else>{{ ownStatusDisplay.symbol.text }}</template>
+        <span :key="ownSymbolKey" class="corner-symbol" :class="{ 'has-hours': ownHoursMark }">
+          <SvgIcon v-if="'icon' in ownSymbol" :name="ownSymbol.icon" />
+          <template v-else>{{ ownSymbol.text }}</template>
+        </span>
+      </Transition>
+      <!-- A partial answer's hours, a line per bound, where the triangle has room for them -->
+      <Transition name="symbol">
+        <span v-if="ownHoursMark" :key="ownSymbolKey" class="corner-hours" :class="{ 'is-long': isLongHoursMark }">
+          <span v-for="line in ownHoursMark" :key="line">{{ line }}</span>
         </span>
       </Transition>
     </div>
@@ -213,6 +291,10 @@ function cycleAvailability() {
       show-hours
       @open="search => emit('open-search', search)"
     />
+    <span v-else-if="windowMark" class="window-mark" data-corner-clear :title="lineupTitle">
+      <SvgIcon name="clock" class="window-icon" />
+      <span class="window-hours"><span>{{ windowMark.main }}</span><span v-if="windowMark.end" class="window-end">{{ windowMark.end }}</span></span>
+    </span>
 
     <!-- Edit mode: who said what, the most available first; the reader is the
          corner. Normal reading: what is planned. The two cross-fade. -->
@@ -224,10 +306,11 @@ function cycleAvailability() {
           class="roster-player"
           data-corner-clear
           :class="getAvailabilityClass(player.status)"
-          :title="`${player.playerName} : ${getAvailabilityDisplay(player.status).title}`"
+          :title="`${player.playerName} : ${describeAvailability(player.status, player.hours)}`"
         >
           <span class="roster-dot" aria-hidden="true"></span>
           <span class="roster-name">{{ player.playerName }}</span>
+          <span v-if="player.status === 'PARTIAL' && player.hours" class="roster-hours">{{ formatAvailabilityHours(player.hours) }}</span>
         </li>
       </ul>
 
@@ -621,6 +704,47 @@ function cycleAvailability() {
     height: 100%;
     display: block;
   }
+
+}
+
+// The hours of a partial answer, right-aligned in the right angle of the face,
+// a tenth of the face in from its walls: the face is wider the lower it goes,
+// so the start sits above the end, both clear of the hypotenuse. Hidden where
+// the triangle is too small to read them: the clock says it then.
+.corner-hours {
+  --face: calc(var(--drawn) - var(--bevel) * 3.414);
+  position: absolute;
+  right: calc(var(--rim) + var(--bevel) + var(--face) * 0.1);
+  bottom: calc(var(--rim) + var(--bevel) + var(--face) * 0.1);
+  z-index: 1;
+  display: none;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: calc(var(--face) * 0.2);
+  font-weight: 900;
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  color: $corner-symbol-color;
+  font-variant-numeric: tabular-nums;
+  transform-origin: 100% 100%; // The spring of a new answer starts from the right angle
+
+  &.is-long {
+    font-size: calc(var(--face) * 0.15);
+  }
+}
+
+// The large corner of edit mode, on a day wide enough: the hours in place of the clock
+@container day-cell (min-width: 5.6rem) {
+  .day-cell.edit-mode .corner {
+    .corner-symbol.has-hours {
+      display: none;
+    }
+
+    .corner-hours {
+      display: flex;
+    }
+  }
 }
 
 // Bottom left, on the left edge of the rows: the corner holds the bottom
@@ -725,6 +849,71 @@ function cycleAvailability() {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+// The hours of a teammate available on part of the day, after the name, in
+// its ink: the yellow of the dot says the answer, and a yellow day would drown
+// yellow hours. Short of room, they give way before the name does.
+.roster-hours {
+  flex-shrink: 1000;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.8;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+// Bottom left, like our own search: the hours a full lineup meets, on a day
+// it only meets on part of
+.window-mark {
+  position: absolute;
+  left: var(--pad);
+  bottom: var(--pad);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.3em;
+  max-width: calc(100% - var(--pad) * 2 - var(--clear, 0px));
+  height: var(--mark);
+  font-size: var(--row-font);
+  color: $color-white;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+// In the ink of the hours: the day it marks is yellow already
+.window-icon {
+  flex-shrink: 0;
+  width: 1.1em !important;
+  height: 1.1em !important;
+}
+
+.window-hours {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+
+// A narrow day keeps when the lineup meets from, a phone the clock alone, as
+// our own search does (see OwnSearchMark); the teammates' hours leave the
+// roster to their names
+@container day-cell (max-width: 8.6rem) {
+  .window-end {
+    display: none;
+  }
+}
+
+@container day-cell (max-width: 7.5rem) {
+  .roster-hours {
+    display: none;
+  }
+}
+
+@container day-cell (max-width: 5.6rem) {
+  .window-hours {
+    display: none;
+  }
 }
 
 // What is planned, a row per item (see DayItems), sized by the metrics of the

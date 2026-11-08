@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, toRef, watch } from 'vue';
-import type { SlotTokenType, VenueSlot } from '@shared/types';
+import type { AvailabilityHours, SlotTokenType, VenueSlot } from '@shared/types';
 import { COMPETITIVE_GAME_ID } from '@shared/constants';
 import { useVenueSlots, type VenueSlotsStatus } from '@/composables/useVenueSlots';
-import { assessSlotHeadcount, orderRunSlots, slotStreaks } from '@shared/utils';
+import { assessSlotHeadcount, orderRunSlots, slotStreaks, windowCovers } from '@shared/utils';
 import { keepWholeMatches } from '@/utils/scrims';
 import SvgIcon from '@/components/common/SvgIcon.vue';
 
@@ -29,6 +29,11 @@ const props = withDefaults(defineProps<{
   label?: string; // What the slots are, above them: the venue's name where several venues are shown
   heading?: boolean; // The label names the block, a venue among others, rather than a field: it reads as a title
   readonly?: boolean; // Shows the slots picked within the day, raised and ringed, the others flat; takes no click
+  // The hours a full lineup of the team meets that day, when it does not meet
+  // all day: the slots it does not cover are tinted yellow, a warning before
+  // they are picked. Null: it meets at no hour, every slot tinted. Left out:
+  // nothing to say.
+  teamHours?: AvailabilityHours | null;
 }>(), {
   currentStartTime: '',
   currentEndTime: '',
@@ -43,6 +48,7 @@ const props = withDefaults(defineProps<{
   label: '⏱️ Créneaux',
   heading: false,
   readonly: false,
+  teamHours: undefined,
 });
 
 const emit = defineEmits<{
@@ -128,6 +134,12 @@ function isClickable(slot: VenueSlot): boolean {
 // Raised as a plate: a slot a click can take, or, shown without clicks, a slot picked
 function isRaised(slot: VenueSlot): boolean {
   return props.readonly ? isSelected(slot) : isClickable(slot);
+}
+
+// A slot no full lineup of the team covers (see teamHours)
+function isOutsideLineup(slot: VenueSlot): boolean {
+  if (props.teamHours === undefined) return false;
+  return props.teamHours === null || !windowCovers(props.teamHours, slot);
 }
 
 // What a slot with players in says when a match needs it free
@@ -417,12 +429,12 @@ const emptyHint = computed(() => {
             :class="[
               `slot-row--${stateOf(slot)}`,
               isRaised(slot) ? 'slot-row--open' : 'slot-row--closed',
-              { selected: isSelected(slot) },
+              { selected: isSelected(slot), 'outside-lineup': isRaised(slot) && isOutsideLineup(slot) },
               headcountClass(slot),
             ]"
             :aria-pressed="isSelected(slot)"
             :disabled="disabled || readonly || !isToggleable(slot)"
-            :title="`${slot.startTime} – ${slot.endTime}`"
+            :title="isOutsideLineup(slot) ? `${slot.startTime} – ${slot.endTime}, hors des dispos de l'équipe` : `${slot.startTime} – ${slot.endTime}`"
             @click="toggle(slot)"
           >
             <!-- The start, like the rows of a day in the calendar: a slot always lasts as long;
@@ -595,6 +607,12 @@ const emptyHint = computed(() => {
     .slot-players {
       color: with-alpha($color-text-secondary, 0.8);
     }
+  }
+
+  // A slot no full lineup covers, said before it is picked: in the yellow of a partial lineup
+  &--open.outside-lineup {
+    background-image: linear-gradient(with-alpha($color-conditional, 0.3), with-alpha($color-conditional, 0.16)), $texture-bg;
+    border-color: with-alpha($color-conditional, 0.7);
   }
 
   &.selected {

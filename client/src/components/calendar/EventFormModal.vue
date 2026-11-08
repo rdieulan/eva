@@ -559,6 +559,7 @@ const modalSize = computed(() => {
 
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
+@use '@/styles/forms' as *;
 
 .event-form {
   display: flex;
@@ -600,32 +601,11 @@ const modalSize = computed(() => {
 }
 
 .form-label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: $color-text-secondary;
-
-  @include mobile {
-    font-size: 0.8rem;
-  }
+  @include form-label;
 }
 
 .form-input {
-  padding: 0.75rem;
-  background: $color-bg-tertiary;
-  border: $border-thin solid $color-border-light;
-  border-radius: 6px;
-  color: $color-white;
-  font-size: 0.95rem;
-  transition: border-color 0.2s;
-
-  &:focus {
-    outline: none;
-    border-color: $color-accent;
-  }
-
-  @include mobile-lg {
-    font-size: 16px; // Prevents zoom on iOS
-  }
+  @include form-input;
 }
 
 .form-textarea {

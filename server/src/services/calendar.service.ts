@@ -4,6 +4,7 @@ import { prisma } from '@db/prisma';
 import type {
   DayData,
   PlayerAvailability,
+  AvailabilityHours,
   AvailabilityStatus,
   EventType,
   VoiceMedium,
@@ -34,6 +35,11 @@ export { resolveMediumForCreate, resolveMediumForUpdate } from './helpers/calend
 /**
  * Get all availabilities for a month (team-filtered)
  */
+// The hours a stored availability gives: a partial one only
+function availabilityHours(availability: { status: AvailabilityStatus; startTime: string | null; endTime: string | null }): AvailabilityHours | null {
+  return availability.status === 'PARTIAL' ? { startTime: availability.startTime, endTime: availability.endTime } : null;
+}
+
 export async function getMonthAvailability(
   month: string,
   teamId: string,
@@ -90,11 +96,13 @@ export async function getMonthAvailability(
       playerId: player.id,
       playerName: player.user!.name,
       status: null,
+      hours: null,
     }));
 
     days[dateStr] = {
       date: dateStr,
       currentPlayerStatus: null,
+      currentPlayerHours: null,
       playerAvailabilities,
       events: [],
       renewals: renewalAnchors
@@ -115,9 +123,11 @@ export async function getMonthAvailability(
       );
       if (playerAvailability) {
         playerAvailability.status = availability.status;
+        playerAvailability.hours = availabilityHours(availability);
       }
       if (availabilityPlayerId === currentPlayerId) {
         dayData.currentPlayerStatus = availability.status;
+        dayData.currentPlayerHours = availabilityHours(availability);
       }
     }
   }
@@ -147,6 +157,7 @@ export function buildEmptyCalendar(month: string): { month: string; days: Record
     days[dateStr] = {
       date: dateStr,
       currentPlayerStatus: null,
+      currentPlayerHours: null,
       playerAvailabilities: [],
       events: [],
       renewals: [],
@@ -162,7 +173,8 @@ export function buildEmptyCalendar(month: string): { month: string; days: Record
 export async function setAvailability(
   playerId: string,
   date: string,
-  status: AvailabilityStatus | null
+  status: AvailabilityStatus | null,
+  hours: AvailabilityHours | null = null, // A partial availability's hours, validated by the caller; none for the other statuses
 ): Promise<{ success: boolean; deleted?: boolean; availability?: unknown }> {
   const dateObj = new Date(date);
 
@@ -174,12 +186,13 @@ export async function setAvailability(
     return { success: true, deleted: true };
   }
 
+  const times = { startTime: hours?.startTime ?? null, endTime: hours?.endTime ?? null };
   const availability = await prisma.availability.upsert({
     where: {
       playerId_date: { playerId, date: dateObj },
     },
-    create: { playerId, date: dateObj, status },
-    update: { status },
+    create: { playerId, date: dateObj, status, ...times },
+    update: { status, ...times },
   });
 
   return {
@@ -189,6 +202,7 @@ export async function setAvailability(
       playerId: availability.playerId,
       date: formatDateStr(availability.date),
       status: availability.status,
+      hours: availabilityHours(availability),
     },
   };
 }

@@ -1,5 +1,5 @@
 // Tests for DayCell component - past days behavior
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { mount } from '@vue/test-utils';
 import DayCell from '@/components/calendar/DayCell.vue';
 import type { CalendarEvent, PlayerAvailability } from '@shared/types';
@@ -18,7 +18,7 @@ describe('DayCell Component - Past Days Behavior', () => {
   };
 
   const mockPlayerAvailabilities: PlayerAvailability[] = [
-    { playerId: 'player-1', playerName: 'Alice', status: 'AVAILABLE' },
+    { playerId: 'player-1', playerName: 'Alice', status: 'AVAILABLE', hours: null },
   ];
 
   it('should emit open-event-viewer when clicking on past day with events', async () => {
@@ -42,7 +42,7 @@ describe('DayCell Component - Past Days Behavior', () => {
     expect(wrapper.emitted('open-event-viewer')![0]).toEqual([[mockEvent], 0]);
   });
 
-  it('should NOT emit set-availability when clicking on past day in edit mode', async () => {
+  it('should NOT open the wheel of answers on a past day in edit mode', async () => {
     const wrapper = mount(DayCell, {
       props: {
         date: '2025-01-15',
@@ -57,9 +57,11 @@ describe('DayCell Component - Past Days Behavior', () => {
       },
     });
 
+    await wrapper.trigger('pointerdown', { button: 0, clientX: 10, clientY: 10, pointerType: 'mouse' });
+    window.dispatchEvent(new MouseEvent('pointerup', { clientX: 10, clientY: 10 }));
     await wrapper.trigger('click');
 
-    expect(wrapper.emitted('set-availability')).toBeFalsy();
+    expect(wrapper.emitted('open-availability')).toBeFalsy();
   });
 
   it('should NOT emit open-create-event when clicking on past day without events', async () => {
@@ -157,7 +159,7 @@ describe('DayCell Component - Future Days Behavior', () => {
     createdAt: '2026-01-01T00:00:00Z',
   };
 
-  it('should emit set-availability when clicking on future day in edit mode', async () => {
+  it('should open the wheel of answers where a tap lands on a future day in edit mode', async () => {
     const wrapper = mount(DayCell, {
       props: {
         date: '2026-12-15',
@@ -172,10 +174,12 @@ describe('DayCell Component - Future Days Behavior', () => {
       },
     });
 
+    await wrapper.trigger('pointerdown', { button: 0, clientX: 100, clientY: 120, pointerType: 'mouse' });
+    window.dispatchEvent(new MouseEvent('pointerup', { clientX: 102, clientY: 121 }));
     await wrapper.trigger('click');
 
-    expect(wrapper.emitted('set-availability')).toBeTruthy();
-    expect(wrapper.emitted('set-availability')![0]).toEqual(['AVAILABLE']);
+    expect(wrapper.emitted('open-availability')).toEqual([[{ date: '2026-12-15', x: 102, y: 121, dragging: false }]]);
+    expect(wrapper.emitted('open-create-event')).toBeFalsy();
   });
 
   it('should emit open-event-viewer when clicking on future day with events', async () => {
@@ -257,6 +261,57 @@ describe('DayCell Component - Subscription renewals', () => {
   });
 });
 
+describe('DayCell Component - Pressing a day in edit mode', () => {
+  const props = {
+    date: '2026-12-15',
+    dayNumber: 15,
+    isCurrentMonth: true,
+    isToday: false,
+    isPast: false,
+    currentPlayerStatus: null,
+    playerAvailabilities: [],
+    events: [],
+    editMode: true,
+  };
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('opens the wheel under a press held still, the release left to pick the answer', async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(DayCell, { props });
+
+    await wrapper.trigger('pointerdown', { button: 0, clientX: 50, clientY: 60, pointerType: 'touch' });
+    vi.advanceTimersByTime(299);
+    expect(wrapper.emitted('open-availability')).toBeFalsy();
+    vi.advanceTimersByTime(1);
+
+    expect(wrapper.emitted('open-availability')).toEqual([[{ date: '2026-12-15', x: 50, y: 60, dragging: true }]]);
+  });
+
+  it('lets a finger that moves before the hold scroll the page: nothing opens', async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(DayCell, { props });
+
+    await wrapper.trigger('pointerdown', { button: 0, clientX: 50, clientY: 60, pointerType: 'touch' });
+    window.dispatchEvent(new MouseEvent('pointermove', { clientX: 50, clientY: 90 }));
+    vi.advanceTimersByTime(1000);
+    window.dispatchEvent(new MouseEvent('pointerup', { clientX: 50, clientY: 90 }));
+
+    expect(wrapper.emitted('open-availability')).toBeFalsy();
+  });
+
+  it('opens the wheel at once under a mouse that drags, where the press began', async () => {
+    const wrapper = mount(DayCell, { props });
+
+    await wrapper.trigger('pointerdown', { button: 0, clientX: 50, clientY: 60, pointerType: 'mouse' });
+    window.dispatchEvent(new MouseEvent('pointermove', { clientX: 50, clientY: 90 }));
+
+    expect(wrapper.emitted('open-availability')).toEqual([[{ date: '2026-12-15', x: 50, y: 60, dragging: true }]]);
+  });
+});
+
 describe('DayCell Component - Voice only availability', () => {
   const baseProps = {
     date: '2026-12-15',
@@ -269,14 +324,17 @@ describe('DayCell Component - Voice only availability', () => {
     editMode: true,
   };
 
-  it('should move from possible to voice only, then to unavailable', async () => {
-    const fromConditional = mount(DayCell, { props: { ...baseProps, currentPlayerStatus: 'CONDITIONAL' as const } });
-    await fromConditional.trigger('click');
-    expect(fromConditional.emitted('set-availability')![0]).toEqual(['VOICE_ONLY']);
+  it('should show the clock of a partial answer in the yellow corner, with when it starts, and its hours in the tooltip', () => {
+    const wrapper = mount(DayCell, {
+      props: { ...baseProps, currentPlayerStatus: 'PARTIAL' as const, currentPlayerHours: { startTime: '21:30', endTime: '23:30' } },
+    });
 
-    const fromVoiceOnly = mount(DayCell, { props: { ...baseProps, currentPlayerStatus: 'VOICE_ONLY' as const } });
-    await fromVoiceOnly.trigger('click');
-    expect(fromVoiceOnly.emitted('set-availability')![0]).toEqual(['UNAVAILABLE']);
+    const corner = wrapper.find('.corner');
+    expect(corner.classes()).toContain('availability--partial');
+    expect(corner.find('.svg-icon').exists()).toBe(true);
+    expect(corner.findAll('.corner-hours span').map(line => line.text())).toEqual(['21h30', '–23h30']);
+    expect(corner.find('.corner-hours').classes()).toContain('is-long');
+    expect(corner.attributes('title')).toBe('Ma disponibilité : Dispo pour jouer de 21:30 à 23:30');
   });
 
   it('should show a microphone in the voice-coloured corner of the day', () => {
@@ -294,35 +352,43 @@ describe('DayCell Component - Voice only availability', () => {
         currentPlayerStatus: null,
         currentPlayerId: 'player-4',
         playerAvailabilities: [
-          { playerId: 'player-1', playerName: 'Nova', status: 'VOICE_ONLY' as const },
-          { playerId: 'player-2', playerName: 'Orion', status: null },
-          { playerId: 'player-3', playerName: 'Lune', status: 'UNAVAILABLE' as const },
-          { playerId: 'player-4', playerName: 'Moi', status: 'AVAILABLE' as const },
+          { playerId: 'player-1', playerName: 'Nova', status: 'VOICE_ONLY' as const, hours: null },
+          { playerId: 'player-2', playerName: 'Orion', status: null, hours: null },
+          { playerId: 'player-3', playerName: 'Lune', status: 'UNAVAILABLE' as const, hours: null },
+          { playerId: 'player-4', playerName: 'Moi', status: 'AVAILABLE' as const, hours: null },
+          { playerId: 'player-5', playerName: 'Kyro', status: 'PARTIAL' as const, hours: { startTime: null, endTime: '22:00' } },
         ],
       },
     });
 
-    // The reader is left out: the cell colour already says where they stand
+    // The reader is left out: the corner already says where they stand
     const players = wrapper.findAll('.roster-player');
-    expect(players.map(player => player.text())).toEqual(['Nova', 'Lune', 'Orion']);
-    expect(players[0]!.classes()).toContain('availability--voice-only');
-    expect(players[1]!.classes()).toContain('availability--unavailable');
-    expect(players[2]!.classes()).toContain('availability--unset');
-    expect(players[2]!.attributes('title')).toBe('Orion : Non renseigné');
+    expect(players.map(player => player.text())).toEqual(['Kyrojusqu\'à 22:00', 'Nova', 'Lune', 'Orion']);
+    expect(players[0]!.classes()).toContain('availability--partial');
+    expect(players[0]!.attributes('title')).toBe('Kyro : Dispo pour jouer jusqu\'à 22:00');
+    expect(players[1]!.classes()).toContain('availability--voice-only');
+    expect(players[2]!.classes()).toContain('availability--unavailable');
+    expect(players[3]!.classes()).toContain('availability--unset');
+    expect(players[3]!.attributes('title')).toBe('Orion : Non renseigné');
     expect(wrapper.find('.items').exists()).toBe(false);
     expect(wrapper.classes()).toContain('edit-mode');
   });
 
-  it('should draw a new symbol when a click sets another status, so it springs in over the old one', async () => {
+  it('should draw a new symbol for another answer, or other hours, so it springs in over the old one', async () => {
     const wrapper = mount(DayCell, { props: { ...baseProps, currentPlayerStatus: 'AVAILABLE' as const } });
     const before = wrapper.find('.corner-symbol');
     expect(before.text()).toBe('✓');
 
-    await wrapper.setProps({ currentPlayerStatus: 'CONDITIONAL' as const });
+    await wrapper.setProps({ currentPlayerStatus: 'PARTIAL' as const, currentPlayerHours: { startTime: '21:00', endTime: null } });
+    const partial = wrapper.find('.corner-symbol');
+    const hours = wrapper.find('.corner-hours');
+    expect(hours.text()).toBe('21h–');
+    expect(hours.classes()).not.toContain('is-long');
+    expect(partial.element).not.toBe(before.element);
 
-    const after = wrapper.find('.corner-symbol');
-    expect(after.text()).toBe('~');
-    expect(after.element).not.toBe(before.element);
+    await wrapper.setProps({ currentPlayerHours: { startTime: '22:00', endTime: null } });
+    expect(wrapper.find('.corner-symbol').element).not.toBe(partial.element);
+    expect(wrapper.find('.corner-hours').element).not.toBe(hours.element);
   });
 
   it('should show what is planned, not the roster, outside edit mode', () => {
@@ -331,7 +397,7 @@ describe('DayCell Component - Voice only availability', () => {
         ...baseProps,
         editMode: false,
         currentPlayerStatus: null,
-        playerAvailabilities: [{ playerId: 'player-1', playerName: 'Nova', status: 'AVAILABLE' as const }],
+        playerAvailabilities: [{ playerId: 'player-1', playerName: 'Nova', status: 'AVAILABLE' as const, hours: null }],
       },
     });
 

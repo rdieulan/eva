@@ -1,15 +1,9 @@
 <script setup lang="ts">
-import { AVAILABILITY_STATUSES } from '@shared/types';
 import {
-  getAvailabilityClass,
-  getAvailabilityDisplay,
   getTeamAvailabilityClass,
   getTeamAvailabilityDisplay,
   TEAM_AVAILABILITY_STATUSES,
 } from '@/utils/availability';
-
-// Every status, then "not set"
-const legendStatuses = [...AVAILABILITY_STATUSES, null];
 
 defineProps<{
   editMode: boolean; // The days show every player's status; otherwise one colour, the team's lineup
@@ -23,19 +17,8 @@ defineEmits<{
 
 <template>
   <div class="calendar-toolbar">
-    <!-- What the day colours mean: the fill is the player's own status, the border the team's lineup -->
-    <div class="availability-legend" title="Coin de la case : ma disponibilité">
-      <span
-        v-for="status in legendStatuses"
-        :key="status ?? 'unset'"
-        class="legend-item"
-        :class="getAvailabilityClass(status)"
-        :title="getAvailabilityDisplay(status).title"
-      >
-        <span class="legend-dot"></span>
-        <span class="legend-label">{{ getAvailabilityDisplay(status).label }}</span>
-      </span>
-    </div>
+    <!-- What the colour of a day means: the team's lineup. The reader's own
+         answer, in the corner, is named on the wheel that sets it. -->
     <div class="availability-legend" title="Case : l'équipe">
       <span
         v-for="status in TEAM_AVAILABILITY_STATUSES"
@@ -124,13 +107,7 @@ defineEmits<{
   border-radius: 50%;
   border: $border-thin solid;
 
-  @each $status, $color in $availability-colors {
-    .availability--#{$status} & {
-      background: $color;
-      border-color: $color;
-    }
-  }
-
+  // A day nobody answered for: the neutral style of an answer not given
   .availability--unset & {
     background: $color-border;
     border-color: $color-text-secondary;
@@ -156,12 +133,6 @@ defineEmits<{
 
 .legend-label {
   color: $color-text-secondary;
-
-  @each $status, $color in $availability-colors {
-    .availability--#{$status} & {
-      color: $color;
-    }
-  }
 
   @each $status, $color in $team-availability-colors {
     .team-availability--#{$status} & {

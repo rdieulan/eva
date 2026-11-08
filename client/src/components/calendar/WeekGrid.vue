@@ -2,7 +2,8 @@
 import { computed, ref, onMounted, watch, nextTick } from 'vue';
 import DayCell from './DayCell.vue';
 import { formatDateStr, isPastDateStr } from '@/utils/calendar';
-import type { DayData, CalendarEvent, AvailabilityStatus, ScrimSearch } from '@shared/types';
+import type { DayData, CalendarEvent, ScrimSearch } from '@shared/types';
+import type { WheelOpening } from './AvailabilityWheel.vue';
 
 const props = defineProps<{
   year: number;
@@ -20,7 +21,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'prev-week': [];
   'next-week': [];
-  'set-availability': [date: string, status: AvailabilityStatus | null];
+  'open-availability': [opening: WheelOpening];
   'open-event-viewer': [events: CalendarEvent[], initialIndex: number];
   'open-create-event': [date: string];
   'toggle-select': [date: string];
@@ -66,10 +67,6 @@ const weekGrid = computed(() => {
 
   return grid;
 });
-
-function handleSetAvailability(date: string, status: AvailabilityStatus | null) {
-  emit('set-availability', date, status);
-}
 
 // Ref for the week days container
 const weekDaysRef = ref<HTMLElement | null>(null);
@@ -127,6 +124,7 @@ watch(() => props.weekStart, () => {
           :is-today="cell.isToday"
           :is-past="cell.isPast"
           :current-player-status="cell.data?.currentPlayerStatus ?? null"
+          :current-player-hours="cell.data?.currentPlayerHours ?? null"
           :player-availabilities="cell.data?.playerAvailabilities ?? []"
           :events="cell.data?.events ?? []"
           :renewals="cell.data?.renewals ?? []"
@@ -138,7 +136,7 @@ watch(() => props.weekStart, () => {
           :selectable="props.selectable"
           :selected="props.selectedDates?.includes(cell.date) ?? false"
           :current-player-id="props.currentPlayerId"
-          @set-availability="(status) => handleSetAvailability(cell.date, status)"
+          @open-availability="(opening) => emit('open-availability', opening)"
           @open-event-viewer="(events, index) => emit('open-event-viewer', events, index)"
           @open-create-event="(date) => emit('open-create-event', date)"
           @toggle-select="(date) => emit('toggle-select', date)"

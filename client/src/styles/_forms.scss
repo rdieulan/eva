@@ -1,0 +1,33 @@
+// Form fields shared by the forms of the app: a label above its field
+// Usage: @include form-label; @include form-input;
+
+@use 'variables' as *;
+
+@mixin form-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: $color-text-secondary;
+
+  @include mobile {
+    font-size: 0.8rem;
+  }
+}
+
+@mixin form-input {
+  padding: 0.75rem;
+  background: $color-bg-tertiary;
+  border: $border-thin solid $color-border-light;
+  border-radius: 6px;
+  color: $color-white;
+  font-size: 0.95rem;
+  transition: border-color 0.2s;
+
+  &:focus {
+    outline: none;
+    border-color: $color-accent;
+  }
+
+  @include mobile-lg {
+    font-size: 16px; // Prevents zoom on iOS
+  }
+}

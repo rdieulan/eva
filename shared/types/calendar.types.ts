@@ -4,13 +4,23 @@ import type { MatchGamePlan } from './map.types';
 import type { SubscriptionRenewal } from './subscription.types';
 
 /**
- * Availability statuses, from most to least available to play. This order is
- * the click cycle in the calendar (then back to "not set") and the order of the
- * player badges. Mirrors the AvailabilityStatus enum in prisma/schema.prisma.
+ * Availability statuses, from most to least available to play: the order the
+ * players of a day are listed in. PARTIAL is available to play on part of the
+ * day only, its hours given with it (AvailabilityHours). Mirrors the
+ * AvailabilityStatus enum in prisma/schema.prisma.
  */
-export const AVAILABILITY_STATUSES = ['AVAILABLE', 'CONDITIONAL', 'VOICE_ONLY', 'UNAVAILABLE'] as const;
+export const AVAILABILITY_STATUSES = ['AVAILABLE', 'PARTIAL', 'VOICE_ONLY', 'UNAVAILABLE'] as const;
 
 export type AvailabilityStatus = typeof AVAILABILITY_STATUSES[number];
+
+/**
+ * The hours of a partial availability: from when, until when, or both. A
+ * bound left out is the start or the end of the day.
+ */
+export interface AvailabilityHours {
+  startTime: string | null; // HH:mm
+  endTime: string | null;   // HH:mm
+}
 
 /**
  * Calendar event types — single source of truth for validation and the
@@ -45,6 +55,7 @@ export interface Availability {
   playerId: string;
   date: string; // ISO date string (YYYY-MM-DD)
   status: AvailabilityStatus;
+  hours: AvailabilityHours | null; // PARTIAL only
 }
 
 // Venue of a match, as shown with the event
@@ -79,12 +90,14 @@ export interface PlayerAvailability {
   playerId: string;
   playerName: string;
   status: AvailabilityStatus | null; // null = non-renseigné
+  hours: AvailabilityHours | null; // Horaires d'une dispo partielle (PARTIAL) ; null sinon
 }
 
 // Data for a single day in the calendar
 export interface DayData {
   date: string; // ISO date string (YYYY-MM-DD)
   currentPlayerStatus: AvailabilityStatus | null;
+  currentPlayerHours: AvailabilityHours | null; // Horaires du joueur connecté quand il est dispo en partie
   playerAvailabilities: PlayerAvailability[];
   events: CalendarEvent[];
   renewals: SubscriptionRenewal[]; // Team players whose subscription renews that day
@@ -101,6 +114,7 @@ export interface MonthData {
 export interface SetAvailabilityRequest {
   date: string; // ISO date string (YYYY-MM-DD)
   status: AvailabilityStatus | null; // null = supprimer
+  hours?: AvailabilityHours | null; // Requis pour PARTIAL, absent pour les autres statuts
 }
 
 // Request to create an event

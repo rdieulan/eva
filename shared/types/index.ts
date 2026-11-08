@@ -30,6 +30,7 @@ export {
 } from '../utils';
 export type {
   AvailabilityStatus,
+  AvailabilityHours,
   EventType,
   VoiceMedium,
   Availability,

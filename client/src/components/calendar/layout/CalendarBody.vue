@@ -6,7 +6,8 @@
  */
 import CalendarGrid from '@/components/calendar/CalendarGrid.vue';
 import WeekGrid from '@/components/calendar/WeekGrid.vue';
-import type { DayData, CalendarEvent, AvailabilityStatus, ScrimSearch } from '@shared/types';
+import type { DayData, CalendarEvent, ScrimSearch } from '@shared/types';
+import type { WheelOpening } from '@/components/calendar/AvailabilityWheel.vue';
 
 defineProps<{
   viewMode: 'month' | 'week';
@@ -27,7 +28,7 @@ defineEmits<{
   'next-month': [];
   'prev-week': [];
   'next-week': [];
-  'set-availability': [date: string, status: AvailabilityStatus | null];
+  'open-availability': [opening: WheelOpening];
   'open-event-viewer': [events: CalendarEvent[], initialIndex: number];
   'open-create-event': [date: string];
   'toggle-select': [date: string];
@@ -52,7 +53,7 @@ defineEmits<{
       :current-player-id="currentPlayerId"
       @prev-month="$emit('prev-month')"
       @next-month="$emit('next-month')"
-      @set-availability="(date, status) => $emit('set-availability', date, status)"
+      @open-availability="(opening) => $emit('open-availability', opening)"
       @open-event-viewer="(events, idx) => $emit('open-event-viewer', events, idx)"
       @open-create-event="(date) => $emit('open-create-event', date)"
       @toggle-select="(date) => $emit('toggle-select', date)"
@@ -75,7 +76,7 @@ defineEmits<{
       :current-player-id="currentPlayerId"
       @prev-week="$emit('prev-week')"
       @next-week="$emit('next-week')"
-      @set-availability="(date, status) => $emit('set-availability', date, status)"
+      @open-availability="(opening) => $emit('open-availability', opening)"
       @open-event-viewer="(events, idx) => $emit('open-event-viewer', events, idx)"
       @open-create-event="(date) => $emit('open-create-event', date)"
       @toggle-select="(date) => $emit('toggle-select', date)"

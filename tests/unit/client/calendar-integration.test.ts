@@ -37,6 +37,8 @@ vi.mock('@/composables/useAuth', () => ({
   useAuth: () => ({
     permissions: ref(mockPermissions),
     user: ref({ id: 'user-1', name: 'Test User', isLeader: true, permissions: null, teamId: null }),
+    // The reader, Alice in the days below: their answers are the ones the wheel sets
+    account: ref({ id: 'user-1', playerId: 'player-1', teamId: 'team-1', accountType: 'player' }),
   }),
 }));
 
@@ -100,7 +102,8 @@ describe('Calendar Integration Tests', () => {
     vi.clearAllMocks();
     routing.route.query = {};
     (api.fetchScrimSearches as any).mockResolvedValue([]);
-    (calendarApi.fetchMonthData as any).mockResolvedValue(mockMonthData);
+    // A fresh copy each time: the page changes the days it shows, answers included
+    (calendarApi.fetchMonthData as any).mockImplementation(async () => structuredClone(mockMonthData));
     (api.fetchAllMaps as any).mockResolvedValue([]);
     (api.fetchPlayers as any).mockResolvedValue([
       { id: 'player-1', name: 'Alice' },
@@ -321,41 +324,59 @@ describe('Calendar Integration Tests', () => {
     expect(api.fetchPlayers).toHaveBeenCalled();
   });
 
-  it('should cycle through availability states when toggling', async () => {
-    (calendarApi.setAvailability as any).mockResolvedValue({
-      id: 'avail-1',
-      playerId: 'player-1',
-      date: '2026-01-15',
-      status: 'UNAVAILABLE',
+  describe('the reader\'s answer for a day, from its wheel', () => {
+    async function openWheel() {
+      const wrapper = mount(CalendarPage);
+      await new Promise(resolve => setTimeout(resolve, 50));
+      await wrapper.findComponent({ name: 'CalendarBody' }).vm.$emit('open-availability', { date: '2026-01-15', x: 300, y: 300, dragging: false });
+      return wrapper;
+    }
+
+    it('opens on the day\'s answer and sets the one picked, the day showing it at once', async () => {
+      (calendarApi.setAvailability as any).mockResolvedValue({ id: 'a', playerId: 'player-1', date: '2026-01-15', status: 'VOICE_ONLY', hours: null });
+      const wrapper = await openWheel();
+      const wheel = wrapper.findComponent({ name: 'AvailabilityWheel' });
+      expect(wheel.props('status')).toBe('AVAILABLE');
+
+      await wheel.vm.$emit('pick', 'VOICE_ONLY');
+
+      expect(calendarApi.setAvailability).toHaveBeenCalledWith('2026-01-15', 'VOICE_ONLY', null);
+      expect(wrapper.findComponent({ name: 'AvailabilityWheel' }).exists()).toBe(false);
+      expect(wrapper.findComponent({ name: 'CalendarBody' }).props('days')['2026-01-15'].currentPlayerStatus).toBe('VOICE_ONLY');
     });
 
-    const wrapper = mount(CalendarPage);
-    await wrapper.vm.$nextTick();
+    it('sets hours from the hub: the day becomes a partial answer', async () => {
+      (calendarApi.setAvailability as any).mockResolvedValue({});
+      const wrapper = await openWheel();
 
-    // Set availability directly to UNAVAILABLE
-    const grid = wrapper.findComponent({ name: 'CalendarGrid' });
-    if (grid.exists()) {
-      await grid.vm.$emit('set-availability', '2026-01-15', 'UNAVAILABLE');
-      expect(calendarApi.setAvailability).toHaveBeenCalledWith('2026-01-15', 'UNAVAILABLE');
-    }
-  });
+      await wrapper.findComponent({ name: 'AvailabilityWheel' }).vm.$emit('hours');
+      const hoursModal = wrapper.findComponent({ name: 'AvailabilityHoursModal' });
+      expect(hoursModal.props('open')).toBe(true);
+      expect(hoursModal.props('date')).toBe('2026-01-15');
+      await hoursModal.vm.$emit('save', { startTime: '21:00', endTime: null });
 
-  it('should set availability to AVAILABLE when requested', async () => {
-    (calendarApi.setAvailability as any).mockResolvedValue({
-      id: 'avail-2',
-      playerId: 'player-1',
-      date: '2026-01-01',
-      status: 'AVAILABLE',
+      expect(calendarApi.setAvailability).toHaveBeenCalledWith('2026-01-15', 'PARTIAL', { startTime: '21:00', endTime: null });
+      const day = wrapper.findComponent({ name: 'CalendarBody' }).props('days')['2026-01-15'];
+      expect(day.currentPlayerStatus).toBe('PARTIAL');
+      expect(day.currentPlayerHours).toEqual({ startTime: '21:00', endTime: null });
+      expect(wrapper.findComponent({ name: 'AvailabilityHoursModal' }).props('open')).toBe(false);
     });
 
-    const wrapper = mount(CalendarPage);
-    await wrapper.vm.$nextTick();
+    it('puts the answer back when the server refuses it, and says why', async () => {
+      (calendarApi.setAvailability as any).mockRejectedValue(new Error('Erreur serveur'));
+      const wrapper = await openWheel();
 
-    const grid = wrapper.findComponent({ name: 'CalendarGrid' });
-    if (grid.exists()) {
-      await grid.vm.$emit('set-availability', '2026-01-01', 'AVAILABLE');
-      expect(calendarApi.setAvailability).toHaveBeenCalledWith('2026-01-01', 'AVAILABLE');
-    }
+      await wrapper.findComponent({ name: 'AvailabilityWheel' }).vm.$emit('pick', 'UNAVAILABLE');
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      await wrapper.vm.$nextTick();
+
+      // The calendar stays on screen, the day back to its answer, the error in a modal
+      expect(wrapper.findComponent({ name: 'CalendarBody' }).props('days')['2026-01-15'].currentPlayerStatus).toBe('AVAILABLE');
+      expect(wrapper.find('.error-state').exists()).toBe(false);
+      expect(wrapper.findComponent({ name: 'ErrorModal' }).props('open')).toBe(true);
+      expect(wrapper.findComponent({ name: 'ErrorModal' }).props('errors')).toEqual(['Erreur serveur']);
+    });
   });
 
   it('should open event form modal when admin creates new event', async () => {
@@ -449,56 +470,4 @@ describe('Calendar Integration Tests', () => {
       expect(modal.props('canDelete')).toBe(true);
     }
   });
-
-  it('should refresh calendar data after availability change', async () => {
-    (calendarApi.setAvailability as any).mockResolvedValue({
-      id: 'avail-1',
-      playerId: 'player-1',
-      date: '2026-01-15',
-      status: 'UNAVAILABLE',
-    });
-
-    const wrapper = mount(CalendarPage);
-    await wrapper.vm.$nextTick();
-
-
-    const grid = wrapper.findComponent({ name: 'CalendarGrid' });
-    if (grid.exists()) {
-      await grid.vm.$emit('set-availability', '2026-01-15', 'UNAVAILABLE');
-      await wrapper.vm.$nextTick();
-      await new Promise(resolve => setTimeout(resolve, 50));
-
-      // Should have called setAvailability
-      expect(calendarApi.setAvailability).toHaveBeenCalled();
-    }
-  });
-
-  it('should prevent setting availability on past dates', async () => {
-    const pastDate = '2025-12-01';
-    const pastMonthData: MonthData = {
-      month: '2025-12',
-      days: {
-        [pastDate]: {
-          date: pastDate,
-          currentPlayerStatus: null,
-          playerAvailabilities: [],
-          events: [],
-        },
-      },
-    };
-
-    (calendarApi.fetchMonthData as any).mockResolvedValue(pastMonthData);
-
-    const wrapper = mount(CalendarPage);
-    await wrapper.vm.$nextTick();
-
-    const grid = wrapper.findComponent({ name: 'CalendarGrid' });
-    if (grid.exists()) {
-      await grid.vm.$emit('set-availability', pastDate, 'AVAILABLE');
-
-      // Should not call setAvailability for past dates (handled by DayCell)
-      // Note: This test may need adjustment based on how past date handling works
-    }
-  });
 });
-

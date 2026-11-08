@@ -32,6 +32,6 @@ SOFTWARE
 
 ## Material Icons
 
-`client/src/assets/icons/bell.svg` is the "notifications" icon of Material Icons by Google: https://github.com/google/material-design-icons
+`client/src/assets/icons/bell.svg` and `client/src/assets/icons/clock.svg` are the "notifications" and "schedule" icons of Material Icons by Google: https://github.com/google/material-design-icons
 
 Licensed under the Apache License, Version 2.0: https://www.apache.org/licenses/LICENSE-2.0
