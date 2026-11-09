@@ -16,9 +16,11 @@ import { TEAM_LOGO_MAX_BYTES } from '@shared/constants/team.constants';
 import {
   CompetitiveApiError,
   fetchLeagueTeamLogo,
+  fetchLeagueTeamTournaments,
   fetchLeagueTeamsPage,
   type LeagueTeamEntry,
   type LeagueTeamLogo,
+  type LeagueTournament,
 } from '../../server/src/integrations/competitive/competitive-teams';
 import { isLeagueDirectoryDue, syncLeagueDirectory } from '../../server/src/services/league-directory.service';
 
@@ -26,10 +28,12 @@ vi.mock('../../server/src/integrations/competitive/competitive-teams', async imp
   ...await importOriginal<typeof import('../../server/src/integrations/competitive/competitive-teams')>(),
   fetchLeagueTeamsPage: vi.fn(),
   fetchLeagueTeamLogo: vi.fn(),
+  fetchLeagueTeamTournaments: vi.fn(),
 }));
 
 const listPage = vi.mocked(fetchLeagueTeamsPage);
 const logoOf = vi.mocked(fetchLeagueTeamLogo);
+const tournamentsOf = vi.mocked(fetchLeagueTeamTournaments);
 
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3, 4]);
 const WEBP = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50]);
@@ -70,6 +74,7 @@ function served(data: Uint8Array, type: LeagueTeamLogo['type']): LeagueTeamLogo 
 beforeEach(() => {
   listPage.mockReset();
   logoOf.mockReset();
+  tournamentsOf.mockReset().mockResolvedValue([]);
 });
 
 afterEach(() => {
@@ -221,8 +226,8 @@ describe('GET /api/league-teams', () => {
     expect(res.status).toBe(200);
     expect(res.body.teams.map((found: { name: string }) => found.name))
       .toEqual(['RONIN', 'Rōnin', 'Ronin-Esport', 'The Ronins', 'Kaironin']);
-    expect(res.body.teams[0]).toEqual({ id: ronin.id, name: 'RONIN', memberCount: 7, logoUrl: `/api/league-teams/${ronin.id}/logo?v=77` });
-    expect(res.body.teams[1]).toEqual({ id: twin.id, name: 'Rōnin', memberCount: 5, logoUrl: null });
+    expect(res.body.teams[0]).toEqual({ id: ronin.id, name: 'RONIN', memberCount: 7, logoUrl: `/api/league-teams/${ronin.id}/logo?v=77`, team: null });
+    expect(res.body.teams[1]).toEqual({ id: twin.id, name: 'Rōnin', memberCount: 5, logoUrl: null, team: null });
   });
 
   it('lists ten teams at most', async () => {
@@ -345,5 +350,90 @@ describe('GET /api/league-teams/:id/logo', () => {
 
     expect((await both).map(res => res.status)).toEqual([200, 200]);
     expect(logoOf).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('GET /api/league-teams/:id/venue', () => {
+  function played(name: string, startsOn: string, region: LeagueTournament['region']): LeagueTournament {
+    return { name, startsOn, region };
+  }
+
+  async function venues() {
+    const nimes = await prisma.venue.create({ data: { slug: 'nimes', name: 'Nîmes', city: 'Nîmes', address: '1 rue du Test' } });
+    const blagnac = await prisma.venue.create({ data: { slug: 'toulouse-blagnac', name: 'Toulouse Blagnac', city: 'Blagnac', address: '2 rue du Test' } });
+    return { nimes, blagnac };
+  }
+
+  function proposal(token: string, leagueTeam: LeagueTeamEntry | { id: string }) {
+    return request(app).get(`/api/league-teams/${leagueTeam.id}/venue`).set(authHeader(token));
+  }
+
+  it('proposes the venue of the team\'s latest tournament played at one of ours', async () => {
+    const { token } = await createAuthenticatedUser();
+    const { nimes } = await venues();
+    const ronin = team('RONIN');
+    await readList([ronin]);
+    tournamentsOf.mockResolvedValueOnce([
+      played('NEMAUSUS LEAGUE - OCTOBRE', '2026-10-01', { name: 'NÎMES', machineName: 'nimes' }),
+      played('COUPE DE FRANCE', '2026-11-15', { name: 'FRANCE', machineName: 'france' }),
+      played('NEMAUSUS LEAGUE - NOVEMBRE', '2026-11-01', { name: 'NÎMES', machineName: 'nimes' }),
+    ]);
+
+    const res = await proposal(token, ronin);
+
+    expect(res.status).toBe(200);
+    expect(res.body.proposal).toEqual({ venueId: nimes.id, venueName: 'Nîmes', leagueName: 'NEMAUSUS LEAGUE - NOVEMBRE' });
+    expect(tournamentsOf).toHaveBeenCalledWith(ronin.id);
+  });
+
+  it('knows a venue by its name when its short name differs', async () => {
+    const { token } = await createAuthenticatedUser();
+    const { blagnac } = await venues();
+    const toulouse = team('Les Toulousains');
+    await readList([toulouse]);
+    tournamentsOf.mockResolvedValueOnce([played('LIGUE BLAGNAC - NOVEMBRE', '2026-11-01', { name: 'Toulouse Blagnac', machineName: 'tlse-blagnac' })]);
+
+    expect((await proposal(token, toulouse)).body.proposal).toMatchObject({ venueId: blagnac.id });
+  });
+
+  it('proposes none when no tournament is played at one of our venues, or the site cannot tell', async () => {
+    const { token } = await createAuthenticatedUser();
+    await venues();
+    const elsewhere = team('Elsewhere');
+    const silent = team('Silent');
+    await readList([elsewhere, silent]);
+    tournamentsOf.mockImplementation(async id => {
+      if (id === silent.id) throw new CompetitiveApiError('Tournament list refused: HTTP 503', 503);
+      return [played('REGIONAL CUP', '2026-11-01', { name: 'OCCITANIE', machineName: 'occitanie' }), played('OPEN', '2026-10-01', null)];
+    });
+
+    for (const leagueTeam of [elsewhere, silent]) {
+      const res = await proposal(token, leagueTeam);
+      expect(res.status).toBe(200);
+      expect(res.body.proposal).toBeNull();
+    }
+  });
+
+  it('asks the site once for a league team, the day long', async () => {
+    const { token } = await createAuthenticatedUser();
+    await venues();
+    const ronin = team('RONIN');
+    await readList([ronin]);
+    tournamentsOf.mockResolvedValue([played('NEMAUSUS LEAGUE - NOVEMBRE', '2026-11-01', { name: 'NÎMES', machineName: 'nimes' })]);
+
+    await proposal(token, ronin).expect(200);
+    await proposal(token, ronin).expect(200);
+
+    expect(tournamentsOf).toHaveBeenCalledTimes(1);
+  });
+
+  it('is for signed-in players, on a league team of the directory, without asking the site otherwise', async () => {
+    const { token } = await createAuthenticatedUser();
+
+    expect((await request(app).get('/api/league-teams/123/venue')).status).toBe(401);
+    const unknown = await proposal(token, { id: '999' });
+    expect(unknown.status).toBe(404);
+    expect(unknown.body.errors).toContain(ERROR.leagueTeamNotFound);
+    expect(tournamentsOf).not.toHaveBeenCalled();
   });
 });

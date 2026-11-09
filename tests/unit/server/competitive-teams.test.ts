@@ -7,6 +7,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   CompetitiveApiError,
   fetchLeagueTeamLogo,
+  fetchLeagueTeamTournaments,
   fetchLeagueTeamsPage,
 } from '../../../server/src/integrations/competitive/competitive-teams';
 
@@ -174,6 +175,48 @@ describe('fetchLeagueTeamLogo', () => {
 
     fetchMock.mockClear();
     await expect(fetchLeagueTeamLogo('../../admin', 'logo_medium', 1024)).rejects.toBeInstanceOf(CompetitiveApiError);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('fetchLeagueTeamTournaments', () => {
+  // A tournament of a local league, the way the site gives it
+  function tournament(overrides: Record<string, unknown> = {}) {
+    return {
+      id: '2570489683180220415',
+      name: 'NEMAUSUS LEAGUE - NOVEMBRE',
+      location: null,
+      scheduledDateStart: '2026-11-01',
+      circuit: { id: '2395738311350114303', name: 'LOCAL LEAGUES' },
+      circuitRegion: { id: '2395742493876512767', name: 'NÎMES', machineName: 'nimes' },
+      ...overrides,
+    };
+  }
+
+  it('asks for the latest tournaments of a team, and keeps their name, day and region', async () => {
+    fetchMock.mockResolvedValueOnce(json({ items: [tournament()], range: { offset: 0, length: 1, total: 7 } }));
+
+    const tournaments = await fetchLeagueTeamTournaments(RONIN);
+
+    expect(fetchMock.mock.calls[0]![0]).toBe(`https://competitive.eva.gg/api/tournaments?team_id=${RONIN}&sort=scheduled_desc&offset=0&limit=10`);
+    expect(tournaments).toEqual([{ name: 'NEMAUSUS LEAGUE - NOVEMBRE', startsOn: '2026-11-01', region: { name: 'NÎMES', machineName: 'nimes' } }]);
+  });
+
+  it('keeps a tournament with no region or no day, and leaves out what is none', async () => {
+    fetchMock.mockResolvedValueOnce(json({ items: [tournament({ circuitRegion: null, scheduledDateStart: null }), { name: 42 }, null] }));
+
+    expect(await fetchLeagueTeamTournaments(RONIN)).toEqual([{ name: 'NEMAUSUS LEAGUE - NOVEMBRE', startsOn: null, region: null }]);
+  });
+
+  it('fails on a refusal or an unreadable answer, and never calls the site for what is no team id', async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 503 }));
+    await expect(fetchLeagueTeamTournaments(RONIN)).rejects.toMatchObject({ status: 503 });
+
+    fetchMock.mockResolvedValueOnce(json({ items: 'none' }));
+    await expect(fetchLeagueTeamTournaments(RONIN)).rejects.toBeInstanceOf(CompetitiveApiError);
+
+    fetchMock.mockClear();
+    await expect(fetchLeagueTeamTournaments('../admin')).rejects.toBeInstanceOf(CompetitiveApiError);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

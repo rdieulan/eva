@@ -117,6 +117,52 @@ export async function fetchLeagueTeamsPage(offset: number, size = LEAGUE_TEAMS_P
   return { teams, skipped: body.items.length - teams.length, total };
 }
 
+/**
+ * A tournament a league team plays, as the site lists it. A local league is a
+ * region of the "LOCAL LEAGUES" circuit, one region per venue, its short name
+ * the venue's (`nimes`); the tournament's own place is left empty.
+ */
+export interface LeagueTournament {
+  name: string;
+  startsOn: string | null; // YYYY-MM-DD
+  region: { name: string; machineName: string } | null;
+}
+
+// The most recent tournaments of a team read: its current league is among them
+const TEAM_TOURNAMENTS_READ = 10;
+
+// An entry of the tournament list as we use it, or null when it reads as none
+function readTournament(item: unknown): LeagueTournament | null {
+  if (!item || typeof item !== 'object') return null;
+  const { name, scheduledDateStart, circuitRegion } = item as Record<string, unknown>;
+  const cleaned = typeof name === 'string' ? cleanForeignName(name) : '';
+  if (!cleaned) return null;
+
+  const region = circuitRegion && typeof circuitRegion === 'object' ? circuitRegion as Record<string, unknown> : null;
+  return {
+    name: [...cleaned].slice(0, NAME_MAX_LENGTH).join('').trimEnd(),
+    startsOn: typeof scheduledDateStart === 'string' && /^\d{4}-\d{2}-\d{2}/.test(scheduledDateStart) ? scheduledDateStart.slice(0, 10) : null,
+    region: region && typeof region.name === 'string' && typeof region.machineName === 'string'
+      ? { name: region.name, machineName: region.machineName }
+      : null,
+  };
+}
+
+/** The most recent tournaments a league team plays or played, latest first */
+export async function fetchLeagueTeamTournaments(teamId: string): Promise<LeagueTournament[]> {
+  if (!SITE_ID.test(teamId)) throw new CompetitiveApiError(`Not a team id: ${teamId}`);
+
+  const response = await call(
+    `/api/tournaments?team_id=${teamId}&sort=scheduled_desc&offset=0&limit=${TEAM_TOURNAMENTS_READ}`,
+    { accept: 'application/json' },
+  );
+  if (!response.ok) throw new CompetitiveApiError(`Tournament list refused: HTTP ${response.status}`, response.status);
+
+  const body = await response.json().catch(() => null) as { items?: unknown } | null;
+  if (!body || !Array.isArray(body.items)) throw new CompetitiveApiError('Tournament list unreadable', response.status);
+  return body.items.map(readTournament).filter((tournament): tournament is LeagueTournament => tournament !== null);
+}
+
 // The whole body of an answer, refused past `maxBytes`, whatever size it claims
 async function readAtMost(response: Response, maxBytes: number): Promise<Uint8Array> {
   const tooLarge = () => new CompetitiveApiError(`Logo larger than ${maxBytes} bytes`, response.status);

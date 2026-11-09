@@ -56,15 +56,22 @@ function goToTeam() {
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
 
+// Centred while what it shows fits the screen, by the free space above and
+// below it; taller, it starts at the top and scrolls (a centred column would
+// spill over its top, out of reach)
 .home-page {
   min-height: 100%;
   width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  overflow-y: auto;
   padding: $spacing-xl;
   @include surface-gradient;
+
+  > :last-child {
+    margin-bottom: auto;
+  }
 
   @include tablet {
     padding: $spacing-lg;
@@ -72,7 +79,6 @@ function goToTeam() {
 
   @include mobile-lg {
     padding: $spacing-md;
-    justify-content: flex-start;
     padding-top: $spacing-xl;
   }
 
@@ -84,9 +90,12 @@ function goToTeam() {
 
 .hero {
   text-align: center;
+  margin-top: auto;
   margin-bottom: $spacing-2xl;
 
+  // On a phone, what the page shows starts at the top
   @include mobile-lg {
+    margin-top: 0;
     margin-bottom: $spacing-xl;
   }
 

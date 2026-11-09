@@ -1,6 +1,6 @@
 // Teams API client
 
-import type { AccountPermissions, Team, TeamDiscordStatus, Venue, VenueSlot } from '@shared/types';
+import type { AccountPermissions, LeagueTeamSummary, Team, TeamDiscordStatus, Venue, VenueSlot } from '@shared/types';
 import { ERROR } from '@shared/constants';
 import { authFetch } from '@/api/utils';
 import { ApiError } from '@/api/error';
@@ -20,7 +20,11 @@ export interface TeamWithMembers extends Team {
   members: TeamMember[];
   isLeader: boolean;
   discord: TeamDiscordStatus; // Whether its notifications go to a Discord channel; never the webhook itself
+  leagueTeam: LeagueTeamSummary | null; // The league team it is on competitive.eva.gg, when linked
 }
+
+/** A team just created: from a league team with a logo, whether its logo came along (null: none to take) */
+export type CreatedTeam = Team & { isLeader: boolean; logoCopied: boolean | null };
 
 /**
  * Get current player's team
@@ -41,12 +45,13 @@ export async function fetchCurrentTeam(): Promise<TeamWithMembers | null> {
 }
 
 /**
- * Create a new team (current player becomes leader)
+ * Create a team, the current player its leader. From a league team of the
+ * directory, it is linked to it and takes its logo.
  */
 export async function createTeam(
-  teamData: { name: string; venueId?: string | null }
-): Promise<Team & { isLeader: boolean }> {
-  return authFetch<Team & { isLeader: boolean }>(
+  teamData: { name: string; venueId?: string | null; leagueTeamId?: string | null }
+): Promise<CreatedTeam> {
+  return authFetch<CreatedTeam>(
     API_BASE,
     { method: 'POST', body: JSON.stringify(teamData) },
     ERROR.teamCreationFailed
@@ -124,6 +129,26 @@ export async function linkTeamDiscord(webhookUrl: string): Promise<void> {
     `${API_BASE}/current/discord`,
     { method: 'PUT', body: JSON.stringify({ webhookUrl }) },
     ERROR.discordLinkFailed
+  );
+}
+
+/** A team just linked or unlinked: its league team, where its logo loads from, its venue */
+export interface TeamLeagueLink {
+  leagueTeam: LeagueTeamSummary | null;
+  logoUrl: string | null;
+  venueId: string | null;
+}
+
+/**
+ * Link the team to its league team of the directory, or unlink it (null). A
+ * team with no logo takes its league team's, one with no venue the venue of
+ * its local league.
+ */
+export async function setTeamLeagueTeam(leagueTeamId: string | null): Promise<TeamLeagueLink> {
+  return authFetch<TeamLeagueLink>(
+    `${API_BASE}/current/league-team`,
+    { method: 'PUT', body: JSON.stringify({ leagueTeamId }) },
+    ERROR.leagueTeamLinkFailed
   );
 }
 

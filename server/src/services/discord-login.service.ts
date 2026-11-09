@@ -3,9 +3,9 @@
 // their account, a player, named after their Discord name; an invitation adds
 // its role, and the session then acts as that role.
 
-import { Prisma } from '@prisma/client';
 import type { AccountRole } from '@prisma/client';
 import { prisma } from '@db/prisma';
+import { isUniqueViolation } from '@db/prisma-errors';
 import { normalizeName, validateName } from '@shared/utils';
 import { appUrl } from '@utils/app-url';
 import type { DiscordIdentity, DiscordOAuthConfig } from '../integrations/discord/discord-oauth';
@@ -50,7 +50,7 @@ async function accountOf(identity: DiscordIdentity): Promise<string> {
     return user.id;
   } catch (error) {
     // Two first sign-ins at once: the other one made the account
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+    if (isUniqueViolation(error)) {
       return (await prisma.user.findUniqueOrThrow({ where: { discordId: identity.id }, select })).id;
     }
     throw error;

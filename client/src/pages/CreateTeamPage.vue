@@ -1,15 +1,22 @@
 <script setup lang="ts">
+// Making a team, the player its leader. Coming from a league team of the
+// directory (?ligue=), the team is named after it, takes its logo, and is
+// linked to it: whoever finds that league team then finds this team. The
+// venue of its local league is proposed once the site has told it.
 import { ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
 import { useErrors } from '@/composables/useErrors';
-import { createTeam, fetchVenues } from '@/api';
+import { createTeam, fetchLeagueTeam, fetchLeagueVenueProposal, fetchVenues } from '@/api';
 import { validateTeamName } from '@shared/utils';
 import { ERROR } from '@shared/constants';
-import type { Venue } from '@shared/types';
+import type { LeagueTeamSummary, LeagueVenueProposal, Venue } from '@shared/types';
 import { formatVenueLabel } from '@/utils/venues';
+import { formatMemberCount } from '@/utils/league';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
+import TeamLogo from '@/components/common/TeamLogo.vue';
 
+const route = useRoute();
 const router = useRouter();
 const { hasTeam, refreshAccount } = useAuth();
 
@@ -23,6 +30,39 @@ const { errors, setErrors, setErrorFromException, clearErrors } = useErrors();
 // Form
 const teamName = ref('');
 const selectedVenueId = ref<string | null>(null);
+// The league team the team is made from, when the player picked one
+const leagueTeam = ref<LeagueTeamSummary | null>(null);
+// The venue of its local league, once the site told it, and whether the player picked one already
+const venueProposal = ref<LeagueVenueProposal | null>(null);
+const hasPickedVenue = ref(false);
+
+// The league team named by the address, its name the team's to start with
+async function loadLeagueTeam() {
+  const id = route.query.ligue;
+  if (typeof id !== 'string' || !id) return;
+  try {
+    leagueTeam.value = await fetchLeagueTeam(id);
+    teamName.value = leagueTeam.value.name;
+    if (leagueTeam.value.team) setErrors([ERROR.leagueTeamTaken]);
+    else void proposeVenue(id);
+  } catch (e) {
+    setErrorFromException(e, ERROR.leagueTeamNotFound);
+  }
+}
+
+// The venue of the league team's local league, read from its tournaments on
+// the site: it may come after the page shows, and never replaces a venue the
+// player picked meanwhile. Without it, the player picks as before.
+async function proposeVenue(leagueTeamId: string) {
+  try {
+    const proposal = await fetchLeagueVenueProposal(leagueTeamId);
+    if (!proposal || hasPickedVenue.value) return;
+    venueProposal.value = proposal;
+    selectedVenueId.value = proposal.venueId;
+  } catch {
+    // No proposal: the field stays as the player leaves it
+  }
+}
 
 // Load venues
 onMounted(async () => {
@@ -33,7 +73,8 @@ onMounted(async () => {
   }
 
   try {
-    venues.value = await fetchVenues();
+    const [loadedVenues] = await Promise.all([fetchVenues(), loadLeagueTeam()]);
+    venues.value = loadedVenues;
   } catch (e) {
     console.error('Error loading venues:', e);
   } finally {
@@ -53,16 +94,17 @@ async function handleSubmit() {
   clearErrors();
 
   try {
-    await createTeam({
+    const created = await createTeam({
       name: teamName.value.trim(),
       venueId: selectedVenueId.value,
+      leagueTeamId: leagueTeam.value?.id ?? null,
     });
 
     // Refresh account data to update teamId and permissions
     await refreshAccount();
 
-    // Redirect to team page
-    router.push('/team');
+    // The team page says so when the league logo could not come along
+    router.push(created.logoCopied === false ? { path: '/team', query: { logo: 'manquant' } } : '/team');
   } catch (e) {
     setErrorFromException(e, ERROR.teamCreationFailed);
   } finally {
@@ -81,7 +123,7 @@ function goBack() {
     <div class="create-team-card">
       <h1>Créer une équipe</h1>
       <p class="description">
-        Vous deviendrez le leader de l'équipe avec toutes les permissions.
+        Tu deviens le leader de l'équipe, avec toutes les permissions.
       </p>
 
       <div v-if="isLoading" class="loading">
@@ -92,13 +134,22 @@ function goBack() {
       <form v-else @submit.prevent="handleSubmit" class="create-form">
         <ErrorDisplay :errors="errors" />
 
+        <div v-if="leagueTeam" class="league-team">
+          <TeamLogo :name="leagueTeam.name" :logo-url="leagueTeam.logoUrl" :size="56" />
+          <div class="league-team-text">
+            <strong>{{ leagueTeam.name }}</strong>
+            <span>Équipe de ligue · {{ formatMemberCount(leagueTeam.memberCount) }}</span>
+            <span>{{ leagueTeam.logoUrl ? 'Son logo est repris pour ton équipe.' : 'Elle n\'a pas de logo : tu pourras en ajouter un.' }}</span>
+          </div>
+        </div>
+
         <div class="form-group">
           <label for="team-name">Nom de l'équipe *</label>
           <input
             id="team-name"
             v-model="teamName"
             type="text"
-            placeholder="Nom de votre équipe"
+            placeholder="Nom de ton équipe"
             :disabled="isSubmitting"
             autofocus
           />
@@ -106,19 +157,22 @@ function goBack() {
 
         <div class="form-group">
           <label for="team-venue">Salle affiliée</label>
-          <select id="team-venue" v-model="selectedVenueId" :disabled="isSubmitting">
+          <select id="team-venue" v-model="selectedVenueId" :disabled="isSubmitting" @change="hasPickedVenue = true">
             <option :value="null">Non spécifiée</option>
             <option v-for="venue in venues" :key="venue.id" :value="venue.id">
               {{ formatVenueLabel(venue) }}
             </option>
           </select>
+          <p v-if="venueProposal && selectedVenueId === venueProposal.venueId" class="venue-hint">
+            La salle de sa ligue sur competitive.eva.gg ({{ venueProposal.leagueName }})
+          </p>
         </div>
 
         <div class="form-actions">
           <button type="button" class="btn-cancel" @click="goBack" :disabled="isSubmitting">
             Annuler
           </button>
-          <button type="submit" class="btn-create" :disabled="isSubmitting">
+          <button type="submit" class="btn-create" :disabled="isSubmitting || !!leagueTeam?.team">
             {{ isSubmitting ? 'Création...' : 'Créer l\'équipe' }}
           </button>
         </div>
@@ -191,6 +245,34 @@ function goBack() {
   gap: $spacing-md;
 }
 
+// The league team the team is made from
+.league-team {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-md;
+  background: $color-bg-tertiary;
+  border: $border-thin solid $color-border;
+  border-radius: $radius-md;
+}
+
+.league-team-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+
+  strong {
+    color: $color-text-primary;
+    overflow-wrap: anywhere;
+  }
+
+  span {
+    color: $color-text-secondary;
+    font-size: $font-size-sm;
+  }
+}
+
 
 .form-group {
   display: flex;
@@ -220,6 +302,13 @@ function goBack() {
       cursor: not-allowed;
     }
   }
+}
+
+.venue-hint {
+  margin: 0;
+  color: $color-text-secondary;
+  font-size: $font-size-xs;
+  overflow-wrap: anywhere;
 }
 
 .form-actions {

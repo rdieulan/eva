@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
 import {
   fetchCurrentTeam,
@@ -19,7 +19,7 @@ import {
   deleteTeamLogo,
 } from '@/api';
 import { useTeamLogo } from '@/composables/useTeamLogo';
-import type { TeamWithMembers, TeamMember, TeamInvite } from '@/api';
+import type { TeamWithMembers, TeamMember, TeamInvite, TeamLeagueLink } from '@/api';
 import type { AccountPermissions, Venue } from '@shared/types';
 import { normalizeAccountPermissions } from '@shared/utils';
 import { ERROR, TEAM_LOGO_MAX_BYTES, TEAM_LOGO_MIME_TYPES } from '@shared/constants';
@@ -28,11 +28,14 @@ import ConfirmModal from '@/components/common/ConfirmModal.vue';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import TeamInfo from '@/components/team/TeamInfo.vue';
 import TeamDiscord from '@/components/team/TeamDiscord.vue';
+import TeamLeague from '@/components/team/TeamLeague.vue';
+import TeamJoinRequests from '@/components/team/TeamJoinRequests.vue';
 import TeamMembers from '@/components/team/TeamMembers.vue';
 import TeamInvites from '@/components/team/TeamInvites.vue';
 import TeamPermissionsModal from '@/components/team/TeamPermissionsModal.vue';
 import TeamInviteModal from '@/components/team/TeamInviteModal.vue';
 
+const route = useRoute();
 const router = useRouter();
 const { isAuthenticated, permissions, account, refreshAccount } = useAuth();
 const { set: setTeamLogo } = useTeamLogo();
@@ -45,6 +48,8 @@ const venues = ref<Venue[]>([]);
 const isLoading = ref(true);
 const { errors, setError, setErrorFromException, clearErrors } = useErrors();
 const successMessage = ref<string | null>(null);
+// Made from a league team whose logo could not come along: said once, the logo to add
+const logoMissing = ref(route.query.logo === 'manquant');
 
 // Permissions modal
 const showPermissionsModal = ref(false);
@@ -124,6 +129,29 @@ async function handleSaveTeam(data: { name: string; venueId: string | null; favo
   } catch (e) {
     setErrorFromException(e, ERROR.serverError);
   }
+}
+
+// The league team linked, changed or unlinked; linking may have given the team
+// its league logo, and the venue of its league
+function handleLeagueChanged({ leagueTeam, logoUrl, venueId }: TeamLeagueLink) {
+  if (!team.value) return;
+  team.value.leagueTeam = leagueTeam;
+  team.value.venueId = venueId ?? undefined;
+  if (logoUrl !== team.value.logoUrl) {
+    team.value.logoUrl = logoUrl;
+    setTeamLogo(logoUrl);
+  }
+  showSuccess(leagueTeam ? 'Équipe de ligue reliée' : 'Équipe de ligue déliée');
+}
+
+// A request to join accepted: the new member shows among the others
+async function handleJoinAccepted(playerName: string) {
+  try {
+    members.value = await fetchTeamMembers();
+  } catch (e) {
+    setErrorFromException(e, ERROR.serverError);
+  }
+  showSuccess(`${playerName} a rejoint l'équipe`);
 }
 
 // Logo handlers: the file is checked here before it travels, the server checks it again
@@ -307,7 +335,11 @@ async function handleRevokeInvite(inviteId: string) {
   }
 }
 
-onMounted(loadData);
+onMounted(() => {
+  // The note is read once: the address loses it
+  if (logoMissing.value) void router.replace({ query: {} });
+  void loadData();
+});
 </script>
 
 <template>
@@ -325,6 +357,12 @@ onMounted(loadData);
       <!-- Messages -->
       <ErrorDisplay :errors="errors" />
       <div v-if="successMessage" class="message success">{{ successMessage }}</div>
+      <div v-if="logoMissing && !team.logoUrl" class="message notice">
+        Le logo de ton équipe de ligue n'a pas pu être repris : ajoute-le avec « Ajouter un logo », ci-dessous.
+      </div>
+
+      <!-- What waits for an answer comes first, across the page, when there is some -->
+      <TeamJoinRequests v-if="canInviteMembers" class="join-requests" @accepted="handleJoinAccepted" />
 
       <!-- Left column: the team, and where its notifications go -->
       <div class="left-column">
@@ -339,6 +377,8 @@ onMounted(loadData);
           @delete-team="showDeleteTeamModal = true"
           @leave-team="showLeaveTeamModal = true"
         />
+
+        <TeamLeague :team-id="team.id" :league-team="team.leagueTeam" :can-manage="canManageTeam" @changed="handleLeagueChanged" />
 
         <TeamDiscord :status="team.discord" :can-manage="canManageTeam" @changed="status => team && (team.discord = status)" />
       </div>
@@ -466,7 +506,8 @@ h1 {
     }
 
     > .loading,
-    > .message {
+    > .message,
+    > .join-requests {
       grid-column: 1 / -1;
     }
   }
@@ -504,6 +545,22 @@ h1 {
     background: with-alpha($color-success, 0.1);
     border: $border-thin solid with-alpha($color-success, 0.3);
     color: $color-success;
+  }
+
+  // Something to do, nothing gone wrong
+  &.notice {
+    background: with-alpha($color-accent, 0.1);
+    border: $border-thin solid with-alpha($color-accent, 0.4);
+    color: $color-text-primary;
+  }
+}
+
+// Stacked on a phone: the space the grid gives on a wide screen
+.join-requests {
+  margin-bottom: $spacing-lg;
+
+  @media (min-width: 900px) {
+    margin-bottom: 0;
   }
 }
 

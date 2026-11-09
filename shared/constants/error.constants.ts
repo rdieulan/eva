@@ -32,6 +32,7 @@ export const ERROR = {
   connectionError: 'Erreur de connexion au serveur',
   requiredFieldsMissing: 'Veuillez remplir tous les champs',
   copyFailed: 'Impossible de copier le lien',
+  invalidRequest: 'Requête invalide',
 
   // Validation (using constants from validation.utils)
   nameTooShort: `Le pseudo doit contenir au moins ${NAME_MIN_LENGTH} caractères`,
@@ -116,6 +117,19 @@ export const ERROR = {
   leagueSearchInvalid: 'Recherche invalide',
   leagueSearchFailed: 'Erreur lors de la recherche des équipes de ligue',
   leagueTeamLogoNotFound: 'Logo de l\'équipe de ligue indisponible',
+  leagueTeamNotFound: 'Équipe de ligue introuvable',
+  leagueTeamTaken: 'Cette équipe de ligue est déjà reliée à une autre équipe de l\'application',
+  leagueTeamLinkFailed: 'Erreur lors du lien avec l\'équipe de ligue',
+
+  // Requests to join a team
+  joinRequestAlreadyPending: 'Tu as déjà une demande en attente : annule-la pour en envoyer une autre',
+  joinRequestRefusedBefore: 'Cette équipe a refusé ta demande : seul un lien d\'invitation de sa part peut t\'y faire entrer',
+  joinRequestNotFound: 'Cette demande n\'est plus en attente',
+  joinRequestPlayerTaken: 'Ce joueur a rejoint une autre équipe entre-temps',
+  joinRequestFailed: 'Erreur lors de l\'envoi de la demande',
+  joinRequestCancelFailed: 'Erreur lors de l\'annulation de la demande',
+  joinRequestAnswerFailed: 'Erreur lors de la réponse à la demande',
+  joinRequestsFetchFailed: 'Erreur lors du chargement des demandes',
 
   // Venues
   venueNotFound: 'Salle non trouvée',

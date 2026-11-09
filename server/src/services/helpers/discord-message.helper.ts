@@ -4,13 +4,25 @@
 // then what there is to do
 
 import type { NotificationContent, NotificationKind } from '@shared/types';
-import { calendarTargetPath, describeNotification } from '@shared/utils';
+import { describeNotification, notificationTargetPath } from '@shared/utils';
 import { appUrl } from '@utils/app-url';
 import type { DiscordMessage } from '../../integrations/discord/discord-webhook';
 
 // The name the cards are posted under, whatever the team named its webhook
 const POSTED_AS = 'EVA';
-const FOOTER = 'EVA · Matchmaking';
+const MATCHMAKING_FOOTER = 'EVA · Matchmaking';
+const TEAM_FOOTER = 'EVA · Équipe';
+
+// The part of the app each kind comes from, at the foot of its card
+const KIND_FOOTERS: Record<NotificationKind, string> = {
+  SCRIM_PROPOSAL_RECEIVED: MATCHMAKING_FOOTER,
+  SCRIM_MATCH_MADE: MATCHMAKING_FOOTER,
+  SCRIM_MATCH_CANCELLED: MATCHMAKING_FOOTER,
+  SCRIM_PROPOSAL_DECLINED: MATCHMAKING_FOOTER,
+  SCRIM_SEARCH_WITHDRAWN: MATCHMAKING_FOOTER,
+  SCRIM_SEARCH_EXPIRED: MATCHMAKING_FOOTER,
+  TEAM_JOIN_REQUESTED: TEAM_FOOTER,
+};
 
 // The bar of a card: an answer awaited, a match made, a match called off, what fell through
 const ANSWER_AWAITED = 0x5865f2;
@@ -25,6 +37,7 @@ export const KIND_COLORS: Record<NotificationKind, number> = {
   SCRIM_PROPOSAL_DECLINED: FELL_THROUGH,
   SCRIM_SEARCH_WITHDRAWN: FELL_THROUGH,
   SCRIM_SEARCH_EXPIRED: FELL_THROUGH,
+  TEAM_JOIN_REQUESTED: ANSWER_AWAITED,
 };
 
 // An icon is wider and taller than a letter: a plain space leaves it glued to
@@ -44,6 +57,7 @@ const ACTION_ICONS: Record<NotificationKind, string> = {
   SCRIM_PROPOSAL_DECLINED: '🔎',
   SCRIM_SEARCH_WITHDRAWN: '🔎',
   SCRIM_SEARCH_EXPIRED: '📆',
+  TEAM_JOIN_REQUESTED: '👥',
 };
 const BOOKING_ICON = '🎟️';
 
@@ -55,6 +69,7 @@ const KIND_ICONS: Record<NotificationKind, string> = {
   SCRIM_PROPOSAL_DECLINED: '🚫',
   SCRIM_SEARCH_WITHDRAWN: '🗑️',
   SCRIM_SEARCH_EXPIRED: '⌛',
+  TEAM_JOIN_REQUESTED: '🙋',
 };
 
 // What Discord would read as formatting or a link in a team's name or message
@@ -79,10 +94,10 @@ export function notificationMessage(
   { base = appUrl(), logo = null }: { base?: string | null; logo?: string | null } = {},
 ): DiscordMessage {
   const { title, who, when, where, quote, detail, target, action, elsewhere } = describeNotification(content);
-  const appLink = base ? `${base}${calendarTargetPath(target)}` : null;
+  const appLink = base ? `${base}${notificationTargetPath(target)}` : null;
 
   const facts = [
-    withIcon('📅', `**${escapeMarkdown(when)}**`),
+    ...(when ? [withIcon('📅', `**${escapeMarkdown(when)}**`)] : []),
     ...(where ? [withIcon('📍', escapeMarkdown(where))] : []),
   ].join('\n\n');
   const word = quote ? quoted(quote) : detail ? escapeMarkdown(detail) : null;
@@ -101,7 +116,7 @@ export function notificationMessage(
       description: [facts, word, links].filter(Boolean).join('\n\n'),
       ...(logo && { thumbnail: { url: `attachment://${logo}` } }),
       color: KIND_COLORS[content.kind],
-      footer: { text: FOOTER },
+      footer: { text: KIND_FOOTERS[content.kind] },
       timestamp: new Date().toISOString(),
     }],
   };
@@ -115,7 +130,7 @@ export function linkedMessage(teamName: string): DiscordMessage {
       title: withIcon('🔗', 'Salon relié'),
       description: `Les notifications de l'équipe ${escapeMarkdown(teamName)} arriveront ici.`,
       color: MATCH_MADE,
-      footer: { text: FOOTER },
+      footer: { text: TEAM_FOOTER },
     }],
   };
 }

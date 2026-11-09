@@ -17,6 +17,7 @@ export const NOTIFICATION_KINDS = [
   'SCRIM_SEARCH_WITHDRAWN',
   'SCRIM_MATCH_CANCELLED',
   'SCRIM_SEARCH_EXPIRED',
+  'TEAM_JOIN_REQUESTED',
 ] as const;
 
 export type NotificationKind = typeof NOTIFICATION_KINDS[number];
@@ -39,7 +40,8 @@ export type NotificationContent =
   | { kind: 'SCRIM_PROPOSAL_DECLINED'; data: ScrimMatchFacts & OtherTeam<'team'> & { searchId: string; reason: ScrimDeclineReason } }
   | { kind: 'SCRIM_SEARCH_WITHDRAWN'; data: ScrimMatchFacts & OtherTeam<'team'> }
   | { kind: 'SCRIM_MATCH_CANCELLED'; data: ScrimMatchFacts & OtherTeam<'opponent'> & { byOpponent: boolean } }
-  | { kind: 'SCRIM_SEARCH_EXPIRED'; data: { searchId: string; date: string } };
+  | { kind: 'SCRIM_SEARCH_EXPIRED'; data: { searchId: string; date: string } }
+  | { kind: 'TEAM_JOIN_REQUESTED'; data: { requestId: string; playerName: string; evaUsername: string | null } };
 
 /**
  * The other team of a notification, its name and its id (for the media that
@@ -69,8 +71,13 @@ export interface MarkNotificationsReadRequest {
   ids: string[];
 }
 
-/** Where a notification leads, whatever the medium: a day of the calendar */
-export type NotificationTarget = CalendarTarget;
+/** The page of the team told: its members, and the requests to join it */
+export interface TeamPageTarget {
+  page: 'team';
+}
+
+/** Where a notification leads, whatever the medium: a day of the calendar, or the team page */
+export type NotificationTarget = CalendarTarget | TeamPageTarget;
 
 /**
  * A notification put in words, for any medium: whole lines for a list (the
@@ -81,8 +88,8 @@ export interface NotificationDescription {
   body: string;          // Who, when and where, in one line
   detail: string | null; // A word more: the reason, the message, what to do next
   target: NotificationTarget;
-  who: { name: string; teamId: string | null } | null; // The other team, when there is one: its id, for its logo
-  when: string;          // The day, and the hours of the match when there is one
+  who: { name: string; teamId: string | null } | null; // The other team, or the player, when there is one: a team's id, for its logo
+  when: string | null;   // The day, and the hours of the match when there is one; null when nothing is dated
   where: string | null;  // The venue, and its arena when it is named
   quote: string | null;  // The other team's own words
   action: string;        // What following the target does, for a medium that shows the link

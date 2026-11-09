@@ -2,20 +2,23 @@
 // list of After-H teams, read again every night, for a player to find their
 // league team by its name and know it by its logo. The site cannot be searched
 // by name: searches run on this copy. A logo is copied from the site the first
-// time it shows, and again only when the team changes it.
+// time it shows, and again only when the team changes it. The venue a team
+// plays its league at is read from its tournaments when it is asked for.
 
 import { prisma } from '@db/prisma';
 import { foldForSearch } from '@shared/utils/search.utils';
 import { TEAM_LOGO_MAX_BYTES, type TeamLogoMimeType } from '@shared/constants/team.constants';
 import { LEAGUE_SEARCH_MIN_LENGTH } from '@shared/constants/league.constants';
-import type { LeagueTeamSummary } from '@shared/types';
+import type { LeagueTeamSummary, LeagueVenueProposal } from '@shared/types';
 import {
   CompetitiveApiError,
   LEAGUE_TEAMS_PAGE_SIZE,
   fetchLeagueTeamLogo,
+  fetchLeagueTeamTournaments,
   fetchLeagueTeamsPage,
   type LeagueTeamEntry,
   type LeagueTeamLogo,
+  type LeagueTournament,
 } from '../integrations/competitive/competitive-teams';
 import { logger } from '../utils/logger';
 
@@ -199,6 +202,22 @@ function matchRank(searchName: string, wanted: string): number {
   return 3;
 }
 
+// What a summary of a league team reads from the directory
+const SUMMARY_SELECT = {
+  id: true,
+  name: true,
+  memberCount: true,
+  logoId: true,
+  team: { select: { id: true, name: true } },
+} as const;
+
+type SummaryRow = { id: string; name: string; memberCount: number; logoId: string | null; team: { id: string; name: string } | null };
+
+/** A league team as the app shows it, with the team of ours linked to it */
+export function toLeagueTeamSummary(row: SummaryRow): LeagueTeamSummary {
+  return { id: row.id, name: row.name, memberCount: row.memberCount, logoUrl: leagueLogoUrlOf(row), team: row.team };
+}
+
 /**
  * The league teams whose name holds what the player typed, accents, case and
  * punctuation aside, best answers first. Several teams can share a name: each
@@ -210,13 +229,92 @@ export async function searchLeagueTeams(query: string): Promise<LeagueTeamSummar
 
   const found = await prisma.leagueTeam.findMany({
     where: { searchName: { contains: wanted } },
-    select: { id: true, name: true, searchName: true, memberCount: true, logoId: true },
+    select: { ...SUMMARY_SELECT, searchName: true },
   });
   return found
     .map(team => ({ team, rank: matchRank(team.searchName, wanted) }))
     .sort((a, b) => a.rank - b.rank || a.team.name.localeCompare(b.team.name, 'fr') || a.team.id.localeCompare(b.team.id))
     .slice(0, LEAGUE_SEARCH_RESULTS)
-    .map(({ team }) => ({ id: team.id, name: team.name, memberCount: team.memberCount, logoUrl: leagueLogoUrlOf(team) }));
+    .map(({ team }) => toLeagueTeamSummary(team));
+}
+
+/** One league team of the directory, null when it is not there */
+export async function getLeagueTeamSummary(leagueTeamId: string): Promise<LeagueTeamSummary | null> {
+  const row = await prisma.leagueTeam.findUnique({ where: { id: leagueTeamId }, select: SUMMARY_SELECT });
+  return row ? toLeagueTeamSummary(row) : null;
+}
+
+// The logo a team of ours takes from its league team: 256 pixels, its largest
+const TEAM_LOGO_FORMAT = 'logo_large';
+
+/**
+ * A league team's logo in the size a team of ours keeps, read from the site
+ * now, for a team created from it or linked to it. Null when it has none or
+ * the site cannot give it: the team goes on without, its own logo to add.
+ */
+export async function readLeagueLogoForTeam(leagueTeamId: string): Promise<LeagueTeamLogo | null> {
+  const leagueTeam = await prisma.leagueTeam.findUnique({ where: { id: leagueTeamId }, select: { logoId: true } });
+  if (!leagueTeam?.logoId) return null;
+  try {
+    return await fetchLeagueTeamLogo(leagueTeamId, TEAM_LOGO_FORMAT, TEAM_LOGO_MAX_BYTES);
+  } catch (error) {
+    logger.warn(`League team ${leagueTeamId}: its logo could not be read for a team of ours`, error);
+    return null;
+  }
+}
+
+// How long the venue read from a league team's tournaments is kept: its league
+// changes once a month at most; and how long a failed read waits to be tried again
+const VENUE_PROPOSAL_KEPT_MS = DAY_MS;
+const VENUE_PROPOSAL_RETRY_AFTER_MS = 15 * 60 * 1000;
+
+// The venues read from the tournaments of league teams, by league team, and until when they hold
+const venueProposals = new Map<string, { proposal: LeagueVenueProposal | null; until: number }>();
+
+// The venue of ours a tournament is played at: its region is a venue of the local leagues,
+// known by its short name (`nimes`, the address of our venue) or else by its name
+function venueOfTournament(
+  tournament: LeagueTournament,
+  venues: { id: string; name: string; slug: string }[],
+): { id: string; name: string } | null {
+  const { region } = tournament;
+  if (!region) return null;
+  return venues.find(venue => venue.slug === region.machineName)
+    ?? venues.find(venue => foldForSearch(venue.name) === foldForSearch(region.name))
+    ?? null;
+}
+
+/**
+ * The venue of ours a league team plays at, read from its most recent
+ * tournament played at one: for a local league, the region of its tournament
+ * is the venue. Null when none of its tournaments is played at one of our
+ * venues, or the site cannot say; kept a day, a failure a quarter of an hour.
+ */
+export async function proposeLeagueTeamVenue(leagueTeamId: string): Promise<LeagueVenueProposal | null> {
+  const kept = venueProposals.get(leagueTeamId);
+  if (kept && kept.until > Date.now()) return kept.proposal;
+
+  let tournaments: LeagueTournament[];
+  try {
+    tournaments = await fetchLeagueTeamTournaments(leagueTeamId);
+  } catch (error) {
+    logger.warn(`League team ${leagueTeamId}: its tournaments could not be read from competitive.eva.gg`, error);
+    venueProposals.set(leagueTeamId, { proposal: null, until: Date.now() + VENUE_PROPOSAL_RETRY_AFTER_MS });
+    return null;
+  }
+
+  const venues = await prisma.venue.findMany({ select: { id: true, name: true, slug: true } });
+  const latestFirst = [...tournaments].sort((a, b) => (b.startsOn ?? '').localeCompare(a.startsOn ?? ''));
+  let proposal: LeagueVenueProposal | null = null;
+  for (const tournament of latestFirst) {
+    const venue = venueOfTournament(tournament, venues);
+    if (venue) {
+      proposal = { venueId: venue.id, venueName: venue.name, leagueName: tournament.name };
+      break;
+    }
+  }
+  venueProposals.set(leagueTeamId, { proposal, until: Date.now() + VENUE_PROPOSAL_KEPT_MS });
+  return proposal;
 }
 
 // The reads of logos under way, for two asking at once to wait for the same

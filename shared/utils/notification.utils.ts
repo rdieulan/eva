@@ -4,8 +4,10 @@
 import type {
   NotificationContent,
   NotificationDescription,
+  NotificationTarget,
   ScrimMatchFacts,
 } from '@shared/types/notification.types';
+import { calendarTargetPath } from '@shared/utils/calendar.utils';
 import { formatShortDay } from '@shared/utils/date.utils';
 import { buildEvaBookingUrl } from '@shared/utils/eva.utils';
 import { describeProposalDecline } from '@shared/utils/scrim-proposal.utils';
@@ -107,5 +109,25 @@ export function describeNotification(content: NotificationContent): Notification
         elsewhere: null,
       };
     }
+    case 'TEAM_JOIN_REQUESTED': {
+      const { data } = content;
+      return {
+        title: 'Demande pour rejoindre l\'équipe',
+        body: data.playerName,
+        who: { name: data.playerName, teamId: null },
+        when: null,
+        where: null,
+        detail: data.evaUsername ? `Compte eva.gg : ${data.evaUsername}` : 'Pas de compte eva.gg relié',
+        quote: null,
+        target: { page: 'team' },
+        action: 'Répondre',
+        elsewhere: null,
+      };
+    }
   }
+}
+
+/** Where a notification leads, as a path of the app, for a link from outside it */
+export function notificationTargetPath(target: NotificationTarget): string {
+  return target.page === 'team' ? '/team' : calendarTargetPath(target);
 }

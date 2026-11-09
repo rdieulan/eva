@@ -66,6 +66,6 @@ export {
 
 export { normalizeAccountPermissions } from './permissions.utils';
 
-export { describeNotification } from './notification.utils';
+export { describeNotification, notificationTargetPath } from './notification.utils';
 
 export { calendarTargetQuery, calendarTargetPath } from './calendar.utils';

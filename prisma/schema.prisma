@@ -70,6 +70,7 @@ model Player {
   openedScrimSearches     ScrimSearch[]
   sentScrimProposals      ScrimProposal[]
   notificationInbox       NotificationInboxEntry[]
+  joinRequests            TeamJoinRequest[]
 
   @@index([teamId])
 }
@@ -125,10 +126,14 @@ model Team {
   discordWebhookUrl      String?
   discordWebhookBrokenAt DateTime? // When Discord refused to post there (webhook deleted): nothing more goes until it is replaced
   venueId                String?
+  // The league team it is on competitive.eva.gg, one team of ours for each:
+  // whoever finds that league team in the directory finds this team with it
+  leagueTeamId           String?             @unique
   leaderId               String              @unique
   createdAt              DateTime            @default(now())
   updatedAt              DateTime            @updatedAt
   venue                  Venue?              @relation(fields: [venueId], references: [id])
+  leagueTeam             LeagueTeam?         @relation(fields: [leagueTeamId], references: [id], onDelete: SetNull)
   leader                 Player              @relation("TeamLeader", fields: [leaderId], references: [id])
   members                Player[]            @relation("TeamMembers")
   balanceRules           BalanceRule[]
@@ -139,6 +144,7 @@ model Team {
   scrimSearches          ScrimSearch[]
   scrimProposals         ScrimProposal[]
   notifications          Notification[]
+  joinRequests           TeamJoinRequest[]
 
   @@index([venueId])
 }
@@ -211,6 +217,7 @@ model LeagueTeam {
   logoType     String? // image/png, image/jpeg or image/webp, as read from the image itself
   logoCopiedId String? // Which of its logos logoData holds: a stale copy once logoId moves on
   seenAt       DateTime // The last read of the list it was in
+  team         Team? // The team of ours it is, when one is linked to it
 }
 
 // ============================================
@@ -398,6 +405,25 @@ model TeamInvite {
   @@index([code])
 }
 
+// A player without a team asking to join one, found through the league team it
+// is linked to. Its leader and the members who may invite answer it. A player
+// waits on one request at a time; a refusal stays, so that team is not asked
+// again by them.
+model TeamJoinRequest {
+  id            String            @id @default(cuid())
+  playerId      String
+  teamId        String
+  status        JoinRequestStatus @default(PENDING)
+  createdAt     DateTime          @default(now())
+  answeredAt    DateTime? // When the team refused it
+  refusalSeenAt DateTime? // When the player saw the refusal: it is not shown again
+  player        Player            @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  team          Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([playerId, teamId])
+  @@index([teamId, status])
+}
+
 // ============================================
 // Balance Rules
 // ============================================
@@ -524,6 +550,11 @@ enum ScrimDeclineReason {
   DAY_PASSED // The day passed with no answer
 }
 
+enum JoinRequestStatus {
+  PENDING // Waiting for the team's answer
+  REFUSED // The team said no: the player cannot ask it again
+}
+
 enum NotificationKind {
   SCRIM_PROPOSAL_RECEIVED // Another team proposed a match on the team's search
   SCRIM_MATCH_MADE // A proposal was accepted: the match is in both calendars
@@ -531,4 +562,5 @@ enum NotificationKind {
   SCRIM_SEARCH_WITHDRAWN // A search the team had a proposal pending on was withdrawn
   SCRIM_MATCH_CANCELLED // A match of the matchmaking was called off
   SCRIM_SEARCH_EXPIRED // The team's search closed with no match: its slots were booked
+  TEAM_JOIN_REQUESTED // A player without a team asks to join it
 }

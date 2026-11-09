@@ -99,6 +99,21 @@ describe('notificationMessage', () => {
     expect(made!.description).not.toContain('Voir le match');
   });
 
+  it('lays a request to join the team out: who asks, their eva.gg account, then answering on the team page', () => {
+    const [embed] = notificationMessage({
+      kind: 'TEAM_JOIN_REQUESTED',
+      data: { requestId: 'request-1', playerName: 'Raph_42', evaUsername: 'RONxSib#177352' },
+    }, { base: BASE }).embeds;
+
+    expect(embed).toMatchObject({
+      author: { name: 'Raph_42' },
+      title: `🙋${GAP}Demande pour rejoindre l'équipe`,
+      // The # escaped, which Discord would read as a heading: it still shows as #
+      description: `Compte eva.gg : RONxSib\\#177352\n\n👥${GAP}[Répondre](${BASE}/team)`,
+      footer: { text: 'EVA · Équipe' },
+    });
+  });
+
   it('lays a search closed with no match out with its day alone', () => {
     const [embed] = notificationMessage({ kind: 'SCRIM_SEARCH_EXPIRED', data: { searchId: 'search-1', date: '2026-11-25' } }, { base: BASE }).embeds;
 
@@ -114,7 +129,7 @@ describe('linkedMessage', () => {
       title: `🔗${GAP}Salon relié`,
       description: 'Les notifications de l\'équipe Les\\_Rivaux arriveront ici.',
       color: 0x3ba55d,
-      footer: { text: 'EVA · Matchmaking' },
+      footer: { text: 'EVA · Équipe' },
     });
   });
 });

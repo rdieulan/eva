@@ -206,17 +206,24 @@ export async function joinTeamWithCode(
     return { success: false, error: inviteError };
   }
 
-  // Use transaction to ensure atomicity
-  await prisma.$transaction([
-    prisma.player.update({
-      where: { id: playerId },
+  const joined = await prisma.$transaction(async tx => {
+    // The player joins, unless another way gave them a team meanwhile
+    const { count } = await tx.player.updateMany({
+      where: { id: playerId, teamId: null },
       data: { teamId: invite.teamId },
-    }),
-    prisma.teamInvite.update({
+    });
+    if (count === 0) return false;
+    await tx.teamInvite.update({
       where: { id: invite.id },
       data: { uses: { increment: 1 } },
-    }),
-  ]);
+    });
+    // A request to join a team, waiting, is answered by joining one
+    await tx.teamJoinRequest.deleteMany({ where: { playerId, status: 'PENDING' } });
+    return true;
+  });
+  if (!joined) {
+    return { success: false, error: ERROR.userAlreadyInTeam };
+  }
 
   return {
     success: true,

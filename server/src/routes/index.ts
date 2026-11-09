@@ -12,6 +12,7 @@ import teamsRoutes from '@routes/teams.routes';
 import leagueTeamsRoutes from '@routes/league-teams.routes';
 import balanceRulesRoutes from '@routes/balance-rules.routes';
 import invitesRoutes from '@routes/invites.routes';
+import joinRequestsRoutes from '@routes/join-requests.routes';
 import playersRoutes from '@routes/players.routes';
 import venuesRoutes from '@routes/venues.routes';
 import scrimsRoutes from '@routes/scrims.routes';
@@ -103,5 +104,6 @@ router.use('/notifications', notificationsRoutes);
 router.use('/admin', adminRoutes);
 router.use('/public', publicRoutes);
 router.use('/', invitesRoutes); // Handles /teams/:teamId/invites and /invites/:code
+router.use('/', joinRequestsRoutes); // Handles /join-requests and /teams/current/join-requests
 
 export default router;

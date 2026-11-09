@@ -1,12 +1,15 @@
 // Team service - business logic
 
 import { prisma } from '@db/prisma';
-import type { AccountPermissions } from '@shared/types';
+import { isUniqueViolation } from '@db/prisma-errors';
+import type { AccountPermissions, LeagueTeamSummary } from '@shared/types';
 import { LEADER_PERMISSIONS, DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
 import { normalizeAccountPermissions } from '@shared/utils';
 import { DEFAULT_ASSIGNMENTS, DEFAULT_GAME_PLAN_NOTES, ERROR } from '@shared/constants';
 import { getPlayerWithTeam } from '@services/player.service';
 import { teamDiscordStatus } from '@services/team-discord.service';
+import { getLeagueTeamSummary, proposeLeagueTeamVenue, readLeagueLogoForTeam } from '@services/league-directory.service';
+import type { LeagueTeamLogo } from '../integrations/competitive/competitive-teams';
 import type { TeamDiscordStatus } from '@shared/types';
 
 // ============================================
@@ -15,6 +18,7 @@ import type { TeamDiscordStatus } from '@shared/types';
 export interface TeamCreateData {
   name: string;
   venueId?: string | null;
+  leagueTeamId?: string | null; // The league team of the directory it is made from
   leaderId: string;
 }
 
@@ -63,6 +67,7 @@ export interface TeamView {
   members: MemberWithRole[];
   isLeader: boolean;
   discord: TeamDiscordStatus; // Whether its notifications go to a Discord channel; never the webhook itself
+  leagueTeam: LeagueTeamSummary | null; // The league team it is on competitive.eva.gg, when linked
 }
 
 /**
@@ -100,6 +105,7 @@ export async function getTeamViewForPlayer(playerId: string): Promise<TeamView |
       })),
     isLeader: !!playerData!.ledTeam,
     discord: await teamDiscordStatus(team.id),
+    leagueTeam: team.leagueTeamId ? await getLeagueTeamSummary(team.leagueTeamId) : null,
   };
 }
 
@@ -202,55 +208,161 @@ export async function getTeamAdminDetail(teamId: string): Promise<TeamAdminDetai
 // Team operations
 // ============================================
 
+/** A team just created, as its creator's app takes it */
+export interface CreatedTeam {
+  id: string;
+  name: string;
+  logoUrl: string | null;
+  venueId: string | null;
+  favoriteVenueIds: string[];
+  leaderId: string;
+  createdAt: Date;
+  updatedAt: Date;
+  isLeader: true;
+  // Created from a league team with a logo: whether its logo came along. Null
+  // when there was none to take.
+  logoCopied: boolean | null;
+}
+
+// The creator was given a team by another way while this one was made
+class JoinedMeanwhile extends Error {}
+
 /**
- * Create a new team with the user as leader
+ * Create a team, its creator its leader with every permission, and its default
+ * game plans. Created from a league team of the directory, it is linked to it
+ * and takes its name as given and its logo when the site gives it; a venue,
+ * when given, is the one it plays at.
  */
-export async function createTeam(data: TeamCreateData) {
-  // Check if user already has a team (via Player)
+export async function createTeam(data: TeamCreateData): Promise<{ error: string } | { team: CreatedTeam }> {
   const user = await prisma.user.findUnique({
     where: { id: data.leaderId },
-    include: { player: true },
+    select: { player: { select: { id: true, teamId: true } } },
   });
+  if (!user?.player) return { error: ERROR.userNotFound };
+  if (user.player.teamId) return { error: ERROR.userAlreadyInTeam };
+  const playerId = user.player.id;
 
-  if (!user?.player) {
-    return { error: ERROR.userNotFound };
+  if (data.venueId && !(await prisma.venue.findUnique({ where: { id: data.venueId }, select: { id: true } }))) {
+    return { error: ERROR.venueNotFound };
   }
 
-  if (user.player.teamId) {
-    return { error: ERROR.userAlreadyInTeam };
+  let logo: LeagueTeamLogo | null = null;
+  let hasLeagueLogo = false;
+  if (data.leagueTeamId) {
+    const leagueTeam = await prisma.leagueTeam.findUnique({
+      where: { id: data.leagueTeamId },
+      select: { logoId: true, team: { select: { id: true } } },
+    });
+    if (!leagueTeam) return { error: ERROR.leagueTeamNotFound };
+    if (leagueTeam.team) return { error: ERROR.leagueTeamTaken };
+    hasLeagueLogo = leagueTeam.logoId !== null;
+    logo = await readLeagueLogoForTeam(data.leagueTeamId);
   }
 
-  // Create team with current player as leader
-  const team = await prisma.team.create({
-    data: {
-      name: data.name.trim(),
-      leader: { connect: { id: user.player.id } },
-      members: { connect: { id: user.player.id } },
-    },
-  });
+  const maps = await prisma.map.findMany({ select: { id: true } });
+  try {
+    const team = await prisma.$transaction(async tx => {
+      const created = await tx.team.create({
+        data: {
+          name: data.name.trim(),
+          leader: { connect: { id: playerId } },
+          ...(data.venueId && { venue: { connect: { id: data.venueId } } }),
+          ...(data.leagueTeamId && { leagueTeam: { connect: { id: data.leagueTeamId } } }),
+          ...(logo && { logoData: new Uint8Array(logo.data), logoType: logo.type, logoUpdatedAt: new Date() }),
+        },
+      });
+      // The creator joins it, unless another way gave them a team meanwhile
+      const joined = await tx.player.updateMany({
+        where: { id: playerId, teamId: null },
+        data: { teamId: created.id, permissions: LEADER_PERMISSIONS as unknown as object },
+      });
+      if (joined.count === 0) throw new JoinedMeanwhile();
+      // A request to join a team, waiting, is answered by making one
+      await tx.teamJoinRequest.deleteMany({ where: { playerId, status: 'PENDING' } });
+      await tx.gamePlan.createMany({
+        data: maps.map(map => ({
+          name: 'Default',
+          mapId: map.id,
+          teamId: created.id,
+          assignments: DEFAULT_ASSIGNMENTS as unknown as object[],
+          notes: DEFAULT_GAME_PLAN_NOTES as unknown as object,
+        })),
+      });
+      return created;
+    });
 
-  // Update player with leader permissions and teamId
-  await prisma.player.update({
-    where: { id: user.player.id },
-    data: {
-      teamId: team.id,
-      permissions: LEADER_PERMISSIONS as unknown as object,
-    },
-  });
+    return {
+      team: {
+        id: team.id,
+        name: team.name,
+        logoUrl: logoUrlOf(team),
+        venueId: team.venueId,
+        favoriteVenueIds: [],
+        leaderId: team.leaderId,
+        createdAt: team.createdAt,
+        updatedAt: team.updatedAt,
+        isLeader: true,
+        logoCopied: hasLeagueLogo ? logo !== null : null,
+      },
+    };
+  } catch (error) {
+    if (error instanceof JoinedMeanwhile) return { error: ERROR.userAlreadyInTeam };
+    // Another player made a team from the same league team meanwhile
+    if (isUniqueViolation(error)) return { error: ERROR.leagueTeamTaken };
+    throw error;
+  }
+}
 
-  // Create default game plans for each map
-  const allMaps = await prisma.map.findMany();
-  await prisma.gamePlan.createMany({
-    data: allMaps.map(map => ({
-      name: 'Default',
-      mapId: map.id,
-      teamId: team.id,
-      assignments: DEFAULT_ASSIGNMENTS as unknown as object[],
-      notes: DEFAULT_GAME_PLAN_NOTES as unknown as object,
-    })),
-  });
+// A team's logo and venue, as the answer of a change that may give it them
+const TEAM_LINKED_REF = { id: true, logoType: true, logoUpdatedAt: true, venueId: true } as const;
 
-  return { team, isLeader: true };
+/** A team just linked or unlinked: its league team, where its logo loads from, its venue */
+export interface TeamLeagueLink {
+  leagueTeam: TeamView['leagueTeam'];
+  logoUrl: string | null;
+  venueId: string | null;
+}
+
+/**
+ * Link a team to its league team of the directory, or unlink it (null). A team
+ * with no logo of its own takes the league team's, when the site gives it, and
+ * a team with no venue the venue of its local league, when the site tells it.
+ */
+export async function setTeamLeagueTeam(teamId: string, leagueTeamId: string | null): Promise<{ error: string } | TeamLeagueLink> {
+  if (leagueTeamId === null) {
+    const updated = await prisma.team.update({ where: { id: teamId }, data: { leagueTeamId: null }, select: TEAM_LINKED_REF });
+    return { leagueTeam: null, logoUrl: logoUrlOf(updated), venueId: updated.venueId };
+  }
+
+  const [team, leagueTeam] = await Promise.all([
+    prisma.team.findUnique({ where: { id: teamId }, select: { logoType: true, venueId: true } }),
+    prisma.leagueTeam.findUnique({ where: { id: leagueTeamId }, select: { team: { select: { id: true } } } }),
+  ]);
+  if (!team) return { error: ERROR.teamNotFound };
+  if (!leagueTeam) return { error: ERROR.leagueTeamNotFound };
+  if (leagueTeam.team && leagueTeam.team.id !== teamId) return { error: ERROR.leagueTeamTaken };
+
+  const [logo, venue] = await Promise.all([
+    team.logoType ? null : readLeagueLogoForTeam(leagueTeamId),
+    team.venueId ? null : proposeLeagueTeamVenue(leagueTeamId),
+  ]);
+  let updated: { id: string; logoType: string | null; logoUpdatedAt: Date | null; venueId: string | null };
+  try {
+    updated = await prisma.team.update({
+      where: { id: teamId },
+      data: {
+        leagueTeamId,
+        ...(logo && { logoData: new Uint8Array(logo.data), logoType: logo.type, logoUpdatedAt: new Date() }),
+        ...(venue && { venueId: venue.venueId }),
+      },
+      select: TEAM_LINKED_REF,
+    });
+  } catch (error) {
+    // Another team linked itself to the same league team meanwhile
+    if (isUniqueViolation(error)) return { error: ERROR.leagueTeamTaken };
+    throw error;
+  }
+  return { leagueTeam: await getLeagueTeamSummary(leagueTeamId), logoUrl: logoUrlOf(updated), venueId: updated.venueId };
 }
 
 /**

@@ -1,7 +1,9 @@
-// Notifications in the app: how long ago one came (where it leads: calendarRoute)
+// Notifications in the app: how long ago one came, and where it leads
 
+import type { RouteLocationRaw } from 'vue-router';
+import type { NotificationTarget } from '@shared/types';
 import { formatShortDay } from '@shared/utils';
-import { formatDateStr } from '@/utils/calendar';
+import { calendarRoute, formatDateStr } from '@/utils/calendar';
 
 const MINUTE_MS = 60 * 1000;
 const MINUTES_PER_HOUR = 60;
@@ -22,4 +24,9 @@ export function formatRelativeTime(iso: string, now: number = Date.now()): strin
   if (days === 1) return 'hier';
   if (days < DAYS_PER_WEEK) return `il y a ${days} jours`;
   return `le ${formatShortDay(formatDateStr(new Date(iso)))}`;
+}
+
+/** Where a notification leads, as a route of the app: a day of the calendar, or the team page */
+export function notificationRoute(target: NotificationTarget): RouteLocationRaw {
+  return target.page === 'team' ? { path: '/team' } : calendarRoute(target);
 }

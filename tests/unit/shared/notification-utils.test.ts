@@ -1,6 +1,13 @@
 // Tests for notifications put in words: one wording and one target per kind, whatever the medium
 import { describe, it, expect } from 'vitest';
-import { buildEvaBookingUrl, describeNotification, describeProposalDecline, formatShortDay, formatVenuePlace } from '@shared/utils';
+import {
+  buildEvaBookingUrl,
+  describeNotification,
+  describeProposalDecline,
+  formatShortDay,
+  formatVenuePlace,
+  notificationTargetPath,
+} from '@shared/utils';
 import { SCRIM_DECLINE_REASONS, type ScrimDeclineReason, type ScrimMatchFacts } from '@shared/types';
 
 const FACTS: ScrimMatchFacts = {
@@ -143,5 +150,30 @@ describe('describeNotification', () => {
       action: 'Ouvrir le calendrier',
       elsewhere: null,
     });
+  });
+
+  it('tells who asks to join the team, with their eva.gg account, and leads to the team page to answer', () => {
+    const data = { requestId: 'request-1', playerName: 'Raph', evaUsername: 'RONxSib#177352' };
+
+    expect(describeNotification({ kind: 'TEAM_JOIN_REQUESTED', data })).toEqual({
+      title: 'Demande pour rejoindre l\'équipe',
+      body: 'Raph',
+      who: { name: 'Raph', teamId: null },
+      when: null,
+      where: null,
+      detail: 'Compte eva.gg : RONxSib#177352',
+      quote: null,
+      target: { page: 'team' },
+      action: 'Répondre',
+      elsewhere: null,
+    });
+    expect(describeNotification({ kind: 'TEAM_JOIN_REQUESTED', data: { ...data, evaUsername: null } }).detail).toBe('Pas de compte eva.gg relié');
+  });
+});
+
+describe('notificationTargetPath', () => {
+  it('leads to a day of the calendar, or to the team page', () => {
+    expect(notificationTargetPath({ page: 'calendar', date: '2026-11-25', mode: 'team' })).toBe('/calendar?date=2026-11-25&mode=team');
+    expect(notificationTargetPath({ page: 'team' })).toBe('/team');
   });
 });

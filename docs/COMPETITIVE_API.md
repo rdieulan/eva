@@ -56,10 +56,32 @@ leurs pages]**. On ne l'appelle pas : l'annuaire ne garde pas qui joue dans une 
 Adresse déclarée par leurs pages (`toornament.repository.team_logo.show_format_url`), sans
 jeton. Formats : `logo_small` (64 px), `logo_medium` (128 px), `logo_large` (256 px), et
 `icon_small` (16 px), `icon_medium` (32 px). L'annuaire montre `logo_medium` : un PNG de
-128 × 128 px, de 14 à 31 Ko pour les trois équipes lues, en 0,3 s au plus.
+128 × 128 px, de 14 à 31 Ko pour les trois équipes lues, en 0,3 s au plus. Une de nos équipes créée
+ou reliée depuis l'annuaire prend `logo_large`, lu une fois et gardé avec elle.
 
 On ne croit ni le type ni la taille annoncés : l'image est lue au plus 256 Ko, et gardée
 seulement si ses premiers octets sont ceux d'un PNG, d'un JPEG ou d'un WebP.
+
+---
+
+## Tournois d'une équipe — `GET /api/tournaments?team_id={teamId}` **[vérifié le 2026-11-10]**
+
+| Élément | Valeur |
+|---|---|
+| Adresse | `https://competitive.eva.gg/api/tournaments?team_id={teamId}&sort=scheduled_desc&offset=0&limit=10` |
+| Tri | `sort` : `scheduled_desc` (les plus récents d'abord), `scheduled_asc`, `created_desc`, `created_asc` **[lu dans leurs pages]** |
+| Jeton | aucun |
+| Réponse | `200`, JSON `{ items, range }` |
+
+Un tournoi porte son nom, ses dates (`scheduledDateStart`, `AAAA-MM-JJ`), son circuit,
+sa saison et sa région. Les ligues locales forment le circuit « LOCAL LEAGUES », une
+région par salle : la région porte le nom de la salle (`NÎMES`) et un nom court
+(`machineName` : `nimes`), qui est l'adresse de notre salle. Le lieu du tournoi
+(`location`) est vide. Les 7 tournois de RONIN sont la ligue de Nîmes, un par mois
+(« NEMAUSUS LEAGUE - NOVEMBRE »).
+
+La salle d'une équipe de ligue se lit donc dans la région de son tournoi le plus
+récent joué dans une de nos salles : rapprochée par le nom court, sinon par le nom.
 
 ---
 
@@ -78,7 +100,7 @@ seulement si ses premiers octets sont ceux d'un PNG, d'un JPEG ou d'un WebP.
 
 | Élément | Rôle |
 |---|---|
-| `server/src/integrations/competitive/competitive-teams.ts` | une page de la liste ; un logo, taille plafonnée et type vérifié sur l'image |
-| `server/src/services/league-directory.service.ts` | l'annuaire : relecture de nuit, recherche, copie des logos |
+| `server/src/integrations/competitive/competitive-teams.ts` | une page de la liste ; un logo, taille plafonnée et type vérifié sur l'image ; les tournois d'une équipe |
+| `server/src/services/league-directory.service.ts` | l'annuaire : relecture de nuit, recherche, copie des logos, salle d'une équipe de ligue |
 | `npm run db:sync-league-teams` | relit la liste tout de suite (base neuve, développement) |
 | `tmp-eva-probe/competitive/` | copie locale de leurs pages, référence hors ligne |

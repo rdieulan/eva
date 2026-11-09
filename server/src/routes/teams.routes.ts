@@ -13,31 +13,45 @@ import { linkTeamDiscord, unlinkTeamDiscord, type LinkTeamDiscordRefusal } from 
 
 const router = Router();
 
-// POST /api/teams - Create a new team
+// Why a creation or a link was refused, as an HTTP status
+const TEAM_REFUSAL_STATUS: Record<string, number> = {
+  [ERROR.leagueTeamNotFound]: 404,
+  [ERROR.venueNotFound]: 404,
+  [ERROR.teamNotFound]: 404,
+  [ERROR.leagueTeamTaken]: 409,
+};
+
+// An optional id in a request body: absent or null, or a non-empty string
+function isOptionalId(value: unknown): value is string | null | undefined {
+  return value === undefined || value === null || (typeof value === 'string' && value.length > 0);
+}
+
+// POST /api/teams - Create a team, the creator its leader; from a league team
+// of the directory (leagueTeamId), it is linked to it and takes its logo
 router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
-  const { name, venueId } = req.body;
+  const { name, venueId, leagueTeamId } = req.body ?? {};
 
   const nameValid = validateTeamName(name);
   if (nameValid !== true) {
     return res.status(400).json({ errors: nameValid });
+  }
+  if (!isOptionalId(venueId) || !isOptionalId(leagueTeamId)) {
+    return res.status(400).json({ errors: [ERROR.invalidRequest] });
   }
 
   try {
     const result = await teamsService.createTeam({
       name,
       venueId,
+      leagueTeamId,
       leaderId: req.account!.userId,
     });
 
-    if (result.error) {
-      return res.status(400).json({ errors: [result.error] });
+    if ('error' in result) {
+      return res.status(TEAM_REFUSAL_STATUS[result.error] ?? 400).json({ errors: [result.error] });
     }
 
-    res.status(201).json({
-      ...result.team,
-      favoriteVenueIds: [],
-      isLeader: result.isLeader,
-    });
+    res.status(201).json(result.team);
   } catch (error) {
     apiLogger.error('Error creating team:', error);
     res.status(500).json({ errors: [ERROR.serverError] });
@@ -348,6 +362,36 @@ router.put(
     } catch (error) {
       apiLogger.error('Error linking the team Discord channel:', error);
       res.status(500).json({ errors: [ERROR.discordLinkFailed] });
+    }
+  },
+);
+
+// PUT /api/teams/current/league-team - Link the team to its league team of the
+// directory, or unlink it ({ leagueTeamId: null })
+router.put(
+  '/current/league-team',
+  authMiddleware,
+  requirePermission('team', 'canManageTeam'),
+  async (req: AuthRequest, res: Response) => {
+    const leagueTeamId = req.body?.leagueTeamId;
+    if (!isOptionalId(leagueTeamId) || leagueTeamId === undefined) {
+      return res.status(400).json({ errors: [ERROR.invalidRequest] });
+    }
+
+    try {
+      const team = await teamsService.getPlayerTeam(req.account!.playerId!);
+      if (!team) {
+        return res.status(404).json({ errors: [ERROR.teamNotFound] });
+      }
+
+      const result = await teamsService.setTeamLeagueTeam(team.id, leagueTeamId);
+      if ('error' in result) {
+        return res.status(TEAM_REFUSAL_STATUS[result.error] ?? 400).json({ errors: [result.error] });
+      }
+      res.json(result);
+    } catch (error) {
+      apiLogger.error('Error linking the team to its league team:', error);
+      res.status(500).json({ errors: [ERROR.leagueTeamLinkFailed] });
     }
   },
 );

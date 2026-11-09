@@ -1,14 +1,11 @@
 // eva.gg account service - link a player to their eva.gg account
 
-import { Prisma } from '@prisma/client';
 import { prisma } from '@db/prisma';
+import { isUniqueViolation } from '@db/prisma-errors';
 import type { EvaAccountLink } from '@shared/types';
 import { fetchPublicPlayerByUsername, type PublicPlayerMiss } from '../integrations/eva/eva-players';
 
 const EVA_ACCOUNT_SELECT = { evaUserId: true, evaUsername: true, evaLinkedAt: true } as const;
-
-// Prisma's code for a unique constraint violation
-const UNIQUE_VIOLATION = 'P2002';
 
 // Why a link was refused: the lookup misses, or another player already holds that account
 export type LinkEvaAccountRefusal = PublicPlayerMiss | 'alreadyLinked';
@@ -69,7 +66,7 @@ export async function linkEvaAccount(playerId: string, username: string): Promis
     });
     return { link: toEvaAccountLink(player)! };
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === UNIQUE_VIOLATION) {
+    if (isUniqueViolation(error)) {
       return { refusal: 'alreadyLinked' };
     }
     throw error;

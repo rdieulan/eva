@@ -1,8 +1,4 @@
 // League teams routes: the directory of the teams of competitive.eva.gg
-//
-//TODO No screen calls these yet: the search of a player's league team, at the
-// team step of the first-login walk-through and on the no-team screen, comes
-// with joining or creating that team from the directory.
 
 import { Router, Response } from 'express';
 import { authMiddleware, AuthRequest } from '@middleware/auth.middleware';
@@ -28,6 +24,36 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   } catch (error) {
     apiLogger.error('Error searching league teams:', error);
     res.status(500).json({ errors: [ERROR.leagueSearchFailed] });
+  }
+});
+
+// GET /api/league-teams/:id - One league team, as a search lists it
+router.get('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const leagueTeam = await leagueDirectory.getLeagueTeamSummary(req.params.id as string);
+    if (!leagueTeam) {
+      return res.status(404).json({ errors: [ERROR.leagueTeamNotFound] });
+    }
+    res.json(leagueTeam);
+  } catch (error) {
+    apiLogger.error('Error fetching league team:', error);
+    res.status(500).json({ errors: [ERROR.serverError] });
+  }
+});
+
+// GET /api/league-teams/:id/venue - The venue of ours the league team plays its
+// local league at, read from its tournaments on the site: a proposal, null when
+// none of them is played at one of our venues
+router.get('/:id/venue', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const leagueTeamId = req.params.id as string;
+    if (!(await leagueDirectory.getLeagueTeamSummary(leagueTeamId))) {
+      return res.status(404).json({ errors: [ERROR.leagueTeamNotFound] });
+    }
+    res.json({ proposal: await leagueDirectory.proposeLeagueTeamVenue(leagueTeamId) });
+  } catch (error) {
+    apiLogger.error('Error proposing a league team\'s venue:', error);
+    res.status(500).json({ errors: [ERROR.serverError] });
   }
 });
 

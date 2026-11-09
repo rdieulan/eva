@@ -71,9 +71,12 @@ export type {
   NotificationInbox,
   MarkNotificationsReadRequest,
   NotificationTarget,
+  TeamPageTarget,
   NotificationDescription,
 } from './notification.types';
 export { NOTIFICATION_KINDS } from './notification.types';
+
+export type { JoinRequestStatus, MyJoinRequest, TeamJoinRequestView } from './join-request.types';
 
 export type {
   SubscriptionTier,
@@ -112,7 +115,7 @@ export type {
 } from './team.types';
 export { TEAM_LOCATIONS } from './team.types';
 
-export type { LeagueTeamSummary } from './league.types';
+export type { LeagueTeamSummary, LeagueVenueProposal } from './league.types';
 
 export type {
   BalanceSeverity,
