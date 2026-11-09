@@ -85,6 +85,7 @@ export async function cleanDatabase(): Promise<void> {
   await prisma.admin.deleteMany();
   await prisma.user.deleteMany();
   await prisma.venue.deleteMany();
+  await prisma.leagueTeam.deleteMany();
 }
 
 /**

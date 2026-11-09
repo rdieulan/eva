@@ -9,6 +9,7 @@ export {
 
 export {
   normalizeName,
+  cleanForeignName,
   validateName,
   validateTeamName,
   isValidName,
@@ -50,6 +51,8 @@ export {
 } from './venue.utils';
 
 export { detectImageType } from './image.utils';
+
+export { foldForSearch } from './search.utils';
 
 export {
   assessTeamAvailability,

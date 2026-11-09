@@ -28,6 +28,18 @@ export function normalizeName(name: string): string {
   return name.trim().replace(/\s+/g, ' ');
 }
 
+const NAME_FORBIDDEN_EVERYWHERE = new RegExp(NAME_FORBIDDEN.source, 'gu');
+
+/**
+ * A name given on another site, made fit to show here: what a name of ours may
+ * not hold (line breaks, direction marks) is dropped rather than refused, then
+ * the name is normalized. Empty when nothing visible is left.
+ */
+export function cleanForeignName(name: string): string {
+  const cleaned = normalizeName(name.replace(NAME_FORBIDDEN_EVERYWHERE, ' '));
+  return NAME_VISIBLE.test(cleaned) ? cleaned : '';
+}
+
 /**
  * Validate a person's name, once normalized: 2 to 32 characters, as Discord
  * allows its own (accents, spaces and emojis are fine)

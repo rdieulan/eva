@@ -66,7 +66,7 @@ server/src/
 ├── middleware/    # Middlewares Express
 ├── routes/        # Routes API
 ├── services/      # Logique métier serveur
-└── integrations/  # Clients d'API tierces (eva.gg), sans alias d'import : les scripts les chargent aussi
+└── integrations/  # Clients d'API tierces (eva.gg, competitive.eva.gg, Discord), sans alias d'import : les scripts les chargent aussi
 ```
 
 ---

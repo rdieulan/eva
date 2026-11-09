@@ -58,13 +58,17 @@ npm run db:seed
 # 6. Remplir la liste des salles (et leur nombre d'arènes) depuis l'API publique eva.gg
 npm run db:sync-venues
 
-# 7. (Optionnel) inviter un super admin : le lien affiché s'ouvre et s'accepte avec Discord
+# 7. Remplir l'annuaire des équipes de ligue depuis competitive.eva.gg (une page de 50 équipes
+#    toutes les 3 secondes : le serveur de dev ne le fait jamais de lui-même)
+npm run db:sync-league-teams
+
+# 8. (Optionnel) inviter un super admin : le lien affiché s'ouvre et s'accepte avec Discord
 npm run create-admin
 
-# 8. Lancer le backend (port 3001) — laisser tourner
+# 9. Lancer le backend (port 3001) — laisser tourner
 npm run server
 
-# 8. Dans un autre terminal, lancer le frontend (port 5173 par défaut)
+# 10. Dans un autre terminal, lancer le frontend (port 5173 par défaut)
 npm run dev
 ```
 
@@ -102,6 +106,7 @@ L'app est disponible sur **http://localhost:5173**. Le backend tourne sur **http
 |---|---|
 | `npm run db:seed` | Seed des maps (référence) |
 | `npm run db:sync-venues [-- <pays>]` | Remplit / met à jour les salles et leur nombre d'arènes depuis l'API eva.gg (FR par défaut) |
+| `npm run db:sync-league-teams` | Relit tout de suite la liste des équipes de ligue de competitive.eva.gg dans l'annuaire (le serveur de production la relit seul chaque nuit) |
 | `npm run db:studio` | Ouvre Prisma Studio (UI d'inspection) |
 | `npm run db:generate` | Régénère le client Prisma après modif du schéma |
 | `npm run db:push` | Sync rapide schéma → DB sans créer de migration (dev only) |
@@ -195,6 +200,7 @@ Pour bootstrapper la prod :
 # Après le déploiement, sur Railway shell (ou local en pointant DATABASE_URL prod)
 npm run db:seed         # seed des maps
 npm run db:sync-venues  # salles eva.gg
+npm run db:sync-league-teams  # annuaire des équipes de ligue (sinon, le serveur le remplit dans l'heure)
 npm run create-admin    # inviter le premier super admin (lien à accepter avec Discord)
 ```
 

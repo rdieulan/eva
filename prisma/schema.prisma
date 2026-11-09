@@ -197,6 +197,22 @@ model VenueManager {
   @@index([venueId])
 }
 
+// A team of the leagues played on competitive.eva.gg, as the site's public list
+// of After-H teams shows it, read again every night: a player finds their team
+// there by its name and knows it by its logo. Who plays in it is not kept.
+model LeagueTeam {
+  id           String   @id // Its id on competitive.eva.gg
+  name         String
+  searchName   String // The name as a search compares it: lowercase, no accents, one space between words
+  memberCount  Int
+  logoId       String? // Its current logo there, a new id for each new logo; null when it has none
+  // Its logo, copied the first time it is shown, for whoever looks next
+  logoData     Bytes?
+  logoType     String? // image/png, image/jpeg or image/webp, as read from the image itself
+  logoCopiedId String? // Which of its logos logoData holds: a stale copy once logoId moves on
+  seenAt       DateTime // The last read of the list it was in
+}
+
 // ============================================
 // Game Plans & Maps
 // ============================================

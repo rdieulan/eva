@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   normalizeName,
+  cleanForeignName,
   validateName,
   validateTeamName,
 } from '@shared/utils';
@@ -54,6 +55,23 @@ describe('Validation Utils', () => {
   describe('normalizeName', () => {
     it('trims the ends and keeps one space between words', () => {
       expect(normalizeName('  Raphaël   le  Grand ')).toBe('Raphaël le Grand');
+    });
+  });
+
+  // A name given on another site is shown, never refused: what a name of ours may not hold goes
+  describe('cleanForeignName', () => {
+    it('keeps a name as given, its ends trimmed and one space between words', () => {
+      expect(cleanForeignName('Paradox ')).toBe('Paradox');
+      expect(cleanForeignName('Les  Faucons 🦅')).toBe('Les Faucons 🦅');
+    });
+
+    it('drops line breaks and the marks that turn the text around', () => {
+      expect(cleanForeignName('two\nlines')).toBe('two lines');
+      expect(cleanForeignName('\u202Eevil\u202C name')).toBe('evil name');
+    });
+
+    it('leaves nothing of a name with nothing to see', () => {
+      expect(cleanForeignName(' \u200B\u2066 ')).toBe('');
     });
   });
 

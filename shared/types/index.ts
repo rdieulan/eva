@@ -112,6 +112,8 @@ export type {
 } from './team.types';
 export { TEAM_LOCATIONS } from './team.types';
 
+export type { LeagueTeamSummary } from './league.types';
+
 export type {
   BalanceSeverity,
   RuleKey,

@@ -2,7 +2,8 @@
 
 eva.gg est l'opérateur des salles où jouent nos équipes. Son API GraphQL sert notre
 liste de salles et le lien entre un joueur et son compte eva.gg. Ce document consigne
-ce que l'on a établi, pour ne pas avoir à le redécouvrir.
+ce que l'on a établi, pour ne pas avoir à le redécouvrir. Le site de leurs ligues,
+competitive.eva.gg, a le sien : `docs/COMPETITIVE_API.md`.
 
 **Source de vérité : le bundle de leur application web** (`app.eva.gg`), copié en local
 dans `tmp-eva-probe/` (ignoré par git). Toutes les formes de requêtes ci-dessous en

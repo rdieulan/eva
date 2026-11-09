@@ -1,16 +1,7 @@
 // Venue display helpers
 
 import type { Venue, VenueLinkKey } from '@shared/types';
-
-// Compare names the way a reader does: "Nîmes" and "NIMES" are the same town
-function normalize(text: string): string {
-  return text
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
-}
+import { foldForSearch } from '@shared/utils';
 
 /**
  * Label of a venue wherever the app names it: its name alone. eva.gg names a
@@ -54,8 +45,8 @@ export function groupMatchmakingVenues(
  * accents and case aside
  */
 export function venueMatches(venue: Pick<Venue, 'name' | 'city'>, query: string): boolean {
-  const wanted = normalize(query);
-  return !wanted || normalize(venue.name).includes(wanted) || normalize(venue.city).includes(wanted);
+  const wanted = foldForSearch(query);
+  return !wanted || foldForSearch(venue.name).includes(wanted) || foldForSearch(venue.city).includes(wanted);
 }
 
 // Keyed by VenueLinkKey: a new network does not compile until it has a label

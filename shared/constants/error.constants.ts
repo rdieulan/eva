@@ -112,6 +112,11 @@ export const ERROR = {
   leadershipTransferFailed: 'Erreur lors du transfert de la direction',
   leaderCannotLeave: 'Le leader ne peut pas quitter l\'équipe. Supprimez l\'équipe ou transférez la direction.',
 
+  // League teams (competitive.eva.gg)
+  leagueSearchInvalid: 'Recherche invalide',
+  leagueSearchFailed: 'Erreur lors de la recherche des équipes de ligue',
+  leagueTeamLogoNotFound: 'Logo de l\'équipe de ligue indisponible',
+
   // Venues
   venueNotFound: 'Salle non trouvée',
   venueBoardFetchFailed: 'Erreur lors de la récupération des recherches de la salle',
