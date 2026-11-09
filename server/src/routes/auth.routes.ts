@@ -9,7 +9,7 @@ import type { AuthRequest } from '@middleware/auth.middleware';
 import { ERROR } from '@shared/constants';
 import type { AccountType } from '@shared/types';
 import { authLogger } from '@utils/logger';
-import { getAccount, heldRoles, renameAccount } from '@services/auth.service';
+import { finishOnboarding, getAccount, heldRoles, renameAccount } from '@services/auth.service';
 import { closeSession, openSession, setSessionRole } from '@services/session.service';
 import { discordLoginConfig, signInWithDiscord } from '@services/discord-login.service';
 import { readInvitation } from '@services/invitation.service';
@@ -193,6 +193,17 @@ router.put('/name', authMiddleware, async (req: AuthRequest, res: Response) => {
   } catch (error) {
     authLogger.error('Rename error:', error);
     res.status(500).json({ errors: [ERROR.nameUpdateFailed] });
+  }
+});
+
+// POST /api/auth/onboarding - The first-login walk-through is over, done or skipped
+router.post('/onboarding', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    await finishOnboarding(req.account!.userId);
+    res.json({ account: await getAccount(req.account!.userId, req.account!.accountType) });
+  } catch (error) {
+    authLogger.error('Onboarding error:', error);
+    res.status(500).json({ errors: [ERROR.onboardingFailed] });
   }
 });
 

@@ -72,6 +72,14 @@ export async function renameAccount(name: string): Promise<Account> {
 }
 
 /**
+ * The first-login walk-through is over, done or skipped: it no longer shows
+ */
+export async function finishOnboarding(): Promise<Account> {
+  const response = await authFetch<LoginResponse>('/api/auth/onboarding', { method: 'POST' }, ERROR.onboardingFailed);
+  return response.account;
+}
+
+/**
  * An invitation to a role, as its link shows it; null when the link leads
  * nowhere (unknown, or already used). Read before signing in.
  */

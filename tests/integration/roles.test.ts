@@ -76,6 +76,26 @@ describe('PUT /api/auth/name', () => {
   });
 });
 
+describe('POST /api/auth/onboarding', () => {
+  it('marks the first-login walk-through over, once: the first time stays', async () => {
+    const { user, token } = await createAuthenticatedUser();
+    expect((await request(app).get('/api/auth/me').set(authHeader(token))).body.account.isOnboarded).toBe(false);
+
+    const done = await request(app).post('/api/auth/onboarding').set(authHeader(token));
+
+    expect(done.status).toBe(200);
+    expect(done.body.account.isOnboarded).toBe(true);
+    const { onboardedAt: first } = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+    await request(app).post('/api/auth/onboarding').set(authHeader(token)).expect(200);
+    const { onboardedAt: again } = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+    expect(again).toEqual(first);
+  });
+
+  it('is for a signed-in person', async () => {
+    expect((await request(app).post('/api/auth/onboarding')).status).toBe(401);
+  });
+});
+
 describe('GET /api/auth/session', () => {
   it('answers who is signed in, and nobody without a refusal', async () => {
     const { user, token } = await createAuthenticatedUser();

@@ -46,6 +46,7 @@ export const ERROR = {
   forbidden: 'Permission refusée',
   foreignOrigin: 'Modification refusée : elle ne vient pas de l\'application',
   nameUpdateFailed: 'Erreur lors du changement de pseudo',
+  onboardingFailed: 'Erreur lors de l\'enregistrement : réessaie',
 
   // Signing in with Discord, as the login page tells it
   discordLoginCancelled: 'Connexion annulée sur Discord.',

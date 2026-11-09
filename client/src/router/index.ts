@@ -6,6 +6,7 @@ import { useAuth } from '@/composables/useAuth';
 
 // Pages allowed without team membership
 const ALLOWED_WITHOUT_TEAM = [
+  'welcome',
   'home',
   'profile',
   'team',
@@ -54,6 +55,7 @@ const TeamPage = () => import('@/pages/TeamPage.vue');
 const CreateTeamPage = () => import('@/pages/CreateTeamPage.vue');
 const JoinTeamPage = () => import('@/pages/JoinTeamPage.vue');
 const LoginPage = () => import('@/pages/LoginPage.vue');
+const WelcomePage = () => import('@/pages/WelcomePage.vue');
 const ActivatePage = () => import('@/pages/ActivatePage.vue');
 const VenueBoardPage = () => import('@/pages/VenueBoardPage.vue');
 const AdminLayout = () => import('@/pages/AdminLayout.vue');
@@ -110,10 +112,17 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Rejoindre une équipe', requiresAuth: true }
   },
   {
+    // The first-login walk-through: pseudo, eva.gg account, EVA Pass, team
+    path: '/bienvenue',
+    name: 'welcome',
+    component: WelcomePage,
+    meta: { title: 'Bienvenue', requiresAuth: true, hideTopBar: true }
+  },
+  {
     path: '/login',
     name: 'login',
     component: LoginPage,
-    meta: { title: 'Connexion', requiresAuth: false }
+    meta: { title: 'Connexion', requiresAuth: false, hideTopBar: true }
   },
   {
     // An invitation to a role (venue manager, admin), accepted by signing in with Discord
@@ -198,6 +207,17 @@ router.beforeEach(async (to, _from, next) => {
   // Check if route requires authentication
   if (to.meta.requiresAuth && !isAuthenticated.value) {
     next({ name: 'login', query: { redirect: to.fullPath } });
+    return;
+  }
+
+  // A player's first login goes through the walk-through first, then on where they were going
+  if (
+    to.meta.requiresAuth
+    && to.name !== 'welcome'
+    && account.value?.accountType === 'player'
+    && !account.value.isOnboarded
+  ) {
+    next({ name: 'welcome', query: to.fullPath === '/' ? {} : { next: to.fullPath } });
     return;
   }
 

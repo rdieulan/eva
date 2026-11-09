@@ -137,7 +137,8 @@ describe('GET /api/auth/discord/callback', () => {
     expect(user.name).toBe('Raphaël');
     expect(user.player).not.toBeNull();
     const me = await request(app).get('/api/auth/me').set(authHeader(sessionToken(res)));
-    expect(me.body.account).toMatchObject({ id: user.id, accountType: 'player', roles: ['player'], name: 'Raphaël' });
+    // A new account goes through the first-login walk-through
+    expect(me.body.account).toMatchObject({ id: user.id, accountType: 'player', roles: ['player'], name: 'Raphaël', isOnboarded: false });
   });
 
   it('opens the same account at the next sign-in, keeping the name changed since', async () => {

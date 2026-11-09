@@ -39,6 +39,7 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { ERROR } from '@shared/constants';
 import { useErrors } from '@/composables/useErrors';
+import { inviteCodeOf } from '@/utils/invites';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 
 const router = useRouter();
@@ -51,25 +52,11 @@ function handleCreateTeam() {
   router.push('/team/create');
 }
 
-// Extract code from URL or raw code
-function extractCode(input: string): string {
-  const trimmed = input.trim();
-
-  // Check if it's a full URL with /join/
-  const joinMatch = trimmed.match(/\/join\/([a-zA-Z0-9]+)/);
-  if (joinMatch && joinMatch[1]) {
-    return joinMatch[1];
-  }
-
-  // Otherwise use as-is
-  return trimmed;
-}
-
 // Handle join - redirect to join page
 function handleJoin() {
   if (!inviteCode.value.trim()) return;
 
-  const code = extractCode(inviteCode.value);
+  const code = inviteCodeOf(inviteCode.value);
 
   if (!code) {
     setError(ERROR.inviteCodeInvalid);

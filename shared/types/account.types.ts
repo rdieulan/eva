@@ -19,6 +19,7 @@ export interface Account {
   name: string;
   accountType: AccountType; // The role the session acts as
   roles: AccountType[];     // Every role of the account, to switch between
+  isOnboarded: boolean;     // The first-login walk-through was done or skipped
   permissions: AccountPermissions;
   // Player-specific data (null if not a player)
   teamId: string | null;

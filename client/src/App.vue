@@ -39,8 +39,8 @@ const userName = computed(() => account.value?.name);
 // The bell tells a team what happened: only a player in a team has one
 const showNotifications = computed(() => account.value?.accountType === 'player' && !!account.value.teamId);
 
-// Determine if TopBar should be displayed (not on login page)
-const showTopBar = computed(() => route.name !== 'login');
+// The TopBar hides on the pages that stand alone (signing in, the first-login walk-through)
+const showTopBar = computed(() => !route.meta.hideTopBar);
 </script>
 
 <template>

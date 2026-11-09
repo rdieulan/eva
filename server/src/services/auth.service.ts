@@ -26,6 +26,7 @@ export async function heldRoles(userId: string): Promise<AccountType[] | null> {
 const ACCOUNT_SELECT = {
   id: true,
   name: true,
+  onboardedAt: true,
   playerId: true,
   managerId: true,
   adminId: true,
@@ -53,12 +54,18 @@ export async function getAccount(userId: string, accountType: AccountType): Prom
     name: user.name,
     accountType: actingAs,
     roles,
+    isOnboarded: user.onboardedAt !== null,
     permissions: permissionsFor(user, actingAs),
     teamId: actingAs === 'player' ? user.player.teamId : null,
     isLeader: actingAs === 'player' && !!user.player.ledTeam,
     managedVenueIds: actingAs === 'manager' ? user.manager?.managedVenues.map(managed => managed.venueId) ?? [] : null,
     adminPermissions: actingAs === 'admin' ? (user.admin?.permissions as unknown as AdminPermissions) ?? null : null,
   };
+}
+
+/** The first-login walk-through is over, done or skipped: it no longer shows. The first time is kept. */
+export async function finishOnboarding(userId: string): Promise<void> {
+  await prisma.user.updateMany({ where: { id: userId, onboardedAt: null }, data: { onboardedAt: new Date() } });
 }
 
 /** Change the name a person shows the others; the errors of a name that breaks the rule */

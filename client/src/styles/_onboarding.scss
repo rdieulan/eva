@@ -1,0 +1,82 @@
+// The fields and buttons of the first-login walk-through, shared by its steps:
+// one large field per question, a main button to go on, a quiet one to skip
+// Usage: @include onboarding-input; @include onboarding-primary; ...
+
+@use 'variables' as *;
+
+@mixin onboarding-input {
+  width: 100%;
+  padding: 0.95rem 1.1rem;
+  background: $color-bg-secondary;
+  border: $border-thick solid $color-border-light;
+  border-radius: $radius-md;
+  color: $color-white;
+  font-size: 1.1rem;
+  transition: border-color 0.2s;
+
+  &:focus {
+    outline: none;
+    border-color: $color-accent;
+  }
+
+  &::placeholder {
+    color: $color-text-muted;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+  }
+
+  @include mobile-lg {
+    font-size: 16px; // Prevents zoom on iOS
+  }
+}
+
+@mixin onboarding-hint {
+  margin: 0;
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+  line-height: 1.5;
+}
+
+@mixin onboarding-primary {
+  width: 100%;
+  padding: 0.95rem;
+  background: $color-accent;
+  border: none;
+  border-radius: $radius-md;
+  color: $color-white;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, opacity 0.2s;
+
+  &:hover:not(:disabled) {
+    background: shade($color-accent, 10%);
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+@mixin onboarding-skip {
+  align-self: center;
+  padding: $spacing-xs $spacing-sm;
+  background: none;
+  border: none;
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    color: $color-text-primary;
+    text-decoration: underline;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
