@@ -38,6 +38,7 @@ Une salle se nomme partout par son nom seul (`formatVenueLabel`), celui qu'eva.g
 - *Réservation d'un match sur eva.gg* : les joueurs inscrits sur les créneaux d'un match se comparent à un match plein de 8, la capacité affichée par eva.gg (souvent 10) est ignorée. eva.gg donne le nombre d'inscrits, jamais les noms : l'affichage montre un écart éventuel, il ne prétend pas savoir qui manque. Pas de case « j'ai réservé » déclarative, qui créerait une fausse certitude pour le chef d'équipe.
 - *Liens d'une salle* : seule une URL http(s) absolue est gardée, venue de la synchronisation eva.gg comme de l'administration : un pseudo, un champ vide ou un `javascript:` sont écartés (`normalizeLinkUrl`).
 - *Compte eva.gg d'un joueur* : il donne son tag (`Pseudo#123456`) ; on garde l'identifiant stable d'eva.gg avec le tag du moment. Un compte eva.gg ne se relie qu'à un seul joueur.
+- *Transférer la direction* (décidé le 2026-11-09) : le leader nomme un autre membre leader, après une confirmation, pour le cas où l'équipe a été créée par un autre que son capitaine. L'ancien leader reste membre avec tous les droits de gestion, que le nouveau ajuste ; seul le leader supprime l'équipe.
 - *Administration* : suppression définitive, pas de corbeille. Supprimer une salle détache les équipes qui y étaient affiliées. Un administrateur ne peut pas se supprimer lui-même, et le dernier super administrateur ne peut être ni supprimé ni rétrogradé.
 
 ## Se connecter

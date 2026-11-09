@@ -8,12 +8,14 @@ defineProps<{
   canManagePermissions: boolean;
   canRemoveMembers: boolean;
   canInviteMembers: boolean;
+  isLeader: boolean; // The reader leads the team: they may hand it over
 }>();
 
 defineEmits<{
   invite: [];
   editPermissions: [member: TeamMember];
   removeMember: [member: TeamMember];
+  transferLeadership: [member: TeamMember];
 }>();
 </script>
 
@@ -41,8 +43,16 @@ defineEmits<{
           </span>
         </div>
 
-        <div class="member-actions" v-if="canManagePermissions && !member.isLeader && member.id !== currentUserId">
-          <button class="btn-icon" title="Gérer les permissions" @click="$emit('editPermissions', member)">
+        <div class="member-actions" v-if="(canManagePermissions || isLeader) && !member.isLeader && member.id !== currentUserId">
+          <button
+            v-if="isLeader"
+            class="btn-icon"
+            title="Transférer la direction"
+            @click="$emit('transferLeadership', member)"
+          >
+            <SvgIcon name="shield" />
+          </button>
+          <button v-if="canManagePermissions" class="btn-icon" title="Gérer les permissions" @click="$emit('editPermissions', member)">
             <SvgIcon name="settings" />
           </button>
           <button

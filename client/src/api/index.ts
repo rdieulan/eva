@@ -74,6 +74,7 @@ export {
   fetchTeamMembers,
   updateMemberPermissions,
   removeMember,
+  transferLeadership,
   deleteTeam,
   leaveTeam,
   createInvite,

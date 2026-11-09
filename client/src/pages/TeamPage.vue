@@ -9,6 +9,7 @@ import {
   fetchTeamMembers,
   updateMemberPermissions,
   removeMember,
+  transferLeadership,
   deleteTeam,
   leaveTeam,
   createInvite,
@@ -33,7 +34,7 @@ import TeamPermissionsModal from '@/components/team/TeamPermissionsModal.vue';
 import TeamInviteModal from '@/components/team/TeamInviteModal.vue';
 
 const router = useRouter();
-const { isAuthenticated, permissions, account } = useAuth();
+const { isAuthenticated, permissions, account, refreshAccount } = useAuth();
 const { set: setTeamLogo } = useTeamLogo();
 
 
@@ -237,6 +238,30 @@ async function confirmRemoveMember() {
   }
 }
 
+// Hand the team over to another member, the reader leading it
+const memberToLead = ref<TeamMember | null>(null);
+
+function openTransferModal(member: TeamMember) {
+  if (!isLeader.value || member.isLeader) return;
+  memberToLead.value = member;
+}
+
+async function confirmTransferLeadership() {
+  if (!memberToLead.value) return;
+
+  try {
+    await transferLeadership(memberToLead.value.id);
+    const newLeader = memberToLead.value.name;
+    memberToLead.value = null;
+    // The reader is a member now: their rights and the page follow
+    await refreshAccount();
+    await loadData();
+    showSuccess(`${newLeader} dirige maintenant l'équipe`);
+  } catch (e) {
+    setErrorFromException(e, ERROR.leadershipTransferFailed);
+  }
+}
+
 // Invite handlers
 function openInviteModal() {
   generatedInvite.value = null;
@@ -327,9 +352,11 @@ onMounted(loadData);
           :can-manage-permissions="canManagePermissions"
           :can-remove-members="canRemoveMembers"
           :can-invite-members="canInviteMembers"
+          :is-leader="isLeader"
           @invite="openInviteModal"
           @edit-permissions="openPermissionsModal"
           @remove-member="openRemoveModal"
+          @transfer-leadership="openTransferModal"
         />
 
         <!-- Invites list (inside members section context) -->
@@ -361,6 +388,16 @@ onMounted(loadData);
       :danger="true"
       @confirm="confirmRemoveMember"
       @cancel="showRemoveModal = false; memberToRemove = null"
+    />
+
+    <!-- Hand-over Confirmation Modal -->
+    <ConfirmModal
+      :open="!!memberToLead"
+      title="Transférer la direction"
+      :message="`${memberToLead?.name} dirigera l'équipe à ta place. Tu restes membre, avec tous les droits de gestion, que le nouveau leader pourra ajuster.`"
+      confirm-text="Transférer"
+      @confirm="confirmTransferLeadership"
+      @cancel="memberToLead = null"
     />
 
     <!-- Delete Team Confirmation Modal -->

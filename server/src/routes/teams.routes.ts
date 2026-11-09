@@ -182,6 +182,30 @@ router.delete(
   }
 );
 
+// PUT /api/teams/current/leader - Hand the team over to another member (leader only)
+router.put('/current/leader', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const { memberId } = req.body ?? {};
+  if (typeof memberId !== 'string' || memberId === '') {
+    return res.status(400).json({ errors: [ERROR.memberNotFound] });
+  }
+
+  try {
+    const result = await teamsService.transferLeadership(req.account!.userId, memberId);
+
+    if (!result.success) {
+      const status = result.error === ERROR.memberNotFound ? 404
+        : result.error === ERROR.memberAlreadyLeader ? 400
+          : 403;
+      return res.status(status).json({ errors: [result.error] });
+    }
+
+    res.json({ message: 'Direction transférée' });
+  } catch (error) {
+    apiLogger.error('Error transferring leadership:', error);
+    res.status(500).json({ errors: [ERROR.leadershipTransferFailed] });
+  }
+});
+
 // DELETE /api/teams/current - Delete the team (leader only)
 router.delete('/current', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {

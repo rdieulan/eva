@@ -107,6 +107,9 @@ export const ERROR = {
   cannotRemoveLeader: 'Impossible de retirer le leader de l\'équipe',
   cannotRemoveSelf: 'Impossible de vous retirer vous-même',
   onlyLeaderCanDelete: 'Seul le leader peut supprimer l\'équipe',
+  onlyLeaderCanTransfer: 'Seul le leader peut transférer la direction de l\'équipe',
+  memberAlreadyLeader: 'Ce membre dirige déjà l\'équipe',
+  leadershipTransferFailed: 'Erreur lors du transfert de la direction',
   leaderCannotLeave: 'Le leader ne peut pas quitter l\'équipe. Supprimez l\'équipe ou transférez la direction.',
 
   // Venues

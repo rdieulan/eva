@@ -175,6 +175,17 @@ export async function removeMember(memberId: string): Promise<void> {
 }
 
 /**
+ * Hand the team over to another member (leader only)
+ */
+export async function transferLeadership(memberId: string): Promise<void> {
+  return authFetch<void>(
+    `${API_BASE}/current/leader`,
+    { method: 'PUT', body: JSON.stringify({ memberId }) },
+    ERROR.leadershipTransferFailed
+  );
+}
+
+/**
  * Delete the team (leader only)
  */
 export async function deleteTeam(): Promise<void> {

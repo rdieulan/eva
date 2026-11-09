@@ -401,6 +401,54 @@ export async function updateMemberPermissions(
 }
 
 /**
+ * Hand the team over to another of its members, who leads it from now on. The
+ * former leader stays a member with every permission a leader has, which the
+ * new leader adjusts as they see fit. Two hand-overs at once: one wins.
+ */
+export async function transferLeadership(
+  currentUserId: string,
+  memberId: string
+): Promise<{ success: boolean; error?: string }> {
+  const currentUser = await prisma.user.findUnique({
+    where: { id: currentUserId },
+    select: { player: { select: { id: true, ledTeam: { select: { id: true } } } } },
+  });
+
+  const team = currentUser?.player.ledTeam;
+  if (!team) {
+    return { success: false, error: ERROR.onlyLeaderCanTransfer };
+  }
+
+  if (memberId === currentUserId) {
+    return { success: false, error: ERROR.memberAlreadyLeader };
+  }
+
+  const target = await prisma.user.findUnique({
+    where: { id: memberId },
+    select: { player: { select: { id: true, teamId: true } } },
+  });
+
+  if (!target || target.player.teamId !== team.id) {
+    return { success: false, error: ERROR.memberNotFound };
+  }
+
+  const handedOver = await prisma.$transaction(async tx => {
+    const { count } = await tx.team.updateMany({
+      where: { id: team.id, leaderId: currentUser!.player.id },
+      data: { leaderId: target.player.id },
+    });
+    if (count === 0) return false;
+    await tx.player.update({
+      where: { id: currentUser!.player.id },
+      data: { permissions: LEADER_PERMISSIONS as unknown as object },
+    });
+    return true;
+  });
+
+  return handedOver ? { success: true } : { success: false, error: ERROR.onlyLeaderCanTransfer };
+}
+
+/**
  * Remove a member from team
  */
 export async function removeMember(
