@@ -1,262 +1,60 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
-import { useAuth } from '@/composables/useAuth';
-import { useErrors } from '@/composables/useErrors';
-import { clearPlayersCache, clearBalanceRulesCache } from '@/api';
+import { computed, defineAsyncComponent } from 'vue';
+import { useRoute } from 'vue-router';
 import { ERROR } from '@shared/constants';
-import { landingPathForAccount } from '@/router';
+import { discordSignInUrl } from '@/api/auth.api';
+import AuthCard from '@/components/auth/layout/AuthCard.vue';
+import DiscordSignInButton from '@/components/auth/DiscordSignInButton.vue';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 
-const router = useRouter();
+// The development login exists in development builds only: a production build drops it
+const DevLoginPicker = import.meta.env.DEV
+  ? defineAsyncComponent(() => import('@/components/auth/DevLoginPicker.vue'))
+  : null;
+
 const route = useRoute();
-const { setAuth } = useAuth();
-const { errors, setError, setErrors, clearErrors } = useErrors();
 
-const email = ref('');
-const password = ref('');
-const isLoading = ref(false);
+// Why the last sign-in stopped, as the server tells it in the address
+const SIGN_IN_PROBLEMS: Record<string, string> = {
+  cancelled: ERROR.discordLoginCancelled,
+  expired: ERROR.discordLoginExpired,
+  failed: ERROR.discordLoginFailed,
+  unavailable: ERROR.discordLoginUnavailable,
+};
 
-async function handleLogin() {
-  if (!email.value || !password.value) {
-    setError(ERROR.requiredFieldsMissing);
-    return;
-  }
+// The page to land on: the one the visitor was sent here from, if any
+const redirect = computed(() => (typeof route.query.redirect === 'string' ? route.query.redirect : null));
 
-  isLoading.value = true;
-  clearErrors();
+const errors = computed(() => {
+  const problem = typeof route.query.error === 'string' ? SIGN_IN_PROBLEMS[route.query.error] : undefined;
+  return problem ? [problem] : [];
+});
 
-  try {
-    const response = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: email.value,
-        password: password.value,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      setErrors(data.errors || [ERROR.connectionError]);
-      return;
-    }
-
-    // Clear cached data from previous account session
-    clearPlayersCache();
-    clearBalanceRulesCache();
-
-    // Set auth using composable
-    setAuth(data.account);
-
-    // Redirect to original page or to the account's default landing page
-    const redirectPath = (route.query.redirect as string) || landingPathForAccount(data.account);
-    router.push(redirectPath);
-  } catch {
-    setError(ERROR.connectionError);
-  } finally {
-    isLoading.value = false;
-  }
-}
+const signInUrl = computed(() => discordSignInUrl({ next: redirect.value ?? undefined }));
 </script>
 
 <template>
-  <div class="login-page">
-    <div class="login-card">
-      <h1>Connexion</h1>
+  <AuthCard title="Connexion">
+    <p class="lead">
+      Ton compte Discord suffit. On n'en garde que son numéro et ton pseudo : ni email, ni mot de passe.
+    </p>
 
-      <form @submit.prevent="handleLogin">
-        <div class="form-group">
-          <label for="email">Email</label>
-          <input
-            id="email"
-            v-model="email"
-            type="email"
-            placeholder="votre@email.com"
-            :disabled="isLoading"
-          />
-        </div>
+    <ErrorDisplay :errors="errors" />
 
-        <div class="form-group">
-          <label for="password">Mot de passe</label>
-          <input
-            id="password"
-            v-model="password"
-            type="password"
-            placeholder="••••••••"
-            :disabled="isLoading"
-          />
-        </div>
+    <DiscordSignInButton :href="signInUrl" />
 
-        <ErrorDisplay :errors="errors" />
-
-        <button type="submit" class="btn-submit" :disabled="isLoading">
-          {{ isLoading ? 'Connexion...' : 'Se connecter' }}
-        </button>
-      </form>
-
-      <div class="register-link">
-        <span>Pas encore de compte ?</span>
-        <router-link to="/register">Créer un compte</router-link>
-      </div>
-    </div>
-  </div>
+    <component :is="DevLoginPicker" v-if="DevLoginPicker" :redirect="redirect" />
+  </AuthCard>
 </template>
 
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
 
-.login-page {
-  min-height: 100%;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  @include surface-gradient;
-  padding: $spacing-xl;
-
-  @include tablet {
-    padding: $spacing-lg;
-  }
-
-  @include mobile-lg {
-    padding: $spacing-md;
-    align-items: flex-start;
-    padding-top: $spacing-2xl;
-  }
-
-  @include mobile {
-    padding: 0.75rem;
-    padding-top: $spacing-xl;
-  }
-}
-
-.login-card {
-  background: $color-bg-tertiary;
-  border: $border-thin solid $color-border-light;
-  border-radius: $radius-xl;
-  padding: 2.5rem;
-  width: 100%;
-  max-width: 400px;
-
-  @include tablet {
-    padding: $spacing-xl;
-  }
-
-  @include mobile-lg {
-    padding: $spacing-lg;
-    border-radius: $radius-lg;
-  }
-
-  @include mobile {
-    padding: 1.25rem;
-    border-radius: 10px;
-  }
-}
-
-h1 {
-  color: $color-white;
+.lead {
+  margin: 0;
   text-align: center;
-  margin: 0 0 $spacing-xl;
-  font-size: 1.8rem;
-
-  @include mobile-lg {
-    font-size: 1.5rem;
-    margin-bottom: $spacing-lg;
-  }
-
-  @include mobile {
-    font-size: 1.35rem;
-    margin-bottom: 1.25rem;
-  }
-}
-
-.form-group {
-  margin-bottom: $spacing-lg;
-
-  @include mobile-lg {
-    margin-bottom: 1.25rem;
-  }
-}
-
-label {
-  display: block;
   color: $color-text-secondary;
-  margin-bottom: $spacing-sm;
-  font-size: 0.9rem;
-
-  @include mobile {
-    font-size: 0.85rem;
-  }
-}
-
-input {
-  width: 100%;
-  padding: 0.75rem $spacing-md;
-  background: $color-bg-secondary;
-  border: $border-thick solid $color-border-light;
-  border-radius: $radius-md;
-  color: $color-white;
-  font-size: 1rem;
-  transition: border-color 0.2s;
-
-  &:focus {
-    outline: none;
-    border-color: $color-accent;
-  }
-
-  &::placeholder {
-    color: $color-text-secondary;
-  }
-
-  @include mobile-lg {
-    padding: 0.875rem $spacing-md;
-    font-size: 16px; // Prevents zoom on iOS
-  }
-}
-
-
-.btn-submit {
-  width: 100%;
-  padding: 0.875rem;
-  background: $color-accent;
-  border: none;
-  border-radius: $radius-md;
-  color: $color-white;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover:not(:disabled) {
-    background: $color-accent;
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  @include mobile {
-    padding: 0.75rem;
-    font-size: 0.95rem;
-  }
-}
-
-.register-link {
-  text-align: center;
-  margin-top: $spacing-md;
-  color: $color-text-muted;
   font-size: $font-size-sm;
-
-  a {
-    color: $color-accent;
-    text-decoration: underline;
-
-    &:hover {
-      color: tint($color-accent, 25%);
-    }
-  }
+  line-height: 1.5;
 }
 </style>

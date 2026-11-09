@@ -93,7 +93,7 @@ describe('Teams API', () => {
       expect(res.status).toBe(200);
       expect(res.body.isLeader).toBe(true);
       // User id, not Player id: that is what the client session carries
-      expect(res.body.leader).toMatchObject({ id: user.id, name: user.name, email: user.email });
+      expect(res.body.leader).toEqual({ id: user.id, name: user.name });
       expect(res.body.leaderId).toBe(user.playerId);
       expect(res.body.members).toHaveLength(1);
       expect(res.body.members[0]).toMatchObject({ id: user.id, isLeader: true });
@@ -372,9 +372,7 @@ describe('Teams API', () => {
 
       expect(inviteRes.status).toBe(201);
 
-      const { token: joinerToken } = await createAuthenticatedUser({
-        email: 'joiner@example.com',
-      });
+      const { token: joinerToken } = await createAuthenticatedUser();
 
       const res = await request(app)
         .post(`/api/invites/${inviteRes.body.code}/join`)
@@ -406,7 +404,7 @@ describe('Teams API', () => {
         },
       });
 
-      const { token } = await createAuthenticatedUser({ email: 'joiner2@example.com' });
+      const { token } = await createAuthenticatedUser();
 
       const res = await request(app)
         .post('/api/invites/EXPIREDCODE/join')
@@ -471,9 +469,7 @@ describe('Teams API', () => {
       const { token: leaderToken, team } = await createUserWithTeam();
 
       // Create a member without invite permission
-      const { token: memberToken } = await createAuthenticatedUser({
-        email: 'member@example.com',
-      });
+      const { token: memberToken } = await createAuthenticatedUser();
 
       // Create invitation with leader
       const inviteRes = await request(app)
@@ -530,7 +526,7 @@ describe('Teams API', () => {
 
     it('should reject if user does not belong to team', async () => {
       const { team } = await createUserWithTeam();
-      const { token: otherToken } = await createUserWithTeam({ email: 'other@example.com' });
+      const { token: otherToken } = await createUserWithTeam();
 
       const res = await expectNoRecordCreated(
         () => prisma.teamInvite.count({ where: { teamId: team.id } }),
@@ -625,7 +621,7 @@ describe('Team logo API', () => {
 
   it('should refuse a member who cannot manage the team', async () => {
     const { token: leaderToken, team } = await createUserWithTeam();
-    const member = await createAuthenticatedUser({ email: 'member@example.com' });
+    const member = await createAuthenticatedUser();
     const invite = await request(app)
       .post(`/api/teams/${team.id}/invites`)
       .set(authHeader(leaderToken))

@@ -126,13 +126,11 @@ export { DEFAULT_BALANCE_RULES } from './balance.types';
 export type {
   Account,
   AccountType,
-  LinkedAccount,
+  InvitationSummary,
+  DevLoginAccount,
 } from './account.types';
 
-export type {
-  LoginResponse,
-  LoginCredentials,
-} from './auth.types';
+export type { LoginResponse } from './auth.types';
 
 export type { Venue, VenueSlot, SlotTokenType, VenueLinks, VenueLinkKey } from './venue.types';
 export { VENUE_LINK_KEYS } from './venue.types';

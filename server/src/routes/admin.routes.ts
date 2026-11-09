@@ -3,7 +3,7 @@
 
 import { Router, Response } from 'express';
 import { authMiddleware, requireAdmin, requireAdminPermission, AuthRequest } from '@middleware/auth.middleware';
-import { validateEmail, validateName, isAcceptableLinkInput } from '@shared/utils';
+import { normalizeName, validateName, isAcceptableLinkInput } from '@shared/utils';
 import { ERROR } from '@shared/constants';
 import { apiLogger } from '@utils/logger';
 import type { AdminPermissions, VenueLinks } from '@shared/types';
@@ -13,6 +13,14 @@ import * as managerService from '@services/manager.service';
 import * as adminService from '@services/admin.service';
 import * as playerService from '@services/player.service';
 import * as teamsService from '@services/teams.service';
+
+// The name an invitation shows until someone accepts it, saying who it is for:
+// the rules of a person's name, who will then go by their own
+function invitedNameErrors(name: unknown): string[] {
+  if (typeof name !== 'string' || name.trim() === '') return [ERROR.invitedNameRequired];
+  const valid = validateName(name);
+  return valid === true ? [] : valid;
+}
 
 // Arenas are numbered 1 upwards, so a venue runs at least one
 function isValidArenaCount(value: unknown): value is number {
@@ -158,11 +166,14 @@ router.delete(
 // Managers
 // ============================================
 
-// GET /api/admin/managers - List all managers
-router.get('/managers', async (_req: AuthRequest, res: Response) => {
+// GET /api/admin/managers - List all managers. The link of a pending
+// invitation gives the role to whoever opens it: only an admin who may manage
+// managers sees it.
+router.get('/managers', async (req: AuthRequest, res: Response) => {
   try {
     const managers = await managerService.listManagers();
-    res.json(managers);
+    const mayManage = await adminService.adminHasPermission(req.account!.adminId!, 'system', 'canManageManagers');
+    res.json(mayManage ? managers : managers.map(manager => ({ ...manager, activationToken: null })));
   } catch (error) {
     apiLogger.error('Admin: error listing managers:', error);
     res.status(500).json({ errors: [ERROR.managersFetchFailed] });
@@ -174,23 +185,9 @@ router.post(
   '/managers',
   requireAdminPermission('canManageManagers'),
   async (req: AuthRequest, res: Response) => {
-    const { email, name, venueIds } = req.body ?? {};
+    const { name, venueIds } = req.body ?? {};
 
-    const errors: string[] = [];
-
-    if (!email || typeof email !== 'string') {
-      errors.push(ERROR.emailAndPasswordRequired);
-    } else {
-      const emailValid = validateEmail(email);
-      if (emailValid !== true) errors.push(...emailValid);
-    }
-
-    if (!name || typeof name !== 'string') {
-      errors.push(ERROR.nameTooShort);
-    } else {
-      const nameValid = validateName(name);
-      if (nameValid !== true) errors.push(...nameValid);
-    }
+    const errors: string[] = invitedNameErrors(name);
 
     const normalizedVenueIds: string[] = Array.isArray(venueIds)
       ? venueIds.filter((v): v is string => typeof v === 'string')
@@ -202,20 +199,14 @@ router.post(
     if (errors.length) return res.status(400).json({ errors });
 
     try {
-      const result = await managerService.createManagerWithActivation(email, name, normalizedVenueIds);
+      const result = await managerService.createManagerWithActivation(normalizeName(name), normalizedVenueIds);
       if ('error' in result) {
-        if (result.error === 'emailExists') {
-          return res.status(409).json({ errors: [ERROR.emailAlreadyUsed] });
-        }
-        if (result.error === 'invalidVenues') {
-          return res.status(400).json({ errors: [ERROR.venueNotFound] });
-        }
-      } else {
-        return res.status(201).json({
-          manager: result.manager,
-          activationToken: result.activationToken,
-        });
+        return res.status(400).json({ errors: [ERROR.venueNotFound] });
       }
+      return res.status(201).json({
+        manager: result.manager,
+        activationToken: result.activationToken,
+      });
     } catch (error) {
       apiLogger.error('Admin: error creating manager:', error);
       res.status(500).json({ errors: [ERROR.managerCreationFailed] });
@@ -286,23 +277,9 @@ router.post(
   '/admins',
   requireAdminPermission('canManageAdmins'),
   async (req: AuthRequest, res: Response) => {
-    const { email, name, permissions } = req.body ?? {};
+    const { name, permissions } = req.body ?? {};
 
-    const errors: string[] = [];
-
-    if (!email || typeof email !== 'string') {
-      errors.push(ERROR.emailAndPasswordRequired);
-    } else {
-      const emailValid = validateEmail(email);
-      if (emailValid !== true) errors.push(...emailValid);
-    }
-
-    if (!name || typeof name !== 'string') {
-      errors.push(ERROR.nameTooShort);
-    } else {
-      const nameValid = validateName(name);
-      if (nameValid !== true) errors.push(...nameValid);
-    }
+    const errors: string[] = invitedNameErrors(name);
 
     const normalized = normalizeAdminPermissions(permissions);
     if (!normalized) errors.push(ERROR.adminPermissionsInvalid);
@@ -310,17 +287,11 @@ router.post(
     if (errors.length) return res.status(400).json({ errors });
 
     try {
-      const result = await adminService.createAdminWithActivation(email, name, normalized!);
-      if ('error' in result) {
-        if (result.error === 'emailExists') {
-          return res.status(409).json({ errors: [ERROR.emailAlreadyUsed] });
-        }
-      } else {
-        return res.status(201).json({
-          admin: result.admin,
-          activationToken: result.activationToken,
-        });
-      }
+      const result = await adminService.createAdminWithActivation(normalizeName(name), normalized!);
+      return res.status(201).json({
+        admin: result.admin,
+        activationToken: result.activationToken,
+      });
     } catch (error) {
       apiLogger.error('Admin: error creating admin:', error);
       res.status(500).json({ errors: [ERROR.adminCreationFailed] });
@@ -392,29 +363,14 @@ router.get('/players', async (_req: AuthRequest, res: Response) => {
   }
 });
 
-// POST /api/admin/players/:id/reset-password - Generate a reset link
-router.post('/players/:id/reset-password', async (req: AuthRequest, res: Response) => {
-  try {
-    const result = await playerService.generatePasswordResetTokenForPlayer(req.params.id);
-    if (result === 'notFound') return res.status(404).json({ errors: [ERROR.playerNotFound] });
-    if (result === 'noUserLinked') return res.status(409).json({ errors: [ERROR.playerCannotDeleteNoUser] });
-    res.json({
-      token: result.token,
-      expiresAt: result.expiresAt,
-      userEmail: result.userEmail,
-    });
-  } catch (error) {
-    apiLogger.error('Admin: error generating password reset:', error);
-    res.status(500).json({ errors: [ERROR.passwordResetFailed] });
-  }
-});
-
-// DELETE /api/admin/players/:id - Delete a player + linked user
+// DELETE /api/admin/players/:id - Delete a player, that is the person
 router.delete('/players/:id', async (req: AuthRequest, res: Response) => {
   try {
     const result = await playerService.deletePlayer(req.params.id);
     if (result === 'notFound') return res.status(404).json({ errors: [ERROR.playerNotFound] });
     if (result === 'isTeamLeader') return res.status(409).json({ errors: [ERROR.playerCannotDeleteLeader] });
+    if (result === 'isAdmin') return res.status(409).json({ errors: [ERROR.playerCannotDeleteAdmin] });
+    if (result === 'isManager') return res.status(409).json({ errors: [ERROR.playerCannotDeleteManager] });
     if (result === 'noUserLinked') return res.status(409).json({ errors: [ERROR.playerCannotDeleteNoUser] });
     res.json({ message: 'Joueur supprimé' });
   } catch (error) {

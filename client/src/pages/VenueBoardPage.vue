@@ -131,7 +131,7 @@ onBeforeUnmount(() => {
 
       <section v-if="!days.length" class="board-empty">
         <p>Aucune équipe ne cherche d'adversaire à {{ board.venue.name }} pour le moment.</p>
-        <RouterLink v-if="!isAuthenticated" :to="{ name: 'register' }" class="btn btn-primary">Créer un compte</RouterLink>
+        <RouterLink v-if="!isAuthenticated" :to="{ name: 'login', query: { redirect: route.fullPath } }" class="btn btn-primary">Créer un compte</RouterLink>
         <RouterLink v-else-if="searchHereRoute" :to="searchHereRoute" class="btn btn-primary">Chercher un adversaire</RouterLink>
       </section>
 

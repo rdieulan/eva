@@ -12,9 +12,7 @@ const ALLOWED_WITHOUT_TEAM = [
   'create-team',
   'join-team',
   'login',
-  'register',
   'activate',
-  'reset-password',
   'venue-board',
   'admin',
   'admin-venues',
@@ -56,9 +54,7 @@ const TeamPage = () => import('@/pages/TeamPage.vue');
 const CreateTeamPage = () => import('@/pages/CreateTeamPage.vue');
 const JoinTeamPage = () => import('@/pages/JoinTeamPage.vue');
 const LoginPage = () => import('@/pages/LoginPage.vue');
-const RegisterPage = () => import('@/pages/RegisterPage.vue');
 const ActivatePage = () => import('@/pages/ActivatePage.vue');
-const ResetPasswordPage = () => import('@/pages/ResetPasswordPage.vue');
 const VenueBoardPage = () => import('@/pages/VenueBoardPage.vue');
 const AdminLayout = () => import('@/pages/AdminLayout.vue');
 const AdminVenuesPage = () => import('@/pages/AdminVenuesPage.vue');
@@ -120,22 +116,11 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Connexion', requiresAuth: false }
   },
   {
-    path: '/register',
-    name: 'register',
-    component: RegisterPage,
-    meta: { title: 'Inscription', requiresAuth: false }
-  },
-  {
+    // An invitation to a role (venue manager, admin), accepted by signing in with Discord
     path: '/activate/:token',
     name: 'activate',
     component: ActivatePage,
-    meta: { title: 'Activer le compte', requiresAuth: false }
-  },
-  {
-    path: '/reset-password/:token',
-    name: 'reset-password',
-    component: ResetPasswordPage,
-    meta: { title: 'Réinitialiser le mot de passe', requiresAuth: false }
+    meta: { title: 'Invitation', requiresAuth: false }
   },
   {
     // A venue's board, shared on its own channels: anyone reads it, signed in or not,
@@ -203,8 +188,8 @@ router.beforeEach(async (to, _from, next) => {
     await initAuth();
   }
 
-  // If already authenticated and trying to access login/register page, redirect
-  if ((to.name === 'login' || to.name === 'register') && isAuthenticated.value) {
+  // If already authenticated and trying to access the login page, redirect
+  if (to.name === 'login' && isAuthenticated.value) {
     const redirect = to.query.redirect as string;
     next(redirect || landingPathForAccount(account.value));
     return;

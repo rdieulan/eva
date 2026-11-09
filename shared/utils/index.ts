@@ -8,14 +8,9 @@ export {
 } from './map.utils';
 
 export {
-  validateEmail,
-  validatePassword,
+  normalizeName,
   validateName,
   validateTeamName,
-  validatePasswordsMatch,
-  validateRegistration,
-  isValidEmail,
-  isValidPassword,
   isValidName,
   type ValidationResult,
 } from './validation.utils';

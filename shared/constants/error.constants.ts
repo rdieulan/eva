@@ -2,8 +2,8 @@
 // Used by both server and client
 
 import {
-  PASSWORD_MIN_LENGTH,
   NAME_MIN_LENGTH,
+  NAME_MAX_LENGTH,
   TEAM_NAME_MIN_LENGTH,
   EVA_USERNAME_MAX_LENGTH,
   EVA_SLOT_ID_MAX_LENGTH,
@@ -34,43 +34,38 @@ export const ERROR = {
   copyFailed: 'Impossible de copier le lien',
 
   // Validation (using constants from validation.utils)
-  emailInvalid: 'Format d\'email invalide',
-  passwordTooShort: `Le mot de passe doit contenir au moins ${PASSWORD_MIN_LENGTH} caractères`,
-  passwordNoDigit: 'Le mot de passe doit contenir au moins un chiffre',
-  passwordNoUppercase: 'Le mot de passe doit contenir au moins une majuscule',
   nameTooShort: `Le pseudo doit contenir au moins ${NAME_MIN_LENGTH} caractères`,
-  nameInvalidChars: 'Le pseudo ne doit contenir que des lettres et des chiffres',
+  nameTooLong: `Le pseudo ne peut pas dépasser ${NAME_MAX_LENGTH} caractères`,
+  nameInvalidChars: 'Le pseudo tient sur une ligne, sans caractère de contrôle',
+  nameNotVisible: 'Le pseudo doit montrer au moins une lettre, un chiffre ou un symbole',
   teamNameTooShort: `Le nom de l'équipe doit contenir au moins ${TEAM_NAME_MIN_LENGTH} caractères`,
-  passwordsMismatch: 'Les mots de passe ne correspondent pas',
 
   // Authentication
-  loginFailed: 'Identifiants invalides',
-  registrationFailed: 'Erreur lors de l\'inscription',
-  passwordChangeFailed: 'Erreur lors du changement de mot de passe',
   unauthorized: 'Non authentifié',
   sessionExpired: 'Session expirée. Veuillez vous reconnecter.',
   forbidden: 'Permission refusée',
   foreignOrigin: 'Modification refusée : elle ne vient pas de l\'application',
-  emailAndPasswordRequired: 'Email et mot de passe requis',
-  emailPasswordNameRequired: 'Email, mot de passe et pseudo requis',
-  emailAlreadyUsed: 'Cette adresse email est déjà utilisée',
-  currentAndNewPasswordRequired: 'Mot de passe actuel et nouveau requis',
-  currentPasswordIncorrect: 'Mot de passe actuel incorrect',
+  nameUpdateFailed: 'Erreur lors du changement de pseudo',
 
-  // Activation
-  activationTokenRequired: 'Token d\'activation requis',
-  activationTokenInvalid: 'Token d\'activation invalide ou expiré',
-  activationFailed: 'Erreur lors de l\'activation du compte',
-  passwordRequired: 'Mot de passe requis',
+  // Signing in with Discord, as the login page tells it
+  discordLoginCancelled: 'Connexion annulée sur Discord.',
+  discordLoginExpired: 'La connexion a pris trop de temps ou a été lancée ailleurs : recommence.',
+  discordLoginFailed: 'Discord n\'a pas répondu : réessaie dans un instant.',
+  discordLoginUnavailable: 'La connexion par Discord n\'est pas configurée sur ce serveur.',
 
-  // Linked accounts
-  linkedAccountCredentialsRequired: 'Identifiants du compte à lier requis',
-  cannotLinkSameAccount: 'Impossible de lier un compte à lui-même',
-  accountAlreadyLinked: 'Ce compte est déjà lié à un groupe',
-  linkAccountFailed: 'Erreur lors de la liaison des comptes',
-  targetAccountIdRequired: 'ID du compte cible requis',
-  accountNotInGroup: 'Ce compte ne fait pas partie de votre groupe lié',
-  switchAccountFailed: 'Erreur lors du changement de compte',
+  // Invitations (manager, admin)
+  invitationInvalid: 'Ce lien d\'invitation n\'est pas valable, ou a déjà servi : demande-en un nouveau.',
+  invitationExpired: 'Ce lien d\'invitation a expiré : demande-en un nouveau.',
+  invitationRoleTaken: 'Ce compte Discord a déjà ce rôle : l\'invitation n\'a rien changé.',
+  invitationFetchFailed: 'Erreur lors de la lecture de l\'invitation',
+  invitedNameRequired: 'Indique pour qui est l\'invitation',
+
+  // Roles of an account
+  roleNotHeld: 'Ce compte n\'a pas ce rôle',
+  roleSwitchFailed: 'Erreur lors du changement de rôle',
+
+  // Development login
+  devLoginFailed: 'Erreur lors de la connexion de développement',
 
   // Account
   userNotFound: 'Utilisateur non trouvé',
@@ -155,9 +150,8 @@ export const ERROR = {
   playerDeleteFailed: 'Erreur lors de la suppression du joueur',
   playerCannotDeleteLeader: 'Impossible de supprimer un joueur qui est leader d\'une équipe. Supprimez l\'équipe ou transférez la direction d\'abord.',
   playerCannotDeleteNoUser: 'Aucun compte utilisateur lié à ce joueur',
-  passwordResetFailed: 'Erreur lors de la réinitialisation du mot de passe',
-  passwordResetTokenRequired: 'Token de réinitialisation requis',
-  passwordResetTokenInvalid: 'Token de réinitialisation invalide ou expiré',
+  playerCannotDeleteAdmin: 'Ce joueur est administrateur : retire-lui d\'abord ce rôle, depuis la liste des administrateurs.',
+  playerCannotDeleteManager: 'Ce joueur est manager : retire-lui d\'abord ce rôle, depuis la liste des managers.',
 
   // eva.gg account
   evaUsernameRequired: 'Indique ton tag eva.gg complet, avec le suffixe #123456',

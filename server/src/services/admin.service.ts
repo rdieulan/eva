@@ -1,55 +1,13 @@
 // Admin service - Admin-specific business logic
 
-import { randomUUID } from 'crypto';
 import { prisma } from '@db/prisma';
 import { DEFAULT_ADMIN_PERMISSIONS } from '@shared/types';
 import type { AdminPermissions } from '@shared/types';
-
-// Activation token validity: 7 days
-const ACTIVATION_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+import { newInvitation } from '@services/invitation.service';
 
 // ============================================
 // Admin CRUD operations
 // ============================================
-
-/**
- * Create a new Admin (and associated User account) — used by the bootstrap CLI
- * script. Password is set immediately (no activation flow).
- */
-export async function createAdmin(
-  email: string,
-  hashedPassword: string,
-  name: string,
-  permissions?: object
-) {
-  const admin = await prisma.admin.create({
-    data: {
-      permissions: (permissions ?? DEFAULT_ADMIN_PERMISSIONS) as unknown as object,
-    },
-  });
-
-  return prisma.user.create({
-    data: {
-      email: email.toLowerCase(),
-      password: hashedPassword,
-      name,
-      adminId: admin.id,
-    },
-    include: { admin: true },
-  });
-}
-
-/**
- * Get admin by ID with user data
- */
-export async function getAdminById(adminId: string) {
-  return prisma.admin.findUnique({
-    where: { id: adminId },
-    include: {
-      user: { select: { id: true, email: true, name: true } },
-    },
-  });
-}
 
 /**
  * Get admin by user ID
@@ -120,10 +78,11 @@ function permissionsAreSuperAdmin(perms: AdminPermissions): boolean {
 // Admin management (admin view)
 // ============================================
 
+// An admin, or an invitation to administer not yet accepted (no account yet:
+// it shows the name given to it, and the link to send)
 export interface AdminSummary {
   id: string;
-  userId: string;
-  email: string;
+  userId: string | null;
   name: string;
   permissions: AdminPermissions;
   isSuperAdmin: boolean;
@@ -138,21 +97,21 @@ function toAdminSummary(record: {
   permissions: unknown;
   activationToken: string | null;
   activationTokenExpiresAt: Date | null;
+  invitedName: string | null;
   createdAt: Date;
-  user: { id: string; email: string; name: string } | null;
-}): AdminSummary | null {
-  if (!record.user) return null;
+  user: { id: string; name: string } | null;
+}): AdminSummary {
   const permissions = (record.permissions ?? DEFAULT_ADMIN_PERMISSIONS) as unknown as AdminPermissions;
+  const isPending = !record.user;
   return {
     id: record.id,
-    userId: record.user.id,
-    email: record.user.email,
-    name: record.user.name,
+    userId: record.user?.id ?? null,
+    name: record.user?.name ?? record.invitedName ?? '',
     permissions,
     isSuperAdmin: permissionsAreSuperAdmin(permissions),
-    activationPending: !!record.activationToken,
-    activationToken: record.activationToken,
-    activationTokenExpiresAt: record.activationTokenExpiresAt,
+    activationPending: isPending,
+    activationToken: isPending ? record.activationToken : null,
+    activationTokenExpiresAt: isPending ? record.activationTokenExpiresAt : null,
     createdAt: record.createdAt,
   };
 }
@@ -162,10 +121,10 @@ function toAdminSummary(record: {
  */
 export async function listAdmins(): Promise<AdminSummary[]> {
   const admins = await prisma.admin.findMany({
-    include: { user: { select: { id: true, email: true, name: true } } },
+    include: { user: { select: { id: true, name: true } } },
     orderBy: { createdAt: 'desc' },
   });
-  return admins.map(toAdminSummary).filter((a): a is AdminSummary => a !== null);
+  return admins.map(toAdminSummary);
 }
 
 /**
@@ -174,68 +133,36 @@ export async function listAdmins(): Promise<AdminSummary[]> {
 export async function getAdminSummary(adminId: string): Promise<AdminSummary | null> {
   const admin = await prisma.admin.findUnique({
     where: { id: adminId },
-    include: { user: { select: { id: true, email: true, name: true } } },
+    include: { user: { select: { id: true, name: true } } },
   });
   return admin ? toAdminSummary(admin) : null;
 }
 
 /**
- * Create an admin with an activation token. Password is set during activation
- * via `POST /api/auth/activate` (same flow as managers).
+ * Invite someone to administer: the admin exists without an account until
+ * someone opens its link and signs in with Discord (see invitation.service).
+ * Returns the invitation with its token, for the link to send.
  */
 export async function createAdminWithActivation(
-  email: string,
-  name: string,
+  invitedName: string,
   permissions: AdminPermissions,
-): Promise<{ admin: AdminSummary; activationToken: string } | { error: 'emailExists' }> {
-  const normalizedEmail = email.toLowerCase().trim();
-  const trimmedName = name.trim();
-
-  const existing = await prisma.user.findFirst({
-    where: { email: { equals: normalizedEmail, mode: 'insensitive' } },
+): Promise<{ admin: AdminSummary; activationToken: string }> {
+  const invitation = newInvitation();
+  const admin = await prisma.admin.create({
+    data: { permissions: permissions as unknown as object, ...invitation, invitedName },
     select: { id: true },
   });
-  if (existing) return { error: 'emailExists' };
 
-  const activationToken = randomUUID();
-  const activationTokenExpiresAt = new Date(Date.now() + ACTIVATION_TOKEN_TTL_MS);
-
-  await prisma.$transaction(async (tx) => {
-    const admin = await tx.admin.create({
-      data: {
-        permissions: permissions as unknown as object,
-        activationToken,
-        activationTokenExpiresAt,
-      },
-    });
-
-    await tx.user.create({
-      data: {
-        email: normalizedEmail,
-        password: randomUUID(),
-        name: trimmedName,
-        adminId: admin.id,
-      },
-    });
-
-    return admin;
-  });
-
-  const fresh = await prisma.admin.findFirst({
-    where: { activationToken },
-    include: { user: { select: { id: true, email: true, name: true } } },
-  });
-  if (!fresh || !fresh.user) throw new Error('Failed to load created admin');
-
-  return { admin: toAdminSummary(fresh)!, activationToken };
+  return { admin: (await getAdminSummary(admin.id))!, activationToken: invitation.activationToken };
 }
 
 export type DeleteAdminError = 'notFound' | 'cannotDeleteSelf' | 'lastSuperAdmin';
 
 /**
- * Delete an admin (and the linked User). Refuses to delete:
- * - the currently authenticated admin
- * - the last remaining super admin in the system
+ * Take the admin role away, or drop an invitation not yet accepted. The person
+ * keeps their account: they stay a player. Refuses to:
+ * - take it from the admin asking
+ * - take it from the last super admin who has an account
  */
 export async function deleteAdmin(
   adminId: string,
@@ -253,16 +180,14 @@ export async function deleteAdmin(
     (target.permissions ?? {}) as unknown as AdminPermissions,
   );
 
-  if (targetIsSuperAdmin) {
-    // Count super admins to make sure at least one remains afterwards
+  // An invitation never accepted leaves nobody without a super admin
+  if (target.user && targetIsSuperAdmin) {
     const remainingSuperAdmins = await countSuperAdmins({ excludeId: adminId });
     if (remainingSuperAdmins === 0) return 'lastSuperAdmin';
   }
 
-  await prisma.$transaction([
-    ...(target.user ? [prisma.user.delete({ where: { id: target.user.id } })] : []),
-    prisma.admin.delete({ where: { id: adminId } }),
-  ]);
+  // The account forgets the role on its own (SetNull)
+  await prisma.admin.delete({ where: { id: adminId } });
 
   return true;
 }
@@ -278,7 +203,7 @@ export async function updateAdminGranularPermissions(
 ): Promise<AdminSummary | UpdateAdminError> {
   const current = await prisma.admin.findUnique({
     where: { id: adminId },
-    select: { permissions: true },
+    select: { permissions: true, user: { select: { id: true } } },
   });
   if (!current) return 'notFound';
 
@@ -287,7 +212,7 @@ export async function updateAdminGranularPermissions(
   );
   const willBeSuperAdmin = permissionsAreSuperAdmin(newPermissions);
 
-  if (currentlySuperAdmin && !willBeSuperAdmin) {
+  if (current.user && currentlySuperAdmin && !willBeSuperAdmin) {
     const remaining = await countSuperAdmins({ excludeId: adminId });
     if (remaining === 0) return 'wouldRemoveLastSuperAdmin';
   }
@@ -300,9 +225,10 @@ export async function updateAdminGranularPermissions(
   return (await getAdminSummary(adminId))!;
 }
 
+// The super admins who have an account: an invitation not yet accepted administers nothing
 async function countSuperAdmins(options: { excludeId?: string } = {}): Promise<number> {
   const admins = await prisma.admin.findMany({
-    where: options.excludeId ? { id: { not: options.excludeId } } : undefined,
+    where: { user: { isNot: null }, ...(options.excludeId && { id: { not: options.excludeId } }) },
     select: { permissions: true },
   });
   return admins.filter(a =>

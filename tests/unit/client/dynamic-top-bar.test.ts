@@ -32,7 +32,7 @@ describe('DynamicTopBar', () => {
   });
 
   it('signs in plainly from any other page', async () => {
-    route.fullPath = '/register';
+    route.fullPath = '/team';
     route.meta = {};
 
     await mountBar().find('.btn-login').trigger('click');

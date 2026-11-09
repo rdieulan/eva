@@ -1,33 +1,22 @@
-// Authentication API client
+// Authentication API client: signing in with Discord, the session, the role it
+// acts as, the name a person shows, the invitations to a role
 
-import type { Account, LoginResponse, LoginCredentials, LinkedAccount } from '@shared/types';
+import type { Account, AccountType, DevLoginAccount, InvitationSummary, LoginResponse } from '@shared/types';
 import { ERROR } from '@shared/constants';
 import { authFetch } from '@/api/utils';
 import { ApiError } from '@/api/error';
 
 /**
- * Login with email and password
- * Note: Does not use authFetch: no session exists yet, a refusal shows here
+ * The address that starts signing in with Discord: the browser goes there, off
+ * to Discord's page, and comes back to `next` signed in (or to the invitation
+ * page, when accepting `invitation` fails)
  */
-export async function login(credentials: LoginCredentials): Promise<LoginResponse> {
-  const response = await fetch('/api/auth/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(credentials),
-  });
-
-  if (!response.ok) {
-    throw await ApiError.fromFailedResponse(response, ERROR.loginFailed);
-  }
-
-  return response.json();
-}
-
-/**
- * Logout current account
- */
-export async function logout(): Promise<void> {
-  await authFetch('/api/auth/logout', { method: 'POST' });
+export function discordSignInUrl({ next, invitation }: { next?: string; invitation?: string } = {}): string {
+  const query = new URLSearchParams({
+    ...(next && next !== '/' && { next }),
+    ...(invitation && { invitation }),
+  }).toString();
+  return `/api/auth/discord${query ? `?${query}` : ''}`;
 }
 
 /**
@@ -35,13 +24,19 @@ export async function logout(): Promise<void> {
  * is an answer here, not a failure: no redirect to the login page.
  */
 export async function fetchSessionAccount(): Promise<Account | null> {
-  const response = await fetch('/api/auth/me');
-  if (response.status === 401) return null;
+  const response = await fetch('/api/auth/session');
   if (!response.ok) {
     throw await ApiError.fromFailedResponse(response, ERROR.serverError);
   }
-  const { account } = (await response.json()) as { account: Account };
+  const { account } = (await response.json()) as { account: Account | null };
   return account;
+}
+
+/**
+ * Logout current account
+ */
+export async function logout(): Promise<void> {
+  await authFetch('/api/auth/logout', { method: 'POST' });
 }
 
 /**
@@ -53,76 +48,64 @@ export async function getCurrentAccount(): Promise<Account> {
 }
 
 /**
- * Change password
+ * Act as another role of the account (player, venue manager, admin), in this session
  */
-export async function changePassword(
-  currentPassword: string,
-  newPassword: string
-): Promise<void> {
-  await authFetch<void>(
-    '/api/auth/change-password',
-    { method: 'POST', body: JSON.stringify({ currentPassword, newPassword }) },
-    ERROR.passwordChangeFailed
+export async function switchRole(role: AccountType): Promise<Account> {
+  const response = await authFetch<LoginResponse>(
+    '/api/auth/role',
+    { method: 'PUT', body: JSON.stringify({ role }) },
+    ERROR.roleSwitchFailed,
   );
+  return response.account;
 }
 
 /**
- * Activate manager account with password
- * Note: Does not use authFetch: no session exists yet, a refusal shows here
+ * Change the name the person shows the others
  */
-export async function activateAccount(activationToken: string, password: string): Promise<void> {
-  const response = await fetch('/api/auth/activate', {
+export async function renameAccount(name: string): Promise<Account> {
+  const response = await authFetch<LoginResponse>(
+    '/api/auth/name',
+    { method: 'PUT', body: JSON.stringify({ name }) },
+    ERROR.nameUpdateFailed,
+  );
+  return response.account;
+}
+
+/**
+ * An invitation to a role, as its link shows it; null when the link leads
+ * nowhere (unknown, or already used). Read before signing in.
+ */
+export async function fetchInvitation(token: string): Promise<InvitationSummary | null> {
+  const response = await fetch(`/api/auth/invitations/${encodeURIComponent(token)}`);
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    throw await ApiError.fromFailedResponse(response, ERROR.invitationFetchFailed);
+  }
+  return (await response.json()) as InvitationSummary;
+}
+
+/**
+ * The accounts the development login offers (development only)
+ */
+export async function fetchDevLoginAccounts(): Promise<DevLoginAccount[]> {
+  const response = await fetch('/api/auth/dev/accounts');
+  if (!response.ok) {
+    throw await ApiError.fromFailedResponse(response, ERROR.devLoginFailed);
+  }
+  return (await response.json()) as DevLoginAccount[];
+}
+
+/**
+ * Act as an account of the local database, without Discord (development only)
+ */
+export async function devLogin(userId: string): Promise<Account> {
+  const response = await fetch('/api/auth/dev/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token: activationToken, password }),
+    body: JSON.stringify({ userId }),
   });
-
   if (!response.ok) {
-    throw await ApiError.fromFailedResponse(response, ERROR.activationFailed);
+    throw await ApiError.fromFailedResponse(response, ERROR.devLoginFailed);
   }
-}
-
-/**
- * Reset a password using an admin-issued reset token.
- * Note: Does not use authFetch because the user is not logged in (yet).
- */
-export async function resetPasswordWithToken(resetToken: string, password: string): Promise<void> {
-  const response = await fetch('/api/auth/reset-password', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token: resetToken, password }),
-  });
-
-  if (!response.ok) {
-    throw await ApiError.fromFailedResponse(response, ERROR.passwordResetFailed);
-  }
-}
-
-/**
- * Link current account to another account
- */
-export async function linkAccount(email: string, password: string): Promise<{ groupId: string }> {
-  return authFetch<{ groupId: string }>(
-    '/api/auth/link-account',
-    { method: 'POST', body: JSON.stringify({ email, password }) },
-    ERROR.linkAccountFailed
-  );
-}
-
-/**
- * Get all linked accounts for current user
- */
-export async function getLinkedAccounts(): Promise<LinkedAccount[]> {
-  return authFetch<LinkedAccount[]>('/api/auth/linked-accounts', undefined, ERROR.serverError);
-}
-
-/**
- * Switch to another linked account
- */
-export async function switchAccount(targetAccountId: string): Promise<LoginResponse> {
-  return authFetch<LoginResponse>(
-    '/api/auth/switch-account',
-    { method: 'POST', body: JSON.stringify({ targetAccountId }) },
-    ERROR.switchAccountFailed
-  );
+  return ((await response.json()) as LoginResponse).account;
 }

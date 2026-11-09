@@ -27,7 +27,6 @@ router.get('/', authMiddleware, requirePermission('team', 'canManagePermissions'
         user: {
           select: {
             id: true,
-            email: true,
             name: true,
             createdAt: true,
           },
@@ -37,7 +36,6 @@ router.get('/', authMiddleware, requirePermission('team', 'canManagePermissions'
     // Return format compatible with frontend
     res.json(players.map(p => ({
       id: p.user!.id,
-      email: p.user!.email,
       name: p.user!.name,
       permissions: p.permissions,
       teamId: p.teamId,

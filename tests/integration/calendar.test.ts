@@ -352,12 +352,8 @@ describe('Calendar API', () => {
     });
 
     it('should isolate events by team', async () => {
-      const { token: token1, team: team1, user: user1 } = await createUserWithTeam({
-        email: 'team1-cal@example.com',
-      });
-      const { token: token2, team: team2 } = await createUserWithTeam({
-        email: 'team2-cal@example.com',
-      });
+      const { token: token1, team: team1, user: user1 } = await createUserWithTeam();
+      const { token: token2, team: team2 } = await createUserWithTeam();
 
       const date = getFutureDate();
       const month = date.substring(0, 7);
@@ -693,8 +689,8 @@ describe('Calendar API', () => {
     });
 
     it('should reject deleting event from another team', async () => {
-      const { token: token1 } = await createUserWithTeam({ email: 'owner@example.com' });
-      const { token: token2 } = await createUserWithTeam({ email: 'other@example.com' });
+      const { token: token1 } = await createUserWithTeam();
+      const { token: token2 } = await createUserWithTeam();
       const date = getFutureDate();
 
       // Create event with team1
@@ -781,8 +777,8 @@ describe('Calendar API', () => {
     });
 
     it('should reject updating event from another team', async () => {
-      const { token: token1 } = await createUserWithTeam({ email: 'owner2@example.com' });
-      const { token: token2 } = await createUserWithTeam({ email: 'other2@example.com' });
+      const { token: token1 } = await createUserWithTeam();
+      const { token: token2 } = await createUserWithTeam();
       const date = getFutureDate();
 
       // Create event with team1

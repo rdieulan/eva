@@ -39,7 +39,6 @@ defineEmits<{
             <span v-if="member.isLeader" class="badge leader">Leader</span>
             <span v-if="member.id === currentUserId" class="badge me">Vous</span>
           </span>
-          <span class="member-email">{{ member.email }}</span>
         </div>
 
         <div class="member-actions" v-if="canManagePermissions && !member.isLeader && member.id !== currentUserId">
@@ -124,11 +123,6 @@ defineEmits<{
   display: flex;
   align-items: center;
   gap: $spacing-sm;
-}
-
-.member-email {
-  font-size: $font-size-sm;
-  color: $color-text-secondary;
 }
 
 .badge {

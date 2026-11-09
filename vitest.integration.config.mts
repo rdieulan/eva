@@ -17,6 +17,11 @@ export default defineConfig({
       NODE_ENV: 'test',
       // No public address unless a test sets one: set here, the dev one in .env stays out
       APP_URL: '',
+      // No Discord application unless a test sets one: a local .env.local stays out
+      DISCORD_CLIENT_ID: '',
+      DISCORD_CLIENT_SECRET: '',
+      // The development login, to test it: never mounted in production whatever is set
+      DEV_LOGIN: 'true',
     },
   },
   resolve: {

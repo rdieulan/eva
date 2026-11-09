@@ -6,7 +6,7 @@ import type { PublicScrimSearch, VenueBoard } from '@shared/types';
 import { ERROR } from '@shared/constants';
 import { ApiError } from '@/api/error';
 
-const route = vi.hoisted(() => ({ params: { slug: 'nimes' } as Record<string, string> }));
+const route = vi.hoisted(() => ({ params: { slug: 'nimes' } as Record<string, string>, fullPath: '/salles/nimes' }));
 vi.mock('vue-router', () => ({ useRoute: () => route }));
 
 const auth = vi.hoisted(() => ({ account: null as unknown, isAuthenticated: null as unknown, hasTeam: null as unknown }));
@@ -111,7 +111,8 @@ describe('VenueBoardPage', () => {
     expect(wrapper.find('.board-empty').text()).toContain('Aucune équipe ne cherche d\'adversaire à Nîmes pour le moment.');
     const link = wrapper.find('.board-empty').findComponent(RouterLinkStub);
     expect(link.text()).toBe('Créer un compte');
-    expect(link.props('to')).toEqual({ name: 'register' });
+    // An account is made by signing in with Discord, back on this board
+    expect(link.props('to')).toEqual({ name: 'login', query: { redirect: '/salles/nimes' } });
   });
 
   it('offers a player of a team to look for an opponent there when nobody does', async () => {

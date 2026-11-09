@@ -3,33 +3,33 @@
 import type { Player, PlayerSubscription, EvaAccountLink, LinkEvaAccountRequest } from '@shared/types';
 import { ERROR } from '@shared/constants';
 import { authFetch } from '@/api/utils';
-import { markedAccountId } from '@/api/session-mark';
+import { currentSessionMark } from '@/api/session-mark';
 import { ApiError } from '@/api/error';
 
-// Cache for players - keyed by account to invalidate on account change
+// Cache for players - keyed by session to invalidate on a change of account or role
 let cachedPlayers: Player[] | null = null;
-let cachedForAccountId: string | null = null;
+let cachedForSession: string | null = null;
 
 /**
  * Clear players cache (call on logout or team change)
  */
 export function clearPlayersCache(): void {
   cachedPlayers = null;
-  cachedForAccountId = null;
+  cachedForSession = null;
 }
 
 /**
  * Load all players from API (with caching)
  * Requires authentication - returns team members only
- * Cache is invalidated when the account changes
+ * Cache is invalidated when the account or its role changes
  */
 export async function fetchPlayers(): Promise<Player[]> {
-  const currentAccountId = markedAccountId();
+  const session = currentSessionMark();
 
-  // Invalidate cache if the account changed
-  if (cachedForAccountId !== currentAccountId) {
+  // Invalidate cache if the account or its role changed
+  if (cachedForSession !== session) {
     cachedPlayers = null;
-    cachedForAccountId = currentAccountId;
+    cachedForSession = session;
   }
 
   if (cachedPlayers) {

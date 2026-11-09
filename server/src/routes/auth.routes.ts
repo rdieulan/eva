@@ -1,153 +1,151 @@
-// Authentication routes
+// Authentication routes: signing in with Discord, the session, the role it
+// acts as, the name a person shows, and the invitations to a role
 
 import { Router } from 'express';
 import type { Request, Response } from 'express';
-import { authMiddleware } from '@middleware/auth.middleware';
+import { randomBytes, timingSafeEqual } from 'crypto';
+import { authMiddleware, readRequestSession, ROLE_OF_ACCOUNT_TYPE } from '@middleware/auth.middleware';
 import type { AuthRequest } from '@middleware/auth.middleware';
 import { ERROR } from '@shared/constants';
+import type { AccountType } from '@shared/types';
 import { authLogger } from '@utils/logger';
+import { getAccount, heldRoles, renameAccount } from '@services/auth.service';
+import { closeSession, openSession, setSessionRole } from '@services/session.service';
+import { discordLoginConfig, signInWithDiscord } from '@services/discord-login.service';
+import { readInvitation } from '@services/invitation.service';
+import type { InvitationError } from '@services/invitation.service';
 import {
-  comparePassword,
-  hashPassword,
-  emailExists,
-  findAccountByEmail,
-  getAccountById,
-  updateAccountPassword,
-  buildAccountData,
-  validateEmail,
-  validatePassword,
-  validateName,
-  findAccountByActivationToken,
-  activateAccount,
-  findUserByPasswordResetToken,
-  applyPasswordReset,
-  linkAccounts,
-  getLinkedAccounts,
-  isAccountInSameGroup,
-} from '@services/auth.service';
-import { createPlayer } from '@services/player.service';
-import { closeOtherSessions, closeSession, openSession } from '@services/session.service';
-import { clearSessionCookie, readSessionCookie, setSessionCookie } from '@utils/session-cookie';
+  clearSessionCookie,
+  clearSignInCookie,
+  readSessionCookie,
+  readSignInCookie,
+  setSessionCookie,
+  setSignInCookie,
+} from '@utils/auth-cookies';
+import { discordAuthorizeUrl, identifyDiscordAccount } from '../integrations/discord/discord-oauth';
 
 const router = Router();
 
-// POST /api/auth/register
-router.post('/register', async (req: Request, res: Response) => {
-  authLogger.debug('POST /api/auth/register');
-  const { email, password, name } = req.body;
+// A page of the app to land on after signing in: a path of ours, nothing else
+// (no other site, no address starting with // or a backslash, no API route)
+const NEXT_MAX_LENGTH = 500;
 
-  // Validation
-  if (!email || !password || !name) {
-    authLogger.debug('Register failed: missing fields');
-    return res.status(400).json({ errors: [ERROR.emailPasswordNameRequired] });
+function safeNext(input: unknown): string {
+  if (typeof input !== 'string' || input.length > NEXT_MAX_LENGTH) return '/';
+  if (!input.startsWith('/') || input.startsWith('//') || input.includes('\\') || /[\u0000-\u001f]/.test(input)) return '/';
+  if (input === '/api' || input.startsWith('/api/')) return '/';
+  return input;
+}
+
+// An invitation's token, as invitation.service makes them (a UUID)
+const INVITATION_TOKEN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function sameSecret(given: string, expected: string): boolean {
+  const a = Buffer.from(given);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
+// Why a sign-in stops, as the login page reads it from its address
+type SignInProblem = 'cancelled' | 'expired' | 'failed' | 'unavailable';
+
+// The page that tells a sign-in stopped: the login page, which can start again
+// towards the same page; the invitation's own page when an invitation failed
+function signInProblemPage(problem: SignInProblem, next: string): string {
+  const query = new URLSearchParams({ error: problem, ...(next !== '/' && { redirect: next }) });
+  return `/login?${query.toString()}`;
+}
+
+const INVITATION_PROBLEMS: Record<InvitationError, string> = {
+  invalid: 'invitation-invalid',
+  expired: 'invitation-expired',
+  roleTaken: 'role-taken',
+};
+
+function invitationProblemPage(error: InvitationError, invitation: string): string {
+  return `/activate/${encodeURIComponent(invitation)}?error=${INVITATION_PROBLEMS[error]}`;
+}
+
+// GET /api/auth/discord - Start signing in: off to Discord's consent page.
+// ?next= the page to land on, ?invitation= the invitation to accept.
+router.get('/discord', (req: Request, res: Response) => {
+  const next = safeNext(req.query.next);
+  const config = discordLoginConfig();
+  if (!config) {
+    authLogger.error('Discord sign-in asked for, but DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET or APP_URL is missing');
+    return res.redirect(signInProblemPage('unavailable', next));
   }
 
-  const emailValid = validateEmail(email);
-  if (emailValid !== true) {
-    authLogger.debug('Register failed: invalid email format');
-    return res.status(400).json({ errors: emailValid });
+  const invitation = typeof req.query.invitation === 'string' && req.query.invitation !== '' ? req.query.invitation : null;
+  if (invitation !== null && !INVITATION_TOKEN.test(invitation)) {
+    return res.redirect(invitationProblemPage('invalid', invitation));
   }
 
-  const passwordValid = validatePassword(password);
-  if (passwordValid !== true) {
-    authLogger.debug('Register failed: password validation failed');
-    return res.status(400).json({ errors: passwordValid });
-  }
-
-  const nameValid = validateName(name);
-  if (nameValid !== true) {
-    authLogger.debug('Register failed: name validation failed');
-    return res.status(400).json({ errors: nameValid });
-  }
-
-  try {
-    // Check if email already exists
-    if (await emailExists(email)) {
-      authLogger.debug('Register failed: email already exists');
-      return res.status(409).json({ errors: [ERROR.emailAlreadyUsed] });
-    }
-
-    // Create player account
-    const hashedPassword = await hashPassword(password);
-    const user = await createPlayer(email, hashedPassword, name.trim());
-
-    authLogger.debug('Register success for:', email);
-    res.status(201).json({
-      message: 'Compte créé avec succès',
-      userId: user.id,
-      playerId: user.player!.id,
-    });
-  } catch (error) {
-    authLogger.error('Register error:', error);
-    res.status(500).json({ errors: [ERROR.serverError] });
-  }
+  const state = randomBytes(32).toString('base64url');
+  setSignInCookie(res, { state, next, invitation });
+  res.redirect(discordAuthorizeUrl(config, state));
 });
 
-// POST /api/auth/login
-router.post('/login', async (req: Request, res: Response) => {
-  authLogger.debug('POST /api/auth/login');
-  const { email, password } = req.body;
+// GET /api/auth/discord/callback - Discord sends the visitor back here, with
+// a code to exchange or the reason it has none. The state ties it to the
+// browser that started: without it, anyone could sign a visitor into their own account.
+router.get('/discord/callback', async (req: Request, res: Response) => {
+  const start = readSignInCookie(req);
+  clearSignInCookie(res);
 
-  if (!email || !password) {
-    authLogger.debug('Login failed: missing email or password');
-    return res.status(400).json({ errors: [ERROR.emailAndPasswordRequired] });
+  // Written by this server, but read as any input: checked again
+  const next = safeNext(start?.next);
+  const invitation = start?.invitation && INVITATION_TOKEN.test(start.invitation) ? start.invitation : null;
+
+  const { state, code, error } = req.query;
+  if (!start || typeof state !== 'string' || !sameSecret(state, start.state)) {
+    return res.redirect(signInProblemPage('expired', next));
   }
+  if (error === 'access_denied') return res.redirect(signInProblemPage('cancelled', next));
+  if (typeof code !== 'string' || code === '') return res.redirect(signInProblemPage('failed', next));
 
-  authLogger.debug('Login attempt for:', email);
+  const config = discordLoginConfig();
+  if (!config) return res.redirect(signInProblemPage('unavailable', next));
 
   try {
-    const account = await findAccountByEmail(email);
+    const identity = await identifyDiscordAccount(config, code, revokeError => {
+      authLogger.warn('Discord access token not revoked:', revokeError);
+    });
 
-    if (!account) {
-      authLogger.debug('Login failed: account not found');
-      return res.status(401).json({ errors: [ERROR.loginFailed] });
-    }
-
-    const validPassword = await comparePassword(password, account.password);
-
-    if (!validPassword) {
-      authLogger.debug('Login failed: invalid password');
-      return res.status(401).json({ errors: [ERROR.loginFailed] });
-    }
+    const outcome = await signInWithDiscord(identity, invitation);
+    if ('error' in outcome) return res.redirect(invitationProblemPage(outcome.error, invitation!));
 
     // The session this browser held, if any, ends with the new one
     const previousToken = readSessionCookie(req);
     if (previousToken) await closeSession(previousToken);
-    const session = await openSession(account.id);
+    const session = await openSession(outcome.userId, outcome.role);
     setSessionCookie(res, session.token, session.expiresAt);
 
-    const authAccount = await buildAccountData(account);
+    authLogger.debug('Discord sign-in for', outcome.userId, 'as', outcome.role);
+    res.redirect(next);
+  } catch (signInError) {
+    authLogger.error('Discord sign-in failed:', signInError);
+    res.redirect(signInProblemPage('failed', next));
+  }
+});
 
-    authLogger.debug('Login success for:', email);
-    res.json({ account: authAccount });
+// GET /api/auth/session - The account of this browser's session, null when it
+// holds none: not signed in is an answer here, not a refusal
+router.get('/session', async (req: Request, res: Response) => {
+  try {
+    const session = await readRequestSession(req, res);
+    res.json({ account: session ? await getAccount(session.userId, session.accountType) : null });
   } catch (error) {
-    authLogger.error('Login error:', error);
+    authLogger.error('/session error:', error);
     res.status(500).json({ errors: [ERROR.serverError] });
   }
 });
 
-// POST /api/auth/logout
-router.post('/logout', authMiddleware, async (req: AuthRequest, res: Response) => {
-  authLogger.debug('POST /api/auth/logout - Account:', req.account?.email);
-  const token = readSessionCookie(req);
-  if (token) await closeSession(token);
-  clearSessionCookie(res);
-
-  res.json({ message: 'Déconnexion réussie' });
-});
-
-// GET /api/auth/me
+// GET /api/auth/me - The account of the session, which must be open
 router.get('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
-  authLogger.debug('GET /api/auth/me - Account:', req.account?.email);
   try {
-    const account = await getAccountById(req.account!.userId);
-
-    if (!account) {
-      authLogger.debug('/me: Account not found in DB');
-      return res.status(404).json({ errors: [ERROR.userNotFound] });
-    }
-
-    authLogger.debug('/me: Returning account data');
+    const account = await getAccount(req.account!.userId, req.account!.accountType);
+    if (!account) return res.status(404).json({ errors: [ERROR.userNotFound] });
     res.json({ account });
   } catch (error) {
     authLogger.error('/me error:', error);
@@ -155,207 +153,59 @@ router.get('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// POST /api/auth/change-password
-router.post('/change-password', authMiddleware, async (req: AuthRequest, res: Response) => {
-  authLogger.debug('POST /api/auth/change-password - Account:', req.account?.email);
-  const { currentPassword, newPassword } = req.body;
+// POST /api/auth/logout - End this browser's session
+router.post('/logout', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const token = readSessionCookie(req);
+  if (token) await closeSession(token);
+  clearSessionCookie(res);
 
-  if (!currentPassword || !newPassword) {
-    return res.status(400).json({ errors: [ERROR.currentAndNewPasswordRequired] });
-  }
+  res.json({ message: 'Déconnexion réussie' });
+});
 
-  const passwordValid = validatePassword(newPassword);
-  if (passwordValid !== true) {
-    return res.status(400).json({ errors: passwordValid });
-  }
+// PUT /api/auth/role - Act as another role of the account, in this session only
+router.put('/role', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const { role } = req.body ?? {};
 
   try {
-    const account = await findAccountByEmail(req.account!.email);
-
-    if (!account) {
-      return res.status(404).json({ errors: [ERROR.userNotFound] });
+    const roles = await heldRoles(req.account!.userId);
+    if (!roles) return res.status(404).json({ errors: [ERROR.userNotFound] });
+    if (typeof role !== 'string' || !roles.includes(role as AccountType)) {
+      return res.status(400).json({ errors: [ERROR.roleNotHeld] });
     }
 
-    const validPassword = await comparePassword(currentPassword, account.password);
+    const changed = await setSessionRole(readSessionCookie(req)!, ROLE_OF_ACCOUNT_TYPE[role as AccountType]);
+    if (!changed) return res.status(401).json({ errors: [ERROR.sessionExpired] });
 
-    if (!validPassword) {
-      authLogger.debug('Change password failed: invalid current password');
-      return res.status(401).json({ errors: [ERROR.currentPasswordIncorrect] });
-    }
-
-    const hashedPassword = await hashPassword(newPassword);
-    await updateAccountPassword(account.id, hashedPassword);
-    // The other sessions, opened with the old password, end: only this one stays
-    const currentToken = readSessionCookie(req);
-    if (currentToken) await closeOtherSessions(account.id, currentToken);
-
-    authLogger.debug('Password changed successfully for:', req.account?.email);
-    res.json({ message: 'Mot de passe modifié avec succès' });
+    authLogger.debug('Role switched to', role, 'for', req.account!.userId);
+    res.json({ account: await getAccount(req.account!.userId, role as AccountType) });
   } catch (error) {
-    authLogger.error('Change password error:', error);
-    res.status(500).json({ errors: [ERROR.serverError] });
+    authLogger.error('Role switch error:', error);
+    res.status(500).json({ errors: [ERROR.roleSwitchFailed] });
   }
 });
 
-// POST /api/auth/activate - Activate manager account with password
-router.post('/activate', async (req: Request, res: Response) => {
-  authLogger.debug('POST /api/auth/activate');
-  const { token, password } = req.body;
-
-  if (!token) {
-    return res.status(400).json({ errors: [ERROR.activationTokenRequired] });
-  }
-
-  if (!password) {
-    return res.status(400).json({ errors: [ERROR.passwordRequired] });
-  }
-
-  const passwordValid = validatePassword(password);
-  if (passwordValid !== true) {
-    return res.status(400).json({ errors: passwordValid });
-  }
-
+// PUT /api/auth/name - Change the name the person shows the others
+router.put('/name', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const lookup = await findAccountByActivationToken(token);
-
-    if (!lookup) {
-      return res.status(400).json({ errors: [ERROR.activationTokenInvalid] });
-    }
-
-    const hashedPassword = await hashPassword(password);
-    await activateAccount(lookup, hashedPassword);
-
-    authLogger.debug('Account activated successfully:', lookup.kind, lookup.userId);
-    res.json({ message: 'Compte activé avec succès' });
+    const renamed = await renameAccount(req.account!.userId, req.body?.name);
+    if (renamed !== true) return res.status(400).json({ errors: renamed });
+    res.json({ account: await getAccount(req.account!.userId, req.account!.accountType) });
   } catch (error) {
-    authLogger.error('Activation error:', error);
-    res.status(500).json({ errors: [ERROR.activationFailed] });
+    authLogger.error('Rename error:', error);
+    res.status(500).json({ errors: [ERROR.nameUpdateFailed] });
   }
 });
 
-// POST /api/auth/reset-password - Use an admin-issued reset token to set a new password
-router.post('/reset-password', async (req: Request, res: Response) => {
-  authLogger.debug('POST /api/auth/reset-password');
-  const { token, password } = req.body;
-
-  if (!token) {
-    return res.status(400).json({ errors: [ERROR.passwordResetTokenRequired] });
-  }
-
-  if (!password) {
-    return res.status(400).json({ errors: [ERROR.passwordRequired] });
-  }
-
-  const passwordValid = validatePassword(password);
-  if (passwordValid !== true) {
-    return res.status(400).json({ errors: passwordValid });
-  }
-
+// GET /api/auth/invitations/:token - An invitation to a role, as its link shows it
+router.get('/invitations/:token', async (req: Request, res: Response) => {
   try {
-    const user = await findUserByPasswordResetToken(token);
-
-    if (!user) {
-      return res.status(400).json({ errors: [ERROR.passwordResetTokenInvalid] });
-    }
-
-    const hashedPassword = await hashPassword(password);
-    await applyPasswordReset(user.id, hashedPassword);
-
-    authLogger.debug('Password reset successfully for:', user.email);
-    res.json({ message: 'Mot de passe réinitialisé avec succès' });
+    const invitation = await readInvitation(req.params.token as string);
+    if (!invitation) return res.status(404).json({ errors: [ERROR.invitationInvalid] });
+    res.json(invitation);
   } catch (error) {
-    authLogger.error('Password reset error:', error);
-    res.status(500).json({ errors: [ERROR.passwordResetFailed] });
-  }
-});
-
-// POST /api/auth/link-account - Link current account to another
-router.post('/link-account', authMiddleware, async (req: AuthRequest, res: Response) => {
-  authLogger.debug('POST /api/auth/link-account');
-  const { email, password } = req.body;
-
-  if (!email || !password) {
-    return res.status(400).json({ errors: [ERROR.linkedAccountCredentialsRequired] });
-  }
-
-  try {
-    // Find the account to link
-    const targetAccount = await findAccountByEmail(email);
-
-    if (!targetAccount) {
-      return res.status(401).json({ errors: [ERROR.loginFailed] });
-    }
-
-    // Verify password
-    const validPassword = await comparePassword(password, targetAccount.password);
-    if (!validPassword) {
-      return res.status(401).json({ errors: [ERROR.loginFailed] });
-    }
-
-    // Check not linking to self
-    if (targetAccount.id === req.account!.userId) {
-      return res.status(400).json({ errors: [ERROR.cannotLinkSameAccount] });
-    }
-
-    // Link the accounts
-    const { groupId } = await linkAccounts(req.account!.userId, targetAccount.id);
-
-    authLogger.debug('Accounts linked successfully, group:', groupId);
-    res.json({ message: 'Comptes liés avec succès', groupId });
-  } catch (error) {
-    authLogger.error('Link account error:', error);
-    res.status(500).json({ errors: [ERROR.linkAccountFailed] });
-  }
-});
-
-// GET /api/auth/linked-accounts - Get all linked accounts
-router.get('/linked-accounts', authMiddleware, async (req: AuthRequest, res: Response) => {
-  try {
-    const linkedAccounts = await getLinkedAccounts(req.account!.userId);
-    res.json(linkedAccounts);
-  } catch (error) {
-    authLogger.error('Get linked accounts error:', error);
-    res.status(500).json({ errors: [ERROR.serverError] });
-  }
-});
-
-// POST /api/auth/switch-account - Switch to another linked account
-router.post('/switch-account', authMiddleware, async (req: AuthRequest, res: Response) => {
-  authLogger.debug('POST /api/auth/switch-account');
-  const { targetAccountId } = req.body;
-
-  if (!targetAccountId) {
-    return res.status(400).json({ errors: [ERROR.targetAccountIdRequired] });
-  }
-
-  try {
-    // Verify target is in same linked group
-    const inSameGroup = await isAccountInSameGroup(req.account!.userId, targetAccountId);
-
-    if (!inSameGroup) {
-      return res.status(403).json({ errors: [ERROR.accountNotInGroup] });
-    }
-
-    // Get target account data
-    const targetAccount = await getAccountById(targetAccountId);
-
-    if (!targetAccount) {
-      return res.status(404).json({ errors: [ERROR.userNotFound] });
-    }
-
-    // The session moves to the target account: a new one opens, the current one ends
-    const session = await openSession(targetAccount.id);
-    const currentToken = readSessionCookie(req);
-    if (currentToken) await closeSession(currentToken);
-    setSessionCookie(res, session.token, session.expiresAt);
-
-    authLogger.debug('Account switched to:', targetAccount.email);
-    res.json({ account: targetAccount });
-  } catch (error) {
-    authLogger.error('Switch account error:', error);
-    res.status(500).json({ errors: [ERROR.switchAccountFailed] });
+    authLogger.error('Invitation read error:', error);
+    res.status(500).json({ errors: [ERROR.invitationFetchFailed] });
   }
 });
 
 export default router;
-

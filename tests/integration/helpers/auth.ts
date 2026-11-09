@@ -1,51 +1,37 @@
-// Integration tests - Authentication helpers
+// Integration tests - Authentication helpers: people as their first sign-in
+// with Discord makes them, straight in the database, and a session opened for them
 
 import request from 'supertest';
 import type { Response } from 'supertest';
-import { app } from '../../../server/src/app';
-import { SESSION_COOKIE } from '../../../server/src/utils/session-cookie';
-import { prisma } from './db';
 import type { User } from '@prisma/client';
-import { PASSWORD_MIN_LENGTH, NAME_MIN_LENGTH, TEAM_NAME_MIN_LENGTH } from '@shared/constants/validation.constants';
+import { app } from '../../../server/src/app';
+import { SESSION_COOKIE } from '../../../server/src/utils/auth-cookies';
+import { openSession } from '../../../server/src/services/session.service';
+import { prisma } from './db';
+import { TEAM_NAME_MIN_LENGTH } from '@shared/constants/validation.constants';
 import { DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
 import type { AccountPermissions, MatchmakingPermissions } from '@shared/types';
 
-// Generate valid test data based on validation rules
-const DEFAULT_TEST_PASSWORD = 'A' + '1' + 'a'.repeat(PASSWORD_MIN_LENGTH - 2); // Uppercase + digit + filler
-const DEFAULT_TEST_NAME = 'x'.repeat(NAME_MIN_LENGTH); // Minimum valid name
 const DEFAULT_TEST_TEAM_NAME = 'T'.repeat(TEAM_NAME_MIN_LENGTH); // Minimum valid team name
 
 interface CreateUserOptions {
-  email?: string;
-  password?: string;
   name?: string;
 }
 
-/**
- * Create a test user via API (register endpoint)
- */
+let peopleMade = 0;
+
+/** A Discord account's number no other test person has: digits only, as Discord's */
+export function newDiscordId(): string {
+  peopleMade += 1;
+  return `${Date.now()}${String(peopleMade).padStart(5, '0')}`;
+}
+
+/** A person, as their first sign-in with Discord makes them: an account and its player */
 export async function createTestUser(options: CreateUserOptions = {}): Promise<User> {
-  const {
-    email = `test-${Date.now()}@example.com`,
-    password = DEFAULT_TEST_PASSWORD,
-    name = DEFAULT_TEST_NAME,
-  } = options;
-
-  const res = await request(app)
-    .post('/api/auth/register')
-    .send({ email, password, name });
-
-  if (res.status !== 201) {
-    throw new Error(`Failed to register user: ${JSON.stringify(res.body)}`);
-  }
-
-  // Fetch the created user from DB to return full User object
-  const user = await prisma.user.findUnique({ where: { id: res.body.userId } });
-  if (!user) {
-    throw new Error('User not found after registration');
-  }
-
-  return user;
+  const discordId = newDiscordId();
+  return prisma.user.create({
+    data: { discordId, name: options.name ?? `Joueur ${peopleMade}`, player: { create: {} } },
+  });
 }
 
 /**
@@ -74,28 +60,15 @@ export function authHeader(token: string): { Cookie: string } {
 }
 
 /**
- * Create a test user and login to get a valid token
+ * A person signed in: their account and a session acting as a player
  */
 export async function createAuthenticatedUser(options: CreateUserOptions = {}): Promise<{
   user: User;
   token: string;
 }> {
-  const password = options.password || DEFAULT_TEST_PASSWORD;
-  const email = options.email || `test-${Date.now()}@example.com`;
-
-  // Register user via API
-  const user = await createTestUser({ ...options, email, password });
-
-  // Login to get token
-  const loginRes = await request(app)
-    .post('/api/auth/login')
-    .send({ email, password });
-
-  if (loginRes.status !== 200) {
-    throw new Error(`Failed to login: ${JSON.stringify(loginRes.body)}`);
-  }
-
-  return { user, token: sessionToken(loginRes) };
+  const user = await createTestUser(options);
+  const { token } = await openSession(user.id);
+  return { user, token };
 }
 
 /**
@@ -127,14 +100,7 @@ export async function createUserWithTeam(options: CreateUserOptions = {}): Promi
   const { user, token } = await createAuthenticatedUser(options);
   const team = await createTestTeam(token);
 
-  // Refresh user to get updated teamId
-  const updatedUser = await prisma.user.findUnique({ where: { id: user.id } });
-
-  return {
-    user: updatedUser!,
-    token,
-    team,
-  };
+  return { user, token, team };
 }
 
 /**
@@ -171,20 +137,15 @@ export async function createTeamMember(
     throw new Error(`Failed to set the member's permissions: ${JSON.stringify(granted.body)}`);
   }
 
-  const { playerId } = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
-  return { user, token, playerId: playerId! };
+  return { user, token, playerId: user.playerId };
 }
 
 /**
- * Create an admin account and return a valid token (login via API).
+ * A person holding the admin role, with a session acting as an admin
  */
 export async function createAuthenticatedAdmin(options: CreateUserOptions & {
   permissions?: Record<string, Record<string, boolean>>;
 } = {}): Promise<{ user: User; token: string; adminId: string }> {
-  const bcrypt = await import('bcryptjs');
-  const email = options.email || `admin-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`;
-  const password = options.password || DEFAULT_TEST_PASSWORD;
-  const name = options.name || DEFAULT_TEST_NAME;
   const permissions = options.permissions ?? {
     system: {
       canManageVenues: true,
@@ -194,19 +155,12 @@ export async function createAuthenticatedAdmin(options: CreateUserOptions & {
     },
   };
 
-  const hashedPassword = await bcrypt.default.hash(password, 10);
   const admin = await prisma.admin.create({ data: { permissions } });
+  const discordId = newDiscordId();
   const user = await prisma.user.create({
-    data: { email, password: hashedPassword, name, adminId: admin.id },
+    data: { discordId, name: options.name ?? `Admin ${peopleMade}`, player: { create: {} }, admin: { connect: { id: admin.id } } },
   });
+  const { token } = await openSession(user.id, 'ADMIN');
 
-  const loginRes = await request(app)
-    .post('/api/auth/login')
-    .send({ email, password });
-
-  if (loginRes.status !== 200) {
-    throw new Error(`Failed to login admin: ${JSON.stringify(loginRes.body)}`);
-  }
-
-  return { user, token: sessionToken(loginRes), adminId: admin.id };
+  return { user, token, adminId: admin.id };
 }

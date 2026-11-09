@@ -9,7 +9,7 @@ import {
 } from '@/api';
 import type { AdminSummary } from '@/api/admin.api';
 import type { AdminPermissions } from '@shared/types';
-import { ERROR } from '@shared/constants';
+import { ERROR, INVITATION_TTL_DAYS, NAME_MAX_LENGTH } from '@shared/constants';
 import { useAuth } from '@/composables/useAuth';
 import { useErrors } from '@/composables/useErrors';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
@@ -25,7 +25,6 @@ const successMessage = ref<string | null>(null);
 // Create form
 const showCreateModal = ref(false);
 const createForm = reactive({
-  email: '',
   name: '',
   permissions: defaultPermissions(),
 });
@@ -79,7 +78,6 @@ async function loadAdmins() {
 }
 
 function openCreate() {
-  createForm.email = '';
   createForm.name = '';
   createForm.permissions = defaultPermissions();
   clearErrors();
@@ -91,7 +89,6 @@ async function submitCreate() {
   isCreating.value = true;
   try {
     const result = await createAdminAdmin({
-      email: createForm.email.trim(),
       name: createForm.name.trim(),
       permissions: createForm.permissions,
     });
@@ -107,13 +104,22 @@ async function submitCreate() {
   }
 }
 
-async function copyActivationUrl() {
+async function copyLink(url: string) {
   try {
-    await navigator.clipboard.writeText(activationUrl.value);
+    await navigator.clipboard.writeText(url);
     showSuccess('Lien copié');
   } catch {
     setError(ERROR.copyFailed);
   }
+}
+
+function copyActivationUrl() {
+  return copyLink(activationUrl.value);
+}
+
+// The link of an invitation still pending, to send it again
+function copyPendingLink(admin: AdminSummary) {
+  if (admin.activationToken) return copyLink(buildActivationUrl(admin.activationToken));
 }
 
 function openEdit(admin: AdminSummary) {
@@ -149,9 +155,10 @@ function openDelete(admin: AdminSummary) {
 async function confirmDelete() {
   if (!adminToDelete.value) return;
   try {
-    await deleteAdminAdmin(adminToDelete.value.id);
-    admins.value = admins.value.filter(a => a.id !== adminToDelete.value!.id);
-    showSuccess('Administrateur supprimé');
+    const removed = adminToDelete.value;
+    await deleteAdminAdmin(removed.id);
+    admins.value = admins.value.filter(a => a.id !== removed.id);
+    showSuccess(removed.activationPending ? 'Invitation annulée' : 'Rôle d\'administrateur retiré');
   } catch (e) {
     setErrorFromException(e, ERROR.adminDeleteFailed);
   } finally {
@@ -171,7 +178,7 @@ onMounted(loadAdmins);
   <section class="admin-admins">
     <header class="page-header">
       <h2>Administrateurs</h2>
-      <button class="btn-primary" @click="openCreate">+ Nouvel administrateur</button>
+      <button class="btn-primary" @click="openCreate">+ Inviter un administrateur</button>
     </header>
 
     <ErrorDisplay :errors="errors" />
@@ -187,7 +194,6 @@ onMounted(loadAdmins);
       <thead>
         <tr>
           <th>Nom</th>
-          <th>Email</th>
           <th>Type</th>
           <th>Statut</th>
           <th class="col-actions"></th>
@@ -199,40 +205,36 @@ onMounted(loadAdmins);
             {{ admin.name }}
             <span v-if="isSelf(admin)" class="self-badge">(vous)</span>
           </td>
-          <td>{{ admin.email }}</td>
           <td>
             <span v-if="admin.isSuperAdmin" class="badge badge--super">Super admin</span>
             <span v-else class="badge badge--regular">Admin</span>
           </td>
           <td>
-            <span v-if="admin.activationPending" class="badge badge--pending">En attente d'activation</span>
+            <span v-if="admin.activationPending" class="badge badge--pending">Invitation en attente</span>
             <span v-else class="badge badge--active">Actif</span>
           </td>
           <td class="col-actions">
+            <button v-if="admin.activationPending" class="btn-link" @click="copyPendingLink(admin)">Copier le lien</button>
             <button class="btn-link" @click="openEdit(admin)">Permissions</button>
             <button
               class="btn-link btn-link--danger"
               :disabled="isSelf(admin)"
-              :title="isSelf(admin) ? 'Vous ne pouvez pas supprimer votre propre compte' : ''"
+              :title="isSelf(admin) ? 'Vous ne pouvez pas retirer votre propre rôle' : ''"
               @click="openDelete(admin)"
-            >Supprimer</button>
+            >{{ admin.activationPending ? 'Annuler' : 'Retirer' }}</button>
           </td>
         </tr>
       </tbody>
     </table>
 
     <!-- Create modal -->
-    <Modal :open="showCreateModal" title="Nouvel administrateur" size="md" @close="showCreateModal = false">
+    <Modal :open="showCreateModal" title="Inviter un administrateur" size="md" @close="showCreateModal = false">
       <form class="admin-form" @submit.prevent="submitCreate">
         <ErrorDisplay :errors="errors" />
 
         <label>
-          Email
-          <input v-model="createForm.email" type="email" required maxlength="200" />
-        </label>
-        <label>
-          Pseudo
-          <input v-model="createForm.name" type="text" required maxlength="50" />
+          Pour qui
+          <input v-model="createForm.name" type="text" required :maxlength="NAME_MAX_LENGTH" placeholder="Le nom qui s'affiche jusqu'à ce qu'il accepte" />
         </label>
 
         <fieldset class="perms">
@@ -259,23 +261,23 @@ onMounted(loadAdmins);
       <template #footer>
         <button class="btn-secondary" :disabled="isCreating" @click="showCreateModal = false">Annuler</button>
         <button class="btn-primary" :disabled="isCreating" @click="submitCreate">
-          {{ isCreating ? 'Création...' : 'Créer' }}
+          {{ isCreating ? 'Création...' : 'Créer l\'invitation' }}
         </button>
       </template>
     </Modal>
 
     <!-- Activation link modal -->
-    <Modal :open="showActivationModal" title="Administrateur créé" size="md" @close="showActivationModal = false">
+    <Modal :open="showActivationModal" title="Invitation créée" size="md" @close="showActivationModal = false">
       <div class="activation-info">
         <p>
-          Le compte de <strong>{{ createdAdminName }}</strong> a été créé. Transmettez ce lien
-          d'activation pour qu'il définisse son mot de passe.
+          Envoie ce lien à <strong>{{ createdAdminName }}</strong> : il l'ouvre, se connecte avec
+          Discord, et devient administrateur sur son propre compte.
         </p>
         <div class="activation-url">
           <input :value="activationUrl" readonly @focus="($event.target as HTMLInputElement).select()" />
           <button class="btn-secondary" @click="copyActivationUrl">Copier</button>
         </div>
-        <p class="hint">Ce lien est valable 7 jours.</p>
+        <p class="hint">Ce lien est valable {{ INVITATION_TTL_DAYS }} jours et ne sert qu'une fois.</p>
       </div>
 
       <template #footer>
@@ -319,10 +321,14 @@ onMounted(loadAdmins);
 
     <ConfirmModal
       :open="showDeleteModal"
-      title="Supprimer l'administrateur"
-      :message="adminToDelete ? `Êtes-vous sûr de vouloir supprimer le compte administrateur de '${adminToDelete.name}' ?` : ''"
-      confirm-text="Supprimer"
-      require-input="supprimer"
+      :title="adminToDelete?.activationPending ? 'Annuler l\'invitation' : 'Retirer le rôle d\'administrateur'"
+      :message="adminToDelete
+        ? (adminToDelete.activationPending
+          ? `Le lien envoyé à '${adminToDelete.name}' ne servira plus.`
+          : `'${adminToDelete.name}' perd le rôle d'administrateur. Son compte reste, comme joueur.`)
+        : ''"
+      :confirm-text="adminToDelete?.activationPending ? 'Annuler l\'invitation' : 'Retirer'"
+      require-input="retirer"
       :danger="true"
       @confirm="confirmDelete"
       @cancel="showDeleteModal = false; adminToDelete = null"
@@ -491,8 +497,7 @@ onMounted(loadAdmins);
     font-size: $font-size-sm;
   }
 
-  input[type='text'],
-  input[type='email'] {
+  input[type='text'] {
     padding: $spacing-sm $spacing-md;
     background: $color-bg-tertiary;
     border: $border-thin solid $color-border;

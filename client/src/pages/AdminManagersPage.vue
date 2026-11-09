@@ -10,7 +10,7 @@ import {
 } from '@/api';
 import type { ManagerSummary } from '@/api/admin.api';
 import type { Venue } from '@shared/types';
-import { ERROR } from '@shared/constants';
+import { ERROR, INVITATION_TTL_DAYS, NAME_MAX_LENGTH } from '@shared/constants';
 import { useErrors } from '@/composables/useErrors';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import Modal from '@/components/common/Modal.vue';
@@ -25,7 +25,7 @@ const successMessage = ref<string | null>(null);
 
 // Create form
 const showCreateModal = ref(false);
-const createForm = reactive({ email: '', name: '', venueIds: [] as string[] });
+const createForm = reactive({ name: '', venueIds: [] as string[] });
 const isCreating = ref(false);
 
 // Activation link modal (shown after creation)
@@ -64,7 +64,6 @@ async function loadData() {
 }
 
 function openCreate() {
-  createForm.email = '';
   createForm.name = '';
   createForm.venueIds = [];
   clearErrors();
@@ -76,7 +75,6 @@ async function submitCreate() {
   isCreating.value = true;
   try {
     const result = await createAdminManager({
-      email: createForm.email.trim(),
       name: createForm.name.trim(),
       venueIds: createForm.venueIds,
     });
@@ -92,13 +90,22 @@ async function submitCreate() {
   }
 }
 
-async function copyActivationUrl() {
+async function copyLink(url: string) {
   try {
-    await navigator.clipboard.writeText(activationUrl.value);
+    await navigator.clipboard.writeText(url);
     showSuccess('Lien copié');
   } catch {
     setError(ERROR.copyFailed);
   }
+}
+
+function copyActivationUrl() {
+  return copyLink(activationUrl.value);
+}
+
+// The link of an invitation still pending, to send it again
+function copyPendingLink(manager: ManagerSummary) {
+  if (manager.activationToken) return copyLink(buildActivationUrl(manager.activationToken));
 }
 
 function openEdit(manager: ManagerSummary) {
@@ -134,9 +141,10 @@ function openDelete(manager: ManagerSummary) {
 async function confirmDelete() {
   if (!managerToDelete.value) return;
   try {
-    await deleteAdminManager(managerToDelete.value.id);
-    managers.value = managers.value.filter(m => m.id !== managerToDelete.value!.id);
-    showSuccess('Manager supprimé');
+    const removed = managerToDelete.value;
+    await deleteAdminManager(removed.id);
+    managers.value = managers.value.filter(m => m.id !== removed.id);
+    showSuccess(removed.activationPending ? 'Invitation annulée' : 'Rôle de manager retiré');
   } catch (e) {
     setErrorFromException(e, ERROR.managerDeleteFailed);
   } finally {
@@ -152,7 +160,7 @@ onMounted(loadData);
   <section class="admin-managers">
     <header class="page-header">
       <h2>Managers</h2>
-      <button class="btn-primary" @click="openCreate">+ Nouveau manager</button>
+      <button class="btn-primary" @click="openCreate">+ Inviter un manager</button>
     </header>
 
     <ErrorDisplay :errors="errors" />
@@ -168,7 +176,6 @@ onMounted(loadData);
       <thead>
         <tr>
           <th>Nom</th>
-          <th>Email</th>
           <th>Salles</th>
           <th>Statut</th>
           <th class="col-actions"></th>
@@ -177,35 +184,33 @@ onMounted(loadData);
       <tbody>
         <tr v-for="manager in managers" :key="manager.id">
           <td>{{ manager.name }}</td>
-          <td>{{ manager.email }}</td>
           <td>
             <span v-if="manager.venues.length === 0" class="muted">Aucune</span>
             <span v-else>{{ manager.venues.map(v => v.name).join(', ') }}</span>
           </td>
           <td>
-            <span v-if="manager.activationPending" class="badge badge--pending">En attente d'activation</span>
+            <span v-if="manager.activationPending" class="badge badge--pending">Invitation en attente</span>
             <span v-else class="badge badge--active">Actif</span>
           </td>
           <td class="col-actions">
+            <button v-if="manager.activationPending && manager.activationToken" class="btn-link" @click="copyPendingLink(manager)">Copier le lien</button>
             <button class="btn-link" @click="openEdit(manager)">Modifier</button>
-            <button class="btn-link btn-link--danger" @click="openDelete(manager)">Supprimer</button>
+            <button class="btn-link btn-link--danger" @click="openDelete(manager)">
+              {{ manager.activationPending ? 'Annuler' : 'Retirer' }}
+            </button>
           </td>
         </tr>
       </tbody>
     </table>
 
     <!-- Create modal -->
-    <Modal :open="showCreateModal" title="Nouveau manager" size="md" @close="showCreateModal = false">
+    <Modal :open="showCreateModal" title="Inviter un manager" size="md" @close="showCreateModal = false">
       <form class="manager-form" @submit.prevent="submitCreate">
         <ErrorDisplay :errors="errors" />
 
         <label>
-          Email
-          <input v-model="createForm.email" type="email" required maxlength="200" />
-        </label>
-        <label>
-          Pseudo
-          <input v-model="createForm.name" type="text" required maxlength="50" />
+          Pour qui
+          <input v-model="createForm.name" type="text" required :maxlength="NAME_MAX_LENGTH" placeholder="Le nom qui s'affiche jusqu'à ce qu'il accepte" />
         </label>
 
         <VenueChecklist
@@ -219,23 +224,23 @@ onMounted(loadData);
       <template #footer>
         <button class="btn-secondary" :disabled="isCreating" @click="showCreateModal = false">Annuler</button>
         <button class="btn-primary" :disabled="isCreating" @click="submitCreate">
-          {{ isCreating ? 'Création...' : 'Créer' }}
+          {{ isCreating ? 'Création...' : 'Créer l\'invitation' }}
         </button>
       </template>
     </Modal>
 
     <!-- Activation link modal -->
-    <Modal :open="showActivationModal" title="Manager créé" size="md" @close="showActivationModal = false">
+    <Modal :open="showActivationModal" title="Invitation créée" size="md" @close="showActivationModal = false">
       <div class="activation-info">
         <p>
-          Le compte de <strong>{{ createdManagerName }}</strong> a été créé. Transmettez ce lien
-          d'activation au manager pour qu'il définisse son mot de passe.
+          Envoie ce lien à <strong>{{ createdManagerName }}</strong> : il l'ouvre, se connecte avec
+          Discord, et devient manager de ses salles sur son propre compte.
         </p>
         <div class="activation-url">
           <input :value="activationUrl" readonly @focus="($event.target as HTMLInputElement).select()" />
           <button class="btn-secondary" @click="copyActivationUrl">Copier</button>
         </div>
-        <p class="hint">Ce lien est valable 7 jours.</p>
+        <p class="hint">Ce lien est valable {{ INVITATION_TTL_DAYS }} jours et ne sert qu'une fois.</p>
       </div>
 
       <template #footer>
@@ -261,10 +266,14 @@ onMounted(loadData);
 
     <ConfirmModal
       :open="showDeleteModal"
-      title="Supprimer le manager"
-      :message="managerToDelete ? `Êtes-vous sûr de vouloir supprimer le compte de '${managerToDelete.name}' ?` : ''"
-      confirm-text="Supprimer"
-      require-input="supprimer"
+      :title="managerToDelete?.activationPending ? 'Annuler l\'invitation' : 'Retirer le rôle de manager'"
+      :message="managerToDelete
+        ? (managerToDelete.activationPending
+          ? `Le lien envoyé à '${managerToDelete.name}' ne servira plus.`
+          : `'${managerToDelete.name}' perd le rôle de manager et ses salles. Son compte reste, comme joueur.`)
+        : ''"
+      :confirm-text="managerToDelete?.activationPending ? 'Annuler l\'invitation' : 'Retirer'"
+      require-input="retirer"
       :danger="true"
       @confirm="confirmDelete"
       @cancel="showDeleteModal = false; managerToDelete = null"
@@ -412,8 +421,7 @@ onMounted(loadData);
     font-size: $font-size-sm;
   }
 
-  input[type='text'],
-  input[type='email'] {
+  input[type='text'] {
     padding: $spacing-sm $spacing-md;
     background: $color-bg-tertiary;
     border: $border-thin solid $color-border;

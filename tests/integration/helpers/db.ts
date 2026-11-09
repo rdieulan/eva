@@ -79,12 +79,12 @@ export async function cleanDatabase(): Promise<void> {
   await prisma.teamFavoriteVenue.deleteMany();
   // Team has FK to Player (leaderId) — must be deleted before Player.
   await prisma.team.deleteMany();
+  // Deleting a player deletes its account (and the account forgets its roles)
   await prisma.player.deleteMany();
   await prisma.manager.deleteMany();
   await prisma.admin.deleteMany();
   await prisma.user.deleteMany();
   await prisma.venue.deleteMany();
-  await prisma.linkedAccountGroup.deleteMany();
 }
 
 /**

@@ -1,6 +1,6 @@
 // Admin API client - venue / manager / admin / player / team management
 
-import type { AdminPermissions, Venue, VenueLinks } from '@shared/types';
+import type { AccountType, AdminPermissions, Venue, VenueLinks } from '@shared/types';
 import { ERROR } from '@shared/constants';
 import { authFetch } from '@/api/utils';
 
@@ -18,10 +18,11 @@ export interface VenueInput extends Partial<VenueLinks> {
   arenaCount: number;
 }
 
+// A manager, or an invitation to manage not yet accepted: no account yet, the
+// name the admin gave it, and its link
 export interface ManagerSummary {
   id: string;
-  userId: string;
-  email: string;
+  userId: string | null;
   name: string;
   activationPending: boolean;
   activationToken: string | null;
@@ -74,7 +75,7 @@ export function fetchAdminManagers(): Promise<ManagerSummary[]> {
   return authFetch<ManagerSummary[]>(MANAGERS_BASE, undefined, ERROR.managersFetchFailed);
 }
 
-export function createManager(input: { email: string; name: string; venueIds: string[] }): Promise<CreatedManager> {
+export function createManager(input: { name: string; venueIds: string[] }): Promise<CreatedManager> {
   return authFetch<CreatedManager>(
     MANAGERS_BASE,
     { method: 'POST', body: JSON.stringify(input) },
@@ -99,7 +100,8 @@ export function deleteManager(id: string): Promise<void> {
 }
 
 /**
- * Build the activation URL a manager / admin can use to set their password.
+ * The link of an invitation to a role, for the person invited to open and
+ * accept by signing in with Discord
  */
 export function buildActivationUrl(activationToken: string): string {
   return `${window.location.origin}/activate/${activationToken}`;
@@ -109,10 +111,10 @@ export function buildActivationUrl(activationToken: string): string {
 // Admins
 // ============================================
 
+// An admin, or an invitation to administer not yet accepted, as for managers
 export interface AdminSummary {
   id: string;
-  userId: string;
-  email: string;
+  userId: string | null;
   name: string;
   permissions: AdminPermissions;
   isSuperAdmin: boolean;
@@ -132,7 +134,6 @@ export function fetchAdminAdmins(): Promise<AdminSummary[]> {
 }
 
 export function createAdmin(input: {
-  email: string;
   name: string;
   permissions: AdminPermissions;
 }): Promise<CreatedAdmin> {
@@ -166,8 +167,8 @@ export function deleteAdmin(id: string): Promise<void> {
 export interface PlayerAdminSummary {
   id: string;
   userId: string | null;
-  email: string | null;
   name: string | null;
+  roles: AccountType[]; // A manager or an admin is a player too
   teamId: string | null;
   teamName: string | null;
   isLeader: boolean;
@@ -178,33 +179,12 @@ export function fetchAdminPlayers(): Promise<PlayerAdminSummary[]> {
   return authFetch<PlayerAdminSummary[]>(PLAYERS_BASE, undefined, ERROR.playersAdminFetchFailed);
 }
 
-export interface PasswordResetPayload {
-  token: string;
-  expiresAt: string;
-  userEmail: string;
-}
-
-export function resetPlayerPassword(id: string): Promise<PasswordResetPayload> {
-  return authFetch<PasswordResetPayload>(
-    `${PLAYERS_BASE}/${id}/reset-password`,
-    { method: 'POST' },
-    ERROR.passwordResetFailed,
-  );
-}
-
 export function deletePlayer(id: string): Promise<void> {
   return authFetch<void>(
     `${PLAYERS_BASE}/${id}`,
     { method: 'DELETE' },
     ERROR.playerDeleteFailed,
   );
-}
-
-/**
- * Build the reset URL a player can use to set a new password.
- */
-export function buildPasswordResetUrl(token: string): string {
-  return `${window.location.origin}/reset-password/${token}`;
 }
 
 // ============================================
@@ -216,7 +196,7 @@ export interface TeamAdminSummary {
   name: string;
   logoUrl: string | null;
   venue: { id: string; name: string; city: string } | null;
-  leader: { id: string; name: string; email: string } | null;
+  leader: { id: string; name: string } | null;
   memberCount: number;
   createdAt: string;
 }
@@ -224,7 +204,6 @@ export interface TeamAdminSummary {
 export interface TeamAdminMember {
   id: string;
   playerId: string;
-  email: string;
   name: string;
   isLeader: boolean;
 }

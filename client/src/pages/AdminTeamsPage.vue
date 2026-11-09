@@ -166,7 +166,7 @@ onMounted(loadTeams);
       <div v-else-if="detail" class="detail">
         <div class="detail-row">
           <span class="detail-label">Leader</span>
-          <span>{{ detail.leader ? `${detail.leader.name} · ${detail.leader.email}` : '—' }}</span>
+          <span>{{ detail.leader ? detail.leader.name : '—' }}</span>
         </div>
         <div class="detail-row">
           <span class="detail-label">Salle</span>
@@ -182,7 +182,6 @@ onMounted(loadTeams);
         <ul class="members">
           <li v-for="m in detail.members" :key="m.id">
             <span class="member-name">{{ m.name }}</span>
-            <span class="member-email">{{ m.email }}</span>
             <span v-if="m.isLeader" class="badge badge--leader">Leader</span>
           </li>
         </ul>
@@ -383,11 +382,6 @@ onMounted(loadTeams);
 .member-name {
   font-weight: 600;
   color: $color-text-primary;
-}
-
-.member-email {
-  color: $color-text-secondary;
-  font-size: $font-size-sm;
   margin-right: auto;
 }
 

@@ -1,389 +1,72 @@
-// Authentication service - business logic
+// Accounts: one person, signed in with Discord, acting as one of their roles.
+// Everyone is a player; managing a venue and administering the app are roles
+// on top, given by invitation (see invitation.service).
 
-import bcrypt from 'bcryptjs';
 import { prisma } from '@db/prisma';
-import type { AccountPermissions, AdminPermissions, Account, AccountType } from '@shared/types';
+import type { Account, AccountType, AdminPermissions } from '@shared/types';
+import { normalizeName, validateName } from '@shared/utils';
+import { PERMISSIONS_INCLUDE, permissionsFor } from '@middleware/auth.middleware';
 
-// Re-export validation functions from shared (single source of truth)
-export {
-  validateEmail,
-  validatePassword,
-  validateName,
-  validatePasswordsMatch,
-  validateRegistration,
-  isValidEmail,
-  isValidPassword,
-  isValidName,
-  type ValidationResult,
-} from '@shared/utils';
-
-// Re-export Account type for backward compatibility
-export type { Account, AccountType };
-
-/**
- * Hash a password
- */
-export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, 10);
+/** The roles a person holds: player always, manager and admin when given */
+export function accountRoles(holder: { managerId: string | null; adminId: string | null }): AccountType[] {
+  return [
+    'player',
+    ...(holder.managerId ? ['manager' as const] : []),
+    ...(holder.adminId ? ['admin' as const] : []),
+  ];
 }
 
-/**
- * Compare password with hash
- */
-export async function comparePassword(password: string, hash: string): Promise<boolean> {
-  return bcrypt.compare(password, hash);
+/** The roles a person holds now; null when the person no longer exists */
+export async function heldRoles(userId: string): Promise<AccountType[] | null> {
+  const holder = await prisma.user.findUnique({ where: { id: userId }, select: { managerId: true, adminId: true } });
+  return holder ? accountRoles(holder) : null;
 }
 
-/**
- * Check if an email already exists (for registration uniqueness check)
- */
-export async function emailExists(email: string): Promise<boolean> {
-  const count = await prisma.user.count({
-    where: {
-      email: {
-        equals: email,
-        mode: 'insensitive',
-      },
-    },
-  });
-  return count > 0;
-}
+// What building an account reads of a person
+const ACCOUNT_SELECT = {
+  id: true,
+  name: true,
+  playerId: true,
+  managerId: true,
+  adminId: true,
+  player: { select: { teamId: true, ...PERMISSIONS_INCLUDE.player.select } },
+  manager: { select: { managedVenues: { select: { venueId: true } }, ...PERMISSIONS_INCLUDE.manager.select } },
+  admin: PERMISSIONS_INCLUDE.admin,
+} as const;
 
 /**
- * Find account by email for authentication (login, change-password)
- * Returns Account with Player/Manager/Admin relations for building auth data
+ * A person's account, acting as one of their roles; a role they no longer hold
+ * reads as player. Null when the person no longer exists.
  */
-export async function findAccountByEmail(email: string) {
-  return prisma.user.findFirst({
-    where: {
-      email: {
-        equals: email,
-        mode: 'insensitive',
-      },
-    },
-    include: {
-      player: { include: { ledTeam: true } },
-      manager: { include: { managedVenues: true } },
-      admin: true,
-    },
-  });
-}
+export async function getAccount(userId: string, accountType: AccountType): Promise<Account | null> {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: ACCOUNT_SELECT });
+  if (!user) return null;
 
-/**
- * Get account by ID and return formatted auth data
- */
-export async function getAccountById(userId: string): Promise<Account | null> {
-  const account = await prisma.user.findUnique({
-    where: { id: userId },
-    include: {
-      player: { include: { ledTeam: true } },
-      manager: { include: { managedVenues: true } },
-      admin: true,
-    },
-  });
-
-  if (!account) return null;
-
-  return buildAccountData(account);
-}
-
-/**
- * Determine account type from account record
- */
-function getAccountType(account: {
-  player?: unknown | null;
-  manager?: unknown | null;
-  admin?: unknown | null;
-}): AccountType {
-  if (account.admin) return 'admin';
-  if (account.manager) return 'manager';
-  return 'player';
-}
-
-/**
- * Build account data from account record
- */
-export async function buildAccountData(account: {
-  id: string;
-  email: string;
-  name: string;
-  playerId?: string | null;
-  managerId?: string | null;
-  adminId?: string | null;
-  player?: {
-    id: string;
-    teamId: string | null;
-    ledTeam: { id: string } | null;
-  } | null;
-  manager?: {
-    id: string;
-    managedVenues: { venueId: string }[];
-  } | null;
-  admin?: {
-    id: string;
-    permissions?: unknown;
-  } | null;
-}): Promise<Account> {
-  // Import dynamically to avoid circular dependency
-  const { getAccountPermissions } = await import('@middleware/auth.middleware');
-  const permissions = await getAccountPermissions(account.id);
-
-  const accountType = getAccountType(account);
-
-  // Load admin permissions separately when applicable (the admin record may have
-  // been provided without permissions — fetch fresh in that case).
-  let adminPermissions: AdminPermissions | null = null;
-  if (account.admin) {
-    if (account.admin.permissions !== undefined) {
-      adminPermissions = (account.admin.permissions ?? null) as AdminPermissions | null;
-    } else {
-      const fresh = await prisma.admin.findUnique({
-        where: { id: account.admin.id },
-        select: { permissions: true },
-      });
-      adminPermissions = (fresh?.permissions ?? null) as unknown as AdminPermissions | null;
-    }
-  }
+  const roles = accountRoles(user);
+  const actingAs = roles.includes(accountType) ? accountType : 'player';
 
   return {
-    id: account.id,
-    playerId: account.player?.id ?? account.playerId ?? null,
-    managerId: account.manager?.id ?? account.managerId ?? null,
-    adminId: account.admin?.id ?? account.adminId ?? null,
-    email: account.email,
-    name: account.name,
-    accountType,
-    permissions,
-    // Player-specific
-    teamId: account.player?.teamId ?? null,
-    isLeader: !!account.player?.ledTeam,
-    // Manager-specific
-    managedVenueIds: account.manager?.managedVenues.map(v => v.venueId) ?? null,
-    // Admin-specific
-    adminPermissions,
+    id: user.id,
+    playerId: actingAs === 'player' ? user.playerId : null,
+    managerId: actingAs === 'manager' ? user.managerId : null,
+    adminId: actingAs === 'admin' ? user.adminId : null,
+    name: user.name,
+    accountType: actingAs,
+    roles,
+    permissions: permissionsFor(user, actingAs),
+    teamId: actingAs === 'player' ? user.player.teamId : null,
+    isLeader: actingAs === 'player' && !!user.player.ledTeam,
+    managedVenueIds: actingAs === 'manager' ? user.manager?.managedVenues.map(managed => managed.venueId) ?? [] : null,
+    adminPermissions: actingAs === 'admin' ? (user.admin?.permissions as unknown as AdminPermissions) ?? null : null,
   };
 }
 
-/**
- * Update account password
- */
-export async function updateAccountPassword(userId: string, hashedPassword: string): Promise<void> {
-  await prisma.user.update({
-    where: { id: userId },
-    data: { password: hashedPassword },
-  });
-}
+/** Change the name a person shows the others; the errors of a name that breaks the rule */
+export async function renameAccount(userId: string, name: unknown): Promise<true | string[]> {
+  if (typeof name !== 'string') return validateName('') as string[];
+  const valid = validateName(name);
+  if (valid !== true) return valid;
 
-// ============================================
-// Password reset (admin-issued)
-// ============================================
-
-/**
- * Find a User by its passwordResetToken iff the token is not expired.
- */
-export async function findUserByPasswordResetToken(token: string) {
-  return prisma.user.findFirst({
-    where: {
-      passwordResetToken: token,
-      passwordResetTokenExpiresAt: { gte: new Date() },
-    },
-    select: { id: true, email: true },
-  });
-}
-
-/**
- * Apply a password reset: set the new hashed password, clear the reset token,
- * and invalidate every existing session for that User so old tokens cannot be
- * reused after the password change.
- */
-export async function applyPasswordReset(userId: string, hashedPassword: string): Promise<void> {
-  await prisma.$transaction([
-    prisma.user.update({
-      where: { id: userId },
-      data: {
-        password: hashedPassword,
-        passwordResetToken: null,
-        passwordResetTokenExpiresAt: null,
-      },
-    }),
-    prisma.session.deleteMany({ where: { userId } }),
-  ]);
-}
-
-// ============================================
-// Activation (for Manager + Admin accounts)
-// ============================================
-
-export type ActivationKind = 'manager' | 'admin';
-
-export interface ActivationLookup {
-  kind: ActivationKind;
-  recordId: string; // manager.id or admin.id
-  userId: string;
-}
-
-/**
- * Find an activation target by token. Looks in Manager then Admin.
- * Returns null when the token doesn't exist or is expired.
- */
-export async function findAccountByActivationToken(token: string): Promise<ActivationLookup | null> {
-  const now = new Date();
-
-  const manager = await prisma.manager.findFirst({
-    where: { activationToken: token, activationTokenExpiresAt: { gte: now } },
-    include: { user: { select: { id: true } } },
-  });
-  if (manager?.user) {
-    return { kind: 'manager', recordId: manager.id, userId: manager.user.id };
-  }
-
-  const admin = await prisma.admin.findFirst({
-    where: { activationToken: token, activationTokenExpiresAt: { gte: now } },
-    include: { user: { select: { id: true } } },
-  });
-  if (admin?.user) {
-    return { kind: 'admin', recordId: admin.id, userId: admin.user.id };
-  }
-
-  return null;
-}
-
-/**
- * Activate an account by clearing its activation token and setting the
- * password on the linked User. Works for both Manager and Admin.
- */
-export async function activateAccount(lookup: ActivationLookup, hashedPassword: string): Promise<void> {
-  const clearTokenStatement = lookup.kind === 'manager'
-    ? prisma.manager.update({
-        where: { id: lookup.recordId },
-        data: { activationToken: null, activationTokenExpiresAt: null },
-      })
-    : prisma.admin.update({
-        where: { id: lookup.recordId },
-        data: { activationToken: null, activationTokenExpiresAt: null },
-      });
-
-  await prisma.$transaction([
-    clearTokenStatement,
-    prisma.user.update({
-      where: { id: lookup.userId },
-      data: { password: hashedPassword },
-    }),
-  ]);
-}
-
-// ============================================
-// Linked accounts
-// ============================================
-
-/**
- * Link two accounts together
- */
-export async function linkAccounts(userId1: string, userId2: string): Promise<{ groupId: string }> {
-  // Get both accounts
-  const [account1, account2] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId1 } }),
-    prisma.user.findUnique({ where: { id: userId2 } }),
-  ]);
-
-  if (!account1 || !account2) {
-    throw new Error('Account not found');
-  }
-
-  // Check if either already has a group
-  const existingGroupId = account1.linkedAccountGroupId || account2.linkedAccountGroupId;
-
-  if (existingGroupId) {
-    // Add the other account to the existing group
-    const accountToAdd = account1.linkedAccountGroupId ? account2 : account1;
-    await prisma.user.update({
-      where: { id: accountToAdd.id },
-      data: { linkedAccountGroupId: existingGroupId },
-    });
-    return { groupId: existingGroupId };
-  }
-
-  // Create new group and link both accounts
-  const group = await prisma.linkedAccountGroup.create({
-    data: {
-      accounts: {
-        connect: [{ id: userId1 }, { id: userId2 }],
-      },
-    },
-  });
-
-  return { groupId: group.id };
-}
-
-/**
- * Linked account summary for account switching
- */
-export interface LinkedAccountSummary {
-  id: string;
-  email: string;
-  name: string;
-  accountType: 'player' | 'manager' | 'admin';
-  isCurrent: boolean;
-}
-
-/**
- * Get all accounts in a linked group (including current)
- */
-export async function getLinkedAccounts(userId: string): Promise<LinkedAccountSummary[]> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { linkedAccountGroupId: true },
-  });
-
-  if (!user?.linkedAccountGroupId) {
-    // Return only the current user
-    const currentUser = await prisma.user.findUnique({
-      where: { id: userId },
-      include: { player: true, manager: true, admin: true },
-    });
-    if (!currentUser) return [];
-
-    return [{
-      id: currentUser.id,
-      email: currentUser.email,
-      name: currentUser.name,
-      accountType: currentUser.admin ? 'admin' : currentUser.manager ? 'manager' : 'player',
-      isCurrent: true,
-    }];
-  }
-
-  const linkedUsers = await prisma.user.findMany({
-    where: {
-      linkedAccountGroupId: user.linkedAccountGroupId,
-    },
-    include: {
-      player: true,
-      manager: true,
-      admin: true,
-    },
-  });
-
-  return linkedUsers.map(u => ({
-    id: u.id,
-    email: u.email,
-    name: u.name,
-    accountType: u.admin ? 'admin' : u.manager ? 'manager' : 'player' as const,
-    isCurrent: u.id === userId,
-  }));
-}
-
-/**
- * Check if target account is in the same linked group
- */
-export async function isAccountInSameGroup(currentUserId: string, targetUserId: string): Promise<boolean> {
-  const [current, target] = await Promise.all([
-    prisma.user.findUnique({ where: { id: currentUserId }, select: { linkedAccountGroupId: true } }),
-    prisma.user.findUnique({ where: { id: targetUserId }, select: { linkedAccountGroupId: true } }),
-  ]);
-
-  if (!current?.linkedAccountGroupId || !target?.linkedAccountGroupId) {
-    return false;
-  }
-
-  return current.linkedAccountGroupId === target.linkedAccountGroupId;
+  await prisma.user.update({ where: { id: userId }, data: { name: normalizeName(name) } });
+  return true;
 }

@@ -143,8 +143,8 @@ describe('eva.gg account API', () => {
     });
 
     it('should refuse an eva.gg account another player already linked', async () => {
-      const first = await createAuthenticatedUser({ email: 'first@example.com' });
-      const second = await createAuthenticatedUser({ email: 'second@example.com' });
+      const first = await createAuthenticatedUser();
+      const second = await createAuthenticatedUser();
       lookup.mockResolvedValue({ player: SIB });
 
       await request(app)

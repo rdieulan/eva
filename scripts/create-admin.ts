@@ -1,16 +1,18 @@
-// Interactive script to create a super admin account
+// Invite the first super admin, or another one
 //
-// Usage: npm run create-admin
+// Usage: npm run create-admin [-- "Name"]
 //
-// Prompts for email, name and password. Creates an Admin record with all
-// permissions set to true (super admin) and the linked User account.
+// Creates an Admin with every permission, without an account yet, and prints
+// its invitation link: whoever opens it and signs in with Discord becomes that
+// admin, on their own account. Asks who it is for when no name is given.
 
 import * as readline from 'readline';
-import bcrypt from 'bcryptjs';
+import { randomUUID } from 'crypto';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
-import { validateEmail, validateName, validatePassword } from '../shared/utils/validation.utils';
+import { normalizeName, validateName } from '../shared/utils/validation.utils';
+import { INVITATION_TTL_DAYS } from '../shared/constants/invitation.constants';
 
 const databaseUrl = process.env.DATABASE_URL || 'postgresql://eva_user:eva_secret_password@localhost:5432/eva_db';
 const pool = new pg.Pool({ connectionString: databaseUrl });
@@ -27,115 +29,57 @@ const SUPER_ADMIN_PERMISSIONS = {
   },
 };
 
-interface MutableInterface extends readline.Interface {
-  output: NodeJS.WritableStream;
-  _writeToOutput?: (s: string) => void;
+function ask(rl: readline.Interface, question: string): Promise<string> {
+  return new Promise(resolve => rl.question(question, resolve));
 }
 
-function createPrompt(): MutableInterface {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  }) as MutableInterface;
-  return rl;
-}
-
-function ask(rl: MutableInterface, question: string): Promise<string> {
-  return new Promise((resolve) => {
-    rl.question(question, (answer) => resolve(answer));
-  });
-}
-
-function askSecret(rl: MutableInterface, question: string): Promise<string> {
-  return new Promise((resolve) => {
-    // Mute output while typing password
-    const originalWrite = (rl as unknown as { _writeToOutput: (s: string) => void })._writeToOutput;
-    let muted = false;
-    (rl as unknown as { _writeToOutput: (s: string) => void })._writeToOutput = function (s: string) {
-      if (muted) {
-        // Only echo line endings to keep prompt responsive
-        if (s === '\n' || s === '\r' || s === '\r\n') {
-          process.stdout.write(s);
-        }
-        return;
-      }
-      process.stdout.write(s);
-    };
-    rl.question(question, (answer) => {
-      muted = false;
-      (rl as unknown as { _writeToOutput: (s: string) => void })._writeToOutput = originalWrite;
-      process.stdout.write('\n');
-      resolve(answer);
-    });
-    muted = true;
-  });
-}
-
-async function promptValid<T>(
-  rl: MutableInterface,
-  question: string,
-  validator: (value: string) => true | string[],
-  secret = false,
-): Promise<string> {
-  while (true) {
-    const value = secret ? await askSecret(rl, question) : await ask(rl, question);
-    const result = validator(value);
-    if (result === true) return value;
-    for (const error of result) {
-      console.error(`  ✗ ${error}`);
+// The name given on the command line, or asked until it fits the rule of a person's name
+async function invitedName(): Promise<string> {
+  const given = process.argv[2];
+  if (given !== undefined) {
+    const valid = validateName(given);
+    if (valid !== true) {
+      for (const error of valid) console.error(`  ✗ ${error}`);
+      process.exit(1);
     }
+    return normalizeName(given);
+  }
+
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    for (;;) {
+      const answer = await ask(rl, 'Pour qui est l\'invitation ? ');
+      const valid = validateName(answer);
+      if (valid === true) return normalizeName(answer);
+      for (const error of valid) console.error(`  ✗ ${error}`);
+    }
+  } finally {
+    rl.close();
   }
 }
 
 async function main(): Promise<void> {
-  console.log('\n=== Création d\'un super admin EVA ===\n');
-
-  const rl = createPrompt();
+  console.log('\n=== Invitation d\'un super admin ===\n');
 
   try {
-    const email = (await promptValid(rl, 'Email     : ', validateEmail)).toLowerCase().trim();
-
-    const existing = await prisma.user.findFirst({
-      where: { email: { equals: email, mode: 'insensitive' } },
-    });
-    if (existing) {
-      console.error(`\n❌ L'email "${email}" est déjà utilisé.`);
-      process.exit(1);
-    }
-
-    const name = (await promptValid(rl, 'Pseudo    : ', validateName)).trim();
-
-    const password = await promptValid(rl, 'Mot de passe : ', validatePassword, true);
-    const confirm = await askSecret(rl, 'Confirmer    : ');
-    if (password !== confirm) {
-      console.error('\n❌ Les mots de passe ne correspondent pas.');
-      process.exit(1);
-    }
-
-    rl.close();
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
+    const name = await invitedName();
+    const activationToken = randomUUID();
     const admin = await prisma.admin.create({
-      data: { permissions: SUPER_ADMIN_PERMISSIONS },
-    });
-
-    const user = await prisma.user.create({
       data: {
-        email,
-        password: hashedPassword,
-        name,
-        adminId: admin.id,
+        permissions: SUPER_ADMIN_PERMISSIONS,
+        activationToken,
+        activationTokenExpiresAt: new Date(Date.now() + INVITATION_TTL_DAYS * 24 * 60 * 60 * 1000),
+        invitedName: name,
       },
     });
 
-    console.log('\n✅ Super admin créé avec succès');
-    console.log(`   User ID  : ${user.id}`);
-    console.log(`   Admin ID : ${admin.id}`);
-    console.log(`   Email    : ${user.email}`);
-    console.log(`   Pseudo   : ${user.name}\n`);
+    const base = process.env.APP_URL?.trim().replace(/\/+$/, '');
+    const path = `/activate/${activationToken}`;
+    console.log(`\n✅ Invitation créée pour ${name} (admin ${admin.id})`);
+    console.log(`   Lien, valable ${INVITATION_TTL_DAYS} jours : ${base ? `${base}${path}` : path}`);
+    if (!base) console.log('   (APP_URL n\'est pas réglée : ajoute l\'adresse du site devant le chemin)');
+    console.log('   À ouvrir par la personne invitée, qui se connecte avec Discord.\n');
   } catch (error) {
-    rl.close();
     console.error('\n❌ Erreur :', error);
     process.exit(1);
   } finally {

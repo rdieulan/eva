@@ -6,6 +6,7 @@ import homeIcon from '@/assets/icons/home.svg?raw';
 import userIcon from '@/assets/icons/user.svg?raw';
 import usersIcon from '@/assets/icons/users.svg?raw';
 import logoutIcon from '@/assets/icons/logout.svg?raw';
+import discordIcon from '@/assets/icons/discord.svg?raw';
 import closeIcon from '@/assets/icons/close.svg?raw';
 import chevronRightIcon from '@/assets/icons/chevron-right.svg?raw';
 import resetIcon from '@/assets/icons/reset.svg?raw';
@@ -30,6 +31,7 @@ const icons: Record<string, string> = {
   user: userIcon,
   users: usersIcon,
   logout: logoutIcon,
+  discord: discordIcon,
   close: closeIcon,
   'chevron-right': chevronRightIcon,
   reset: resetIcon,

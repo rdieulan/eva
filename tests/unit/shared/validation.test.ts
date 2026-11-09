@@ -1,17 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import {
-  validateEmail,
-  validatePassword,
-  validatePasswordsMatch,
+  normalizeName,
   validateName,
   validateTeamName,
-  validateRegistration,
 } from '@shared/utils';
 import {
-  PASSWORD_MIN_LENGTH,
   NAME_MIN_LENGTH,
+  NAME_MAX_LENGTH,
   TEAM_NAME_MIN_LENGTH,
 } from '@shared/constants/validation.constants';
+import { ERROR } from '@shared/constants';
 
 // ============================================
 // UNIT TESTS: Shared Validation Utils
@@ -20,36 +18,42 @@ import {
 
 describe('Validation Utils', () => {
   // ----------------------------------------
-  // Email Validation
+  // Name Validation: a person's name follows Discord's own bounds
   // ----------------------------------------
-  describe('validateEmail', () => {
-    it('should accept valid email formats', () => {
-      expect(validateEmail('user@example.com')).toBe(true);
-      expect(validateEmail('test.user@domain.org')).toBe(true);
+  describe('validateName', () => {
+    it('accepts the names Discord allows: accents, spaces, emojis, 2 to 32 characters', () => {
+      for (const name of ['Raphaël', 'Sib 🎮', 'raph_42', 'x'.repeat(NAME_MIN_LENGTH), 'x'.repeat(NAME_MAX_LENGTH)]) {
+        expect(validateName(name)).toBe(true);
+      }
     });
 
-    it('should reject invalid email formats', () => {
-      expect(validateEmail('notanemail')).not.toBe(true);
-      expect(validateEmail('@nodomain.com')).not.toBe(true);
+    it('counts an emoji as one character', () => {
+      expect(validateName('🎮🎮')).toBe(true);
+      expect(validateName('🎮'.repeat(NAME_MAX_LENGTH + 1))).toEqual([ERROR.nameTooLong]);
+    });
+
+    it('rejects a name too short or too long once normalized', () => {
+      expect(validateName('  a  ')).toEqual([ERROR.nameTooShort]);
+      expect(validateName('x'.repeat(NAME_MAX_LENGTH + 1))).toEqual([ERROR.nameTooLong]);
+    });
+
+    it('wants something to see, and keeps the marks that join an emoji', () => {
+      for (const invisible of ['\u200B\u200B', '\u00AD\u00AD\u00AD', '\u2060\u2060', '\u200F\u200F']) {
+        expect(validateName(invisible)).toContain(ERROR.nameNotVisible);
+      }
+      expect(validateName('👨‍👩‍👧 Nova')).toBe(true);
+    });
+
+    it('rejects line breaks and the marks that turn the text around', () => {
+      expect(validateName('two\nlines')).toEqual([ERROR.nameInvalidChars]);
+      expect(validateName('tab\tbed')).toEqual([ERROR.nameInvalidChars]);
+      expect(validateName('abc‮def')).toEqual([ERROR.nameInvalidChars]);
     });
   });
 
-  // ----------------------------------------
-  // Name Validation
-  // ----------------------------------------
-  describe('validateName', () => {
-    it('should accept alphanumeric names at NAME_MIN_LENGTH', () => {
-      const validName = 'A1x'.slice(0, NAME_MIN_LENGTH).padEnd(NAME_MIN_LENGTH, '0');
-      expect(validateName(validName)).toBe(true);
-    });
-
-    it('should reject names shorter than NAME_MIN_LENGTH', () => {
-      expect(validateName('A1'.slice(0, NAME_MIN_LENGTH - 1))).not.toBe(true);
-    });
-
-    it('should reject names with spaces or special characters', () => {
-      expect(validateName('John Doe')).not.toBe(true);
-      expect(validateName('test_name')).not.toBe(true);
+  describe('normalizeName', () => {
+    it('trims the ends and keeps one space between words', () => {
+      expect(normalizeName('  Raphaël   le  Grand ')).toBe('Raphaël le Grand');
     });
   });
 
@@ -70,72 +74,6 @@ describe('Validation Utils', () => {
     it('should handle null/undefined gracefully', () => {
       expect(validateTeamName(null as unknown as string)).not.toBe(true);
       expect(validateTeamName(undefined as unknown as string)).not.toBe(true);
-    });
-  });
-
-  // ----------------------------------------
-  // Password Validation
-  // ----------------------------------------
-  describe('validatePassword', () => {
-    it('should accept passwords meeting all criteria', () => {
-      expect(validatePassword('Password1')).toBe(true);
-    });
-
-    it('should reject passwords shorter than PASSWORD_MIN_LENGTH', () => {
-      const tooShort = 'Aa1xxxx'.slice(0, PASSWORD_MIN_LENGTH - 1);
-      expect(validatePassword(tooShort)).not.toBe(true);
-    });
-
-    it('should reject passwords without digits', () => {
-      expect(validatePassword('A'.repeat(PASSWORD_MIN_LENGTH))).not.toBe(true);
-    });
-
-    it('should reject passwords without uppercase', () => {
-      expect(validatePassword('a'.repeat(PASSWORD_MIN_LENGTH - 1) + '1')).not.toBe(true);
-    });
-
-    it('should return errors array when validation fails', () => {
-      const result = validatePassword('x');
-      expect(result).not.toBe(true);
-      expect(Array.isArray(result)).toBe(true);
-    });
-  });
-
-  // ----------------------------------------
-  // Password Confirmation
-  // ----------------------------------------
-  describe('validatePasswordsMatch', () => {
-    it('should accept matching passwords', () => {
-      expect(validatePasswordsMatch('Password1', 'Password1')).toBe(true);
-    });
-
-    it('should reject non-matching passwords', () => {
-      expect(validatePasswordsMatch('Password1', 'Different1')).not.toBe(true);
-    });
-  });
-
-  // ----------------------------------------
-  // Full Registration Validation
-  // ----------------------------------------
-  describe('validateRegistration', () => {
-    it('should accept valid registration data', () => {
-      expect(validateRegistration({
-        email: 'user@example.com',
-        password: 'Password1',
-        confirmPassword: 'Password1',
-        name: 'Player123',
-      })).toBe(true);
-    });
-
-    it('should return errors array when data is invalid', () => {
-      const result = validateRegistration({
-        email: 'invalid',
-        password: 'x',
-        confirmPassword: 'y',
-        name: '',
-      });
-      expect(result).not.toBe(true);
-      expect(Array.isArray(result)).toBe(true);
     });
   });
 });

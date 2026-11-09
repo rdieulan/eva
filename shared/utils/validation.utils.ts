@@ -3,10 +3,8 @@
 
 import { ERROR } from '@shared/constants';
 import {
-  EMAIL_REGEX,
-  PASSWORD_MIN_LENGTH,
   NAME_MIN_LENGTH,
-  NAME_REGEX,
+  NAME_MAX_LENGTH,
   TEAM_NAME_MIN_LENGTH,
 } from '@shared/constants/validation.constants';
 
@@ -18,58 +16,41 @@ import {
  */
 export type ValidationResult = true | string[];
 
-/**
- * Validate email format
- */
-export function validateEmail(email: string): ValidationResult {
-  const errors: string[] = [];
+// Control characters (line breaks, tabs) and the marks that turn the direction
+// of the text around: a name is one line, read the way it is written
+const NAME_FORBIDDEN = /[\p{Cc}\u202A-\u202E\u2066-\u2069]/u;
+// Something to see: a letter, a digit, a symbol (emojis) or a punctuation mark,
+// not only zero-width marks. Those stay allowed around them: emojis are joined by one.
+const NAME_VISIBLE = /[\p{L}\p{N}\p{S}\p{P}]/u;
 
-  if (!EMAIL_REGEX.test(email)) {
-    errors.push(ERROR.emailInvalid);
-  }
-
-  return errors.length ? errors : true;
+/** A name as it is kept: no space at either end, and one space between words */
+export function normalizeName(name: string): string {
+  return name.trim().replace(/\s+/g, ' ');
 }
 
 /**
- * Validate password rules:
- * - Min 8 characters
- * - At least one digit
- * - At least one uppercase letter
- */
-export function validatePassword(password: string): ValidationResult {
-  const errors: string[] = [];
-
-  if (password.length < PASSWORD_MIN_LENGTH) {
-    errors.push(ERROR.passwordTooShort);
-  }
-
-  if (!/[0-9]/.test(password)) {
-    errors.push(ERROR.passwordNoDigit);
-  }
-
-  if (!/[A-Z]/.test(password)) {
-    errors.push(ERROR.passwordNoUppercase);
-  }
-
-  return errors.length ? errors : true;
-}
-
-/**
- * Validate name rules:
- * - Min 3 characters
- * - Only alphanumeric characters (letters and digits)
+ * Validate a person's name, once normalized: 2 to 32 characters, as Discord
+ * allows its own (accents, spaces and emojis are fine)
  */
 export function validateName(name: string): ValidationResult {
   const errors: string[] = [];
-  const trimmed = name.trim();
+  const normalized = normalizeName(name);
+  const length = [...normalized].length;
 
-  if (trimmed.length < NAME_MIN_LENGTH) {
+  if (length < NAME_MIN_LENGTH) {
     errors.push(ERROR.nameTooShort);
   }
 
-  if (!NAME_REGEX.test(trimmed)) {
+  if (length > NAME_MAX_LENGTH) {
+    errors.push(ERROR.nameTooLong);
+  }
+
+  if (NAME_FORBIDDEN.test(name)) {
     errors.push(ERROR.nameInvalidChars);
+  }
+
+  if (!NAME_VISIBLE.test(normalized)) {
+    errors.push(ERROR.nameNotVisible);
   }
 
   return errors.length ? errors : true;
@@ -90,46 +71,8 @@ export function validateTeamName(name: string): ValidationResult {
   return errors.length ? errors : true;
 }
 
-/**
- * Check if passwords match
- */
-export function validatePasswordsMatch(password: string, confirmPassword: string): ValidationResult {
-  if (password !== confirmPassword) {
-    return [ERROR.passwordsMismatch];
-  }
-  return true;
-}
-
-/**
- * Validate all registration fields at once
- */
-export function validateRegistration(data: {
-  email: string;
-  password: string;
-  confirmPassword: string;
-  name: string;
-}): ValidationResult {
-  const errors: string[] = [];
-
-  const emailResult = validateEmail(data.email);
-  if (emailResult !== true) errors.push(...emailResult);
-
-  const passwordResult = validatePassword(data.password);
-  if (passwordResult !== true) errors.push(...passwordResult);
-
-  const matchResult = validatePasswordsMatch(data.password, data.confirmPassword);
-  if (matchResult !== true) errors.push(...matchResult);
-
-  const nameResult = validateName(data.name);
-  if (nameResult !== true) errors.push(...nameResult);
-
-  return errors.length ? errors : true;
-}
-
 // ============================================
 // Helper for quick boolean checks (client-side)
 // ============================================
 
-export const isValidEmail = (email: string): boolean => validateEmail(email) === true;
-export const isValidPassword = (password: string): boolean => validatePassword(password) === true;
 export const isValidName = (name: string): boolean => validateName(name) === true;

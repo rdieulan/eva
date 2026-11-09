@@ -39,7 +39,6 @@ export function logoUrlOf(team: TeamLogoRef): string | null {
 export interface MemberWithRole {
   id: string;
   name: string;
-  email: string;
   permissions: unknown;
   isLeader: boolean;
 }
@@ -60,7 +59,7 @@ export interface TeamView {
   leaderId: string;
   createdAt: Date;
   updatedAt: Date;
-  leader: { id: string; name: string; email: string } | null;
+  leader: { id: string; name: string } | null;
   members: MemberWithRole[];
   isLeader: boolean;
   discord: TeamDiscordStatus; // Whether its notifications go to a Discord channel; never the webhook itself
@@ -89,14 +88,13 @@ export async function getTeamViewForPlayer(playerId: string): Promise<TeamView |
     createdAt: team.createdAt,
     updatedAt: team.updatedAt,
     leader: leaderUser
-      ? { id: leaderUser.id, name: leaderUser.name, email: leaderUser.email }
+      ? { id: leaderUser.id, name: leaderUser.name }
       : null,
     members: team.members
       .filter(member => member.user !== null)
       .map(member => ({
         id: member.user!.id,
         name: member.user!.name,
-        email: member.user!.email,
         permissions: member.permissions,
         isLeader: member.id === team.leaderId,
       })),
@@ -112,7 +110,6 @@ export async function getTeamViewForPlayer(playerId: string): Promise<TeamView |
 export interface TeamAdminMember {
   id: string;
   playerId: string;
-  email: string;
   name: string;
   isLeader: boolean;
 }
@@ -122,7 +119,7 @@ export interface TeamAdminSummary {
   name: string;
   logoUrl: string | null;
   venue: { id: string; name: string; city: string } | null;
-  leader: { id: string; name: string; email: string } | null;
+  leader: { id: string; name: string } | null;
   memberCount: number;
   createdAt: Date;
 }
@@ -139,7 +136,7 @@ export async function listAllTeams(): Promise<TeamAdminSummary[]> {
     include: {
       venue: { select: { id: true, name: true, city: true } },
       leader: {
-        include: { user: { select: { id: true, name: true, email: true } } },
+        include: { user: { select: { id: true, name: true } } },
       },
       _count: { select: { members: true } },
     },
@@ -152,7 +149,7 @@ export async function listAllTeams(): Promise<TeamAdminSummary[]> {
     logoUrl: logoUrlOf(t),
     venue: t.venue,
     leader: t.leader?.user
-      ? { id: t.leader.user.id, name: t.leader.user.name, email: t.leader.user.email }
+      ? { id: t.leader.user.id, name: t.leader.user.name }
       : null,
     memberCount: t._count.members,
     createdAt: t.createdAt,
@@ -168,10 +165,10 @@ export async function getTeamAdminDetail(teamId: string): Promise<TeamAdminDetai
     include: {
       venue: { select: { id: true, name: true, city: true } },
       leader: {
-        include: { user: { select: { id: true, name: true, email: true } } },
+        include: { user: { select: { id: true, name: true } } },
       },
       members: {
-        include: { user: { select: { id: true, name: true, email: true } } },
+        include: { user: { select: { id: true, name: true } } },
       },
     },
   });
@@ -183,7 +180,6 @@ export async function getTeamAdminDetail(teamId: string): Promise<TeamAdminDetai
     .map(p => ({
       id: p.user!.id,
       playerId: p.id,
-      email: p.user!.email,
       name: p.user!.name,
       isLeader: p.id === team.leaderId,
     }));
@@ -194,7 +190,7 @@ export async function getTeamAdminDetail(teamId: string): Promise<TeamAdminDetai
     logoUrl: logoUrlOf(team),
     venue: team.venue,
     leader: team.leader?.user
-      ? { id: team.leader.user.id, name: team.leader.user.name, email: team.leader.user.email }
+      ? { id: team.leader.user.id, name: team.leader.user.name }
       : null,
     memberCount: members.length,
     createdAt: team.createdAt,
@@ -343,7 +339,7 @@ export async function getTeamMembers(teamId: string): Promise<MemberWithRole[]> 
   const players = await prisma.player.findMany({
     where: { teamId },
     include: {
-      user: { select: { id: true, name: true, email: true } },
+      user: { select: { id: true, name: true } },
       ledTeam: { select: { id: true } },
     },
     orderBy: { user: { name: 'asc' } },
@@ -352,7 +348,6 @@ export async function getTeamMembers(teamId: string): Promise<MemberWithRole[]> 
   return players.map(player => ({
     id: player.user!.id,
     name: player.user!.name,
-    email: player.user!.email,
     permissions: player.ledTeam ? LEADER_PERMISSIONS : normalizeAccountPermissions(player.permissions),
     isLeader: !!player.ledTeam,
   }));

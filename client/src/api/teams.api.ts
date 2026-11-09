@@ -10,14 +10,13 @@ const API_BASE = '/api/teams';
 export interface TeamMember {
   id: string;
   name: string;
-  email: string;
   permissions: AccountPermissions | null;
   isLeader: boolean;
 }
 
 export interface TeamWithMembers extends Team {
   // null when the leader Player has no linked User account
-  leader: { id: string; name: string; email: string } | null;
+  leader: { id: string; name: string } | null;
   members: TeamMember[];
   isLeader: boolean;
   discord: TeamDiscordStatus; // Whether its notifications go to a Discord channel; never the webhook itself

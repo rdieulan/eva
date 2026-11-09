@@ -30,6 +30,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE
 ```
 
+## Simple Icons
+
+`client/src/assets/icons/discord.svg` is the Discord logo as drawn by Simple Icons 13.21.0: https://github.com/simple-icons/simple-icons
+
+Simple Icons is released under CC0 1.0 Universal: https://creativecommons.org/publicdomain/zero/1.0/
+
+The logo itself is a trademark of Discord Inc., shown on the button that signs in with Discord as its brand guidelines allow: https://discord.com/branding
+
 ## Material Icons
 
 `client/src/assets/icons/bell.svg` and `client/src/assets/icons/clock.svg` are the "notifications" and "schedule" icons of Material Icons by Google: https://github.com/google/material-design-icons

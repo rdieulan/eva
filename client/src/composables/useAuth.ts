@@ -3,7 +3,7 @@ import type { AccountPermissions, Account } from '@shared/types';
 import { normalizeAccountPermissions } from '@shared/utils';
 import { clearPlayersCache } from '@/api/players.api';
 import { fetchSessionAccount, getCurrentAccount } from '@/api/auth.api';
-import { markSession, markedAccountId, onSessionMarkChange, unmarkSession } from '@/api/session-mark';
+import { markSession, onSessionMarkChange, sessionMarkOf, unmarkSession } from '@/api/session-mark';
 import { clearBalanceRulesCache } from '@/composables/useBalanceRules';
 
 // Global state. The session is a cookie the page cannot read: the account the
@@ -16,22 +16,22 @@ let markListenerInitialized = false;
 
 /**
  * Follow the other tabs: a logout there signs this one out, a login or a
- * switch to another account reloads it on that account
+ * switch of account or role reloads it as the session now acts
  */
 function setupMarkListener(): void {
   if (markListenerInitialized) return;
   markListenerInitialized = true;
 
-  onSessionMarkChange(accountId => {
-    const currentId = account.value?.id ?? null;
+  onSessionMarkChange(mark => {
+    const currentMark = account.value ? sessionMarkOf(account.value) : null;
 
-    if (!accountId && currentId) {
+    if (!mark && currentMark) {
       clearAuthState();
       window.location.href = '/login';
       return;
     }
 
-    if (accountId && accountId !== currentId) {
+    if (mark && mark !== currentMark) {
       window.location.reload();
     }
   });
@@ -50,12 +50,12 @@ function clearAuth() {
   unmarkSession();
 }
 
-// Set the account a login or a switch opened a session for
+// Set the account a login or a switch of role made the session act as
 function setAuth(newAccount: Account) {
   account.value = newAccount;
   isInitialized.value = true;
   isLoading.value = false;
-  markSession(newAccount.id);
+  markSession(newAccount);
 }
 
 // Refresh account data from server (after team join, permission changes, etc.)
@@ -92,21 +92,19 @@ async function doInitAuth(): Promise<void> {
   // Setup cross-tab session sync
   setupMarkListener();
 
-  // A browser that never signed in asks nothing: a visitor of a public page
-  // leaves no refused request behind
-  if (markedAccountId()) {
-    try {
-      const sessionAccount = await fetchSessionAccount();
-      if (sessionAccount) {
-        account.value = sessionAccount;
-        markSession(sessionAccount.id);
-      } else {
-        // The session ended (logout elsewhere, expired): the mark goes with it
-        unmarkSession();
-      }
-    } catch {
-      // The server did not answer: signed out for now, the mark stays for the next load
+  // Asked on every load: a sign-in with Discord comes back through a
+  // redirect, and the server answers "nobody" without refusing anything
+  try {
+    const sessionAccount = await fetchSessionAccount();
+    account.value = sessionAccount;
+    if (sessionAccount) {
+      markSession(sessionAccount);
+    } else {
+      // No session, or it ended (logout elsewhere, expired): the mark goes with it
+      unmarkSession();
     }
+  } catch {
+    // The server did not answer: signed out for now, the mark stays for the next load
   }
 
   isLoading.value = false;

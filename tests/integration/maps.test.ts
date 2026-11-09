@@ -61,12 +61,8 @@ describe('Maps API', () => {
 
     it('should isolate game plans by team', async () => {
       // Create two teams - each will have default game plans created via API
-      const { token: token1, team: team1 } = await createUserWithTeam({
-        email: 'team1@example.com',
-      });
-      const { token: token2, team: team2 } = await createUserWithTeam({
-        email: 'team2@example.com',
-      });
+      const { token: token1, team: team1 } = await createUserWithTeam();
+      const { token: token2, team: team2 } = await createUserWithTeam();
 
       // Rename one plan for team1 to identify it
       const team1Plans = await prisma.gamePlan.findMany({ where: { teamId: team1.id } });

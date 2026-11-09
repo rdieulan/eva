@@ -8,16 +8,17 @@ import type { AccountPermissions, AdminPermissions } from './permissions.types';
 export type AccountType = 'player' | 'manager' | 'admin';
 
 /**
- * Account data returned from auth endpoints
+ * Account data returned from auth endpoints: one person, acting as one of
+ * their roles. The ids are those of the role acted as, null for the others.
  */
 export interface Account {
   id: string;           // User ID
-  playerId: string | null;  // Player ID (null if not a player)
-  managerId: string | null; // Manager ID (null if not a manager)
-  adminId: string | null;   // Admin ID (null if not an admin)
-  email: string;
+  playerId: string | null;  // Player ID (null when not acting as a player)
+  managerId: string | null; // Manager ID (null when not acting as a manager)
+  adminId: string | null;   // Admin ID (null when not acting as an admin)
   name: string;
-  accountType: AccountType;
+  accountType: AccountType; // The role the session acts as
+  roles: AccountType[];     // Every role of the account, to switch between
   permissions: AccountPermissions;
   // Player-specific data (null if not a player)
   teamId: string | null;
@@ -29,12 +30,21 @@ export interface Account {
 }
 
 /**
- * Linked account summary for account switching
+ * An invitation to a role, as its link shows it before anyone accepts it
  */
-export interface LinkedAccount {
+export interface InvitationSummary {
+  role: 'manager' | 'admin';
+  invitedName: string | null;
+  venueNames: string[]; // The venues a manager will manage; none for an admin
+  isExpired: boolean;
+}
+
+/**
+ * An account the development login offers (never in production)
+ */
+export interface DevLoginAccount {
   id: string;
-  email: string;
   name: string;
-  accountType: AccountType;
-  isCurrent: boolean;
+  teamName: string | null;
+  roles: AccountType[];
 }

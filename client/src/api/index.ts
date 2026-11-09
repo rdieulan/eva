@@ -99,13 +99,11 @@ export {
   updateAdminPermissions as updateAdminAdminPermissions,
   deleteAdmin as deleteAdminAdmin,
   fetchAdminPlayers,
-  resetPlayerPassword,
   deletePlayer as deleteAdminPlayer,
   fetchAdminTeams,
   fetchAdminTeamDetail,
   deleteTeam as deleteAdminTeam,
   buildActivationUrl,
-  buildPasswordResetUrl,
 } from '@/api/admin.api';
 export type {
   ManagerSummary,
@@ -114,7 +112,6 @@ export type {
   AdminSummary,
   CreatedAdmin,
   PlayerAdminSummary,
-  PasswordResetPayload,
   TeamAdminSummary,
   TeamAdminDetail,
   TeamAdminMember,

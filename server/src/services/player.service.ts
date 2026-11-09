@@ -1,54 +1,13 @@
 // Player service - Player-specific business logic
 
-import { randomUUID } from 'crypto';
 import { prisma } from '@db/prisma';
 import { DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
-import type { PlayerSubscription } from '@shared/types';
+import type { AccountType, PlayerSubscription } from '@shared/types';
 import { formatDateStr } from './helpers/date.helper';
-
-// Password reset tokens live 24h
-const PASSWORD_RESET_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 
 // ============================================
 // Player CRUD operations
 // ============================================
-
-/**
- * Create a new Player (and associated User account)
- */
-export async function createPlayer(email: string, hashedPassword: string, name: string) {
-  // Create Player first
-  const player = await prisma.player.create({
-    data: {},
-  });
-
-  // Create User account linked to Player
-  return prisma.user.create({
-    data: {
-      email: email.toLowerCase(),
-      password: hashedPassword,
-      name,
-      playerId: player.id,
-    },
-    include: {
-      player: true,
-    },
-  });
-}
-
-/**
- * Get player by ID with user data
- */
-export async function getPlayerById(playerId: string) {
-  return prisma.player.findUnique({
-    where: { id: playerId },
-    include: {
-      user: { select: { id: true, email: true, name: true } },
-      team: true,
-      ledTeam: true,
-    },
-  });
-}
 
 /**
  * Get player by user ID
@@ -78,10 +37,10 @@ export async function getPlayerWithTeam(playerId: string) {
       team: {
         include: {
           leader: {
-            include: { user: { select: { id: true, name: true, email: true } } }
+            include: { user: { select: { id: true, name: true } } }
           },
           members: {
-            include: { user: { select: { id: true, name: true, email: true } } }
+            include: { user: { select: { id: true, name: true } } }
           },
           favoriteVenues: { select: { venueId: true }, orderBy: { position: 'asc' } },
         },
@@ -193,8 +152,8 @@ export async function verifyPlayerBelongsToTeam(playerId: string, teamId: string
 export interface PlayerAdminSummary {
   id: string;
   userId: string | null;
-  email: string | null;
   name: string | null;
+  roles: AccountType[]; // A manager or an admin is a player too
   teamId: string | null;
   teamName: string | null;
   isLeader: boolean;
@@ -207,7 +166,7 @@ export interface PlayerAdminSummary {
 export async function listAllPlayers(): Promise<PlayerAdminSummary[]> {
   const players = await prisma.player.findMany({
     include: {
-      user: { select: { id: true, email: true, name: true } },
+      user: { select: { id: true, name: true, managerId: true, adminId: true } },
       team: { select: { id: true, name: true } },
       ledTeam: { select: { id: true } },
     },
@@ -217,8 +176,12 @@ export async function listAllPlayers(): Promise<PlayerAdminSummary[]> {
   return players.map(p => ({
     id: p.id,
     userId: p.user?.id ?? null,
-    email: p.user?.email ?? null,
     name: p.user?.name ?? null,
+    roles: [
+      'player' as const,
+      ...(p.user?.managerId ? ['manager' as const] : []),
+      ...(p.user?.adminId ? ['admin' as const] : []),
+    ],
     teamId: p.team?.id ?? null,
     teamName: p.team?.name ?? null,
     isLeader: !!p.ledTeam,
@@ -226,19 +189,20 @@ export async function listAllPlayers(): Promise<PlayerAdminSummary[]> {
   }));
 }
 
-export type DeletePlayerError = 'notFound' | 'isTeamLeader' | 'noUserLinked';
+export type DeletePlayerError = 'notFound' | 'isTeamLeader' | 'isAdmin' | 'isManager' | 'noUserLinked';
 
 /**
- * Delete a Player and the linked User account, cleaning up dependents that
- * have a RESTRICT FK (CalendarEvent.createdById, TeamInvite.createdById).
- * Refuses to delete a Player who is currently the leader of a team — the
- * caller should delete the team first or transfer leadership.
+ * Delete a player, that is the person and their account, cleaning up
+ * dependents that have a RESTRICT FK (CalendarEvent.createdById,
+ * TeamInvite.createdById). Refuses to delete a team's leader (delete the team
+ * first or transfer leadership), and someone holding a role: a manager's or an
+ * admin's goes first from its own list, under its own permission and guards.
  */
 export async function deletePlayer(playerId: string): Promise<true | DeletePlayerError> {
   const player = await prisma.player.findUnique({
     where: { id: playerId },
     include: {
-      user: { select: { id: true } },
+      user: { select: { id: true, managerId: true, adminId: true } },
       ledTeam: { select: { id: true } },
     },
   });
@@ -246,52 +210,16 @@ export async function deletePlayer(playerId: string): Promise<true | DeletePlaye
   if (!player) return 'notFound';
   if (player.ledTeam) return 'isTeamLeader';
   if (!player.user) return 'noUserLinked';
+  if (player.user.adminId) return 'isAdmin';
+  if (player.user.managerId) return 'isManager';
 
   // Order matters: clear RESTRICT-FK dependents before deleting Player; Player
-  // delete cascades availabilities and gamePlanPlayers. User is deleted last
-  // because User.playerId is SetNull on Player delete (deleting Player only
-  // nulls the FK, the User row stays unless we remove it explicitly).
+  // delete cascades the account (and its sessions), availabilities and gamePlanPlayers.
   await prisma.$transaction([
     prisma.calendarEvent.deleteMany({ where: { createdById: playerId } }),
     prisma.teamInvite.deleteMany({ where: { createdById: playerId } }),
     prisma.player.delete({ where: { id: playerId } }),
-    prisma.user.delete({ where: { id: player.user.id } }),
   ]);
 
   return true;
-}
-
-export type PasswordResetError = 'notFound' | 'noUserLinked';
-
-export interface PasswordResetResult {
-  token: string;
-  expiresAt: Date;
-  userEmail: string;
-}
-
-/**
- * Generate a password reset token for the User behind this Player. Returns
- * the token + expiry so the admin can forward a reset link to the user.
- * Overwrites any previous unused token.
- */
-export async function generatePasswordResetTokenForPlayer(
-  playerId: string,
-): Promise<PasswordResetResult | PasswordResetError> {
-  const player = await prisma.player.findUnique({
-    where: { id: playerId },
-    include: { user: { select: { id: true, email: true } } },
-  });
-
-  if (!player) return 'notFound';
-  if (!player.user) return 'noUserLinked';
-
-  const token = randomUUID();
-  const expiresAt = new Date(Date.now() + PASSWORD_RESET_TOKEN_TTL_MS);
-
-  await prisma.user.update({
-    where: { id: player.user.id },
-    data: { passwordResetToken: token, passwordResetTokenExpiresAt: expiresAt },
-  });
-
-  return { token, expiresAt, userEmail: player.user.email };
 }

@@ -3,6 +3,7 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import authRoutes from '@routes/auth.routes';
+import devAuthRoutes from '@routes/dev-auth.routes';
 import mapsRoutes from '@routes/maps.routes';
 import plansRoutes from '@routes/plans.routes';
 import usersRoutes from '@routes/users.routes';
@@ -18,6 +19,7 @@ import adminRoutes from '@routes/admin.routes';
 import publicRoutes from '@routes/public.routes';
 import { prisma, pool } from '@db/prisma';
 import { logger } from '@utils/logger';
+import { isDevLoginEnabled } from '@services/dev-login.service';
 
 const router = Router();
 
@@ -79,6 +81,12 @@ router.get('/health', async (_req: Request, res: Response) => {
 });
 
 // Mount route modules
+// The development login, when asked for and never in production: anyone
+// reaching this server can then act as any of its accounts
+if (isDevLoginEnabled()) {
+  logger.warn('Development login enabled (DEV_LOGIN=true): any account can be acted as without Discord');
+  router.use('/auth/dev', devAuthRoutes);
+}
 router.use('/auth', authRoutes);
 router.use('/maps', mapsRoutes);
 router.use('/plans', plansRoutes);

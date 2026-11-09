@@ -7,13 +7,11 @@ import { createHash } from 'crypto';
 import request from 'supertest';
 import { app } from '../../server/src/app';
 import { prisma } from './helpers/db';
-import { authHeader, createAuthenticatedAdmin, createAuthenticatedUser, sessionCookieOf, sessionToken } from './helpers/auth';
+import { authHeader, createAuthenticatedAdmin, createAuthenticatedUser, sessionCookieOf } from './helpers/auth';
 import { ERROR } from '@shared/constants/error.constants';
-import { PASSWORD_MIN_LENGTH } from '@shared/constants/validation.constants';
 import { openSession, SESSION_MAX_LIFETIME_MS, SESSION_TTL_MS } from '../../server/src/services/session.service';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const PASSWORD = 'A1' + 'a'.repeat(PASSWORD_MIN_LENGTH - 2);
 
 const hashOf = (token: string) => createHash('sha256').update(token).digest('hex');
 
@@ -102,36 +100,11 @@ describe('Sessions', () => {
     expect(Math.abs(cookieExpiry(sessionCookieOf(used))! - stored.expiresAt.getTime())).toBeLessThan(1000);
   });
 
-  it('ends the session a browser held when it signs in again', async () => {
-    const { user, token: before } = await createAuthenticatedUser({ password: PASSWORD });
-
-    const login = await request(app).post('/api/auth/login').set(authHeader(before)).send({ email: user.email, password: PASSWORD });
-
-    expect(login.status).toBe(200);
-    expect((await me(before)).status).toBe(401);
-    expect((await me(sessionToken(login))).status).toBe(200);
-  });
-
-  it('ends the other sessions of an account whose password changes, and keeps the one that changed it', async () => {
-    const { user, token: here } = await createAuthenticatedUser({ password: PASSWORD });
-    const elsewhere = sessionToken(await request(app).post('/api/auth/login').send({ email: user.email, password: PASSWORD }));
-
-    await request(app)
-      .post('/api/auth/change-password')
-      .set(authHeader(here))
-      .send({ currentPassword: PASSWORD, newPassword: `${PASSWORD}b` })
-      .expect(200);
-
-    expect((await me(here)).status).toBe(200);
-    expect((await me(elsewhere)).status).toBe(401);
-  });
-
   it('ends the sessions of an account deleted by an administrator', async () => {
     const { user, token } = await createAuthenticatedUser();
     const admin = await createAuthenticatedAdmin();
-    const { playerId } = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
 
-    await request(app).delete(`/api/admin/players/${playerId}`).set(authHeader(admin.token)).expect(200);
+    await request(app).delete(`/api/admin/players/${user.playerId}`).set(authHeader(admin.token)).expect(200);
 
     expect((await me(token)).status).toBe(401);
   });

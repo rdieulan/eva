@@ -1,6 +1,6 @@
 // Express app configuration (exported for testing with Supertest)
 
-import 'dotenv/config';
+import './env';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import fs from 'fs';

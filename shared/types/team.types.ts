@@ -27,12 +27,10 @@ export interface TeamWithMembers extends Team {
   leader: {
     id: string;
     name: string;
-    email: string;
   };
   members: Array<{
     id: string;
     name: string;
-    email: string;
   }>;
 }
 

@@ -42,7 +42,7 @@ router.put('/:planId', authMiddleware, requirePermission('planner', 'canEdit'), 
   const teamId = req.account?.teamId;
 
   apiLogger.debug(`[API] PUT /api/plans/${planId}`);
-  apiLogger.debug(' Account:', req.account?.email);
+  apiLogger.debug(' Account:', req.account?.userId);
 
   try {
     const result = await plansService.updatePlan(
@@ -57,7 +57,7 @@ router.put('/:planId', authMiddleware, requirePermission('planner', 'canEdit'), 
       return;
     }
 
-    apiLogger.debug(`[API] Game plan updated by ${req.account?.email}: ${planId}`);
+    apiLogger.debug(`[API] Game plan updated by ${req.account?.userId}: ${planId}`);
     res.json(result.plan);
   } catch (error) {
     apiLogger.error(' Error updating game plan:', error);
@@ -79,7 +79,7 @@ router.delete('/:planId', authMiddleware, requirePermission('planner', 'canDelet
       return;
     }
 
-    apiLogger.debug(`Game plan deleted by ${req.account?.email}: ${planId}`);
+    apiLogger.debug(`Game plan deleted by ${req.account?.userId}: ${planId}`);
     res.json({ success: true });
   } catch (error) {
     apiLogger.error('Error deleting game plan:', error);

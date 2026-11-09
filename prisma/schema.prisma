@@ -7,35 +7,25 @@ datasource db {
 }
 
 // ============================================
-// Auth & Account Linking
+// Accounts & sessions
 // ============================================
 
+// One person, signed in with their Discord account. Everyone is a player;
+// managing a venue and administering the app are roles on top, given by
+// invitation. Nothing else of the Discord account is kept: no email, no avatar.
 model User {
-  id                          String              @id @default(cuid())
-  email                       String              @unique
-  password                    String
-  name                        String
-  playerId                    String?             @unique
-  managerId                   String?             @unique
-  adminId                     String?             @unique
-  linkedAccountGroupId        String?
-  passwordResetToken          String?             @unique
-  passwordResetTokenExpiresAt DateTime?
-  createdAt                   DateTime            @default(now())
-  updatedAt                   DateTime            @updatedAt
-  player                      Player?             @relation(fields: [playerId], references: [id], onDelete: SetNull)
-  manager                     Manager?            @relation(fields: [managerId], references: [id], onDelete: SetNull)
-  admin                       Admin?              @relation(fields: [adminId], references: [id], onDelete: SetNull)
-  linkedAccountGroup          LinkedAccountGroup? @relation(fields: [linkedAccountGroupId], references: [id])
-  sessions                    Session[]
-
-  @@index([linkedAccountGroupId])
-}
-
-model LinkedAccountGroup {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  accounts  User[]
+  id        String    @id @default(cuid())
+  discordId String    @unique // The Discord account's number, which never changes
+  name      String // Shown to the others; taken from Discord at the first login, changed on the profile
+  playerId  String    @unique
+  managerId String?   @unique
+  adminId   String?   @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  player    Player    @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  manager   Manager?  @relation(fields: [managerId], references: [id], onDelete: SetNull)
+  admin     Admin?    @relation(fields: [adminId], references: [id], onDelete: SetNull)
+  sessions  Session[]
 }
 
 // Who a request acts for. The browser keeps a random token in a cookie; only
@@ -43,7 +33,8 @@ model LinkedAccountGroup {
 model Session {
   id        String   @id @default(cuid())
   userId    String
-  tokenHash String   @unique // SHA-256 of the token, hex
+  tokenHash String      @unique // SHA-256 of the token, hex
+  role      AccountRole @default(PLAYER) // The role of the account the session acts as
   expiresAt DateTime // Pushed back while the session is used
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -85,11 +76,14 @@ model Player {
 // Manager (gérant de salle)
 // ============================================
 
+// A manager without an account is an invitation not yet accepted: its link
+// carries the activation token, and the name the admin gave it shows until then
 model Manager {
   id                       String         @id @default(cuid())
   permissions              Json? // Manager-specific permissions
   activationToken          String?        @unique
   activationTokenExpiresAt DateTime?
+  invitedName              String?
   createdAt                DateTime       @default(now())
   updatedAt                DateTime       @updatedAt
   user                     User?
@@ -100,11 +94,13 @@ model Manager {
 // Admin (administrateur)
 // ============================================
 
+// An admin without an account is an invitation not yet accepted, as for managers
 model Admin {
   id                       String    @id @default(cuid())
   permissions              Json // Toutes les permissions admin (superAdmin = toutes à true)
   activationToken          String?   @unique
   activationTokenExpiresAt DateTime?
+  invitedName              String?
   createdAt                DateTime  @default(now())
   updatedAt                DateTime  @updatedAt
   user                     User?
@@ -440,6 +436,13 @@ model NotificationInboxEntry {
 // ============================================
 // Enums
 // ============================================
+
+// The roles of an account, the one a session acts as
+enum AccountRole {
+  PLAYER
+  MANAGER
+  ADMIN
+}
 
 enum AvailabilityStatus {
   AVAILABLE

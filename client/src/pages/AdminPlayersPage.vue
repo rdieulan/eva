@@ -2,20 +2,17 @@
 import { ref, onMounted, computed } from 'vue';
 import {
   fetchAdminPlayers,
-  resetPlayerPassword,
   deleteAdminPlayer,
-  buildPasswordResetUrl,
 } from '@/api';
 import type { PlayerAdminSummary } from '@/api/admin.api';
 import { ERROR } from '@shared/constants';
 import { useErrors } from '@/composables/useErrors';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
-import Modal from '@/components/common/Modal.vue';
 import ConfirmModal from '@/components/common/ConfirmModal.vue';
 
 const players = ref<PlayerAdminSummary[]>([]);
 const isLoading = ref(true);
-const { errors, setErrorFromException, setError, clearErrors } = useErrors();
+const { errors, setErrorFromException, clearErrors } = useErrors();
 const successMessage = ref<string | null>(null);
 
 const search = ref('');
@@ -25,16 +22,9 @@ const filteredPlayers = computed(() => {
   if (!q) return players.value;
   return players.value.filter(p =>
     (p.name ?? '').toLowerCase().includes(q)
-    || (p.email ?? '').toLowerCase().includes(q)
     || (p.teamName ?? '').toLowerCase().includes(q),
   );
 });
-
-// Reset password modal
-const showResetModal = ref(false);
-const resetUrl = ref<string>('');
-const resetUserEmail = ref<string>('');
-const isGeneratingReset = ref(false);
 
 // Delete modal
 const showDeleteModal = ref(false);
@@ -57,28 +47,12 @@ function showSuccess(message: string) {
   setTimeout(() => { successMessage.value = null; }, 3000);
 }
 
-async function openResetPassword(player: PlayerAdminSummary) {
-  clearErrors();
-  isGeneratingReset.value = true;
-  try {
-    const result = await resetPlayerPassword(player.id);
-    resetUrl.value = buildPasswordResetUrl(result.token);
-    resetUserEmail.value = result.userEmail;
-    showResetModal.value = true;
-  } catch (e) {
-    setErrorFromException(e, ERROR.passwordResetFailed);
-  } finally {
-    isGeneratingReset.value = false;
-  }
-}
-
-async function copyResetUrl() {
-  try {
-    await navigator.clipboard.writeText(resetUrl.value);
-    showSuccess('Lien copié');
-  } catch {
-    setError(ERROR.copyFailed);
-  }
+// Why a player cannot be deleted from here, if they cannot
+function deleteBlockedReason(player: PlayerAdminSummary): string {
+  if (player.isLeader) return 'Impossible de supprimer un leader d’équipe. Supprimez l’équipe d’abord.';
+  if (player.roles.includes('admin')) return 'Administrateur : retirez-lui d’abord ce rôle, dans la liste des administrateurs.';
+  if (player.roles.includes('manager')) return 'Manager : retirez-lui d’abord ce rôle, dans la liste des managers.';
+  return '';
 }
 
 function openDelete(player: PlayerAdminSummary) {
@@ -114,7 +88,7 @@ onMounted(loadPlayers);
       <input
         v-model="search"
         type="search"
-        placeholder="Rechercher par nom, email, équipe..."
+        placeholder="Rechercher par pseudo ou équipe..."
         class="search"
       />
     </header>
@@ -136,7 +110,6 @@ onMounted(loadPlayers);
       <thead>
         <tr>
           <th>Pseudo</th>
-          <th>Email</th>
           <th>Équipe</th>
           <th>Rôle</th>
           <th>Inscrit le</th>
@@ -145,8 +118,11 @@ onMounted(loadPlayers);
       </thead>
       <tbody>
         <tr v-for="p in filteredPlayers" :key="p.id">
-          <td>{{ p.name ?? '—' }}</td>
-          <td>{{ p.email ?? '—' }}</td>
+          <td>
+            {{ p.name ?? '—' }}
+            <span v-if="p.roles.includes('manager')" class="badge badge--role">Gérant</span>
+            <span v-if="p.roles.includes('admin')" class="badge badge--role">Admin</span>
+          </td>
           <td>
             <span v-if="p.teamName">{{ p.teamName }}</span>
             <span v-else class="muted">Sans équipe</span>
@@ -159,39 +135,15 @@ onMounted(loadPlayers);
           <td>{{ formatDate(p.createdAt) }}</td>
           <td class="col-actions">
             <button
-              class="btn-link"
-              :disabled="isGeneratingReset || !p.userId"
-              @click="openResetPassword(p)"
-            >Réinitialiser le mot de passe</button>
-            <button
               class="btn-link btn-link--danger"
-              :disabled="p.isLeader"
-              :title="p.isLeader ? 'Impossible de supprimer un leader d’équipe. Supprimez l’équipe d’abord.' : ''"
+              :disabled="!!deleteBlockedReason(p)"
+              :title="deleteBlockedReason(p)"
               @click="openDelete(p)"
             >Supprimer</button>
           </td>
         </tr>
       </tbody>
     </table>
-
-    <!-- Reset password URL modal -->
-    <Modal :open="showResetModal" title="Lien de réinitialisation" size="md" @close="showResetModal = false">
-      <div class="reset-info">
-        <p>
-          Transmettez ce lien à <strong>{{ resetUserEmail }}</strong> pour qu'il
-          définisse un nouveau mot de passe. Ses sessions actuelles ont été invalidées.
-        </p>
-        <div class="reset-url">
-          <input :value="resetUrl" readonly @focus="($event.target as HTMLInputElement).select()" />
-          <button class="btn-secondary" @click="copyResetUrl">Copier</button>
-        </div>
-        <p class="hint">Ce lien est valable 24 heures.</p>
-      </div>
-
-      <template #footer>
-        <button class="btn-primary" @click="showResetModal = false">Fermer</button>
-      </template>
-    </Modal>
 
     <ConfirmModal
       :open="showDeleteModal"
@@ -325,14 +277,12 @@ onMounted(loadPlayers);
     background: with-alpha($color-accent, 0.15);
     color: $color-accent;
   }
-}
 
-.btn-primary {
-  @include btn-base($color-accent);
-}
-
-.btn-secondary {
-  @include btn-base($color-bg-tertiary);
+  &--role {
+    margin-left: $spacing-xs;
+    background: $color-bg-tertiary;
+    color: $color-text-secondary;
+  }
 }
 
 .btn-link {
@@ -356,34 +306,5 @@ onMounted(loadPlayers);
   &--danger {
     color: $color-danger;
   }
-}
-
-.reset-info {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-md;
-  color: $color-text-primary;
-}
-
-.reset-url {
-  display: flex;
-  gap: $spacing-sm;
-
-  input {
-    flex: 1;
-    padding: $spacing-sm $spacing-md;
-    background: $color-bg-tertiary;
-    border: $border-thin solid $color-border;
-    border-radius: $radius-sm;
-    color: $color-text-primary;
-    font-family: monospace;
-    font-size: $font-size-sm;
-  }
-}
-
-.hint {
-  color: $color-text-secondary;
-  font-size: $font-size-sm;
-  margin: 0;
 }
 </style>

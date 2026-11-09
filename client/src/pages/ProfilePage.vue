@@ -1,31 +1,35 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
 import { useErrors } from '@/composables/useErrors';
 import { useSubscription } from '@/composables/useSubscription';
 import { clearPlayersCache } from '@/api';
-import { validatePassword, validatePasswordsMatch } from '@shared/utils';
-import { ERROR, SUBSCRIPTION_RENEWAL_PERIOD_DAYS } from '@shared/constants';
+import { normalizeName, validateName } from '@shared/utils';
+import { ERROR, NAME_MAX_LENGTH, SUBSCRIPTION_RENEWAL_PERIOD_DAYS } from '@shared/constants';
+import { renameAccount } from '@/api/auth.api';
 import { SUBSCRIPTION_TIERS } from '@shared/types';
 import { SUBSCRIPTION_TIER_LABELS } from '@/utils/subscription';
 import { formatLongDate } from '@/utils/calendar';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import SvgIcon from '@/components/common/SvgIcon.vue';
-import LinkedAccountsSection from '@/components/profile/LinkedAccountsSection.vue';
+import AccountRolesSection from '@/components/profile/AccountRolesSection.vue';
 import EvaAccountSection from '@/components/profile/EvaAccountSection.vue';
 import ThemeSection from '@/components/profile/ThemeSection.vue';
 
 const router = useRouter();
-const { account, clearAuth } = useAuth();
+const { account, clearAuth, setAuth } = useAuth();
 
-// Password change
-const currentPassword = ref('');
-const newPassword = ref('');
-const confirmPassword = ref('');
-const { errors: passwordErrors, setError: setPasswordError, setErrors: setPasswordErrors, clearErrors: clearPasswordErrors } = useErrors();
-const passwordSuccess = ref('');
-const isChangingPassword = ref(false);
+// The name shown to the others: it starts as the Discord name, and changes here
+const name = ref(account.value?.name ?? '');
+const { errors: nameErrors, setErrors: setNameErrors, setErrorFromException: setNameErrorFromException, clearErrors: clearNameErrors } = useErrors();
+const nameSuccess = ref('');
+const isSavingName = ref(false);
+const isNameChanged = computed(() => normalizeName(name.value) !== account.value?.name);
+
+watch(() => account.value?.name, current => {
+  name.value = current ?? '';
+});
 
 // Subscription (player accounts only)
 const {
@@ -45,56 +49,24 @@ onMounted(() => {
   if (account.value?.playerId) loadSubscription();
 });
 
-// Change password
-async function handleChangePassword() {
-  clearPasswordErrors();
-  passwordSuccess.value = '';
+async function saveName() {
+  clearNameErrors();
+  nameSuccess.value = '';
 
-  if (!currentPassword.value || !newPassword.value || !confirmPassword.value) {
-    setPasswordError(ERROR.requiredFieldsMissing);
+  const valid = validateName(name.value);
+  if (valid !== true) {
+    setNameErrors(valid);
     return;
   }
 
-  // Use shared validators
-  const passwordValid = validatePassword(newPassword.value);
-  if (passwordValid !== true) {
-    setPasswordErrors(passwordValid);
-    return;
-  }
-
-  const matchValid = validatePasswordsMatch(newPassword.value, confirmPassword.value);
-  if (matchValid !== true) {
-    setPasswordErrors(matchValid);
-    return;
-  }
-
-  isChangingPassword.value = true;
-
+  isSavingName.value = true;
   try {
-    const response = await fetch('/api/auth/change-password', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        currentPassword: currentPassword.value,
-        newPassword: newPassword.value,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      setPasswordErrors(data.errors || [ERROR.passwordChangeFailed]);
-      return;
-    }
-
-    passwordSuccess.value = 'Mot de passe modifié avec succès';
-    currentPassword.value = '';
-    newPassword.value = '';
-    confirmPassword.value = '';
-  } catch {
-    setPasswordError(ERROR.passwordChangeFailed);
+    setAuth(await renameAccount(name.value));
+    nameSuccess.value = 'Pseudo enregistré';
+  } catch (error) {
+    setNameErrorFromException(error, ERROR.nameUpdateFailed);
   } finally {
-    isChangingPassword.value = false;
+    isSavingName.value = false;
   }
 }
 
@@ -122,20 +94,36 @@ async function handleLogout() {
         <h2>Informations</h2>
         <div class="info-grid">
           <div class="info-item">
-            <label>Nom</label>
-            <span>{{ account.name }}</span>
-          </div>
-          <div class="info-item">
-            <label>Email</label>
-            <span>{{ account.email }}</span>
-          </div>
-          <div class="info-item">
             <label>Statut</label>
             <span class="role-badge" :class="account.isLeader ? 'leader' : 'player'">
               {{ account.isLeader ? 'Leader' : 'Joueur' }}
             </span>
           </div>
         </div>
+
+        <form class="profile-form name-form" @submit.prevent="saveName">
+          <div class="form-group">
+            <label for="accountName">Pseudo</label>
+            <input
+              id="accountName"
+              v-model="name"
+              type="text"
+              :maxlength="NAME_MAX_LENGTH"
+              :disabled="isSavingName"
+            />
+            <p class="form-hint">Pris de ton compte Discord à ta première connexion : c'est le nom que voient les autres.</p>
+          </div>
+
+          <ErrorDisplay :errors="nameErrors" />
+
+          <div v-if="nameSuccess" class="message success">
+            {{ nameSuccess }}
+          </div>
+
+          <button type="submit" class="btn-primary" :disabled="isSavingName || !isNameChanged">
+            {{ isSavingName ? 'Enregistrement...' : 'Enregistrer' }}
+          </button>
+        </form>
       </section>
 
       <!-- Subscription (player accounts only) -->
@@ -183,57 +171,8 @@ async function handleLogout() {
       <!-- eva.gg account (player accounts only) -->
       <EvaAccountSection v-if="account?.playerId" />
 
-      <!-- Password change -->
-      <section class="profile-section">
-        <h2>Changer le mot de passe</h2>
-        <form @submit.prevent="handleChangePassword" class="profile-form">
-          <div class="form-group">
-            <label for="currentPassword">Mot de passe actuel</label>
-            <input
-              id="currentPassword"
-              v-model="currentPassword"
-              type="password"
-              placeholder="••••••••"
-              :disabled="isChangingPassword"
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="newPassword">Nouveau mot de passe</label>
-            <input
-              id="newPassword"
-              v-model="newPassword"
-              type="password"
-              placeholder="••••••••"
-              :disabled="isChangingPassword"
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="confirmPassword">Confirmer le nouveau mot de passe</label>
-            <input
-              id="confirmPassword"
-              v-model="confirmPassword"
-              type="password"
-              placeholder="••••••••"
-              :disabled="isChangingPassword"
-            />
-          </div>
-
-          <ErrorDisplay :errors="passwordErrors" />
-
-          <div v-if="passwordSuccess" class="message success">
-            {{ passwordSuccess }}
-          </div>
-
-          <button type="submit" class="btn-primary" :disabled="isChangingPassword">
-            {{ isChangingPassword ? 'Modification...' : 'Modifier le mot de passe' }}
-          </button>
-        </form>
-      </section>
-
-      <!-- Linked accounts -->
-      <LinkedAccountsSection />
+      <!-- Roles of the account (player, manager, admin) -->
+      <AccountRolesSection />
 
       <ThemeSection />
 
@@ -393,6 +332,10 @@ h1 {
   display: flex;
   flex-direction: column;
   gap: $spacing-md;
+}
+
+.name-form {
+  margin-top: $spacing-lg;
 }
 
 .form-group {

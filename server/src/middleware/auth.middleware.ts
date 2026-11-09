@@ -1,6 +1,8 @@
-// Authentication middleware
+// Authentication middleware: who a request acts for, as which role, and what
+// that role may do
 
 import type { Request, Response, NextFunction } from 'express';
+import type { AccountRole } from '@prisma/client';
 import { prisma } from '@db/prisma';
 import type { AccountPermissions, AccountType, AdminPermissions } from '@shared/types';
 import { DEFAULT_PLAYER_PERMISSIONS, LEADER_PERMISSIONS } from '@shared/types';
@@ -9,18 +11,20 @@ import { ERROR } from '@shared/constants';
 import { authLogger } from '@utils/logger';
 import { findSession } from '@services/session.service';
 import type { SessionAccountRecord } from '@services/session.service';
-import { clearSessionCookie, readSessionCookie, setSessionCookie } from '@utils/session-cookie';
+import { clearSessionCookie, readSessionCookie, setSessionCookie } from '@utils/auth-cookies';
 
-/** Who a request acts for, as its session says */
+/**
+ * Who a request acts for, as its session says: one person, acting as one of
+ * their roles. Only the id of that role is set: acting as an admin, the same
+ * person is no player, so the player's routes refuse them, and the other way round.
+ */
 export interface SessionAccount {
   userId: string;
-  email: string;
   accountType: AccountType;
-  // Type-specific IDs (only one will be set)
   playerId?: string;
   managerId?: string;
   adminId?: string;
-  // The player's team, if any
+  // The player's team, when acting as a player
   teamId?: string;
 }
 
@@ -28,94 +32,117 @@ export interface AuthRequest extends Request {
   account?: SessionAccount;
 }
 
-function sessionAccount(record: SessionAccountRecord): SessionAccount {
+export const ROLE_OF_ACCOUNT_TYPE: Record<AccountType, AccountRole> = { player: 'PLAYER', manager: 'MANAGER', admin: 'ADMIN' };
+
+/** The role a session acts as, among those its account still holds: a role taken away reads as player */
+export function actingRole(holder: { managerId: string | null; adminId: string | null }, role: AccountRole): AccountType {
+  if (role === 'ADMIN' && holder.adminId) return 'admin';
+  if (role === 'MANAGER' && holder.managerId) return 'manager';
+  return 'player';
+}
+
+function sessionAccount(record: SessionAccountRecord, role: AccountRole): SessionAccount {
+  const accountType = actingRole(record, role);
   return {
     userId: record.id,
-    email: record.email,
-    accountType: record.adminId ? 'admin' : record.managerId ? 'manager' : 'player',
-    playerId: record.playerId ?? undefined,
-    managerId: record.managerId ?? undefined,
-    adminId: record.adminId ?? undefined,
-    teamId: record.player?.teamId ?? undefined,
+    accountType,
+    ...(accountType === 'player' && { playerId: record.playerId, teamId: record.player.teamId ?? undefined }),
+    ...(accountType === 'manager' && { managerId: record.managerId! }),
+    ...(accountType === 'admin' && { adminId: record.adminId! }),
   };
 }
 
 /**
- * Get account permissions from database
- * Detects account type (Player, Manager, Admin) and returns appropriate permissions
+ * The session a request carries, read and pushed back when due (the cookie
+ * follows); null when it carries none or one that ended, whose cookie goes
  */
-export async function getAccountPermissions(userId: string): Promise<AccountPermissions> {
-  const account = await prisma.user.findUnique({
-    where: { id: userId },
-    include: {
-      player: { include: { ledTeam: true } },
-      manager: true,
-      admin: true,
-    },
-  });
+export async function readRequestSession(req: Request, res: Response): Promise<SessionAccount | null> {
+  const token = readSessionCookie(req);
+  if (!token) return null;
 
-  // Admin permissions
-  if (account?.admin) {
-    return (account.admin.permissions as unknown as AccountPermissions) ?? LEADER_PERMISSIONS;
+  const session = await findSession(token);
+  if (!session) {
+    clearSessionCookie(res);
+    return null;
   }
 
-  // Manager permissions
-  if (account?.manager) {
-    return (account.manager.permissions as unknown as AccountPermissions) ?? DEFAULT_PLAYER_PERMISSIONS;
-  }
+  if (session.renewedUntil) setSessionCookie(res, token, session.renewedUntil);
+  return sessionAccount(session.account, session.role);
+}
 
-  // Player permissions
-  if (account?.player) {
-    // If player is a leader, grant full permissions
-    if (account.player.ledTeam) {
-      return LEADER_PERMISSIONS;
-    }
-    return normalizeAccountPermissions(account.player.permissions);
-  }
+// What a person's roles may do, as loaded for permissionsFor
+export const PERMISSIONS_INCLUDE = {
+  player: { select: { permissions: true, ledTeam: { select: { id: true } } } },
+  manager: { select: { permissions: true } },
+  admin: { select: { permissions: true } },
+} as const;
 
+interface PermissionsHolder {
+  player: { permissions: unknown; ledTeam: { id: string } | null } | null;
+  manager: { permissions: unknown } | null;
+  admin: { permissions: unknown } | null;
+}
+
+/** What a person may do acting as one of their roles: a team's leader has everything as a player */
+export function permissionsFor(holder: PermissionsHolder, accountType: AccountType): AccountPermissions {
+  if (accountType === 'admin' && holder.admin) {
+    return (holder.admin.permissions as unknown as AccountPermissions) ?? LEADER_PERMISSIONS;
+  }
+  if (accountType === 'manager' && holder.manager) {
+    return (holder.manager.permissions as unknown as AccountPermissions) ?? DEFAULT_PLAYER_PERMISSIONS;
+  }
+  if (accountType === 'player' && holder.player) {
+    return holder.player.ledTeam ? LEADER_PERMISSIONS : normalizeAccountPermissions(holder.player.permissions);
+  }
   return DEFAULT_PLAYER_PERMISSIONS;
+}
+
+/**
+ * Get account permissions from database, for the role the account acts as
+ */
+export async function getAccountPermissions(userId: string, accountType: AccountType): Promise<AccountPermissions> {
+  const holder = await prisma.user.findUnique({ where: { id: userId }, select: PERMISSIONS_INCLUDE });
+  return holder ? permissionsFor(holder, accountType) : DEFAULT_PLAYER_PERMISSIONS;
 }
 
 /**
  * Check if account has specific permission
  */
 export async function hasPermission(
-  userId: string,
+  account: SessionAccount,
   category: keyof AccountPermissions,
   permission: string
 ): Promise<boolean> {
-  const permissions = await getAccountPermissions(userId);
+  const permissions = await getAccountPermissions(account.userId, account.accountType);
   const categoryPerms = permissions[category];
   return (categoryPerms as unknown as Record<string, boolean>)?.[permission] ?? false;
 }
 
 /**
  * Authentication middleware - requires an open session. The session's account
- * is read on every request, so a session ended or an account deleted stops here.
+ * is read on every request, so a session ended, an account deleted or a role
+ * taken away stops here.
  */
 export async function authMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
-  const token = readSessionCookie(req);
-  if (!token) {
+  if (!readSessionCookie(req)) {
     authLogger.debug('Middleware: no session cookie');
     return res.status(401).json({ errors: [ERROR.unauthorized] });
   }
 
-  let session: Awaited<ReturnType<typeof findSession>>;
+  let account: SessionAccount | null;
   try {
-    session = await findSession(token);
+    account = await readRequestSession(req, res);
   } catch (error) {
     authLogger.error('Middleware: session lookup failed:', error);
     return res.status(500).json({ errors: [ERROR.serverError] });
   }
-  if (!session) {
+  if (!account) {
     authLogger.debug('Middleware: unknown or expired session');
-    clearSessionCookie(res);
     return res.status(401).json({ errors: [ERROR.sessionExpired] });
   }
 
-  if (session.renewedUntil) setSessionCookie(res, token, session.renewedUntil);
-  req.account = sessionAccount(session.account);
-  authLogger.debug('Middleware: session of', req.account.accountType, req.account.email);
+  req.account = account;
+  authLogger.debug('Middleware: session of', account.accountType, account.userId);
   next();
 }
 
@@ -126,23 +153,23 @@ export async function authMiddleware(req: AuthRequest, res: Response, next: Next
 export function requirePermission(category: keyof AccountPermissions, permission: string) {
   return async (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!req.account) {
-      return res.status(401).json({ errors: ['Non authentifié'] });
+      return res.status(401).json({ errors: [ERROR.unauthorized] });
     }
 
-    const allowed = await hasPermission(req.account.userId, category, permission);
+    const allowed = await hasPermission(req.account, category, permission);
 
     if (!allowed) {
-      authLogger.debug(`Permission denied: ${category}.${permission} for account ${req.account.email}`);
-      return res.status(403).json({ errors: ['Permission refusée'] });
+      authLogger.debug(`Permission denied: ${category}.${permission} for account ${req.account.userId}`);
+      return res.status(403).json({ errors: [ERROR.forbidden] });
     }
 
-    authLogger.debug(`Permission granted: ${category}.${permission} for account ${req.account.email}`);
+    authLogger.debug(`Permission granted: ${category}.${permission} for account ${req.account.userId}`);
     next();
   };
 }
 
 /**
- * Admin middleware - requires the account to be an admin
+ * Admin middleware - requires the account to act as an admin
  * Must be chained after authMiddleware.
  */
 export function requireAdmin(req: AuthRequest, res: Response, next: NextFunction) {
@@ -151,7 +178,7 @@ export function requireAdmin(req: AuthRequest, res: Response, next: NextFunction
   }
 
   if (!req.account.adminId) {
-    authLogger.debug('Admin access denied for', req.account.email);
+    authLogger.debug('Admin access denied for', req.account.userId);
     return res.status(403).json({ errors: [ERROR.adminRequired] });
   }
 
@@ -182,7 +209,7 @@ export function requireAdminPermission(permission: keyof AdminPermissions['syste
     const allowed = perms.system?.[permission] === true;
 
     if (!allowed) {
-      authLogger.debug(`Admin permission denied: ${permission} for ${req.account.email}`);
+      authLogger.debug(`Admin permission denied: ${permission} for ${req.account.userId}`);
       return res.status(403).json({ errors: [ERROR.forbidden] });
     }
 

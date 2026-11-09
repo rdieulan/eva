@@ -47,8 +47,8 @@ describe('Plans API', () => {
     });
 
     it('skips ids that are not team players instead of failing the whole save', async () => {
-      const { token, team } = await createUserWithTeam({ email: 'leader-skip@example.com' });
-      const { user: outsider } = await createAuthenticatedUser({ email: 'outsider@example.com' });
+      const { token, team } = await createUserWithTeam();
+      const { user: outsider } = await createAuthenticatedUser();
 
       const plan = await prisma.gamePlan.findFirst({ where: { teamId: team.id } });
 
@@ -69,7 +69,7 @@ describe('Plans API', () => {
     });
 
     it('replaces existing assignments and does not wipe them when the request is valid', async () => {
-      const { token, user, team } = await createUserWithTeam({ email: 'leader-replace@example.com' });
+      const { token, user, team } = await createUserWithTeam();
       const plan = await prisma.gamePlan.findFirst({ where: { teamId: team.id } });
 
       await request(app)

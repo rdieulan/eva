@@ -19,7 +19,7 @@ Outil web de gestion d'équipe FPS 4v4 : planification de postes par map, calend
 | Frontend | Vue 3 (script setup) + TypeScript + Vite + SCSS |
 | Backend | Node.js + Express + TypeScript |
 | ORM / DB | Prisma 7 + PostgreSQL 16 |
-| Auth | Sessions vérifiées par le serveur (cookie HttpOnly) + bcrypt |
+| Auth | Connexion par Discord (OAuth2, identité seule) + sessions vérifiées par le serveur (cookie HttpOnly) |
 | Tests | Vitest (unit + intégration via Supertest) |
 | Conteneurs | Docker / Docker Compose |
 | Déploiement | Railway (Dockerfile) |
@@ -42,6 +42,9 @@ npm install
 cp .env.example .env
 # Ajuster DATABASE_URL si besoin (les défauts marchent avec docker-compose)
 # APP_URL vaut http://localhost:5173 en dev : sans elle, le site ne peut rien modifier
+# DEV_LOGIN=true offre, en dev seulement, de se connecter à n'importe quel compte local sans Discord
+# Les secrets de l'application Discord vont dans .env.local, jamais commité :
+#   DISCORD_CLIENT_ID=...  DISCORD_CLIENT_SECRET=...
 
 # 3. Démarrer PostgreSQL (crée aussi eva_db et eva_db_test)
 npm run docker:up
@@ -55,7 +58,7 @@ npm run db:seed
 # 6. Remplir la liste des salles (et leur nombre d'arènes) depuis l'API publique eva.gg
 npm run db:sync-venues
 
-# 7. (Optionnel) créer un super admin pour accéder à /admin
+# 7. (Optionnel) inviter un super admin : le lien affiché s'ouvre et s'accepte avec Discord
 npm run create-admin
 
 # 8. Lancer le backend (port 3001) — laisser tourner
@@ -74,7 +77,10 @@ L'app est disponible sur **http://localhost:5173**. Le backend tourne sur **http
 | `DATABASE_URL` | URL Postgres (format `postgresql://user:pass@host:port/db`) | `postgresql://eva_user:eva_secret_password@localhost:5432/eva_db` |
 | `NODE_ENV` | `development` / `production` / `test` | — |
 | `PORT` | Port du backend | `3001` |
-| `APP_URL` | Adresse publique du site : liens des notifications Discord, et seule origine d'où le serveur accepte des modifications | `http://localhost:5173` |
+| `APP_URL` | Adresse publique du site : liens des notifications Discord, retour de la connexion par Discord, et seule origine d'où le serveur accepte des modifications | `http://localhost:5173` |
+| `DISCORD_CLIENT_ID` | Identifiant de l'application Discord de la connexion (dans `.env.local` en dev) | — |
+| `DISCORD_CLIENT_SECRET` | Secret de cette application : **jamais commité**, dans `.env.local` en dev | — |
+| `DEV_LOGIN` | `true` : se connecter à n'importe quel compte local sans Discord, pour les vérifications. Jamais actif en production, quoi qu'on règle | `true` |
 
 ## Scripts npm
 
@@ -99,7 +105,7 @@ L'app est disponible sur **http://localhost:5173**. Le backend tourne sur **http
 | `npm run db:studio` | Ouvre Prisma Studio (UI d'inspection) |
 | `npm run db:generate` | Régénère le client Prisma après modif du schéma |
 | `npm run db:push` | Sync rapide schéma → DB sans créer de migration (dev only) |
-| `npm run create-admin` | Crée un super admin interactivement |
+| `npm run create-admin` | Invite un super admin : affiche le lien à ouvrir et accepter avec Discord |
 
 ### eva.gg
 | Script | Effet |
@@ -152,13 +158,15 @@ eva/
 
 ## Modèle d'auth
 
-Un `User` porte les credentials (email + password) et peut être lié à exactement **l'un** parmi :
+Un `User` est une personne, connectée avec son compte Discord : on garde le numéro de ce compte (`discordId`) et le pseudo qu'elle affiche, rien d'autre (ni email, ni mot de passe, ni avatar). La connexion demande à Discord la seule portée `identify` ; le jeton d'accès sert à lire le compte, puis il est révoqué (`integrations/discord/discord-oauth.ts`). La première connexion crée le compte. Chaque personne a ses rôles :
 
-- `Player` — joueur d'équipe (a un `teamId`, des permissions granulaires, des disponibilités).
-- `Manager` — gérant de salle (rattaché à une ou plusieurs `Venue` via `VenueManager`).
-- `Admin` — administrateur (permissions système : gérer venues / managers / autres admins).
+- `Player` — toujours : joueur d'équipe (a un `teamId`, des permissions granulaires, des disponibilités).
+- `Manager` — gérant de salle (rattaché à une ou plusieurs `Venue` via `VenueManager`), donné par invitation.
+- `Admin` — administrateur (permissions système : gérer venues / managers / autres admins), donné par invitation.
 
-Un même utilisateur humain peut avoir plusieurs comptes (par exemple un compte player et un compte manager) reliés via `LinkedAccountGroup` et basculer entre eux sans se reconnecter (`POST /api/auth/switch-account`).
+Une invitation est un `Manager` ou un `Admin` sans compte : son lien (`/activate/:token`) s'ouvre, puis s'accepte en se connectant avec Discord, et le rôle rejoint le compte de la personne (`invitation.service.ts`). La session agit sous un rôle du compte (`Session.role`), un joueur au départ ; `PUT /api/auth/role` en change, pour cette session seulement. Seul l'identifiant du rôle joué est posé sur la requête : un admin qui agit en joueur n'a pas les droits d'admin, et l'inverse. Un rôle retiré fait agir la session en joueur.
+
+La connexion par Discord part de `GET /api/auth/discord` (vers la page de Discord, avec un `state` gardé dans un cookie de dix minutes) et revient sur `GET /api/auth/discord/callback`, qui vérifie ce `state` avant tout : sans lui, n'importe qui pourrait connecter un visiteur à son propre compte. En dev, `DEV_LOGIN=true` ajoute `/api/auth/dev/*` et la liste « Se connecter en tant que… » de la page de connexion ; ni l'un ni l'autre n'existe en production.
 
 La session est un jeton aléatoire dans un cookie `HttpOnly` (`SameSite=Lax`, `Secure` et préfixe `__Host-` en production) : le code de la page ne peut pas le lire. La base n'en garde que l'empreinte SHA-256 (`Session.tokenHash`) et le serveur la vérifie à chaque requête (`authMiddleware`) : la déconnexion la ferme pour de bon, la suppression d'un compte aussi. Elle dure 30 jours et se prolonge, au plus une fois par jour, tant qu'elle sert, sans dépasser 90 jours après son ouverture. Les requêtes qui modifient sont refusées quand le navigateur dit qu'elles viennent d'un autre site que `APP_URL` (en-tête `Origin`).
 
@@ -187,7 +195,7 @@ Pour bootstrapper la prod :
 # Après le déploiement, sur Railway shell (ou local en pointant DATABASE_URL prod)
 npm run db:seed         # seed des maps
 npm run db:sync-venues  # salles eva.gg
-npm run create-admin    # créer le premier super admin
+npm run create-admin    # inviter le premier super admin (lien à accepter avec Discord)
 ```
 
 ## Roadmap

@@ -4,12 +4,21 @@ import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import { app } from '../../server/src/app';
 import { prisma } from './helpers/db';
-import { createAuthenticatedUser, createAuthenticatedAdmin, createUserWithTeam, authHeader, sessionToken } from './helpers/auth';
+import { createAuthenticatedUser, createAuthenticatedAdmin, createUserWithTeam, authHeader } from './helpers/auth';
 import { ERROR } from '@shared/constants/error.constants';
-import { PASSWORD_MIN_LENGTH } from '@shared/constants/validation.constants';
 import { DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
+import { acceptInvitation } from '../../server/src/services/invitation.service';
+import { openSession } from '../../server/src/services/session.service';
 
-const VALID_PASSWORD = 'A' + '1' + 'a'.repeat(PASSWORD_MIN_LENGTH - 2);
+// Someone accepting an invitation, as their sign-in with Discord does: a new
+// person whose account takes the role, and a session acting as it
+async function acceptAs(activationToken: string) {
+  const { user } = await createAuthenticatedUser();
+  const role = await acceptInvitation(activationToken, user.id);
+  if (role !== 'MANAGER' && role !== 'ADMIN') throw new Error(`Invitation not accepted: ${role}`);
+  const { token } = await openSession(user.id, role);
+  return { user, token };
+}
 
 // Venues made here each need a public board name of their own
 let venuesMade = 0;
@@ -334,14 +343,14 @@ describe('Admin API', () => {
   // Managers
   // ============================================
   describe('GET /api/admin/managers', () => {
-    it('returns the list of managers', async () => {
+    it('returns the managers and the invitations not yet accepted', async () => {
       const { token } = await createAuthenticatedAdmin();
       const venue = await createTestVenue();
 
       await request(app)
         .post('/api/admin/managers')
         .set(authHeader(token))
-        .send({ email: `manager-${Date.now()}@example.com`, name: 'Mgrname', venueIds: [venue.id] });
+        .send({ name: 'Jean de Nîmes', venueIds: [venue.id] });
 
       const res = await request(app)
         .get('/api/admin/managers')
@@ -350,8 +359,23 @@ describe('Admin API', () => {
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
       expect(res.body.length).toBe(1);
+      expect(res.body[0]).toMatchObject({ name: 'Jean de Nîmes', userId: null, activationPending: true });
       expect(res.body[0].venues).toHaveLength(1);
-      expect(res.body[0].activationPending).toBe(true);
+    });
+
+    it('shows the link of a pending invitation only to an admin who may manage managers', async () => {
+      const { token } = await createAuthenticatedAdmin();
+      await request(app).post('/api/admin/managers').set(authHeader(token)).send({ name: 'Jean', venueIds: [] }).expect(201);
+      const { token: viewer } = await createAuthenticatedAdmin({
+        permissions: { system: { canManageVenues: true, canManageManagers: false, canManageAdmins: false, canViewAllData: true } },
+      });
+
+      const allowed = await request(app).get('/api/admin/managers').set(authHeader(token));
+      const viewing = await request(app).get('/api/admin/managers').set(authHeader(viewer));
+
+      expect(allowed.body[0].activationToken).toEqual(expect.any(String));
+      expect(viewing.status).toBe(200);
+      expect(viewing.body[0]).toMatchObject({ name: 'Jean', activationPending: true, activationToken: null });
     });
 
     it('rejects without admin role', async () => {
@@ -364,59 +388,41 @@ describe('Admin API', () => {
   });
 
   describe('POST /api/admin/managers', () => {
-    it('creates a manager with an activation token and links venues', async () => {
+    it('invites a manager of venues, whose link gives the role to whoever accepts it', async () => {
       const { token } = await createAuthenticatedAdmin();
       const v1 = await createTestVenue({ name: 'V1' });
       const v2 = await createTestVenue({ name: 'V2' });
 
-      const email = `manager-${Date.now()}@example.com`;
       const res = await request(app)
         .post('/api/admin/managers')
         .set(authHeader(token))
-        .send({ email, name: 'Mgrname', venueIds: [v1.id, v2.id] });
+        .send({ name: '  Jean   de Nîmes ', venueIds: [v1.id, v2.id] });
 
       expect(res.status).toBe(201);
       expect(res.body.activationToken).toBeDefined();
-      expect(res.body.manager.email).toBe(email);
+      expect(res.body.manager).toMatchObject({ name: 'Jean de Nîmes', userId: null, activationPending: true });
       expect(res.body.manager.venues).toHaveLength(2);
-      expect(res.body.manager.activationPending).toBe(true);
 
-      // Manager can activate with the returned token
-      const activate = await request(app)
-        .post('/api/auth/activate')
-        .send({ token: res.body.activationToken, password: VALID_PASSWORD });
-      expect(activate.status).toBe(200);
+      const manager = await acceptAs(res.body.activationToken);
+      const me = await request(app).get('/api/auth/me').set(authHeader(manager.token));
+      expect(me.body.account).toMatchObject({ accountType: 'manager', roles: ['player', 'manager'] });
+      expect([...me.body.account.managedVenueIds].sort()).toEqual([v1.id, v2.id].sort());
 
-      // And then log in
-      const login = await request(app)
-        .post('/api/auth/login')
-        .send({ email, password: VALID_PASSWORD });
-      expect(login.status).toBe(200);
-      expect(login.body.account.accountType).toBe('manager');
+      // Accepted: the list shows the person, no link any more
+      const list = await request(app).get('/api/admin/managers').set(authHeader(token));
+      expect(list.body[0]).toMatchObject({ userId: manager.user.id, name: manager.user.name, activationPending: false, activationToken: null });
     });
 
-    it('creates a manager without venues', async () => {
+    it('invites a manager without venues', async () => {
       const { token } = await createAuthenticatedAdmin();
 
       const res = await request(app)
         .post('/api/admin/managers')
         .set(authHeader(token))
-        .send({ email: `m-${Date.now()}@example.com`, name: 'Mgrname', venueIds: [] });
+        .send({ name: 'Mgrname', venueIds: [] });
 
       expect(res.status).toBe(201);
       expect(res.body.manager.venues).toHaveLength(0);
-    });
-
-    it('rejects when email is already used', async () => {
-      const { token, user } = await createAuthenticatedAdmin();
-
-      const res = await request(app)
-        .post('/api/admin/managers')
-        .set(authHeader(token))
-        .send({ email: user.email, name: 'Mgrname', venueIds: [] });
-
-      expect(res.status).toBe(409);
-      expect(res.body.errors).toContain(ERROR.emailAlreadyUsed);
     });
 
     it('rejects an unknown venue id', async () => {
@@ -425,22 +431,22 @@ describe('Admin API', () => {
       const res = await request(app)
         .post('/api/admin/managers')
         .set(authHeader(token))
-        .send({ email: `m-${Date.now()}@example.com`, name: 'Mgrname', venueIds: ['nope'] });
+        .send({ name: 'Mgrname', venueIds: ['nope'] });
 
       expect(res.status).toBe(400);
       expect(res.body.errors).toContain(ERROR.venueNotFound);
     });
 
-    it('validates email and name', async () => {
+    it('asks who the invitation is for, as a name', async () => {
       const { token } = await createAuthenticatedAdmin();
 
-      const res = await request(app)
-        .post('/api/admin/managers')
-        .set(authHeader(token))
-        .send({ email: 'not-an-email', name: 'a', venueIds: [] });
+      const missing = await request(app).post('/api/admin/managers').set(authHeader(token)).send({ venueIds: [] });
+      expect(missing.status).toBe(400);
+      expect(missing.body.errors).toContain(ERROR.invitedNameRequired);
 
-      expect(res.status).toBe(400);
-      expect(res.body.errors).toEqual(expect.arrayContaining([ERROR.emailInvalid]));
+      const tooShort = await request(app).post('/api/admin/managers').set(authHeader(token)).send({ name: 'a', venueIds: [] });
+      expect(tooShort.status).toBe(400);
+      expect(tooShort.body.errors).toContain(ERROR.nameTooShort);
     });
 
     it('rejects an admin without canManageManagers permission', async () => {
@@ -458,7 +464,7 @@ describe('Admin API', () => {
       const res = await request(app)
         .post('/api/admin/managers')
         .set(authHeader(token))
-        .send({ email: `m-${Date.now()}@example.com`, name: 'Mgrname', venueIds: [] });
+        .send({ name: 'Mgrname', venueIds: [] });
 
       expect(res.status).toBe(403);
     });
@@ -474,7 +480,7 @@ describe('Admin API', () => {
       const created = await request(app)
         .post('/api/admin/managers')
         .set(authHeader(token))
-        .send({ email: `m-${Date.now()}@example.com`, name: 'Mgrname', venueIds: [v1.id, v2.id] });
+        .send({ name: 'Mgrname', venueIds: [v1.id, v2.id] });
 
       const res = await request(app)
         .put(`/api/admin/managers/${created.body.manager.id}`)
@@ -510,27 +516,38 @@ describe('Admin API', () => {
   });
 
   describe('DELETE /api/admin/managers/:id', () => {
-    it('deletes a manager and its user account', async () => {
+    it('takes the role away and keeps the person, a player again', async () => {
       const { token } = await createAuthenticatedAdmin();
-
       const created = await request(app)
         .post('/api/admin/managers')
         .set(authHeader(token))
-        .send({ email: `m-${Date.now()}@example.com`, name: 'Mgrname', venueIds: [] });
-
-      const managerId = created.body.manager.id;
-      const userId = created.body.manager.userId;
+        .send({ name: 'Mgrname', venueIds: [] });
+      const manager = await acceptAs(created.body.activationToken);
 
       const res = await request(app)
-        .delete(`/api/admin/managers/${managerId}`)
+        .delete(`/api/admin/managers/${created.body.manager.id}`)
         .set(authHeader(token));
 
       expect(res.status).toBe(200);
+      expect(await prisma.manager.findUnique({ where: { id: created.body.manager.id } })).toBeNull();
+      const person = await prisma.user.findUniqueOrThrow({ where: { id: manager.user.id } });
+      expect(person.managerId).toBeNull();
+      // Their session, set to act as a manager, now acts as the player they still are
+      const me = await request(app).get('/api/auth/me').set(authHeader(manager.token));
+      expect(me.body.account).toMatchObject({ accountType: 'player', roles: ['player'] });
+    });
 
-      const manager = await prisma.manager.findUnique({ where: { id: managerId } });
-      expect(manager).toBeNull();
-      const user = await prisma.user.findUnique({ where: { id: userId } });
-      expect(user).toBeNull();
+    it('drops an invitation nobody accepted: its link stops working', async () => {
+      const { token } = await createAuthenticatedAdmin();
+      const created = await request(app)
+        .post('/api/admin/managers')
+        .set(authHeader(token))
+        .send({ name: 'Mgrname', venueIds: [] });
+
+      await request(app).delete(`/api/admin/managers/${created.body.manager.id}`).set(authHeader(token)).expect(200);
+
+      const { user } = await createAuthenticatedUser();
+      expect(await acceptInvitation(created.body.activationToken, user.id)).toBe('invalid');
     });
 
     it('returns 404 when the manager does not exist', async () => {
@@ -602,46 +619,34 @@ describe('Admin API', () => {
   });
 
   describe('POST /api/admin/admins', () => {
-    it('creates an admin with an activation token, and that admin can log in after activation', async () => {
+    it('invites an admin, whose link gives the role and its permissions to whoever accepts it', async () => {
       const { token } = await createAuthenticatedAdmin();
 
-      const email = `admin-${Date.now()}@example.com`;
       const res = await request(app)
         .post('/api/admin/admins')
         .set(authHeader(token))
-        .send({ email, name: 'Newadmin', permissions: REGULAR_ADMIN_PERMISSIONS });
+        .send({ name: 'Newadmin', permissions: REGULAR_ADMIN_PERMISSIONS });
 
       expect(res.status).toBe(201);
       expect(res.body.activationToken).toBeDefined();
-      expect(res.body.admin.email).toBe(email);
-      expect(res.body.admin.isSuperAdmin).toBe(false);
-      expect(res.body.admin.activationPending).toBe(true);
+      expect(res.body.admin).toMatchObject({ name: 'Newadmin', userId: null, isSuperAdmin: false, activationPending: true });
 
-      // Activate via the shared endpoint
-      const activate = await request(app)
-        .post('/api/auth/activate')
-        .send({ token: res.body.activationToken, password: VALID_PASSWORD });
-      expect(activate.status).toBe(200);
-
-      // Then log in
-      const login = await request(app)
-        .post('/api/auth/login')
-        .send({ email, password: VALID_PASSWORD });
-      expect(login.status).toBe(200);
-      expect(login.body.account.accountType).toBe('admin');
-      expect(login.body.account.adminPermissions).toEqual(REGULAR_ADMIN_PERMISSIONS);
+      const admin = await acceptAs(res.body.activationToken);
+      const me = await request(app).get('/api/auth/me').set(authHeader(admin.token));
+      expect(me.body.account).toMatchObject({ accountType: 'admin', roles: ['player', 'admin'] });
+      expect(me.body.account.adminPermissions).toEqual(REGULAR_ADMIN_PERMISSIONS);
     });
 
-    it('rejects when email already exists', async () => {
-      const { token, user } = await createAuthenticatedAdmin();
+    it('asks who the invitation is for', async () => {
+      const { token } = await createAuthenticatedAdmin();
 
       const res = await request(app)
         .post('/api/admin/admins')
         .set(authHeader(token))
-        .send({ email: user.email, name: 'Newadmin', permissions: FULL_ADMIN_PERMISSIONS });
+        .send({ permissions: FULL_ADMIN_PERMISSIONS });
 
-      expect(res.status).toBe(409);
-      expect(res.body.errors).toContain(ERROR.emailAlreadyUsed);
+      expect(res.status).toBe(400);
+      expect(res.body.errors).toContain(ERROR.invitedNameRequired);
     });
 
     it('rejects malformed permissions payload', async () => {
@@ -650,7 +655,7 @@ describe('Admin API', () => {
       const res = await request(app)
         .post('/api/admin/admins')
         .set(authHeader(token))
-        .send({ email: `admin-${Date.now()}@example.com`, name: 'Newadmin', permissions: { foo: 'bar' } });
+        .send({ name: 'Newadmin', permissions: { foo: 'bar' } });
 
       expect(res.status).toBe(400);
       expect(res.body.errors).toContain(ERROR.adminPermissionsInvalid);
@@ -662,7 +667,7 @@ describe('Admin API', () => {
       const res = await request(app)
         .post('/api/admin/admins')
         .set(authHeader(token))
-        .send({ email: `admin-${Date.now()}@example.com`, name: 'Newadmin', permissions: FULL_ADMIN_PERMISSIONS });
+        .send({ name: 'Newadmin', permissions: FULL_ADMIN_PERMISSIONS });
 
       expect(res.status).toBe(403);
     });
@@ -675,7 +680,7 @@ describe('Admin API', () => {
       const created = await request(app)
         .post('/api/admin/admins')
         .set(authHeader(token))
-        .send({ email: `admin-${Date.now()}@example.com`, name: 'Newadmin', permissions: REGULAR_ADMIN_PERMISSIONS });
+        .send({ name: 'Newadmin', permissions: REGULAR_ADMIN_PERMISSIONS });
       expect(created.status).toBe(201);
 
       const updated = await request(app)
@@ -708,15 +713,32 @@ describe('Admin API', () => {
       expect(res.body.errors).toContain(ERROR.adminCannotDemoteLastSuperAdmin);
     });
 
+    it('does not count an invitation nobody accepted as another super admin', async () => {
+      const { token, adminId } = await createAuthenticatedAdmin();
+      await request(app)
+        .post('/api/admin/admins')
+        .set(authHeader(token))
+        .send({ name: 'Pending', permissions: FULL_ADMIN_PERMISSIONS })
+        .expect(201);
+
+      const res = await request(app)
+        .put(`/api/admin/admins/${adminId}`)
+        .set(authHeader(token))
+        .send({ permissions: REGULAR_ADMIN_PERMISSIONS });
+
+      expect(res.status).toBe(409);
+    });
+
     it('allows demoting a super admin when another super admin exists', async () => {
       const { token } = await createAuthenticatedAdmin();
 
-      // Create a second super admin
+      // A second super admin, who accepted the invitation
       const second = await request(app)
         .post('/api/admin/admins')
         .set(authHeader(token))
-        .send({ email: `super-${Date.now()}@example.com`, name: 'Othersuper', permissions: FULL_ADMIN_PERMISSIONS });
+        .send({ name: 'Othersuper', permissions: FULL_ADMIN_PERMISSIONS });
       expect(second.status).toBe(201);
+      await acceptAs(second.body.activationToken);
 
       // Demote it — that works because there's still 1 super admin (the caller)
       const res = await request(app)
@@ -741,25 +763,25 @@ describe('Admin API', () => {
   });
 
   describe('DELETE /api/admin/admins/:id', () => {
-    it('deletes a regular admin', async () => {
+    it('takes the role away and keeps the person, a player again', async () => {
       const { token } = await createAuthenticatedAdmin();
-
       const created = await request(app)
         .post('/api/admin/admins')
         .set(authHeader(token))
-        .send({ email: `admin-${Date.now()}@example.com`, name: 'Newadmin', permissions: REGULAR_ADMIN_PERMISSIONS });
-      expect(created.status).toBe(201);
+        .send({ name: 'Newadmin', permissions: REGULAR_ADMIN_PERMISSIONS });
+      const admin = await acceptAs(created.body.activationToken);
 
       const res = await request(app)
         .delete(`/api/admin/admins/${created.body.admin.id}`)
         .set(authHeader(token));
 
       expect(res.status).toBe(200);
-
-      const admin = await prisma.admin.findUnique({ where: { id: created.body.admin.id } });
-      expect(admin).toBeNull();
-      const user = await prisma.user.findUnique({ where: { id: created.body.admin.userId } });
-      expect(user).toBeNull();
+      expect(await prisma.admin.findUnique({ where: { id: created.body.admin.id } })).toBeNull();
+      const person = await prisma.user.findUniqueOrThrow({ where: { id: admin.user.id } });
+      expect(person.adminId).toBeNull();
+      // Their session no longer reaches the administration
+      const venues = await request(app).get('/api/admin/venues').set(authHeader(admin.token));
+      expect(venues.status).toBe(403);
     });
 
     it('refuses to delete self', async () => {
@@ -773,39 +795,38 @@ describe('Admin API', () => {
       expect(res.body.errors).toContain(ERROR.adminCannotDeleteSelf);
     });
 
-    it('refuses to delete the last super admin', async () => {
-      // Create a non-super admin
-      const { token } = await createAuthenticatedAdmin();
-      const other = await request(app)
+    it('refuses to take the role from the last super admin, an invitation never accepted not counting', async () => {
+      const { adminId: onlySuperAdmin } = await createAuthenticatedAdmin();
+      // An admin who may manage admins without being a super admin
+      const { token } = await createAuthenticatedAdmin({
+        permissions: { system: { canManageVenues: false, canManageManagers: false, canManageAdmins: true, canViewAllData: false } },
+      });
+      await request(app)
         .post('/api/admin/admins')
         .set(authHeader(token))
-        .send({ email: `admin-${Date.now()}@example.com`, name: 'Newadmin', permissions: REGULAR_ADMIN_PERMISSIONS });
-      expect(other.status).toBe(201);
+        .send({ name: 'Pending', permissions: FULL_ADMIN_PERMISSIONS })
+        .expect(201);
 
-      // Activate + login as the other admin
-      await request(app)
-        .post('/api/auth/activate')
-        .send({ token: other.body.activationToken, password: VALID_PASSWORD });
-      const loginOther = await request(app)
-        .post('/api/auth/login')
-        .send({ email: other.body.admin.email, password: VALID_PASSWORD });
-      expect(loginOther.status).toBe(200);
+      const res = await request(app)
+        .delete(`/api/admin/admins/${onlySuperAdmin}`)
+        .set(authHeader(token));
 
-      // The non-super admin doesn't have canManageAdmins → can't even call
-      const cantDelete = await request(app)
-        .delete(`/api/admin/admins/${other.body.admin.id}`)
-        .set(authHeader(sessionToken(loginOther)));
-      expect(cantDelete.status).toBe(403);
+      expect(res.status).toBe(409);
+      expect(res.body.errors).toContain(ERROR.adminCannotRemoveLastSuperAdmin);
+    });
 
-      // The first super admin tries to delete itself — refused (cannotDeleteSelf wins)
-      // But if there were no other super admin and we tried to delete *another* super admin,
-      // it would also be refused. Let's verify with a different scenario:
-      const initialAdmins = await prisma.admin.count();
-      expect(initialAdmins).toBe(2);
-      // Only 1 super admin exists; we can't reproduce "delete last super admin" without
-      // first creating another super admin and deleting the original. We test the path
-      // via service-level semantics elsewhere; here, ensure the cannotDeleteSelf guard
-      // covers the practical case for a 1-super-admin system.
+    it('drops a super admin invitation nobody accepted', async () => {
+      const { token } = await createAuthenticatedAdmin();
+      const pending = await request(app)
+        .post('/api/admin/admins')
+        .set(authHeader(token))
+        .send({ name: 'Pending', permissions: FULL_ADMIN_PERMISSIONS });
+
+      const res = await request(app)
+        .delete(`/api/admin/admins/${pending.body.admin.id}`)
+        .set(authHeader(token));
+
+      expect(res.status).toBe(200);
     });
 
     it('returns 404 when the admin does not exist', async () => {
@@ -823,8 +844,8 @@ describe('Admin API', () => {
   // Players (read-only)
   // ============================================
   describe('GET /api/admin/players', () => {
-    it('lists all players with team data', async () => {
-      const { token: adminToken } = await createAuthenticatedAdmin();
+    it('lists all players with team data and the roles they hold', async () => {
+      const { token: adminToken, user: admin } = await createAuthenticatedAdmin();
       const { team } = await createUserWithTeam();
 
       const res = await request(app)
@@ -839,6 +860,8 @@ describe('Admin API', () => {
       expect(leaderRow).toBeDefined();
       expect(leaderRow.teamId).toBe(team.id);
       expect(leaderRow.teamName).toBe(team.name);
+      expect(leaderRow.roles).toEqual(['player']);
+      expect(res.body.find((p: { userId: string }) => p.userId === admin.id).roles).toEqual(['player', 'admin']);
     });
 
     it('rejects a non-admin account', async () => {
@@ -852,149 +875,53 @@ describe('Admin API', () => {
     });
   });
 
-  describe('POST /api/admin/players/:id/reset-password', () => {
-    it('issues a reset token that lets the user set a new password', async () => {
-      const { token: adminToken } = await createAuthenticatedAdmin();
-      const { user, token: initialToken } = await createAuthenticatedUser();
-      const player = await prisma.player.findFirst({ where: { user: { id: user.id } } });
-      expect(player).not.toBeNull();
-
-      const res = await request(app)
-        .post(`/api/admin/players/${player!.id}/reset-password`)
-        .set(authHeader(adminToken));
-
-      expect(res.status).toBe(200);
-      expect(res.body.token).toBeDefined();
-      expect(res.body.userEmail).toBe(user.email);
-      expect(new Date(res.body.expiresAt).getTime()).toBeGreaterThan(Date.now());
-
-      // The reset token is persisted on the User row
-      const reloaded = await prisma.user.findUnique({ where: { id: user.id } });
-      expect(reloaded!.passwordResetToken).toBe(res.body.token);
-
-      // Existing sessions are wiped when the reset is consumed
-      const NEW_PASSWORD = 'B2' + 'b'.repeat(PASSWORD_MIN_LENGTH - 2);
-      const apply = await request(app)
-        .post('/api/auth/reset-password')
-        .send({ token: res.body.token, password: NEW_PASSWORD });
-      expect(apply.status).toBe(200);
-
-      const sessions = await prisma.session.count({ where: { userId: user.id } });
-      expect(sessions).toBe(0);
-
-      // The old JWT no longer references a session — using it on a session-aware
-      // endpoint (logout) would fail, but /me only checks JWT validity so it still
-      // returns the account. The key invariant is: new password works for login.
-      void initialToken;
-
-      const login = await request(app)
-        .post('/api/auth/login')
-        .send({ email: user.email, password: NEW_PASSWORD });
-      expect(login.status).toBe(200);
-    });
-
-    it('returns 404 for an unknown player', async () => {
-      const { token } = await createAuthenticatedAdmin();
-
-      const res = await request(app)
-        .post('/api/admin/players/non-existent/reset-password')
-        .set(authHeader(token));
-
-      expect(res.status).toBe(404);
-    });
-
-    it('rejects a non-admin account', async () => {
-      const { token } = await createAuthenticatedUser();
-
-      const res = await request(app)
-        .post('/api/admin/players/anything/reset-password')
-        .set(authHeader(token));
-
-      expect(res.status).toBe(403);
-    });
-  });
-
-  describe('POST /api/auth/reset-password', () => {
-    it('rejects missing token', async () => {
-      const res = await request(app)
-        .post('/api/auth/reset-password')
-        .send({ password: VALID_PASSWORD });
-      expect(res.status).toBe(400);
-      expect(res.body.errors).toContain(ERROR.passwordResetTokenRequired);
-    });
-
-    it('rejects invalid token', async () => {
-      const res = await request(app)
-        .post('/api/auth/reset-password')
-        .send({ token: 'nope', password: VALID_PASSWORD });
-      expect(res.status).toBe(400);
-      expect(res.body.errors).toContain(ERROR.passwordResetTokenInvalid);
-    });
-
-    it('rejects weak password', async () => {
-      const { token: adminToken } = await createAuthenticatedAdmin();
-      const { user } = await createAuthenticatedUser();
-      const player = await prisma.player.findFirst({ where: { user: { id: user.id } } });
-      const issue = await request(app)
-        .post(`/api/admin/players/${player!.id}/reset-password`)
-        .set(authHeader(adminToken));
-
-      const res = await request(app)
-        .post('/api/auth/reset-password')
-        .send({ token: issue.body.token, password: 'weak' });
-      expect(res.status).toBe(400);
-
-      // Token must still be valid because the reset wasn't applied
-      const reloaded = await prisma.user.findUnique({ where: { id: user.id } });
-      expect(reloaded!.passwordResetToken).toBe(issue.body.token);
-    });
-
-    it('refuses to reuse the same token after success', async () => {
-      const { token: adminToken } = await createAuthenticatedAdmin();
-      const { user } = await createAuthenticatedUser();
-      const player = await prisma.player.findFirst({ where: { user: { id: user.id } } });
-      const issue = await request(app)
-        .post(`/api/admin/players/${player!.id}/reset-password`)
-        .set(authHeader(adminToken));
-
-      const first = await request(app)
-        .post('/api/auth/reset-password')
-        .send({ token: issue.body.token, password: VALID_PASSWORD });
-      expect(first.status).toBe(200);
-
-      const second = await request(app)
-        .post('/api/auth/reset-password')
-        .send({ token: issue.body.token, password: VALID_PASSWORD });
-      expect(second.status).toBe(400);
-      expect(second.body.errors).toContain(ERROR.passwordResetTokenInvalid);
-    });
-  });
-
   describe('DELETE /api/admin/players/:id', () => {
     it('deletes a player and their user account', async () => {
       const { token: adminToken } = await createAuthenticatedAdmin();
-      const { user } = await createAuthenticatedUser();
-      const player = await prisma.player.findFirst({ where: { user: { id: user.id } } });
+      const { user, token } = await createAuthenticatedUser();
 
       const res = await request(app)
-        .delete(`/api/admin/players/${player!.id}`)
+        .delete(`/api/admin/players/${user.playerId}`)
         .set(authHeader(adminToken));
 
       expect(res.status).toBe(200);
+      expect(await prisma.player.findUnique({ where: { id: user.playerId } })).toBeNull();
+      expect(await prisma.user.findUnique({ where: { id: user.id } })).toBeNull();
+      expect((await request(app).get('/api/auth/me').set(authHeader(token))).status).toBe(401);
+    });
 
-      const reloadedPlayer = await prisma.player.findUnique({ where: { id: player!.id } });
-      expect(reloadedPlayer).toBeNull();
-      const reloadedUser = await prisma.user.findUnique({ where: { id: user.id } });
-      expect(reloadedUser).toBeNull();
+    it('refuses to delete a manager: that role goes from the managers\' list, under its own permission', async () => {
+      const { token: adminToken } = await createAuthenticatedAdmin();
+      const created = await request(app)
+        .post('/api/admin/managers')
+        .set(authHeader(adminToken))
+        .send({ name: 'Mgrname', venueIds: [] });
+      const manager = await acceptAs(created.body.activationToken);
+
+      const res = await request(app).delete(`/api/admin/players/${manager.user.playerId}`).set(authHeader(adminToken));
+
+      expect(res.status).toBe(409);
+      expect(res.body.errors).toContain(ERROR.playerCannotDeleteManager);
+      expect(await prisma.manager.findUnique({ where: { id: created.body.manager.id } })).not.toBeNull();
+    });
+
+    it('refuses to delete an admin: that role goes from the admins\' list, where its guards stand', async () => {
+      const { token: adminToken, user: admin } = await createAuthenticatedAdmin();
+
+      const res = await request(app)
+        .delete(`/api/admin/players/${admin.playerId}`)
+        .set(authHeader(adminToken));
+
+      expect(res.status).toBe(409);
+      expect(res.body.errors).toContain(ERROR.playerCannotDeleteAdmin);
     });
 
     it('refuses to delete a team leader', async () => {
       const { token: adminToken } = await createAuthenticatedAdmin();
       const { team, user } = await createUserWithTeam();
-      const leader = await prisma.player.findFirst({ where: { user: { id: user.id } } });
 
       const res = await request(app)
-        .delete(`/api/admin/players/${leader!.id}`)
+        .delete(`/api/admin/players/${user.playerId}`)
         .set(authHeader(adminToken));
 
       expect(res.status).toBe(409);
@@ -1054,7 +981,7 @@ describe('Admin API', () => {
       expect(res.status).toBe(200);
       expect(res.body.id).toBe(team.id);
       expect(res.body.members).toHaveLength(1);
-      expect(res.body.members[0].email).toBe(leader.email);
+      expect(res.body.members[0].name).toBe(leader.name);
       expect(res.body.members[0].isLeader).toBe(true);
     });
 
@@ -1167,29 +1094,17 @@ describe('Admin API', () => {
   // ============================================
   describe('Permissions', () => {
     it('rejects a manager account on admin routes', async () => {
-      // Use the admin endpoint itself to create a manager, then login as them
       const { token: adminToken } = await createAuthenticatedAdmin();
-
-      const email = `mgr-${Date.now()}@example.com`;
       const created = await request(app)
         .post('/api/admin/managers')
         .set(authHeader(adminToken))
-        .send({ email, name: 'Mgrname', venueIds: [] });
+        .send({ name: 'Mgrname', venueIds: [] });
       expect(created.status).toBe(201);
-
-      // Activate + login
-      await request(app)
-        .post('/api/auth/activate')
-        .send({ token: created.body.activationToken, password: VALID_PASSWORD });
-
-      const login = await request(app)
-        .post('/api/auth/login')
-        .send({ email, password: VALID_PASSWORD });
-      expect(login.status).toBe(200);
+      const manager = await acceptAs(created.body.activationToken);
 
       const res = await request(app)
         .get('/api/admin/venues')
-        .set(authHeader(sessionToken(login)));
+        .set(authHeader(manager.token));
       expect(res.status).toBe(403);
       expect(res.body.errors).toContain(ERROR.adminRequired);
     });

@@ -67,7 +67,7 @@ router.post('/:mapId', authMiddleware, requirePermission('planner', 'canEdit'), 
 
   try {
     await mapsService.upsertMap(mapId, { name, images, template });
-    apiLogger.debug(`Map updated by ${req.account?.email}: ${mapId}`);
+    apiLogger.debug(`Map updated by ${req.account?.userId}: ${mapId}`);
     res.json({ success: true, message: `Carte ${mapId} sauvegardée` });
   } catch (error) {
     apiLogger.error('Error saving map:', error);
@@ -114,7 +114,7 @@ router.post('/:mapId/plans', authMiddleware, requirePermission('planner', 'canCr
     }
 
 
-    apiLogger.debug(`Game plan created by ${req.account?.email}: ${plan.id} for map ${mapId}`);
+    apiLogger.debug(`Game plan created by ${req.account?.userId}: ${plan.id} for map ${mapId}`);
     res.json(plan);
   } catch (error) {
     apiLogger.error('Error creating game plan:', error);
