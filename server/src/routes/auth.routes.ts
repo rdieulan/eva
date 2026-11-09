@@ -7,11 +7,8 @@ import type { AuthRequest } from '@middleware/auth.middleware';
 import { ERROR } from '@shared/constants';
 import { authLogger } from '@utils/logger';
 import {
-  generateToken,
   comparePassword,
   hashPassword,
-  createSession,
-  deleteSession,
   emailExists,
   findAccountByEmail,
   getAccountById,
@@ -29,6 +26,8 @@ import {
   isAccountInSameGroup,
 } from '@services/auth.service';
 import { createPlayer } from '@services/player.service';
+import { closeOtherSessions, closeSession, openSession } from '@services/session.service';
+import { clearSessionCookie, readSessionCookie, setSessionCookie } from '@utils/session-cookie';
 
 const router = Router();
 
@@ -111,26 +110,16 @@ router.post('/login', async (req: Request, res: Response) => {
       return res.status(401).json({ errors: [ERROR.loginFailed] });
     }
 
-    // Determine account type and specific ID
-    const accountType = account.admin ? 'admin' : account.manager ? 'manager' : 'player';
-    const token = generateToken({
-      userId: account.id,
-      email: account.email,
-      accountType,
-      playerId: account.player?.id,
-      managerId: account.manager?.id,
-      adminId: account.admin?.id,
-    });
-
-    await createSession(account.id, token);
+    // The session this browser held, if any, ends with the new one
+    const previousToken = readSessionCookie(req);
+    if (previousToken) await closeSession(previousToken);
+    const session = await openSession(account.id);
+    setSessionCookie(res, session.token, session.expiresAt);
 
     const authAccount = await buildAccountData(account);
 
     authLogger.debug('Login success for:', email);
-    res.json({
-      token,
-      account: authAccount,
-    });
+    res.json({ account: authAccount });
   } catch (error) {
     authLogger.error('Login error:', error);
     res.status(500).json({ errors: [ERROR.serverError] });
@@ -140,13 +129,9 @@ router.post('/login', async (req: Request, res: Response) => {
 // POST /api/auth/logout
 router.post('/logout', authMiddleware, async (req: AuthRequest, res: Response) => {
   authLogger.debug('POST /api/auth/logout - Account:', req.account?.email);
-  const authHeader = req.headers.authorization;
-  const token = authHeader?.substring(7);
-
-  if (token) {
-    const count = await deleteSession(token);
-    authLogger.debug('Logout: Deleted', count, 'session(s)');
-  }
+  const token = readSessionCookie(req);
+  if (token) await closeSession(token);
+  clearSessionCookie(res);
 
   res.json({ message: 'Déconnexion réussie' });
 });
@@ -200,6 +185,9 @@ router.post('/change-password', authMiddleware, async (req: AuthRequest, res: Re
 
     const hashedPassword = await hashPassword(newPassword);
     await updateAccountPassword(account.id, hashedPassword);
+    // The other sessions, opened with the old password, end: only this one stays
+    const currentToken = readSessionCookie(req);
+    if (currentToken) await closeOtherSessions(account.id, currentToken);
 
     authLogger.debug('Password changed successfully for:', req.account?.email);
     res.json({ message: 'Mot de passe modifié avec succès' });
@@ -355,23 +343,14 @@ router.post('/switch-account', authMiddleware, async (req: AuthRequest, res: Res
       return res.status(404).json({ errors: [ERROR.userNotFound] });
     }
 
-    // Generate new token for target account
-    const token = generateToken({
-      userId: targetAccount.id,
-      playerId: targetAccount.playerId ?? undefined,
-      managerId: targetAccount.managerId ?? undefined,
-      adminId: targetAccount.adminId ?? undefined,
-      email: targetAccount.email,
-      teamId: targetAccount.teamId ?? undefined,
-    });
-
-    await createSession(targetAccount.id, token);
+    // The session moves to the target account: a new one opens, the current one ends
+    const session = await openSession(targetAccount.id);
+    const currentToken = readSessionCookie(req);
+    if (currentToken) await closeSession(currentToken);
+    setSessionCookie(res, session.token, session.expiresAt);
 
     authLogger.debug('Account switched to:', targetAccount.email);
-    res.json({
-      token,
-      account: targetAccount,
-    });
+    res.json({ account: targetAccount });
   } catch (error) {
     authLogger.error('Switch account error:', error);
     res.status(500).json({ errors: [ERROR.switchAccountFailed] });

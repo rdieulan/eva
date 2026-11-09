@@ -1,9 +1,10 @@
 // Integration tests - Authentication routes
 
 import { describe, it, expect } from 'vitest';
+import { createHash } from 'crypto';
 import request from 'supertest';
 import { app } from '../../server/src/app';
-import { createTestUser, isValidJwtFormat } from './helpers/auth';
+import { createTestUser, sessionCookieOf, sessionToken } from './helpers/auth';
 import { prisma } from './helpers/db';
 import { PASSWORD_MIN_LENGTH, NAME_MIN_LENGTH } from '@shared/constants/validation.constants';
 import { ERROR } from '@shared/constants/error.constants';
@@ -116,15 +117,17 @@ describe('Auth API', () => {
       expect(res.body.account.email).toBe('login@example.com');
       expect(res.body.account).toHaveProperty('playerId');
 
-      // Verify token is a valid JWT format
-      expect(res.body).toHaveProperty('token');
-      expect(typeof res.body.token).toBe('string');
-      expect(isValidJwtFormat(res.body.token)).toBe(true);
+      // The session comes as a cookie the page's scripts cannot read, never in the body
+      expect(res.body).not.toHaveProperty('token');
+      const cookie = sessionCookieOf(res);
+      expect(cookie).toMatch(/; HttpOnly/i);
+      expect(cookie).toMatch(/; SameSite=Lax/i);
+      expect(cookie).toMatch(/; Path=\//i);
 
-      // Verify session was created in DB
+      // Only the token's hash is kept
       const sessions = await prisma.session.findMany({ where: { userId: user.id } });
-      expect(sessions.length).toBeGreaterThan(0);
-      expect(sessions[0].token).toBe(res.body.token);
+      expect(sessions).toHaveLength(1);
+      expect(sessions[0].tokenHash).toBe(createHash('sha256').update(sessionToken(res)).digest('hex'));
     });
 
     it('should login with email case-insensitive', async () => {
@@ -142,7 +145,7 @@ describe('Auth API', () => {
         });
 
       expect(res.status).toBe(200);
-      expect(res.body).toHaveProperty('token');
+      expect(sessionCookieOf(res)).not.toBeNull();
     });
 
     it('should reject login with wrong password', async () => {

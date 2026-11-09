@@ -99,7 +99,7 @@ async function handleSwitchAccount(targetAccountId: string) {
 
   try {
     const response = await switchAccount(targetAccountId);
-    setAuth(response.token, response.account);
+    setAuth(response.account);
     // Hard-navigate to the new account's landing page so all component state is
     // dropped and the global guards re-run against the fresh account.
     window.location.href = landingPathForAccount(response.account);

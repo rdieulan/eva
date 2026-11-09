@@ -6,7 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
 import { app } from '../../server/src/app';
-import { createAuthenticatedUser, createTeamMember, createUserWithTeam } from './helpers/auth';
+import { createAuthenticatedUser, createTeamMember, createUserWithTeam, authHeader } from './helpers/auth';
 import { prisma } from './helpers/db';
 import { DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
 import type { MatchmakingPermissions } from '@shared/types';
@@ -42,26 +42,26 @@ async function memberWith(leaderToken: string, teamId: string, matchmaking: Part
 }
 
 function open(token: string) {
-  return request(app).post('/api/scrims/searches').set('Authorization', `Bearer ${token}`).send(OFFER);
+  return request(app).post('/api/scrims/searches').set(authHeader(token)).send(OFFER);
 }
 
 function change(token: string, searchId: string) {
   return request(app)
     .put(`/api/scrims/searches/${searchId}`)
-    .set('Authorization', `Bearer ${token}`)
+    .set(authHeader(token))
     .send({ venues: [{ venueId: NIMES.id, evaSlotIds: ['a1-2120', 'a1-2200'] }], slotCount: 2, matchCount: 1 });
 }
 
 function withdraw(token: string, searchId: string) {
-  return request(app).delete(`/api/scrims/searches/${searchId}`).set('Authorization', `Bearer ${token}`);
+  return request(app).delete(`/api/scrims/searches/${searchId}`).set(authHeader(token));
 }
 
 function propose(token: string, searchId: string) {
-  return request(app).post(`/api/scrims/searches/${searchId}/proposals`).set('Authorization', `Bearer ${token}`).send({ evaSlotIds: ['a1-2000', 'a1-2040'] });
+  return request(app).post(`/api/scrims/searches/${searchId}/proposals`).set(authHeader(token)).send({ evaSlotIds: ['a1-2000', 'a1-2040'] });
 }
 
 function respond(token: string, proposalId: string, answer: 'accept' | 'decline') {
-  return request(app).put(`/api/scrims/proposals/${proposalId}/${answer}`).set('Authorization', `Bearer ${token}`);
+  return request(app).put(`/api/scrims/proposals/${proposalId}/${answer}`).set(authHeader(token));
 }
 
 describe('Matchmaking permissions', () => {
@@ -85,7 +85,7 @@ describe('Matchmaking permissions', () => {
 
     expect((await open(proposer)).status).toBe(403);
     const sent = await propose(proposer, theirs.body.id).expect(201);
-    await request(app).delete(`/api/scrims/proposals/${sent.body.id}`).set('Authorization', `Bearer ${proposer}`).expect(204);
+    await request(app).delete(`/api/scrims/proposals/${sent.body.id}`).set(authHeader(proposer)).expect(204);
   });
 
   it('lets a member the leader allowed to respond accept and decline the proposals the team received, and nothing more', async () => {
@@ -105,13 +105,13 @@ describe('Matchmaking permissions', () => {
 
   it('refuses every matchmaking action to a member the leader gave none, events or not', async () => {
     const { token: leader, team } = await createUserWithTeam();
-    const invite = await request(app).post(`/api/teams/${team.id}/invites`).set('Authorization', `Bearer ${leader}`).send({ expiresInHours: 24, maxUses: 1 }).expect(201);
+    const invite = await request(app).post(`/api/teams/${team.id}/invites`).set(authHeader(leader)).send({ expiresInHours: 24, maxUses: 1 }).expect(201);
     const { token: member, user } = await createAuthenticatedUser();
-    await request(app).post(`/api/invites/${invite.body.code}/join`).set('Authorization', `Bearer ${member}`).expect(200);
+    await request(app).post(`/api/invites/${invite.body.code}/join`).set(authHeader(member)).expect(200);
     // Creating events is a calendar permission: it opens no search
     await request(app)
       .put(`/api/teams/current/members/${user.id}/permissions`)
-      .set('Authorization', `Bearer ${leader}`)
+      .set(authHeader(leader))
       .send({ permissions: { ...DEFAULT_PLAYER_PERMISSIONS, calendar: { ...DEFAULT_PLAYER_PERMISSIONS.calendar, canCreateEvents: true } } })
       .expect(200);
     const ours = await open(leader).expect(201);
@@ -127,7 +127,7 @@ describe('Matchmaking permissions', () => {
     expect((await respond(member, received.body.id, 'decline')).status).toBe(403);
 
     // Reading the searches stays open to every member
-    expect((await request(app).get('/api/scrims/searches').query({ month: '2030-06', venueIds: NIMES.id }).set('Authorization', `Bearer ${member}`)).status).toBe(200);
+    expect((await request(app).get('/api/scrims/searches').query({ month: '2030-06', venueIds: NIMES.id }).set(authHeader(member))).status).toBe(200);
   });
 
   it('keeps to the permissions the app knows when the leader saves them, and reads old ones as nothing granted', async () => {
@@ -139,7 +139,7 @@ describe('Matchmaking permissions', () => {
     // Saved before the matchmaking permissions existed
     await prisma.player.update({ where: { id: player.id }, data: { permissions: { calendar: { canCreateEvents: true } } } });
     expect((await open(member)).status).toBe(403);
-    const members = await request(app).get('/api/teams/current/members').set('Authorization', `Bearer ${leader}`).expect(200);
+    const members = await request(app).get('/api/teams/current/members').set(authHeader(leader)).expect(200);
     const listed = members.body.find((entry: { isLeader: boolean }) => !entry.isLeader);
     expect(listed.permissions.matchmaking).toEqual({ canSearch: false, canPropose: false, canRespond: false });
     expect(listed.permissions.calendar.canCreateEvents).toBe(true);

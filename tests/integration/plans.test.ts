@@ -3,7 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import { app } from '../../server/src/app';
-import { createUserWithTeam, createAuthenticatedUser } from './helpers/auth';
+import { createUserWithTeam, createAuthenticatedUser, authHeader } from './helpers/auth';
 import { prisma } from './helpers/db';
 
 describe('Plans API', () => {
@@ -18,7 +18,7 @@ describe('Plans API', () => {
       // returns), so that is what it sends back on save.
       const res = await request(app)
         .put(`/api/plans/${plan!.id}`)
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({
           players: [{ playerId: user.id, assignmentIds: [1, 2], mainAssignmentId: 1 }],
         });
@@ -37,7 +37,7 @@ describe('Plans API', () => {
       // Read path round-trips back to the User.id space the frontend expects.
       const getRes = await request(app)
         .get(`/api/plans/${plan!.id}`)
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(getRes.status).toBe(200);
       expect(getRes.body.players).toHaveLength(1);
@@ -54,7 +54,7 @@ describe('Plans API', () => {
 
       const res = await request(app)
         .put(`/api/plans/${plan!.id}`)
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({
           players: [
             { playerId: outsider.id, assignmentIds: [1] }, // valid user, not in team -> skip
@@ -74,12 +74,12 @@ describe('Plans API', () => {
 
       await request(app)
         .put(`/api/plans/${plan!.id}`)
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ players: [{ playerId: user.id, assignmentIds: [1] }] });
 
       const res = await request(app)
         .put(`/api/plans/${plan!.id}`)
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ players: [{ playerId: user.id, assignmentIds: [3, 4], mainAssignmentId: 3 }] });
 
       expect(res.status).toBe(200);

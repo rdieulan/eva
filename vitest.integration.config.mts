@@ -14,8 +14,9 @@ export default defineConfig({
     // Load test environment variables
     env: {
       DATABASE_URL: 'postgresql://eva_user:eva_secret_password@localhost:5432/eva_db_test',
-      JWT_SECRET: 'test-secret-key-for-integration-tests',
       NODE_ENV: 'test',
+      // No public address unless a test sets one: set here, the dev one in .env stays out
+      APP_URL: '',
     },
   },
   resolve: {

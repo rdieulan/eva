@@ -6,7 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
 import { app } from '../../server/src/app';
-import { createAuthenticatedAdmin, createTeamMember, createUserWithTeam } from './helpers/auth';
+import { createAuthenticatedAdmin, createTeamMember, createUserWithTeam, authHeader } from './helpers/auth';
 import { prisma } from './helpers/db';
 import { ERROR } from '@shared/constants/error.constants';
 import { NOTIFICATION_INBOX_SIZE, NOTIFICATION_RETENTION_DAYS } from '@shared/constants';
@@ -53,28 +53,27 @@ beforeEach(async () => {
   await prisma.venue.create({ data: NIMES });
 });
 
-const auth = (token: string) => ({ Authorization: `Bearer ${token}` });
 
 async function open(token: string, body: Record<string, unknown> = {}): Promise<string> {
   const res = await request(app)
     .post('/api/scrims/searches')
-    .set(auth(token))
+    .set(authHeader(token))
     .send({ date: DATE, venues: [{ venueId: NIMES.id, evaSlotIds: EVENING.map(item => item.slotId) }], slotCount: 2, matchCount: 1, ...body })
     .expect(201);
   return res.body.id;
 }
 
 async function propose(token: string, searchId: string, evaSlotIds: string[] = RUN, message?: string): Promise<string> {
-  const res = await request(app).post(`/api/scrims/searches/${searchId}/proposals`).set(auth(token)).send({ evaSlotIds, message }).expect(201);
+  const res = await request(app).post(`/api/scrims/searches/${searchId}/proposals`).set(authHeader(token)).send({ evaSlotIds, message }).expect(201);
   return res.body.id;
 }
 
 function accept(token: string, proposalId: string) {
-  return request(app).put(`/api/scrims/proposals/${proposalId}/accept`).set(auth(token));
+  return request(app).put(`/api/scrims/proposals/${proposalId}/accept`).set(authHeader(token));
 }
 
 async function inbox(token: string): Promise<NotificationInbox> {
-  return (await request(app).get('/api/notifications').set(auth(token)).expect(200)).body;
+  return (await request(app).get('/api/notifications').set(authHeader(token)).expect(200)).body;
 }
 
 async function told(token: string): Promise<InboxNotification[]> {
@@ -146,7 +145,7 @@ describe('Notifications of the matchmaking', () => {
     const searchId = await open(searcher.token);
     const proposalId = await propose(proposer.token, searchId);
 
-    await request(app).put(`/api/scrims/proposals/${proposalId}/decline`).set(auth(searcher.token)).expect(200);
+    await request(app).put(`/api/scrims/proposals/${proposalId}/decline`).set(authHeader(searcher.token)).expect(200);
 
     for (const member of [proposer, allowed]) {
       expect(await told(member.token)).toMatchObject([
@@ -190,7 +189,7 @@ describe('Notifications of the matchmaking', () => {
 
     await request(app)
       .put(`/api/scrims/searches/${searchId}`)
-      .set(auth(searcher.token))
+      .set(authHeader(searcher.token))
       .send({ venues: [{ venueId: NIMES.id, evaSlotIds: ['a1-2120', 'a1-2200'] }], slotCount: 2, matchCount: 1 })
       .expect(200);
 
@@ -204,7 +203,7 @@ describe('Notifications of the matchmaking', () => {
     // Withdrawn before any match: deleted
     const plain = await open(searcher.token);
     await propose(waiting.token, plain);
-    await request(app).delete(`/api/scrims/searches/${plain}`).set(auth(searcher.token)).expect(204);
+    await request(app).delete(`/api/scrims/searches/${plain}`).set(authHeader(searcher.token)).expect(204);
     expect(await told(waiting.token)).toMatchObject([
       { kind: 'SCRIM_SEARCH_WITHDRAWN', data: { teamName: searcher.team.name, date: DATE, startTime: '20:00', venueId: NIMES.id } },
     ]);
@@ -213,7 +212,7 @@ describe('Notifications of the matchmaking', () => {
     const matched = await open(searcher.token, { matchCount: 2 });
     await accept(searcher.token, await propose(made.token, matched, ['a1-1920', 'a1-2000'])).expect(200);
     await propose(stillWaiting.token, matched, ['a1-2040', 'a1-2120']);
-    await request(app).delete(`/api/scrims/searches/${matched}`).set(auth(searcher.token)).expect(204);
+    await request(app).delete(`/api/scrims/searches/${matched}`).set(authHeader(searcher.token)).expect(204);
     expect(await kinds(stillWaiting.token)).toEqual(['SCRIM_SEARCH_WITHDRAWN']);
     expect(await kinds(made.token)).toEqual(['SCRIM_MATCH_MADE']);
   });
@@ -224,7 +223,7 @@ describe('Notifications of the matchmaking', () => {
     await accept(searcher.token, await propose(proposer.token, searchId)).expect(200);
     const proposerCopy = (await prisma.calendarEvent.findMany()).find(event => event.teamId === proposer.team.id)!;
 
-    await request(app).delete(`/api/scrims/matches/${proposerCopy.id}`).set(auth(proposer.token)).expect(204);
+    await request(app).delete(`/api/scrims/matches/${proposerCopy.id}`).set(authHeader(proposer.token)).expect(204);
 
     const cancelled = async (token: string) => (await told(token)).filter(notification => notification.kind === 'SCRIM_MATCH_CANCELLED');
     expect(await cancelled(proposer.token)).toEqual([]);
@@ -271,7 +270,7 @@ describe('Notifications of the matchmaking', () => {
     const other = await createUserWithTeam();
     const searchId = await open(searcher.token);
     const proposalId = await propose(proposer.token, searchId);
-    await request(app).delete(`/api/scrims/proposals/${proposalId}`).set(auth(proposer.token)).expect(204);
+    await request(app).delete(`/api/scrims/proposals/${proposalId}`).set(authHeader(proposer.token)).expect(204);
     await propose(other.token, searchId);
     const before = await prisma.notification.count();
 
@@ -295,7 +294,7 @@ describe('GET /api/notifications', () => {
     const listed = await inbox(searcher.token);
     expect(listed.unreadCount).toBe(2);
     expect(listed.notifications.map(notification => notification.data)).toMatchObject([{ teamName: second.team.name }, { teamName: first.team.name }]);
-    expect((await request(app).get('/api/notifications/unread-count').set(auth(searcher.token)).expect(200)).body).toEqual({ unreadCount: 2 });
+    expect((await request(app).get('/api/notifications/unread-count').set(authHeader(searcher.token)).expect(200)).body).toEqual({ unreadCount: 2 });
     expect(await inbox(outsider.token)).toEqual({ notifications: [], unreadCount: 0 });
   });
 
@@ -323,7 +322,7 @@ describe('GET /api/notifications', () => {
   it('refuses an account that is not a player, and a request without a token', async () => {
     const admin = await createAuthenticatedAdmin();
 
-    const res = await request(app).get('/api/notifications').set(auth(admin.token));
+    const res = await request(app).get('/api/notifications').set(authHeader(admin.token));
 
     expect(res.status).toBe(403);
     expect(res.body.errors).toContain(ERROR.playerAccountRequired);
@@ -342,7 +341,7 @@ describe('PUT /api/notifications/read', () => {
     await propose(second.token, searchId, ['a1-2040', 'a1-2120']);
     const [newest, oldest] = await told(searcher.token);
 
-    await request(app).put('/api/notifications/read').set(auth(searcher.token)).send({ ids: [oldest!.id] }).expect(204);
+    await request(app).put('/api/notifications/read').set(authHeader(searcher.token)).send({ ids: [oldest!.id] }).expect(204);
 
     const after = await inbox(searcher.token);
     expect(after.unreadCount).toBe(1);
@@ -355,7 +354,7 @@ describe('PUT /api/notifications/read', () => {
     const { token } = await createUserWithTeam();
 
     for (const body of [{}, { ids: 'notification-1' }, { ids: [42] }, { ids: [''] }, { ids: Array.from({ length: NOTIFICATION_INBOX_SIZE + 1 }, (_, index) => `n-${index}`) }]) {
-      const res = await request(app).put('/api/notifications/read').set(auth(token)).send(body);
+      const res = await request(app).put('/api/notifications/read').set(authHeader(token)).send(body);
       expect(res.status).toBe(400);
       expect(res.body.errors).toContain(ERROR.notificationsReadInvalid);
     }

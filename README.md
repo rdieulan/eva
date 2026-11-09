@@ -19,7 +19,7 @@ Outil web de gestion d'équipe FPS 4v4 : planification de postes par map, calend
 | Frontend | Vue 3 (script setup) + TypeScript + Vite + SCSS |
 | Backend | Node.js + Express + TypeScript |
 | ORM / DB | Prisma 7 + PostgreSQL 16 |
-| Auth | JWT (Bearer) + bcrypt |
+| Auth | Sessions vérifiées par le serveur (cookie HttpOnly) + bcrypt |
 | Tests | Vitest (unit + intégration via Supertest) |
 | Conteneurs | Docker / Docker Compose |
 | Déploiement | Railway (Dockerfile) |
@@ -40,7 +40,8 @@ npm install
 
 # 2. Copier la config d'environnement
 cp .env.example .env
-# Ajuster DATABASE_URL et JWT_SECRET si besoin (les défauts marchent avec docker-compose)
+# Ajuster DATABASE_URL si besoin (les défauts marchent avec docker-compose)
+# APP_URL vaut http://localhost:5173 en dev : sans elle, le site ne peut rien modifier
 
 # 3. Démarrer PostgreSQL (crée aussi eva_db et eva_db_test)
 npm run docker:up
@@ -71,10 +72,9 @@ L'app est disponible sur **http://localhost:5173**. Le backend tourne sur **http
 | Variable | Description | Défaut local |
 |---|---|---|
 | `DATABASE_URL` | URL Postgres (format `postgresql://user:pass@host:port/db`) | `postgresql://eva_user:eva_secret_password@localhost:5432/eva_db` |
-| `JWT_SECRET` | Secret de signature des JWT — **à changer en prod** | `votre_secret_jwt_a_changer_en_production` |
-| `JWT_EXPIRES_IN` | Durée de vie des tokens | `7d` |
 | `NODE_ENV` | `development` / `production` / `test` | — |
 | `PORT` | Port du backend | `3001` |
+| `APP_URL` | Adresse publique du site : liens des notifications Discord, et seule origine d'où le serveur accepte des modifications | `http://localhost:5173` |
 
 ## Scripts npm
 
@@ -160,7 +160,7 @@ Un `User` porte les credentials (email + password) et peut être lié à exactem
 
 Un même utilisateur humain peut avoir plusieurs comptes (par exemple un compte player et un compte manager) reliés via `LinkedAccountGroup` et basculer entre eux sans se reconnecter (`POST /api/auth/switch-account`).
 
-Le JWT embarque `userId`, `email`, `accountType` (`player` / `manager` / `admin`) et l'id spécifique au rôle (`playerId` / `managerId` / `adminId`).
+La session est un jeton aléatoire dans un cookie `HttpOnly` (`SameSite=Lax`, `Secure` et préfixe `__Host-` en production) : le code de la page ne peut pas le lire. La base n'en garde que l'empreinte SHA-256 (`Session.tokenHash`) et le serveur la vérifie à chaque requête (`authMiddleware`) : la déconnexion la ferme pour de bon, la suppression d'un compte aussi. Elle dure 30 jours et se prolonge, au plus une fois par jour, tant qu'elle sert, sans dépasser 90 jours après son ouverture. Les requêtes qui modifient sont refusées quand le navigateur dit qu'elles viennent d'un autre site que `APP_URL` (en-tête `Origin`).
 
 ## Tests d'intégration
 

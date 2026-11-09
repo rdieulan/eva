@@ -8,7 +8,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
 import { app } from '../../server/src/app';
-import { createUserWithTeam } from './helpers/auth';
+import { createUserWithTeam, authHeader } from './helpers/auth';
 import { prisma } from './helpers/db';
 import { fetchLocationSessions } from '../../server/src/integrations/eva/eva-sessions';
 import { EvaApiError } from '../../server/src/integrations/eva/eva-graphql';
@@ -58,14 +58,14 @@ beforeEach(async () => {
 async function open(token: string, body: Record<string, unknown> = {}): Promise<string> {
   const res = await request(app)
     .post('/api/scrims/searches')
-    .set('Authorization', `Bearer ${token}`)
+    .set(authHeader(token))
     .send({ date: DATE, venues: [{ venueId: NIMES.id, evaSlotIds: ['a1-2000', 'a1-2040', 'a1-2120', 'a1-2200'] }], slotCount: 2, matchCount: 1, ...body })
     .expect(201);
   return res.body.id;
 }
 
 async function propose(token: string, searchId: string, evaSlotIds: string[]): Promise<string> {
-  const res = await request(app).post(`/api/scrims/searches/${searchId}/proposals`).set('Authorization', `Bearer ${token}`).send({ evaSlotIds }).expect(201);
+  const res = await request(app).post(`/api/scrims/searches/${searchId}/proposals`).set(authHeader(token)).send({ evaSlotIds }).expect(201);
   return res.body.id;
 }
 
@@ -120,7 +120,7 @@ describe('Scrim upkeep: the slots booked since a search opened', () => {
     const searcher = await createUserWithTeam();
     const searchId = await open(searcher.token, { matchCount: 2 });
     const made = await propose((await createUserWithTeam()).token, searchId, ['a1-2000', 'a1-2040']);
-    await request(app).put(`/api/scrims/proposals/${made}/accept`).set('Authorization', `Bearer ${searcher.token}`).expect(200);
+    await request(app).put(`/api/scrims/proposals/${made}/accept`).set(authHeader(searcher.token)).expect(200);
 
     // The two teams booked their match on eva.gg
     serve(nimes('a1-2000', 'a1-2040'));
@@ -157,7 +157,7 @@ describe('Scrim upkeep: the days gone by', () => {
     const searcher = await createUserWithTeam();
     const withMatch = await open(searcher.token, { matchCount: 2 });
     const made = await propose((await createUserWithTeam()).token, withMatch, ['a1-2000', 'a1-2040']);
-    await request(app).put(`/api/scrims/proposals/${made}/accept`).set('Authorization', `Bearer ${searcher.token}`).expect(200);
+    await request(app).put(`/api/scrims/proposals/${made}/accept`).set(authHeader(searcher.token)).expect(200);
     const left = await propose((await createUserWithTeam()).token, withMatch, ['a1-2120', 'a1-2200']);
     const withoutMatch = await open((await createUserWithTeam()).token);
     sessions.mockClear();
@@ -177,7 +177,7 @@ describe('Scrim upkeep: the days gone by', () => {
 
     await upkeepScrimSearches({ now: AFTER_THE_DAY, pauseMs: 0 });
 
-    const listed = await request(app).get('/api/scrims/searches').query({ month: '2030-06' }).set('Authorization', `Bearer ${searcher.token}`).expect(200);
+    const listed = await request(app).get('/api/scrims/searches').query({ month: '2030-06' }).set(authHeader(searcher.token)).expect(200);
     expect(listed.body).toEqual([]);
   });
 });

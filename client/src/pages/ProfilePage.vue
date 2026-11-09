@@ -17,7 +17,7 @@ import EvaAccountSection from '@/components/profile/EvaAccountSection.vue';
 import ThemeSection from '@/components/profile/ThemeSection.vue';
 
 const router = useRouter();
-const { account, token, clearAuth } = useAuth();
+const { account, clearAuth } = useAuth();
 
 // Password change
 const currentPassword = ref('');
@@ -73,10 +73,7 @@ async function handleChangePassword() {
   try {
     const response = await fetch('/api/auth/change-password', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token.value}`,
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         currentPassword: currentPassword.value,
         newPassword: newPassword.value,
@@ -104,12 +101,7 @@ async function handleChangePassword() {
 // Logout
 async function handleLogout() {
   try {
-    await fetch('/api/auth/logout', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token.value}`,
-      },
-    });
+    await fetch('/api/auth/logout', { method: 'POST' });
   } catch {
     // Ignore server-side logout errors
   } finally {

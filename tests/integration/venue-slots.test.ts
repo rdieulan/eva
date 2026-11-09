@@ -6,7 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
 import { app } from '../../server/src/app';
-import { createAuthenticatedUser } from './helpers/auth';
+import { createAuthenticatedUser, authHeader } from './helpers/auth';
 import { prisma } from './helpers/db';
 import { ERROR } from '@shared/constants/error.constants';
 import { fetchLocationSessions } from '../../server/src/integrations/eva/eva-sessions';
@@ -50,7 +50,7 @@ describe('GET /api/venues/:id/slots', () => {
     const res = await request(app)
       .get(`/api/venues/${NIMES.id}/slots`)
       .query({ date: '2026-11-03' })
-      .set('Authorization', `Bearer ${token}`);
+      .set(authHeader(token));
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual([{
@@ -77,13 +77,13 @@ describe('GET /api/venues/:id/slots', () => {
       await request(app)
         .get(`/api/venues/${NIMES.id}/slots`)
         .query({ date: '2026-11-03' })
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .expect(200);
     }
     await request(app)
       .get(`/api/venues/${NIMES.id}/slots`)
       .query({ date: '2026-11-04' })
-      .set('Authorization', `Bearer ${token}`)
+      .set(authHeader(token))
       .expect(200);
 
     expect(sessions).toHaveBeenCalledTimes(2);
@@ -96,7 +96,7 @@ describe('GET /api/venues/:id/slots', () => {
     const res = await request(app)
       .get(`/api/venues/${NIMES.id}/slots`)
       .query({ date: '2026-12-25' })
-      .set('Authorization', `Bearer ${token}`);
+      .set(authHeader(token));
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual([]);
@@ -108,7 +108,7 @@ describe('GET /api/venues/:id/slots', () => {
     const res = await request(app)
       .get(`/api/venues/${HAND_MADE.id}/slots`)
       .query({ date: '2026-11-03' })
-      .set('Authorization', `Bearer ${token}`);
+      .set(authHeader(token));
 
     expect(res.status).toBe(409);
     expect(res.body.errors).toEqual([ERROR.venueNotOnEva]);
@@ -121,7 +121,7 @@ describe('GET /api/venues/:id/slots', () => {
     const res = await request(app)
       .get('/api/venues/nope/slots')
       .query({ date: '2026-11-03' })
-      .set('Authorization', `Bearer ${token}`);
+      .set(authHeader(token));
 
     expect(res.status).toBe(404);
     expect(res.body.errors).toEqual([ERROR.venueNotFound]);
@@ -134,7 +134,7 @@ describe('GET /api/venues/:id/slots', () => {
       const res = await request(app)
         .get(`/api/venues/${NIMES.id}/slots`)
         .query(query)
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(400);
       expect(res.body.errors).toEqual([ERROR.dateInvalid]);
@@ -149,7 +149,7 @@ describe('GET /api/venues/:id/slots', () => {
     const res = await request(app)
       .get(`/api/venues/${NIMES.id}/slots`)
       .query({ date: '2026-11-03' })
-      .set('Authorization', `Bearer ${token}`);
+      .set(authHeader(token));
 
     expect(res.status).toBe(502);
     expect(res.body.errors).toEqual([ERROR.evaUnavailable]);
@@ -167,7 +167,7 @@ describe('GET /api/venues', () => {
 
     const res = await request(app)
       .get('/api/venues')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authHeader(token));
 
     const byId = new Map(res.body.map((v: { id: string; hasEvaSlots: boolean }) => [v.id, v.hasEvaSlots]));
     expect(byId.get(NIMES.id)).toBe(true);

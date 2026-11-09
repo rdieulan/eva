@@ -10,7 +10,7 @@ import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 
 const route = useRoute();
 const router = useRouter();
-const { account, token, refreshAccount } = useAuth();
+const { account, isAuthenticated, refreshAccount } = useAuth();
 
 // State
 const isLoading = ref(true);
@@ -22,7 +22,7 @@ const success = ref(false);
 // Computed
 const inviteCode = computed(() => route.params.code as string);
 const isValid = computed(() => validation.value?.valid === true);
-const isLoggedIn = computed(() => !!token.value);
+const isLoggedIn = isAuthenticated;
 
 // Load invitation validation
 onMounted(async () => {

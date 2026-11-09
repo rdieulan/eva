@@ -3,7 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import { app } from '../../server/src/app';
-import { createAuthenticatedUser, createUserWithTeam } from './helpers/auth';
+import { createAuthenticatedUser, createUserWithTeam, authHeader } from './helpers/auth';
 import { prisma, expectNoRecordCreated } from './helpers/db';
 import { ERROR } from '@shared/constants/error.constants';
 
@@ -56,7 +56,7 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .get(`/api/calendar/availability?month=${month}`)
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty('month');
@@ -70,13 +70,13 @@ describe('Calendar API', () => {
 
       await request(app)
         .put('/api/players/me/subscription')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ tier: 'GOLD', renewalDate: '2026-10-05' })
         .expect(200);
 
       const res = await request(app)
         .get('/api/calendar/availability?month=2026-11')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(200);
       const renewalDays = Object.values(res.body.days as Record<string, { date: string; renewals: unknown[] }>)
@@ -94,13 +94,13 @@ describe('Calendar API', () => {
 
       await request(app)
         .put('/api/players/me/subscription')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ tier: null, renewalDate: '2026-12-10' })
         .expect(200);
 
       const res = await request(app)
         .get('/api/calendar/availability?month=2026-11')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       const days = Object.values(res.body.days as Record<string, { renewals: unknown[] }>);
       expect(days.every(day => day.renewals.length === 0)).toBe(true);
@@ -113,7 +113,7 @@ describe('Calendar API', () => {
         .get(`/api/calendar/availability?month=${month}`);
 
       expect(res.status).toBe(401);
-      expect(res.body.errors).toContain(ERROR.tokenMissing);
+      expect(res.body.errors).toContain(ERROR.unauthorized);
     });
 
     it('should reject with invalid month parameter', async () => {
@@ -121,7 +121,7 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .get('/api/calendar/availability?month=invalid')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(400);
       expect(res.body.errors).toContain(ERROR.monthParamRequired);
@@ -133,7 +133,7 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .get(`/api/calendar/availability?month=${month}`)
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(403);
       expect(res.body.errors).toContain(ERROR.teamRequiredForCalendar);
@@ -150,7 +150,7 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .post('/api/calendar/availability')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ date, status: 'AVAILABLE' });
 
       expect(res.status).toBe(200);
@@ -169,14 +169,14 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .post('/api/calendar/availability')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ date, status: 'VOICE_ONLY' });
 
       expect(res.status).toBe(200);
 
       const month = await request(app)
         .get(`/api/calendar/availability?month=${date.substring(0, 7)}`)
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
       expect(month.body.days[date].currentPlayerStatus).toBe('VOICE_ONLY');
       expect(month.body.days[date].playerAvailabilities).toContainEqual({
         playerId: user.playerId,
@@ -192,14 +192,14 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .post('/api/calendar/availability')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ date, status: 'PARTIAL', hours: { startTime: '21:00', endTime: null } });
 
       expect(res.status).toBe(200);
       expect(res.body).toMatchObject({ status: 'PARTIAL', hours: { startTime: '21:00', endTime: null } });
       const month = await request(app)
         .get(`/api/calendar/availability?month=${date.substring(0, 7)}`)
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
       expect(month.body.days[date].currentPlayerHours).toEqual({ startTime: '21:00', endTime: null });
       expect(month.body.days[date].playerAvailabilities).toContainEqual({
         playerId: user.playerId,
@@ -212,7 +212,7 @@ describe('Calendar API', () => {
     it('should drop the hours once the answer is no longer partial', async () => {
       const { token, user } = await createUserWithTeam();
       const date = getFutureDate();
-      const auth = { Authorization: `Bearer ${token}` };
+      const auth = authHeader(token);
       await request(app).post('/api/calendar/availability').set(auth).send({ date, status: 'PARTIAL', hours: { startTime: '20:00', endTime: '23:00' } }).expect(200);
 
       await request(app).post('/api/calendar/availability').set(auth).send({ date, status: 'AVAILABLE' }).expect(200);
@@ -226,7 +226,7 @@ describe('Calendar API', () => {
       const date = getFutureDate();
       const send = (body: Record<string, unknown>) => request(app)
         .post('/api/calendar/availability')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ date, ...body });
 
       for (const body of [
@@ -258,7 +258,7 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .post('/api/calendar/availability')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ date: 'invalid-date', status: 'AVAILABLE' });
 
       expect(res.status).toBe(400);
@@ -271,7 +271,7 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .post('/api/calendar/availability')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ date, status: 'INVALID_STATUS' });
 
       expect(res.status).toBe(400);
@@ -291,7 +291,7 @@ describe('Calendar API', () => {
       // Create an event first
       const createRes = await request(app)
         .post('/api/calendar/events')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({
           date,
           startTime: '19:00',
@@ -305,7 +305,7 @@ describe('Calendar API', () => {
       // Fetch events
       const res = await request(app)
         .get(`/api/calendar/events?month=${month}`)
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
@@ -333,7 +333,7 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .get('/api/calendar/events?month=invalid')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(400);
       expect(res.body.errors).toContain(ERROR.monthParamRequired);
@@ -345,7 +345,7 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .get(`/api/calendar/events?month=${month}`)
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(403);
       expect(res.body.errors).toContain(ERROR.teamRequiredForCalendar);
@@ -365,7 +365,7 @@ describe('Calendar API', () => {
       // Create event for team1 via API
       await request(app)
         .post('/api/calendar/events')
-        .set('Authorization', `Bearer ${token1}`)
+        .set(authHeader(token1))
         .send({
           date,
           startTime: '20:00',
@@ -377,7 +377,7 @@ describe('Calendar API', () => {
       // Create event for team2 via API
       await request(app)
         .post('/api/calendar/events')
-        .set('Authorization', `Bearer ${token2}`)
+        .set(authHeader(token2))
         .send({
           date,
           startTime: '20:00',
@@ -389,7 +389,7 @@ describe('Calendar API', () => {
       // Team1 should only see their event
       const res1 = await request(app)
         .get(`/api/calendar/events?month=${month}`)
-        .set('Authorization', `Bearer ${token1}`);
+        .set(authHeader(token1));
 
       expect(res1.status).toBe(200);
       expect(res1.body.some((e: any) => e.title === 'Team1 Event')).toBe(true);
@@ -398,7 +398,7 @@ describe('Calendar API', () => {
       // Team2 should only see their event
       const res2 = await request(app)
         .get(`/api/calendar/events?month=${month}`)
-        .set('Authorization', `Bearer ${token2}`);
+        .set(authHeader(token2));
 
       expect(res2.status).toBe(200);
       expect(res2.body.some((e: any) => e.title === 'Team2 Event')).toBe(true);
@@ -416,7 +416,7 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .post('/api/calendar/events')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({
           date,
           startTime: '20:00',
@@ -442,7 +442,7 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .post('/api/calendar/events')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({
           date,
           startTime: '21:00',
@@ -467,7 +467,7 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .post('/api/calendar/events')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({
           date: getFutureDate(),
           startTime: '21:00',
@@ -485,7 +485,7 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .post('/api/calendar/events')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({
           date: getFutureDate(),
           startTime: '21:00',
@@ -504,7 +504,7 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .post('/api/calendar/events')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({
           date: getFutureDate(),
           startTime: '21:00',
@@ -523,7 +523,7 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .post('/api/calendar/events')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({
           date: getFutureDate(),
           startTime: '21:00',
@@ -560,7 +560,7 @@ describe('Calendar API', () => {
         () => prisma.calendarEvent.count(),
         () => request(app)
           .post('/api/calendar/events')
-          .set('Authorization', `Bearer ${token}`)
+          .set(authHeader(token))
           .send({
             date,
             startTime: '20:00',
@@ -580,7 +580,7 @@ describe('Calendar API', () => {
         () => prisma.calendarEvent.count({ where: { teamId: team.id } }),
         () => request(app)
           .post('/api/calendar/events')
-          .set('Authorization', `Bearer ${token}`)
+          .set(authHeader(token))
           .send({
             date: 'invalid',
             startTime: '20:00',
@@ -602,7 +602,7 @@ describe('Calendar API', () => {
         () => prisma.calendarEvent.count({ where: { teamId: team.id } }),
         () => request(app)
           .post('/api/calendar/events')
-          .set('Authorization', `Bearer ${token}`)
+          .set(authHeader(token))
           .send({
             date,
             startTime: '20:00',
@@ -624,7 +624,7 @@ describe('Calendar API', () => {
         () => prisma.calendarEvent.count({ where: { teamId: team.id } }),
         () => request(app)
           .post('/api/calendar/events')
-          .set('Authorization', `Bearer ${token}`)
+          .set(authHeader(token))
           .send({
             date,
             startTime: '20:00',
@@ -650,7 +650,7 @@ describe('Calendar API', () => {
       // Create event first
       const createRes = await request(app)
         .post('/api/calendar/events')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({
           date,
           startTime: '20:00',
@@ -664,7 +664,7 @@ describe('Calendar API', () => {
       // Delete it
       const res = await request(app)
         .delete(`/api/calendar/events/${eventId}`)
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -686,7 +686,7 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .delete('/api/calendar/events/non-existent-id')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(404);
       expect(res.body.errors).toContain(ERROR.eventNotFound);
@@ -700,7 +700,7 @@ describe('Calendar API', () => {
       // Create event with team1
       const createRes = await request(app)
         .post('/api/calendar/events')
-        .set('Authorization', `Bearer ${token1}`)
+        .set(authHeader(token1))
         .send({
           date,
           startTime: '20:00',
@@ -714,7 +714,7 @@ describe('Calendar API', () => {
       // Try to delete with team2
       const res = await request(app)
         .delete(`/api/calendar/events/${eventId}`)
-        .set('Authorization', `Bearer ${token2}`);
+        .set(authHeader(token2));
 
       expect(res.status).toBe(403);
       expect(res.body.errors).toContain(ERROR.accessDenied);
@@ -736,7 +736,7 @@ describe('Calendar API', () => {
       // Create event first
       const createRes = await request(app)
         .post('/api/calendar/events')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({
           date,
           startTime: '20:00',
@@ -750,7 +750,7 @@ describe('Calendar API', () => {
       // Update it
       const res = await request(app)
         .put(`/api/calendar/events/${eventId}`)
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ title: 'Updated Title' });
 
       expect(res.status).toBe(200);
@@ -774,7 +774,7 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .put('/api/calendar/events/non-existent-id')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ title: 'New Title' });
 
       expect(res.status).toBe(404);
@@ -788,7 +788,7 @@ describe('Calendar API', () => {
       // Create event with team1
       const createRes = await request(app)
         .post('/api/calendar/events')
-        .set('Authorization', `Bearer ${token1}`)
+        .set(authHeader(token1))
         .send({
           date,
           startTime: '20:00',
@@ -802,7 +802,7 @@ describe('Calendar API', () => {
       // Try to update with team2
       const res = await request(app)
         .put(`/api/calendar/events/${eventId}`)
-        .set('Authorization', `Bearer ${token2}`)
+        .set(authHeader(token2))
         .send({ title: 'Hacked Title' });
 
       expect(res.status).toBe(403);
@@ -820,7 +820,7 @@ describe('Calendar API', () => {
     async function createEvent(token: string, body: Record<string, unknown> = {}) {
       return request(app)
         .post('/api/calendar/events')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({
           date: getFutureDate(),
           startTime: '20:00',
@@ -838,7 +838,7 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .put(`/api/calendar/events/${created.body.id}`)
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ description: '' });
 
       expect(res.status).toBe(200);
@@ -854,7 +854,7 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .put(`/api/calendar/events/${created.body.id}`)
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ title });
 
       expect(res.status).toBe(400);
@@ -870,7 +870,7 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .put(`/api/calendar/events/${created.body.id}`)
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ date: '' });
 
       expect(res.status).toBe(400);
@@ -883,7 +883,7 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .put(`/api/calendar/events/${created.body.id}`)
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ startTime: '22:00', endTime: '20:00' });
 
       expect(res.status).toBe(400);
@@ -908,7 +908,7 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .put(`/api/calendar/events/${created.body.id}`)
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ endTime: '19:00' });
 
       expect(res.status).toBe(400);
@@ -921,7 +921,7 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .put(`/api/calendar/events/${created.body.id}`)
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ endTime: '23:30' });
 
       expect(res.status).toBe(200);
@@ -940,7 +940,7 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .post('/api/calendar/events')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({
           date: getFutureDate(),
           startTime: '20:00',
@@ -960,7 +960,7 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .post('/api/calendar/events')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({
           date: getFutureDate(),
           startTime: '20:00',
@@ -980,7 +980,7 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .post('/api/calendar/events')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({
           date: getFutureDate(),
           startTime: '20:00',
@@ -999,7 +999,7 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .post('/api/calendar/events')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({
           date: getFutureDate(),
           startTime: '20:00',
@@ -1019,7 +1019,7 @@ describe('Calendar API', () => {
         () => prisma.calendarEvent.count(),
         () => request(app)
           .post('/api/calendar/events')
-          .set('Authorization', `Bearer ${token}`)
+          .set(authHeader(token))
           .send({
             date: getFutureDate(),
             startTime: '20:00',
@@ -1040,7 +1040,7 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .post('/api/calendar/events')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({
           date: getFutureDate(),
           startTime: '20:00',
@@ -1060,7 +1060,7 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .post('/api/calendar/events')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({
           date: getFutureDate(),
           startTime: '21:00',
@@ -1081,7 +1081,7 @@ describe('Calendar API', () => {
 
       const created = await request(app)
         .post('/api/calendar/events')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({
           date: getFutureDate(),
           startTime: '20:00',
@@ -1092,7 +1092,7 @@ describe('Calendar API', () => {
 
       const moved = await request(app)
         .put(`/api/calendar/events/${created.body.id}`)
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ venueId: away.id });
 
       expect(moved.status).toBe(200);
@@ -1101,7 +1101,7 @@ describe('Calendar API', () => {
       // Updating something else leaves the venue alone
       const renamed = await request(app)
         .put(`/api/calendar/events/${created.body.id}`)
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ title: 'Match vs TeamY' });
 
       expect(renamed.body.venue.id).toBe(away.id);
@@ -1113,7 +1113,7 @@ describe('Calendar API', () => {
 
       const created = await request(app)
         .post('/api/calendar/events')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({
           date: getFutureDate(),
           startTime: '20:00',
@@ -1125,7 +1125,7 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .put(`/api/calendar/events/${created.body.id}`)
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ type: 'VOICE_MEETING', voiceMedium: 'DISCORD' });
 
       expect(res.status).toBe(200);
@@ -1142,13 +1142,13 @@ describe('Calendar API', () => {
 
       await request(app)
         .post('/api/calendar/events')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ date, startTime: '20:00', endTime: '22:00', type: 'MATCH', title: 'Match vs TeamX' })
         .expect(201);
 
       const month = await request(app)
         .get(`/api/calendar/availability?month=${date.substring(0, 7)}`)
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(month.body.days[date].events[0].venue)
         .toEqual({ id: venue.id, name: 'VR Arena', evaLocationId: null, discord: null });
@@ -1162,7 +1162,7 @@ describe('Calendar API', () => {
     async function createMatch(token: string, body: Record<string, unknown> = {}) {
       return request(app)
         .post('/api/calendar/events')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({
           date: getFutureDate(),
           startTime: '20:00',
@@ -1242,7 +1242,7 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .put(`/api/calendar/events/${created.body.id}`)
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ arenaNumber: 3 });
 
       expect(res.status).toBe(200);
@@ -1256,7 +1256,7 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .put(`/api/calendar/events/${created.body.id}`)
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ title: 'Match vs TeamY' });
 
       expect(res.status).toBe(200);
@@ -1271,7 +1271,7 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .put(`/api/calendar/events/${created.body.id}`)
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ venueId: away.id });
 
       expect(res.status).toBe(200);
@@ -1286,7 +1286,7 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .put(`/api/calendar/events/${created.body.id}`)
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ type: 'EVENT' });
 
       expect(res.status).toBe(200);
@@ -1306,7 +1306,7 @@ describe('Calendar API', () => {
 
       const month = await request(app)
         .get(`/api/calendar/availability?month=${date.substring(0, 7)}`)
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(month.body.days[date].events[0].arenaNumber).toBe(2);
     });
@@ -1323,7 +1323,7 @@ describe('Calendar API', () => {
       // Create MATCH event
       const createRes = await request(app)
         .post('/api/calendar/events')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({
           date,
           startTime: '20:00',
@@ -1338,7 +1338,7 @@ describe('Calendar API', () => {
       // Attach gameplan
       const res = await request(app)
         .put(`/api/calendar/events/${eventId}/gameplan`)
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ gamePlan });
 
       expect(res.status).toBe(200);
@@ -1358,7 +1358,7 @@ describe('Calendar API', () => {
       // Create a non-MATCH event
       const createRes = await request(app)
         .post('/api/calendar/events')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({
           date,
           startTime: '20:00',
@@ -1371,7 +1371,7 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .put(`/api/calendar/events/${eventId}/gameplan`)
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ gamePlan: { strategy: 'test' } });
 
       expect(res.status).toBe(400);
@@ -1391,7 +1391,7 @@ describe('Calendar API', () => {
 
       const res = await request(app)
         .put('/api/calendar/events/non-existent-id/gameplan')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ gamePlan: {} });
 
       expect(res.status).toBe(404);
@@ -1407,7 +1407,7 @@ describe('Calendar API', () => {
     async function createMatch(token: string, body: Record<string, unknown> = {}) {
       return request(app)
         .post('/api/calendar/events')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({
           date: getFutureDate(),
           startTime: '20:00',
@@ -1421,7 +1421,7 @@ describe('Calendar API', () => {
     async function update(token: string, id: string, body: Record<string, unknown>) {
       return request(app)
         .put(`/api/calendar/events/${id}`)
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send(body);
     }
 
@@ -1577,7 +1577,7 @@ describe('Calendar API', () => {
 
       const month = await request(app)
         .get(`/api/calendar/availability?month=${date!.substring(0, 7)}`)
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(month.body.days[date!].events[0].evaSlotIds).toEqual([SLOT_20H, SLOT_20H40]);
     });

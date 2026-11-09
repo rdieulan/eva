@@ -48,7 +48,7 @@ async function handleLogin() {
     clearBalanceRulesCache();
 
     // Set auth using composable
-    setAuth(data.token, data.account);
+    setAuth(data.account);
 
     // Redirect to original page or to the account's default landing page
     const redirectPath = (route.query.redirect as string) || landingPathForAccount(data.account);

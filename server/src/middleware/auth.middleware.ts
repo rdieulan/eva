@@ -1,50 +1,44 @@
 // Authentication middleware
 
 import type { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
 import { prisma } from '@db/prisma';
 import type { AccountPermissions, AccountType, AdminPermissions } from '@shared/types';
 import { DEFAULT_PLAYER_PERMISSIONS, LEADER_PERMISSIONS } from '@shared/types';
 import { normalizeAccountPermissions } from '@shared/utils';
 import { ERROR } from '@shared/constants';
 import { authLogger } from '@utils/logger';
+import { findSession } from '@services/session.service';
+import type { SessionAccountRecord } from '@services/session.service';
+import { clearSessionCookie, readSessionCookie, setSessionCookie } from '@utils/session-cookie';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key';
-
-// Security warning for production
-if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
-  authLogger.error('WARNING: JWT_SECRET not set in production! Using insecure default.');
-}
-
-export interface JwtPayload {
+/** Who a request acts for, as its session says */
+export interface SessionAccount {
   userId: string;
   email: string;
-  accountType?: AccountType;
+  accountType: AccountType;
   // Type-specific IDs (only one will be set)
   playerId?: string;
   managerId?: string;
   adminId?: string;
-  // Player-specific (enriched by middleware)
+  // The player's team, if any
   teamId?: string;
 }
 
 export interface AuthRequest extends Request {
-  account?: JwtPayload;
+  account?: SessionAccount;
 }
 
-/**
- * Verify a JWT token
- */
-export function verifyToken(token: string): JwtPayload | null {
-  try {
-    return jwt.verify(token, JWT_SECRET) as JwtPayload;
-  } catch {
-    return null;
-  }
+function sessionAccount(record: SessionAccountRecord): SessionAccount {
+  return {
+    userId: record.id,
+    email: record.email,
+    accountType: record.adminId ? 'admin' : record.managerId ? 'manager' : 'player',
+    playerId: record.playerId ?? undefined,
+    managerId: record.managerId ?? undefined,
+    adminId: record.adminId ?? undefined,
+    teamId: record.player?.teamId ?? undefined,
+  };
 }
-
-// Import player helpers
-import { getPlayerTeamId } from '@services/player.service';
 
 /**
  * Get account permissions from database
@@ -96,42 +90,33 @@ export async function hasPermission(
 }
 
 /**
- * Authentication middleware - requires valid JWT token
- * Enriches the payload with teamId from database (for Players only)
+ * Authentication middleware - requires an open session. The session's account
+ * is read on every request, so a session ended or an account deleted stops here.
  */
-export function authMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    authLogger.debug('Middleware: Missing or invalid Authorization header');
-    return res.status(401).json({ errors: [ERROR.tokenMissing] });
+export async function authMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
+  const token = readSessionCookie(req);
+  if (!token) {
+    authLogger.debug('Middleware: no session cookie');
+    return res.status(401).json({ errors: [ERROR.unauthorized] });
   }
 
-  const token = authHeader.substring(7);
-  const payload = verifyToken(token);
-
-  if (!payload) {
-    authLogger.debug('Middleware: Invalid token');
-    return res.status(401).json({ errors: [ERROR.tokenInvalid] });
+  let session: Awaited<ReturnType<typeof findSession>>;
+  try {
+    session = await findSession(token);
+  } catch (error) {
+    authLogger.error('Middleware: session lookup failed:', error);
+    return res.status(500).json({ errors: [ERROR.serverError] });
+  }
+  if (!session) {
+    authLogger.debug('Middleware: unknown or expired session');
+    clearSessionCookie(res);
+    return res.status(401).json({ errors: [ERROR.sessionExpired] });
   }
 
-  // Enrich payload with teamId from database (only for Players)
-  if (payload.playerId) {
-    getPlayerTeamId(payload.playerId).then(teamId => {
-      authLogger.debug('Middleware: Token valid for player', payload.email, 'team:', teamId);
-      req.account = { ...payload, teamId };
-      next();
-    }).catch(error => {
-      authLogger.error('Error fetching team:', error);
-      req.account = payload;
-      next();
-    });
-  } else {
-    // Manager or Admin - no teamId needed
-    authLogger.debug('Middleware: Token valid for', payload.accountType, payload.email);
-    req.account = payload;
-    next();
-  }
+  if (session.renewedUntil) setSessionCookie(res, token, session.renewedUntil);
+  req.account = sessionAccount(session.account);
+  authLogger.debug('Middleware: session of', req.account.accountType, req.account.email);
+  next();
 }
 
 /**

@@ -38,15 +38,18 @@ model LinkedAccountGroup {
   accounts  User[]
 }
 
+// Who a request acts for. The browser keeps a random token in a cookie; only
+// its hash is kept here, so a copy of the database opens no session
 model Session {
   id        String   @id @default(cuid())
   userId    String
-  token     String   @unique
-  expiresAt DateTime
+  tokenHash String   @unique // SHA-256 of the token, hex
+  expiresAt DateTime // Pushed back while the session is used
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([token])
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 // ============================================

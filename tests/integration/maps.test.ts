@@ -3,7 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import { app } from '../../server/src/app';
-import { createAuthenticatedUser, createUserWithTeam } from './helpers/auth';
+import { createAuthenticatedUser, createUserWithTeam, authHeader } from './helpers/auth';
 import { prisma } from './helpers/db';
 import { ERROR } from '@shared/constants/error.constants';
 
@@ -21,7 +21,7 @@ describe('Maps API', () => {
 
       const res = await request(app)
         .get('/api/maps')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
@@ -45,7 +45,7 @@ describe('Maps API', () => {
       const res = await request(app).get('/api/maps');
 
       expect(res.status).toBe(401);
-      expect(res.body.errors).toContain(ERROR.tokenMissing);
+      expect(res.body.errors).toContain(ERROR.unauthorized);
     });
 
     it('should reject user without team', async () => {
@@ -53,7 +53,7 @@ describe('Maps API', () => {
 
       const res = await request(app)
         .get('/api/maps')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(403);
       expect(res.body.errors).toContain(ERROR.teamRequiredForMaps);
@@ -87,7 +87,7 @@ describe('Maps API', () => {
       // Team1 should only see their plans
       const res1 = await request(app)
         .get('/api/maps')
-        .set('Authorization', `Bearer ${token1}`);
+        .set(authHeader(token1));
 
       expect(res1.status).toBe(200);
       const allPlanNames1 = res1.body.flatMap((m: any) => m.gamePlans?.map((p: any) => p.name) || []);
@@ -97,7 +97,7 @@ describe('Maps API', () => {
       // Team2 should only see their plans
       const res2 = await request(app)
         .get('/api/maps')
-        .set('Authorization', `Bearer ${token2}`);
+        .set(authHeader(token2));
 
       expect(res2.status).toBe(200);
       const allPlanNames2 = res2.body.flatMap((m: any) => m.gamePlans?.map((p: any) => p.name) || []);

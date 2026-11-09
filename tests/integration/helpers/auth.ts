@@ -1,7 +1,9 @@
 // Integration tests - Authentication helpers
 
 import request from 'supertest';
+import type { Response } from 'supertest';
 import { app } from '../../../server/src/app';
+import { SESSION_COOKIE } from '../../../server/src/utils/session-cookie';
 import { prisma } from './db';
 import type { User } from '@prisma/client';
 import { PASSWORD_MIN_LENGTH, NAME_MIN_LENGTH, TEAM_NAME_MIN_LENGTH } from '@shared/constants/validation.constants';
@@ -47,17 +49,28 @@ export async function createTestUser(options: CreateUserOptions = {}): Promise<U
 }
 
 /**
- * Check if a string is a valid JWT format (3 base64 parts separated by dots)
+ * The session cookie a response sets, as the browser would store it: its value
+ * and attributes. Null when the response sets none.
  */
-export function isValidJwtFormat(token: string): boolean {
-  if (!token) return false;
+export function sessionCookieOf(res: Response): string | null {
+  const header = res.headers['set-cookie'] as unknown as string[] | string | undefined;
+  const cookies = Array.isArray(header) ? header : header ? [header] : [];
+  return cookies.find(cookie => cookie.startsWith(`${SESSION_COOKIE}=`)) ?? null;
+}
 
-  const parts = token.split('.');
-  if (parts.length !== 3) return false;
+/** The session token a response hands over in its cookie; throws when there is none */
+export function sessionToken(res: Response): string {
+  const cookie = sessionCookieOf(res);
+  const token = cookie?.slice(SESSION_COOKIE.length + 1).split(';')[0];
+  if (!token) {
+    throw new Error(`No session cookie in the response: ${JSON.stringify(res.headers['set-cookie'])}`);
+  }
+  return token;
+}
 
-  // Check each part is valid base64url
-  const base64UrlRegex = /^[A-Za-z0-9_-]+$/;
-  return parts.every(part => part.length > 0 && base64UrlRegex.test(part));
+/** The header a request carries the session with, as a browser sends its cookie */
+export function authHeader(token: string): { Cookie: string } {
+  return { Cookie: `${SESSION_COOKIE}=${token}` };
 }
 
 /**
@@ -82,7 +95,7 @@ export async function createAuthenticatedUser(options: CreateUserOptions = {}): 
     throw new Error(`Failed to login: ${JSON.stringify(loginRes.body)}`);
   }
 
-  return { user, token: loginRes.body.token };
+  return { user, token: sessionToken(loginRes) };
 }
 
 /**
@@ -93,7 +106,7 @@ export async function createTestTeam(token: string, name?: string): Promise<{ id
 
   const res = await request(app)
     .post('/api/teams')
-    .set('Authorization', `Bearer ${token}`)
+    .set(authHeader(token))
     .send({ name: teamName });
 
   if (res.status !== 201) {
@@ -135,13 +148,13 @@ export async function createTeamMember(
 ): Promise<{ user: User; token: string; playerId: string }> {
   const invite = await request(app)
     .post(`/api/teams/${teamId}/invites`)
-    .set('Authorization', `Bearer ${leaderToken}`)
+    .set(authHeader(leaderToken))
     .send({ expiresInHours: 24, maxUses: 1 });
   if (invite.status !== 201) {
     throw new Error(`Failed to invite a member: ${JSON.stringify(invite.body)}`);
   }
   const { token, user } = await createAuthenticatedUser();
-  const joined = await request(app).post(`/api/invites/${invite.body.code}/join`).set('Authorization', `Bearer ${token}`);
+  const joined = await request(app).post(`/api/invites/${invite.body.code}/join`).set(authHeader(token));
   if (joined.status !== 200) {
     throw new Error(`Failed to join the team: ${JSON.stringify(joined.body)}`);
   }
@@ -152,7 +165,7 @@ export async function createTeamMember(
   };
   const granted = await request(app)
     .put(`/api/teams/current/members/${user.id}/permissions`)
-    .set('Authorization', `Bearer ${leaderToken}`)
+    .set(authHeader(leaderToken))
     .send({ permissions });
   if (granted.status !== 200) {
     throw new Error(`Failed to set the member's permissions: ${JSON.stringify(granted.body)}`);
@@ -195,5 +208,5 @@ export async function createAuthenticatedAdmin(options: CreateUserOptions & {
     throw new Error(`Failed to login admin: ${JSON.stringify(loginRes.body)}`);
   }
 
-  return { user, token: loginRes.body.token, adminId: admin.id };
+  return { user, token: sessionToken(loginRes), adminId: admin.id };
 }

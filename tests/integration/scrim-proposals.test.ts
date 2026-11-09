@@ -5,7 +5,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
 import { app } from '../../server/src/app';
-import { createAuthenticatedUser, createUserWithTeam } from './helpers/auth';
+import { createAuthenticatedUser, createUserWithTeam, authHeader } from './helpers/auth';
 import { prisma } from './helpers/db';
 import { ERROR } from '@shared/constants/error.constants';
 import { SCRIM_PROPOSAL_MESSAGE_MAX_LENGTH } from '@shared/constants/validation.constants';
@@ -56,7 +56,7 @@ beforeEach(async () => {
 async function openSearch(token: string, body: Record<string, unknown> = {}): Promise<string> {
   const res = await request(app)
     .post('/api/scrims/searches')
-    .set('Authorization', `Bearer ${token}`)
+    .set(authHeader(token))
     .send({ date: DATE, venues: [atNimes(...OFFERED)], slotCount: 2, matchCount: 1, ...body })
     .expect(201);
   return res.body.id;
@@ -65,7 +65,7 @@ async function openSearch(token: string, body: Record<string, unknown> = {}): Pr
 function propose(token: string, searchId: string, body: Record<string, unknown> = {}) {
   return request(app)
     .post(`/api/scrims/searches/${searchId}/proposals`)
-    .set('Authorization', `Bearer ${token}`)
+    .set(authHeader(token))
     .send({ evaSlotIds: RUN, ...body });
 }
 
@@ -73,7 +73,7 @@ function listAtVenue(token: string) {
   return request(app)
     .get('/api/scrims/searches')
     .query({ month: MONTH, venueIds: NIMES.id })
-    .set('Authorization', `Bearer ${token}`);
+    .set(authHeader(token));
 }
 
 async function setup(searchBody: Record<string, unknown> = {}) {
@@ -84,7 +84,7 @@ async function setup(searchBody: Record<string, unknown> = {}) {
 }
 
 function accept(token: string, proposalId: string) {
-  return request(app).put(`/api/scrims/proposals/${proposalId}/accept`).set('Authorization', `Bearer ${token}`);
+  return request(app).put(`/api/scrims/proposals/${proposalId}/accept`).set(authHeader(token));
 }
 
 async function statusOf(proposalId: string) {
@@ -223,7 +223,7 @@ describe('POST /api/scrims/searches/:id/proposals', () => {
   it('should let a team propose again after taking a proposal back', async () => {
     const { proposer, searchId } = await setup();
     const first = await propose(proposer.token, searchId).expect(201);
-    await request(app).delete(`/api/scrims/proposals/${first.body.id}`).set('Authorization', `Bearer ${proposer.token}`).expect(204);
+    await request(app).delete(`/api/scrims/proposals/${first.body.id}`).set(authHeader(proposer.token)).expect(204);
 
     const res = await propose(proposer.token, searchId);
 
@@ -342,7 +342,7 @@ describe('PUT /api/scrims/proposals/:id/accept', () => {
     // Each team sees its match in its own calendar
     const calendar = await request(app)
       .get(`/api/calendar/events?month=${MONTH}`)
-      .set('Authorization', `Bearer ${proposer.token}`);
+      .set(authHeader(proposer.token));
     expect(calendar.body).toHaveLength(1);
     expect(calendar.body[0]).toMatchObject({ title: `Scrim vs ${searcher.team.name}`, venue: { id: NIMES.id }, arenaNumber: 1 });
 
@@ -492,7 +492,7 @@ describe('PUT /api/scrims/proposals/:id/accept', () => {
   it('should refuse a proposal already answered, and answer 404 for an unknown one', async () => {
     const { searcher, proposer, searchId } = await setup();
     const proposal = await propose(proposer.token, searchId).expect(201);
-    await request(app).put(`/api/scrims/proposals/${proposal.body.id}/decline`).set('Authorization', `Bearer ${searcher.token}`).expect(200);
+    await request(app).put(`/api/scrims/proposals/${proposal.body.id}/decline`).set(authHeader(searcher.token)).expect(200);
 
     const again = await accept(searcher.token, proposal.body.id);
     expect(again.status).toBe(409);
@@ -510,7 +510,7 @@ describe('PUT /api/scrims/proposals/:id/decline', () => {
 
     const res = await request(app)
       .put(`/api/scrims/proposals/${proposal.body.id}/decline`)
-      .set('Authorization', `Bearer ${searcher.token}`);
+      .set(authHeader(searcher.token));
 
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ status: 'DECLINED', declineReason: 'BY_TEAM' });
@@ -536,7 +536,7 @@ describe('PUT /api/scrims/proposals/:id/decline', () => {
     const { proposer, searchId } = await setup();
     const proposal = await propose(proposer.token, searchId).expect(201);
 
-    const res = await request(app).put(`/api/scrims/proposals/${proposal.body.id}/decline`).set('Authorization', `Bearer ${proposer.token}`);
+    const res = await request(app).put(`/api/scrims/proposals/${proposal.body.id}/decline`).set(authHeader(proposer.token));
     expect(res.status).toBe(403);
   });
 });
@@ -546,7 +546,7 @@ describe('DELETE /api/scrims/proposals/:id', () => {
     const { searcher, proposer, searchId } = await setup();
     const proposal = await propose(proposer.token, searchId).expect(201);
 
-    const res = await request(app).delete(`/api/scrims/proposals/${proposal.body.id}`).set('Authorization', `Bearer ${proposer.token}`);
+    const res = await request(app).delete(`/api/scrims/proposals/${proposal.body.id}`).set(authHeader(proposer.token));
 
     expect(res.status).toBe(204);
     expect(await statusOf(proposal.body.id)).toBe('WITHDRAWN');
@@ -557,10 +557,10 @@ describe('DELETE /api/scrims/proposals/:id', () => {
     const { searcher, proposer, searchId } = await setup();
     const proposal = await propose(proposer.token, searchId).expect(201);
 
-    expect((await request(app).delete(`/api/scrims/proposals/${proposal.body.id}`).set('Authorization', `Bearer ${searcher.token}`)).status).toBe(403);
+    expect((await request(app).delete(`/api/scrims/proposals/${proposal.body.id}`).set(authHeader(searcher.token))).status).toBe(403);
 
     await accept(searcher.token, proposal.body.id).expect(200);
-    const late = await request(app).delete(`/api/scrims/proposals/${proposal.body.id}`).set('Authorization', `Bearer ${proposer.token}`);
+    const late = await request(app).delete(`/api/scrims/proposals/${proposal.body.id}`).set(authHeader(proposer.token));
     expect(late.status).toBe(409);
   });
 
@@ -568,7 +568,7 @@ describe('DELETE /api/scrims/proposals/:id', () => {
     const { searcher, proposer, searchId } = await setup();
     await propose(proposer.token, searchId).expect(201);
 
-    await request(app).delete(`/api/scrims/searches/${searchId}`).set('Authorization', `Bearer ${searcher.token}`).expect(204);
+    await request(app).delete(`/api/scrims/searches/${searchId}`).set(authHeader(searcher.token)).expect(204);
 
     expect(await prisma.scrimProposal.count()).toBe(0);
   });
@@ -585,7 +585,7 @@ describe('DELETE /api/scrims/matches/:eventId', () => {
   }
 
   function cancel(token: string, eventId: string) {
-    return request(app).delete(`/api/scrims/matches/${eventId}`).set('Authorization', `Bearer ${token}`);
+    return request(app).delete(`/api/scrims/matches/${eventId}`).set(authHeader(token));
   }
 
   it('should call the match off from either team: both calendars lose it, and its proposal says so', async () => {
@@ -630,7 +630,7 @@ describe('DELETE /api/scrims/matches/:eventId', () => {
     const { searcher, proposer, searchId } = await made({ matchCount: 2 }, ['a1-1920', 'a1-2000']);
     const waiting = await propose((await createUserWithTeam()).token, searchId, { evaSlotIds: ['a1-2040', 'a1-2120'] }).expect(201);
 
-    await request(app).delete(`/api/scrims/searches/${searchId}`).set('Authorization', `Bearer ${searcher.token}`).expect(204);
+    await request(app).delete(`/api/scrims/searches/${searchId}`).set(authHeader(searcher.token)).expect(204);
 
     // Out of the market, its pending proposal fallen, its match still tied to it
     expect((await prisma.scrimSearch.findUniqueOrThrow({ where: { id: searchId } })).status).toBe('MATCHED');
@@ -666,7 +666,7 @@ describe('DELETE /api/scrims/matches/:eventId', () => {
 
     const plain = await request(app)
       .post('/api/calendar/events')
-      .set('Authorization', `Bearer ${searcher.token}`)
+      .set(authHeader(searcher.token))
       .send({ date: DATE, startTime: '14:00', endTime: '15:00', type: 'EVENT', title: 'Réunion' })
       .expect(201);
     expect((await cancel(searcher.token, plain.body.id)).status).toBe(404);
@@ -680,7 +680,7 @@ describe('DELETE /api/scrims/matches/:eventId', () => {
   it('should leave a match of the matchmaking to its calling off, and keep its time and place; its title may change', async () => {
     const { searcher } = await made();
     const copy = (await prisma.calendarEvent.findMany()).find(event => event.teamId === searcher.team.id)!;
-    const auth = { Authorization: `Bearer ${searcher.token}` };
+    const auth = authHeader(searcher.token);
 
     const deleted = await request(app).delete(`/api/calendar/events/${copy.id}`).set(auth);
     expect(deleted.status).toBe(409);

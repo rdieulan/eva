@@ -2,81 +2,68 @@ import { ref, computed } from 'vue';
 import type { AccountPermissions, Account } from '@shared/types';
 import { normalizeAccountPermissions } from '@shared/utils';
 import { clearPlayersCache } from '@/api/players.api';
-import { getCurrentAccount } from '@/api/auth.api';
+import { fetchSessionAccount, getCurrentAccount } from '@/api/auth.api';
+import { markSession, markedAccountId, onSessionMarkChange, unmarkSession } from '@/api/session-mark';
 import { clearBalanceRulesCache } from '@/composables/useBalanceRules';
 
-// Global state
+// Global state. The session is a cookie the page cannot read: the account the
+// server answers for is what says who is signed in.
 const account = ref<Account | null>(null);
-const token = ref<string | null>(null);
 const isLoading = ref(true);
 const isInitialized = ref(false);
 let initPromise: Promise<void> | null = null;
-let storageListenerInitialized = false;
+let markListenerInitialized = false;
 
 /**
- * Setup listener for localStorage changes from other tabs
- * Detects when another tab logs in/out or changes account
+ * Follow the other tabs: a logout there signs this one out, a login or a
+ * switch to another account reloads it on that account
  */
-function setupStorageListener(): void {
-  if (storageListenerInitialized) return;
-  storageListenerInitialized = true;
+function setupMarkListener(): void {
+  if (markListenerInitialized) return;
+  markListenerInitialized = true;
 
-  window.addEventListener('storage', (event) => {
-    // Only react to token changes
-    if (event.key !== 'token') return;
+  onSessionMarkChange(accountId => {
+    const currentId = account.value?.id ?? null;
 
-    const currentToken = token.value;
-    const newToken = event.newValue;
-
-    // Another tab logged out
-    if (!newToken && currentToken) {
+    if (!accountId && currentId) {
       clearAuthState();
       window.location.href = '/login';
       return;
     }
 
-    // Another tab logged in with a different account
-    if (newToken && newToken !== currentToken) {
-      // Reload the page to sync with the new session
+    if (accountId && accountId !== currentId) {
       window.location.reload();
     }
   });
 }
 
-// Clear authentication state (internal, without localStorage removal)
+// Clear authentication state (internal, the mark stays)
 function clearAuthState() {
-  token.value = null;
   account.value = null;
   clearPlayersCache();
   clearBalanceRulesCache();
 }
 
-// Clear authentication
+// Clear authentication, after a logout
 function clearAuth() {
   clearAuthState();
-  localStorage.removeItem('token');
-  localStorage.removeItem('account');
+  unmarkSession();
 }
 
-// Set account after login
-function setAuth(newToken: string, newAccount: Account) {
-  token.value = newToken;
+// Set the account a login or a switch opened a session for
+function setAuth(newAccount: Account) {
   account.value = newAccount;
   isInitialized.value = true;
   isLoading.value = false;
-  localStorage.setItem('token', newToken);
-  localStorage.setItem('account', JSON.stringify(newAccount));
+  markSession(newAccount.id);
 }
 
 // Refresh account data from server (after team join, permission changes, etc.)
 async function refreshAccount(): Promise<void> {
-  const currentToken = token.value || localStorage.getItem('token');
-  if (!currentToken) return;
+  if (!account.value) return;
 
   try {
-    const refreshedAccount = await getCurrentAccount();
-    account.value = refreshedAccount;
-    localStorage.setItem('account', JSON.stringify(refreshedAccount));
+    account.value = await getCurrentAccount();
     // Clear caches as team data may have changed
     clearPlayersCache();
     clearBalanceRulesCache();
@@ -103,25 +90,23 @@ async function doInitAuth(): Promise<void> {
   isLoading.value = true;
 
   // Setup cross-tab session sync
-  setupStorageListener();
+  setupMarkListener();
 
-  const storedToken = localStorage.getItem('token');
-
-  if (!storedToken) {
-    isLoading.value = false;
-    isInitialized.value = true;
-    return;
-  }
-
-  // Validate token with server
-  try {
-    const validatedAccount = await getCurrentAccount();
-    token.value = storedToken;
-    account.value = validatedAccount;
-    localStorage.setItem('account', JSON.stringify(validatedAccount));
-  } catch {
-    // Token invalid or server error
-    clearAuth();
+  // A browser that never signed in asks nothing: a visitor of a public page
+  // leaves no refused request behind
+  if (markedAccountId()) {
+    try {
+      const sessionAccount = await fetchSessionAccount();
+      if (sessionAccount) {
+        account.value = sessionAccount;
+        markSession(sessionAccount.id);
+      } else {
+        // The session ended (logout elsewhere, expired): the mark goes with it
+        unmarkSession();
+      }
+    } catch {
+      // The server did not answer: signed out for now, the mark stays for the next load
+    }
   }
 
   isLoading.value = false;
@@ -134,14 +119,13 @@ const permissions = computed<AccountPermissions>(() => normalizeAccountPermissio
 
 // Exported composable
 export function useAuth() {
-  const isAuthenticated = computed(() => !!(token.value && account.value));
+  const isAuthenticated = computed(() => !!account.value);
   const isLeader = computed(() => account.value?.isLeader ?? false);
   const hasTeam = computed(() => !!account.value?.teamId);
 
   return {
     // State
     account: computed(() => account.value),
-    token: computed(() => token.value),
     isAuthenticated,
     isLeader,
     hasTeam,

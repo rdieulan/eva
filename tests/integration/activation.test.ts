@@ -4,6 +4,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import { app } from '../../server/src/app';
 import { prisma } from './helpers/db';
+import { sessionToken } from './helpers/auth';
 import { ERROR } from '@shared/constants/error.constants';
 import { PASSWORD_MIN_LENGTH } from '@shared/constants/validation.constants';
 
@@ -170,7 +171,7 @@ describe('Account Activation API', () => {
       expect(loginRes.body.account).toBeDefined();
       expect(loginRes.body.account.email).toBe(email);
       expect(loginRes.body.account.accountType).toBe('manager');
-      expect(loginRes.body.token).toBeDefined();
+      expect(sessionToken(loginRes)).toBeTruthy();
 
       // Verify session was created in DB
       const user = await prisma.user.findUnique({ where: { email } });

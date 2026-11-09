@@ -1,37 +1,25 @@
 // API utilities
 
 import { ApiError } from '@/api/error';
+import { unmarkSession } from '@/api/session-mark';
 import { ERROR } from '@shared/constants';
 
 // Flag to prevent multiple simultaneous logout redirects
 let isLoggingOut = false;
 
 /**
- * Handle 401 unauthorized errors globally
- * Clears auth state and redirects to login
+ * Handle 401 unauthorized errors globally: the session ended, back to the login page
  */
 function handleUnauthorized(): void {
   if (isLoggingOut) return;
   isLoggingOut = true;
 
-  // Clear auth data from localStorage
-  localStorage.removeItem('token');
-  localStorage.removeItem('account');
-
-  // Redirect to login
+  unmarkSession();
   window.location.href = '/login';
 }
 
-/**
- * Get authentication headers for API calls
- */
-export function getAuthHeaders(): HeadersInit {
-  const token = localStorage.getItem('token');
-  return {
-    'Content-Type': 'application/json',
-    ...(token && { Authorization: `Bearer ${token}` }),
-  };
-}
+// The session itself is a cookie, sent by the browser with every request to the API
+const JSON_HEADERS: HeadersInit = { 'Content-Type': 'application/json' };
 
 /**
  * Authenticated fetch wrapper
@@ -55,7 +43,7 @@ export async function authFetch<T>(
   const response = await fetch(url, {
     ...options,
     headers: {
-      ...getAuthHeaders(),
+      ...JSON_HEADERS,
       ...options.headers,
     },
   });

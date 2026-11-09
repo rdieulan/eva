@@ -6,7 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
 import { app } from '../../server/src/app';
-import { createUserWithTeam } from './helpers/auth';
+import { createUserWithTeam, authHeader } from './helpers/auth';
 import { prisma } from './helpers/db';
 import { ERROR } from '@shared/constants/error.constants';
 import { fetchLocationSessions } from '../../server/src/integrations/eva/eva-sessions';
@@ -51,7 +51,7 @@ beforeEach(async () => {
 async function openSearch(token: string, body: Record<string, unknown>): Promise<string> {
   const res = await request(app)
     .post('/api/scrims/searches')
-    .set('Authorization', `Bearer ${token}`)
+    .set(authHeader(token))
     .send({ date: DATE, slotCount: 2, matchCount: 1, ...body })
     .expect(201);
   return res.body.id;
@@ -97,10 +97,10 @@ describe('GET /api/public/venues/:slug/board', () => {
     // 19:20 to 20:40: arena 2 at 20:00 is taken by the time, 20:40 is left alone on it
     const proposal = await request(app)
       .post(`/api/scrims/searches/${searchId}/proposals`)
-      .set('Authorization', `Bearer ${opponent.token}`)
+      .set(authHeader(opponent.token))
       .send({ evaSlotIds: ['a1-1920', 'a1-2000'] })
       .expect(201);
-    await request(app).put(`/api/scrims/proposals/${proposal.body.id}/accept`).set('Authorization', `Bearer ${searcher.token}`).expect(200);
+    await request(app).put(`/api/scrims/proposals/${proposal.body.id}/accept`).set(authHeader(searcher.token)).expect(200);
 
     const nimes = (await board('nimes')).body.searches;
     expect(nimes).toHaveLength(1);
@@ -130,7 +130,7 @@ describe('GET /api/public/venues/:slug/board', () => {
     const searchId = await openSearch(searcher.token, { venues: [atNimes('a1-1920', 'a1-2000', 'a1-2040', 'a1-2120')] });
     await request(app)
       .post(`/api/scrims/searches/${searchId}/proposals`)
-      .set('Authorization', `Bearer ${opponent.token}`)
+      .set(authHeader(opponent.token))
       .send({ evaSlotIds: ['a1-2040', 'a1-2120'], message: 'On est chauds' })
       .expect(201);
 

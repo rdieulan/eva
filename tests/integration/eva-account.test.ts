@@ -6,7 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
 import { app } from '../../server/src/app';
-import { createAuthenticatedUser, createAuthenticatedAdmin } from './helpers/auth';
+import { createAuthenticatedUser, createAuthenticatedAdmin, authHeader } from './helpers/auth';
 import { prisma } from './helpers/db';
 import { ERROR } from '@shared/constants/error.constants';
 import { EVA_USERNAME_MAX_LENGTH } from '@shared/constants/validation.constants';
@@ -32,7 +32,7 @@ describe('eva.gg account API', () => {
 
       const res = await request(app)
         .get('/api/players/me/eva-account')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(200);
       expect(res.body).toBeNull();
@@ -43,7 +43,7 @@ describe('eva.gg account API', () => {
 
       const res = await request(app)
         .get('/api/players/me/eva-account')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(403);
       expect(res.body.errors).toContain(ERROR.playerAccountRequired);
@@ -62,7 +62,7 @@ describe('eva.gg account API', () => {
 
       const res = await request(app)
         .put('/api/players/me/eva-account')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ username: '  Sib#202617 ' });
 
       expect(res.status).toBe(200);
@@ -77,7 +77,7 @@ describe('eva.gg account API', () => {
 
       const reread = await request(app)
         .get('/api/players/me/eva-account')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
       expect(reread.body).toEqual(res.body);
     });
 
@@ -87,7 +87,7 @@ describe('eva.gg account API', () => {
 
       const res = await request(app)
         .put('/api/players/me/eva-account')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ username: 'sib#202617' });
 
       expect(res.body.username).toBe('Sib#202617');
@@ -98,14 +98,14 @@ describe('eva.gg account API', () => {
       lookup.mockResolvedValueOnce({ player: SIB });
       await request(app)
         .put('/api/players/me/eva-account')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ username: 'Sib#202617' })
         .expect(200);
 
       lookup.mockResolvedValueOnce({ player: { userId: 177352, username: 'RONxSib#177352', displayName: 'RONxSib' } });
       const res = await request(app)
         .put('/api/players/me/eva-account')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ username: 'RONxSib#177352' });
 
       expect(res.status).toBe(200);
@@ -120,7 +120,7 @@ describe('eva.gg account API', () => {
 
       const res = await request(app)
         .put('/api/players/me/eva-account')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ username: 'Nobody#000000' });
 
       expect(res.status).toBe(404);
@@ -135,7 +135,7 @@ describe('eva.gg account API', () => {
 
       const res = await request(app)
         .put('/api/players/me/eva-account')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ username: 'Shy#123456' });
 
       expect(res.status).toBe(422);
@@ -149,13 +149,13 @@ describe('eva.gg account API', () => {
 
       await request(app)
         .put('/api/players/me/eva-account')
-        .set('Authorization', `Bearer ${first.token}`)
+        .set(authHeader(first.token))
         .send({ username: 'Sib#202617' })
         .expect(200);
 
       const res = await request(app)
         .put('/api/players/me/eva-account')
-        .set('Authorization', `Bearer ${second.token}`)
+        .set(authHeader(second.token))
         .send({ username: 'Sib#202617' });
 
       expect(res.status).toBe(409);
@@ -170,13 +170,13 @@ describe('eva.gg account API', () => {
 
       await request(app)
         .put('/api/players/me/eva-account')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ username: 'Sib#202617' })
         .expect(200);
 
       const res = await request(app)
         .put('/api/players/me/eva-account')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ username: 'Sib#202617' });
 
       expect(res.status).toBe(200);
@@ -189,7 +189,7 @@ describe('eva.gg account API', () => {
       for (const body of [{}, { username: '' }, { username: '   ' }, { username: 42 }]) {
         const res = await request(app)
           .put('/api/players/me/eva-account')
-          .set('Authorization', `Bearer ${token}`)
+          .set(authHeader(token))
           .send(body);
 
         expect(res.status).toBe(400);
@@ -203,7 +203,7 @@ describe('eva.gg account API', () => {
 
       const res = await request(app)
         .put('/api/players/me/eva-account')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ username: 'x'.repeat(EVA_USERNAME_MAX_LENGTH + 1) });
 
       expect(res.status).toBe(400);
@@ -217,7 +217,7 @@ describe('eva.gg account API', () => {
 
       const res = await request(app)
         .put('/api/players/me/eva-account')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ username: 'Sib#202617' });
 
       expect(res.status).toBe(502);
@@ -231,7 +231,7 @@ describe('eva.gg account API', () => {
 
       const res = await request(app)
         .put('/api/players/me/eva-account')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ username: 'Sib#202617' });
 
       expect(res.status).toBe(403);
@@ -245,13 +245,13 @@ describe('eva.gg account API', () => {
       lookup.mockResolvedValue({ player: SIB });
       await request(app)
         .put('/api/players/me/eva-account')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ username: 'Sib#202617' })
         .expect(200);
 
       const res = await request(app)
         .delete('/api/players/me/eva-account')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(204);
       const player = await prisma.player.findUnique({ where: { id: user.playerId! } });
@@ -261,7 +261,7 @@ describe('eva.gg account API', () => {
 
       const reread = await request(app)
         .get('/api/players/me/eva-account')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
       expect(reread.body).toBeNull();
     });
 
@@ -270,7 +270,7 @@ describe('eva.gg account API', () => {
 
       const res = await request(app)
         .delete('/api/players/me/eva-account')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(204);
     });
@@ -280,7 +280,7 @@ describe('eva.gg account API', () => {
 
       const res = await request(app)
         .delete('/api/players/me/eva-account')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(403);
     });

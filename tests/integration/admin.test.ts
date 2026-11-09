@@ -4,7 +4,7 @@ import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import { app } from '../../server/src/app';
 import { prisma } from './helpers/db';
-import { createAuthenticatedUser, createAuthenticatedAdmin, createUserWithTeam } from './helpers/auth';
+import { createAuthenticatedUser, createAuthenticatedAdmin, createUserWithTeam, authHeader, sessionToken } from './helpers/auth';
 import { ERROR } from '@shared/constants/error.constants';
 import { PASSWORD_MIN_LENGTH } from '@shared/constants/validation.constants';
 import { DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
@@ -39,7 +39,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .get('/api/admin/venues')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
@@ -49,7 +49,7 @@ describe('Admin API', () => {
     it('rejects without authentication', async () => {
       const res = await request(app).get('/api/admin/venues');
       expect(res.status).toBe(401);
-      expect(res.body.errors).toContain(ERROR.tokenMissing);
+      expect(res.body.errors).toContain(ERROR.unauthorized);
     });
 
     it('rejects a non-admin account (player)', async () => {
@@ -57,7 +57,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .get('/api/admin/venues')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(403);
       expect(res.body.errors).toContain(ERROR.adminRequired);
@@ -70,7 +70,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .post('/api/admin/venues')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({
           name: 'EVA Lyon',
           city: 'Lyon',
@@ -91,7 +91,7 @@ describe('Admin API', () => {
       const { token } = await createAuthenticatedAdmin();
       const create = (name: string) => request(app)
         .post('/api/admin/venues')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ name, city: 'Nîmes', address: '1 rue' });
 
       const first = await create('Nîmes');
@@ -102,7 +102,7 @@ describe('Admin API', () => {
       // Renamed, a venue keeps the address already shared
       const renamed = await request(app)
         .put(`/api/admin/venues/${first.body.id}`)
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ name: 'Nîmes Centre' });
       expect(renamed.body).toMatchObject({ name: 'Nîmes Centre', slug: 'nimes' });
     });
@@ -112,7 +112,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .post('/api/admin/venues')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ name: '  Venue Test  ', city: 'Paris', address: ' addr ', phone: '   ' });
 
       expect(res.status).toBe(201);
@@ -126,7 +126,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .post('/api/admin/venues')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ name: '', city: '', address: '' });
 
       expect(res.status).toBe(400);
@@ -141,7 +141,7 @@ describe('Admin API', () => {
       const { token } = await createAuthenticatedUser();
       const res = await request(app)
         .post('/api/admin/venues')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ name: 'X', city: 'Y', address: 'Z' });
       expect(res.status).toBe(403);
     });
@@ -160,7 +160,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .post('/api/admin/venues')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ name: 'X', city: 'Y', address: 'Z' });
 
       expect(res.status).toBe(403);
@@ -173,7 +173,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .post('/api/admin/venues')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({
           name: 'EVA Nîmes',
           city: 'Nîmes',
@@ -196,7 +196,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .post('/api/admin/venues')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ name: 'EVA Nîmes', city: 'Nîmes', address: 'addr', discord: 'evanimes' });
 
       expect(res.status).toBe(400);
@@ -209,14 +209,14 @@ describe('Admin API', () => {
 
       const set = await request(app)
         .put(`/api/admin/venues/${venue.id}`)
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ twitch: 'https://www.twitch.tv/evanimes' });
       expect(set.status).toBe(200);
       expect(set.body.twitch).toBe('https://www.twitch.tv/evanimes');
 
       const clear = await request(app)
         .put(`/api/admin/venues/${venue.id}`)
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ twitch: '' });
       expect(clear.status).toBe(200);
       expect(clear.body.twitch).toBeNull();
@@ -230,7 +230,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .put(`/api/admin/venues/${venue.id}`)
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ name: 'New' });
 
       expect(res.status).toBe(200);
@@ -243,7 +243,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .put('/api/admin/venues/non-existent')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ name: 'Hello' });
 
       expect(res.status).toBe(404);
@@ -256,7 +256,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .put(`/api/admin/venues/${venue.id}`)
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({});
 
       expect(res.status).toBe(400);
@@ -276,7 +276,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .delete(`/api/admin/venues/${venue.id}`)
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(200);
 
@@ -310,7 +310,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .delete(`/api/admin/venues/${venue.id}`)
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(200);
 
@@ -324,7 +324,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .delete('/api/admin/venues/non-existent')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(404);
     });
@@ -340,12 +340,12 @@ describe('Admin API', () => {
 
       await request(app)
         .post('/api/admin/managers')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ email: `manager-${Date.now()}@example.com`, name: 'Mgrname', venueIds: [venue.id] });
 
       const res = await request(app)
         .get('/api/admin/managers')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
@@ -358,7 +358,7 @@ describe('Admin API', () => {
       const { token } = await createAuthenticatedUser();
       const res = await request(app)
         .get('/api/admin/managers')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
       expect(res.status).toBe(403);
     });
   });
@@ -372,7 +372,7 @@ describe('Admin API', () => {
       const email = `manager-${Date.now()}@example.com`;
       const res = await request(app)
         .post('/api/admin/managers')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ email, name: 'Mgrname', venueIds: [v1.id, v2.id] });
 
       expect(res.status).toBe(201);
@@ -400,7 +400,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .post('/api/admin/managers')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ email: `m-${Date.now()}@example.com`, name: 'Mgrname', venueIds: [] });
 
       expect(res.status).toBe(201);
@@ -412,7 +412,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .post('/api/admin/managers')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ email: user.email, name: 'Mgrname', venueIds: [] });
 
       expect(res.status).toBe(409);
@@ -424,7 +424,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .post('/api/admin/managers')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ email: `m-${Date.now()}@example.com`, name: 'Mgrname', venueIds: ['nope'] });
 
       expect(res.status).toBe(400);
@@ -436,7 +436,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .post('/api/admin/managers')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ email: 'not-an-email', name: 'a', venueIds: [] });
 
       expect(res.status).toBe(400);
@@ -457,7 +457,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .post('/api/admin/managers')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ email: `m-${Date.now()}@example.com`, name: 'Mgrname', venueIds: [] });
 
       expect(res.status).toBe(403);
@@ -473,12 +473,12 @@ describe('Admin API', () => {
 
       const created = await request(app)
         .post('/api/admin/managers')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ email: `m-${Date.now()}@example.com`, name: 'Mgrname', venueIds: [v1.id, v2.id] });
 
       const res = await request(app)
         .put(`/api/admin/managers/${created.body.manager.id}`)
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ venueIds: [v3.id] });
 
       expect(res.status).toBe(200);
@@ -490,7 +490,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .put('/api/admin/managers/non-existent')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ venueIds: [] });
 
       expect(res.status).toBe(404);
@@ -501,7 +501,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .put('/api/admin/managers/anything')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ venueIds: 'not-an-array' });
 
       expect(res.status).toBe(400);
@@ -515,7 +515,7 @@ describe('Admin API', () => {
 
       const created = await request(app)
         .post('/api/admin/managers')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ email: `m-${Date.now()}@example.com`, name: 'Mgrname', venueIds: [] });
 
       const managerId = created.body.manager.id;
@@ -523,7 +523,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .delete(`/api/admin/managers/${managerId}`)
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(200);
 
@@ -538,7 +538,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .delete('/api/admin/managers/non-existent')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(404);
     });
@@ -571,7 +571,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .get('/api/admin/admins')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
@@ -584,7 +584,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .get('/api/admin/admins')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(403);
     });
@@ -594,7 +594,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .get('/api/admin/admins')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(403);
       expect(res.body.errors).toContain(ERROR.adminRequired);
@@ -608,7 +608,7 @@ describe('Admin API', () => {
       const email = `admin-${Date.now()}@example.com`;
       const res = await request(app)
         .post('/api/admin/admins')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ email, name: 'Newadmin', permissions: REGULAR_ADMIN_PERMISSIONS });
 
       expect(res.status).toBe(201);
@@ -637,7 +637,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .post('/api/admin/admins')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ email: user.email, name: 'Newadmin', permissions: FULL_ADMIN_PERMISSIONS });
 
       expect(res.status).toBe(409);
@@ -649,7 +649,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .post('/api/admin/admins')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ email: `admin-${Date.now()}@example.com`, name: 'Newadmin', permissions: { foo: 'bar' } });
 
       expect(res.status).toBe(400);
@@ -661,7 +661,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .post('/api/admin/admins')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ email: `admin-${Date.now()}@example.com`, name: 'Newadmin', permissions: FULL_ADMIN_PERMISSIONS });
 
       expect(res.status).toBe(403);
@@ -674,13 +674,13 @@ describe('Admin API', () => {
 
       const created = await request(app)
         .post('/api/admin/admins')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ email: `admin-${Date.now()}@example.com`, name: 'Newadmin', permissions: REGULAR_ADMIN_PERMISSIONS });
       expect(created.status).toBe(201);
 
       const updated = await request(app)
         .put(`/api/admin/admins/${created.body.admin.id}`)
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({
           permissions: {
             system: {
@@ -701,7 +701,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .put(`/api/admin/admins/${adminId}`)
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ permissions: REGULAR_ADMIN_PERMISSIONS });
 
       expect(res.status).toBe(409);
@@ -714,14 +714,14 @@ describe('Admin API', () => {
       // Create a second super admin
       const second = await request(app)
         .post('/api/admin/admins')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ email: `super-${Date.now()}@example.com`, name: 'Othersuper', permissions: FULL_ADMIN_PERMISSIONS });
       expect(second.status).toBe(201);
 
       // Demote it — that works because there's still 1 super admin (the caller)
       const res = await request(app)
         .put(`/api/admin/admins/${second.body.admin.id}`)
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ permissions: REGULAR_ADMIN_PERMISSIONS });
 
       expect(res.status).toBe(200);
@@ -733,7 +733,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .put('/api/admin/admins/non-existent')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ permissions: FULL_ADMIN_PERMISSIONS });
 
       expect(res.status).toBe(404);
@@ -746,13 +746,13 @@ describe('Admin API', () => {
 
       const created = await request(app)
         .post('/api/admin/admins')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ email: `admin-${Date.now()}@example.com`, name: 'Newadmin', permissions: REGULAR_ADMIN_PERMISSIONS });
       expect(created.status).toBe(201);
 
       const res = await request(app)
         .delete(`/api/admin/admins/${created.body.admin.id}`)
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(200);
 
@@ -767,7 +767,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .delete(`/api/admin/admins/${adminId}`)
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(409);
       expect(res.body.errors).toContain(ERROR.adminCannotDeleteSelf);
@@ -778,7 +778,7 @@ describe('Admin API', () => {
       const { token } = await createAuthenticatedAdmin();
       const other = await request(app)
         .post('/api/admin/admins')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ email: `admin-${Date.now()}@example.com`, name: 'Newadmin', permissions: REGULAR_ADMIN_PERMISSIONS });
       expect(other.status).toBe(201);
 
@@ -794,7 +794,7 @@ describe('Admin API', () => {
       // The non-super admin doesn't have canManageAdmins → can't even call
       const cantDelete = await request(app)
         .delete(`/api/admin/admins/${other.body.admin.id}`)
-        .set('Authorization', `Bearer ${loginOther.body.token}`);
+        .set(authHeader(sessionToken(loginOther)));
       expect(cantDelete.status).toBe(403);
 
       // The first super admin tries to delete itself — refused (cannotDeleteSelf wins)
@@ -813,7 +813,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .delete('/api/admin/admins/non-existent')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(404);
     });
@@ -829,7 +829,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .get('/api/admin/players')
-        .set('Authorization', `Bearer ${adminToken}`);
+        .set(authHeader(adminToken));
 
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
@@ -846,7 +846,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .get('/api/admin/players')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(403);
     });
@@ -861,7 +861,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .post(`/api/admin/players/${player!.id}/reset-password`)
-        .set('Authorization', `Bearer ${adminToken}`);
+        .set(authHeader(adminToken));
 
       expect(res.status).toBe(200);
       expect(res.body.token).toBeDefined();
@@ -898,7 +898,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .post('/api/admin/players/non-existent/reset-password')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(404);
     });
@@ -908,7 +908,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .post('/api/admin/players/anything/reset-password')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(403);
     });
@@ -937,7 +937,7 @@ describe('Admin API', () => {
       const player = await prisma.player.findFirst({ where: { user: { id: user.id } } });
       const issue = await request(app)
         .post(`/api/admin/players/${player!.id}/reset-password`)
-        .set('Authorization', `Bearer ${adminToken}`);
+        .set(authHeader(adminToken));
 
       const res = await request(app)
         .post('/api/auth/reset-password')
@@ -955,7 +955,7 @@ describe('Admin API', () => {
       const player = await prisma.player.findFirst({ where: { user: { id: user.id } } });
       const issue = await request(app)
         .post(`/api/admin/players/${player!.id}/reset-password`)
-        .set('Authorization', `Bearer ${adminToken}`);
+        .set(authHeader(adminToken));
 
       const first = await request(app)
         .post('/api/auth/reset-password')
@@ -978,7 +978,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .delete(`/api/admin/players/${player!.id}`)
-        .set('Authorization', `Bearer ${adminToken}`);
+        .set(authHeader(adminToken));
 
       expect(res.status).toBe(200);
 
@@ -995,7 +995,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .delete(`/api/admin/players/${leader!.id}`)
-        .set('Authorization', `Bearer ${adminToken}`);
+        .set(authHeader(adminToken));
 
       expect(res.status).toBe(409);
       expect(res.body.errors).toContain(ERROR.playerCannotDeleteLeader);
@@ -1008,7 +1008,7 @@ describe('Admin API', () => {
       const { token } = await createAuthenticatedAdmin();
       const res = await request(app)
         .delete('/api/admin/players/non-existent')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
       expect(res.status).toBe(404);
     });
 
@@ -1016,7 +1016,7 @@ describe('Admin API', () => {
       const { token } = await createAuthenticatedUser();
       const res = await request(app)
         .delete('/api/admin/players/anything')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
       expect(res.status).toBe(403);
     });
   });
@@ -1031,7 +1031,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .get('/api/admin/teams')
-        .set('Authorization', `Bearer ${adminToken}`);
+        .set(authHeader(adminToken));
 
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
@@ -1049,7 +1049,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .get(`/api/admin/teams/${team.id}`)
-        .set('Authorization', `Bearer ${adminToken}`);
+        .set(authHeader(adminToken));
 
       expect(res.status).toBe(200);
       expect(res.body.id).toBe(team.id);
@@ -1063,7 +1063,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .get('/api/admin/teams/non-existent')
-        .set('Authorization', `Bearer ${adminToken}`);
+        .set(authHeader(adminToken));
 
       expect(res.status).toBe(404);
     });
@@ -1079,7 +1079,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .delete(`/api/admin/teams/${team.id}`)
-        .set('Authorization', `Bearer ${adminToken}`);
+        .set(authHeader(adminToken));
 
       expect(res.status).toBe(200);
 
@@ -1100,18 +1100,18 @@ describe('Admin API', () => {
 
       const invite = await request(app)
         .post(`/api/teams/${team.id}/invites`)
-        .set('Authorization', `Bearer ${leaderToken}`)
+        .set(authHeader(leaderToken))
         .send({ expiresInHours: 24, maxUses: 1 });
       expect(invite.status).toBe(201);
 
       const joined = await request(app)
         .post(`/api/invites/${invite.body.code}/join`)
-        .set('Authorization', `Bearer ${memberToken}`);
+        .set(authHeader(memberToken));
       expect(joined.status).toBe(200);
 
       const res = await request(app)
         .delete(`/api/admin/teams/${team.id}`)
-        .set('Authorization', `Bearer ${adminToken}`);
+        .set(authHeader(adminToken));
 
       expect(res.status).toBe(200);
 
@@ -1125,17 +1125,17 @@ describe('Admin API', () => {
 
       const blocked = await request(app)
         .delete(`/api/admin/players/${leader.playerId}`)
-        .set('Authorization', `Bearer ${adminToken}`);
+        .set(authHeader(adminToken));
       expect(blocked.status).toBe(409);
 
       await request(app)
         .delete(`/api/admin/teams/${team.id}`)
-        .set('Authorization', `Bearer ${adminToken}`)
+        .set(authHeader(adminToken))
         .expect(200);
 
       const deleted = await request(app)
         .delete(`/api/admin/players/${leader.playerId}`)
-        .set('Authorization', `Bearer ${adminToken}`);
+        .set(authHeader(adminToken));
       expect(deleted.status).toBe(200);
     });
 
@@ -1144,7 +1144,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .delete('/api/admin/teams/non-existent')
-        .set('Authorization', `Bearer ${adminToken}`);
+        .set(authHeader(adminToken));
 
       expect(res.status).toBe(404);
       expect(res.body.errors).toContain(ERROR.teamNotFound);
@@ -1155,7 +1155,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .delete('/api/admin/teams/anything')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(403);
       expect(res.body.errors).toContain(ERROR.adminRequired);
@@ -1173,7 +1173,7 @@ describe('Admin API', () => {
       const email = `mgr-${Date.now()}@example.com`;
       const created = await request(app)
         .post('/api/admin/managers')
-        .set('Authorization', `Bearer ${adminToken}`)
+        .set(authHeader(adminToken))
         .send({ email, name: 'Mgrname', venueIds: [] });
       expect(created.status).toBe(201);
 
@@ -1189,7 +1189,7 @@ describe('Admin API', () => {
 
       const res = await request(app)
         .get('/api/admin/venues')
-        .set('Authorization', `Bearer ${login.body.token}`);
+        .set(authHeader(sessionToken(login)));
       expect(res.status).toBe(403);
       expect(res.body.errors).toContain(ERROR.adminRequired);
     });

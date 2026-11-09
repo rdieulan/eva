@@ -254,11 +254,6 @@ async function performSave(): Promise<{ success: boolean; error?: string }> {
     return { success: false, error: ERROR.mapNotFound };
   }
 
-  const token = localStorage.getItem('token');
-  if (!token) {
-    return { success: false, error: ERROR.tokenMissing };
-  }
-
   const gamePlanId = selectedPlanId.value;
   if (!gamePlanId) {
     return { success: false, error: ERROR.planNotFound };

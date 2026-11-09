@@ -7,7 +7,7 @@ import { ApiError } from '@/api/error';
 
 /**
  * Login with email and password
- * Note: Does not use authFetch because no token exists yet
+ * Note: Does not use authFetch: no session exists yet, a refusal shows here
  */
 export async function login(credentials: LoginCredentials): Promise<LoginResponse> {
   const response = await fetch('/api/auth/login', {
@@ -28,6 +28,20 @@ export async function login(credentials: LoginCredentials): Promise<LoginRespons
  */
 export async function logout(): Promise<void> {
   await authFetch('/api/auth/logout', { method: 'POST' });
+}
+
+/**
+ * The account of this browser's session, null when it holds none. Signed out
+ * is an answer here, not a failure: no redirect to the login page.
+ */
+export async function fetchSessionAccount(): Promise<Account | null> {
+  const response = await fetch('/api/auth/me');
+  if (response.status === 401) return null;
+  if (!response.ok) {
+    throw await ApiError.fromFailedResponse(response, ERROR.serverError);
+  }
+  const { account } = (await response.json()) as { account: Account };
+  return account;
 }
 
 /**
@@ -54,7 +68,7 @@ export async function changePassword(
 
 /**
  * Activate manager account with password
- * Note: Does not use authFetch because no token exists yet
+ * Note: Does not use authFetch: no session exists yet, a refusal shows here
  */
 export async function activateAccount(activationToken: string, password: string): Promise<void> {
   const response = await fetch('/api/auth/activate', {

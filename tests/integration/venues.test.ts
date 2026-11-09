@@ -3,7 +3,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import { app } from '../../server/src/app';
-import { createAuthenticatedUser, createUserWithTeam } from './helpers/auth';
+import { createAuthenticatedUser, createUserWithTeam, authHeader } from './helpers/auth';
 import { prisma } from './helpers/db';
 import { ERROR } from '@shared/constants/error.constants';
 
@@ -29,7 +29,7 @@ describe('Venues API', () => {
 
       const res = await request(app)
         .get('/api/venues')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
@@ -46,7 +46,7 @@ describe('Venues API', () => {
       const res = await request(app).get('/api/venues');
 
       expect(res.status).toBe(401);
-      expect(res.body.errors).toContain(ERROR.tokenMissing);
+      expect(res.body.errors).toContain(ERROR.unauthorized);
     });
   });
 
@@ -56,7 +56,7 @@ describe('Venues API', () => {
 
       const res = await request(app)
         .put('/api/teams/current')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ venueId: TEST_VENUE.id });
 
       expect(res.status).toBe(200);
@@ -73,7 +73,7 @@ describe('Venues API', () => {
       // First set a venue
       await request(app)
         .put('/api/teams/current')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ venueId: TEST_VENUE.id });
 
       // Verify venue was set
@@ -83,7 +83,7 @@ describe('Venues API', () => {
       // Then remove it
       const res = await request(app)
         .put('/api/teams/current')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ venueId: null });
 
       expect(res.status).toBe(200);
@@ -100,7 +100,7 @@ describe('Venues API', () => {
 
       const res = await request(app)
         .put('/api/teams/current')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ venueId: 'non-existent-venue' });
 
       expect(res.status).toBe(400);
@@ -117,7 +117,7 @@ describe('Venues API', () => {
         .send({ venueId: TEST_VENUE.id });
 
       expect(res.status).toBe(401);
-      expect(res.body.errors).toContain(ERROR.tokenMissing);
+      expect(res.body.errors).toContain(ERROR.unauthorized);
     });
 
     it('should reject non-leader member without permission', async () => {
@@ -129,19 +129,19 @@ describe('Venues API', () => {
       // Create invite
       const inviteRes = await request(app)
         .post(`/api/teams/${team.id}/invites`)
-        .set('Authorization', `Bearer ${leaderToken}`)
+        .set(authHeader(leaderToken))
         .send({ expiresInHours: 24, maxUses: 1 });
 
       if (inviteRes.body.code) {
         // Join team
         await request(app)
           .post(`/api/invites/${inviteRes.body.code}/join`)
-          .set('Authorization', `Bearer ${memberToken}`);
+          .set(authHeader(memberToken));
 
         // Try to change venue as non-leader (should fail without permission)
         const res = await request(app)
           .put('/api/teams/current')
-          .set('Authorization', `Bearer ${memberToken}`)
+          .set(authHeader(memberToken))
           .send({ venueId: TEST_VENUE.id });
 
         expect(res.status).toBe(403);

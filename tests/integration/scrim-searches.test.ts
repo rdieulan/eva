@@ -6,7 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
 import { app } from '../../server/src/app';
-import { createAuthenticatedUser, createUserWithTeam } from './helpers/auth';
+import { createAuthenticatedUser, createUserWithTeam, authHeader } from './helpers/auth';
 import { prisma } from './helpers/db';
 import { ERROR } from '@shared/constants/error.constants';
 import { SCRIM_SEARCH_VENUES_MAX } from '@shared/constants/eva.constants';
@@ -86,22 +86,22 @@ const atMontpellier = (...evaSlotIds: string[]) => ({ venueId: MONTPELLIER.id, e
 function open(token: string, body: Record<string, unknown>) {
   return request(app)
     .post('/api/scrims/searches')
-    .set('Authorization', `Bearer ${token}`)
+    .set(authHeader(token))
     .send({ date: DATE, venues: [atNimes('a1-2000', 'a1-2040')], slotCount: 2, matchCount: 1, ...body });
 }
 
 function list(token: string, query: Record<string, string>) {
-  return request(app).get('/api/scrims/searches').query(query).set('Authorization', `Bearer ${token}`);
+  return request(app).get('/api/scrims/searches').query(query).set(authHeader(token));
 }
 
 async function joinAsMember(leaderToken: string, teamId: string): Promise<string> {
   const invite = await request(app)
     .post(`/api/teams/${teamId}/invites`)
-    .set('Authorization', `Bearer ${leaderToken}`)
+    .set(authHeader(leaderToken))
     .send({ expiresInHours: 24, maxUses: 1 })
     .expect(201);
   const { token } = await createAuthenticatedUser();
-  await request(app).post(`/api/invites/${invite.body.code}/join`).set('Authorization', `Bearer ${token}`).expect(200);
+  await request(app).post(`/api/invites/${invite.body.code}/join`).set(authHeader(token)).expect(200);
   return token;
 }
 
@@ -575,7 +575,7 @@ describe('DELETE /api/scrims/searches/:id', () => {
 
     const res = await request(app)
       .delete(`/api/scrims/searches/${opened.body.id}`)
-      .set('Authorization', `Bearer ${token}`);
+      .set(authHeader(token));
 
     expect(res.status).toBe(204);
     expect(await prisma.scrimSearch.count()).toBe(0);
@@ -589,7 +589,7 @@ describe('DELETE /api/scrims/searches/:id', () => {
 
     const res = await request(app)
       .delete(`/api/scrims/searches/${opened.body.id}`)
-      .set('Authorization', `Bearer ${mine}`);
+      .set(authHeader(mine));
 
     expect(res.status).toBe(403);
     expect(await prisma.scrimSearch.count()).toBe(1);
@@ -602,7 +602,7 @@ describe('DELETE /api/scrims/searches/:id', () => {
 
     const res = await request(app)
       .delete(`/api/scrims/searches/${opened.body.id}`)
-      .set('Authorization', `Bearer ${token}`);
+      .set(authHeader(token));
 
     expect(res.status).toBe(409);
     expect(res.body.errors).toContain(ERROR.scrimSearchNotOpen);
@@ -613,7 +613,7 @@ describe('DELETE /api/scrims/searches/:id', () => {
 
     const res = await request(app)
       .delete('/api/scrims/searches/no-such-search')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authHeader(token));
 
     expect(res.status).toBe(404);
   });
@@ -622,7 +622,7 @@ describe('DELETE /api/scrims/searches/:id', () => {
     const { token } = await createUserWithTeam();
     await open(token, {}).expect(201);
 
-    await request(app).delete('/api/teams/current').set('Authorization', `Bearer ${token}`).expect(200);
+    await request(app).delete('/api/teams/current').set(authHeader(token)).expect(200);
 
     expect(await prisma.scrimSearch.count()).toBe(0);
   });
@@ -632,14 +632,14 @@ describe('PUT /api/scrims/searches/:id', () => {
   function change(token: string, id: string, body: Record<string, unknown>) {
     return request(app)
       .put(`/api/scrims/searches/${id}`)
-      .set('Authorization', `Bearer ${token}`)
+      .set(authHeader(token))
       .send({ venues: [atNimes('a1-2000', 'a1-2040')], slotCount: 2, matchCount: 1, ...body });
   }
 
   function propose(token: string, searchId: string, evaSlotIds: string[]) {
     return request(app)
       .post(`/api/scrims/searches/${searchId}/proposals`)
-      .set('Authorization', `Bearer ${token}`)
+      .set(authHeader(token))
       .send({ evaSlotIds });
   }
 
@@ -694,7 +694,7 @@ describe('PUT /api/scrims/searches/:id', () => {
     const { token: theirs } = await createUserWithTeam();
     const opened = await open(mine, { venues: [EVENING], matchCount: 2 }).expect(201);
     const sent = await propose(theirs, opened.body.id, ['m1-2000', 'm1-2040']).expect(201);
-    await request(app).put(`/api/scrims/proposals/${sent.body.id}/accept`).set('Authorization', `Bearer ${mine}`).expect(200);
+    await request(app).put(`/api/scrims/proposals/${sent.body.id}/accept`).set(authHeader(mine)).expect(200);
 
     // One match made: one in all is no search any more
     const tooLow = await change(mine, opened.body.id, { venues: [atMontpellier('m1-2120', 'm1-2200')], matchCount: 1 });

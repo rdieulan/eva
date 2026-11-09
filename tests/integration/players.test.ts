@@ -3,7 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import { app } from '../../server/src/app';
-import { createAuthenticatedUser, createAuthenticatedAdmin } from './helpers/auth';
+import { createAuthenticatedUser, createAuthenticatedAdmin, authHeader } from './helpers/auth';
 import { prisma } from './helpers/db';
 import { ERROR } from '@shared/constants/error.constants';
 
@@ -14,7 +14,7 @@ describe('Players API', () => {
 
       const res = await request(app)
         .get('/api/players/me/subscription')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ tier: null, renewalDate: null });
@@ -25,7 +25,7 @@ describe('Players API', () => {
 
       const res = await request(app)
         .get('/api/players/me/subscription')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(403);
       expect(res.body.errors).toContain(ERROR.playerAccountRequired);
@@ -43,7 +43,7 @@ describe('Players API', () => {
 
       const res = await request(app)
         .put('/api/players/me/subscription')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ tier: 'SILVER', renewalDate: '2026-10-05' });
 
       expect(res.status).toBe(200);
@@ -55,7 +55,7 @@ describe('Players API', () => {
 
       const reread = await request(app)
         .get('/api/players/me/subscription')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
       expect(reread.body).toEqual({ tier: 'SILVER', renewalDate: '2026-10-05' });
     });
 
@@ -64,13 +64,13 @@ describe('Players API', () => {
 
       await request(app)
         .put('/api/players/me/subscription')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ tier: 'GOLD', renewalDate: '2026-10-05' })
         .expect(200);
 
       const res = await request(app)
         .put('/api/players/me/subscription')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ tier: null, renewalDate: null });
 
       expect(res.status).toBe(200);
@@ -82,7 +82,7 @@ describe('Players API', () => {
 
       const res = await request(app)
         .put('/api/players/me/subscription')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ tier: 'PLATINUM', renewalDate: '2026-02-31' });
 
       expect(res.status).toBe(400);
@@ -98,7 +98,7 @@ describe('Players API', () => {
 
       const res = await request(app)
         .put('/api/players/me/subscription')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ tier: 'GOLD', renewalDate: '2026-10-05' });
 
       expect(res.status).toBe(403);

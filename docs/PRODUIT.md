@@ -40,6 +40,10 @@ Une salle se nomme partout par son nom seul (`formatVenueLabel`), celui qu'eva.g
 - *Compte eva.gg d'un joueur* : il donne son tag (`Pseudo#123456`) ; on garde l'identifiant stable d'eva.gg avec le tag du moment. Un compte eva.gg ne se relie qu'à un seul joueur.
 - *Administration* : suppression définitive, pas de corbeille. Supprimer une salle détache les équipes qui y étaient affiliées. Un administrateur ne peut pas se supprimer lui-même, et le dernier super administrateur ne peut être ni supprimé ni rétrogradé.
 
+## Se connecter
+
+- *La session* : on reste connecté 30 jours, prolongés tant qu'on revient, jusqu'à 90 jours : au-delà, on se reconnecte, pour qu'une copie du cookie ne serve pas indéfiniment. La session est un cookie que le code des pages ne lit pas : un script glissé dans une page ne peut pas l'emporter. Le serveur la vérifie à chaque requête : se déconnecter la ferme pour de bon sur cet appareil, un compte supprimé perd toutes les siennes. Une modification envoyée depuis un autre site est refusée, et les pages d'un autre site ne lisent pas les réponses de l'API.
+
 ## L'adresse du site
 
 Deux domaines (choisis le 2026-11-09). L'application vit sur scrim-calendar.com, sans « eva » : une demande d'accès est à venir chez eva.gg, et deux concurrents ont déjà « eva » dans leur nom. eva-calendar.com, le repère de la communauté, redirige vers scrim-calendar.com en gardant le chemin. Tout ce que l'application produit porte scrim-calendar.com (liens copiés, cartes Discord, connexion par Discord, demande d'accès à eva.gg) : lâcher le domaine eva ne casserait rien. Pas de redirection masquée, qui afficherait le site dans un cadre : les liens d'une page ne se partageraient plus et la connexion par Discord refuserait de s'y ouvrir. Pas d'application servie sur les deux domaines non plus : les liens copiés depuis l'adresse eva casseraient avec elle, et la connexion ne suivrait pas d'un domaine à l'autre.

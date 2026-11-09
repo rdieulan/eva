@@ -2,13 +2,14 @@
 
 import 'dotenv/config';
 import express from 'express';
-import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import routes from "@routes/index";
 import { logger } from '@utils/logger';
 import { venueBoardPage } from '@services/venue-board-page.service';
+import { sameOriginChanges } from '@middleware/same-origin.middleware';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,9 +21,11 @@ const isProduction = process.env.NODE_ENV === 'production';
 // req.protocol / req.get('host') reflect the public origin.
 app.set('trust proxy', true);
 
-// Middleware
-app.use(cors());
+// Middleware. No CORS: the pages and the API share one address, and no other
+// site is to call the API from a browser.
 app.use(express.json());
+app.use(cookieParser());
+app.use('/api', sameOriginChanges);
 
 // Request logger (disabled in test environment)
 if (process.env.NODE_ENV !== 'test') {

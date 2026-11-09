@@ -3,7 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import { app } from '../../server/src/app';
-import { createAuthenticatedUser, createUserWithTeam } from './helpers/auth';
+import { createAuthenticatedUser, createUserWithTeam, authHeader } from './helpers/auth';
 import { prisma, expectNoRecordCreated } from './helpers/db';
 import { TEAM_NAME_MIN_LENGTH } from '@shared/constants/validation.constants';
 import { TEAM_LOGO_MAX_BYTES, TEAM_FAVORITE_VENUES_MAX } from '@shared/constants/team.constants';
@@ -23,7 +23,7 @@ describe('Teams API', () => {
 
       const res = await request(app)
         .post('/api/teams')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ name: VALID_TEAM_NAME, location: 'Europe - West' });
 
       expect(res.status).toBe(201);
@@ -55,7 +55,7 @@ describe('Teams API', () => {
         .send({ name: VALID_TEAM_NAME });
 
       expect(res.status).toBe(401);
-      expect(res.body.errors).toContain(ERROR.tokenMissing);
+      expect(res.body.errors).toContain(ERROR.unauthorized);
     });
 
     it('should reject if user already has a team', async () => {
@@ -63,7 +63,7 @@ describe('Teams API', () => {
 
       const res = await request(app)
         .post('/api/teams')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ name: VALID_TEAM_NAME });
 
       expect(res.status).toBe(400);
@@ -77,7 +77,7 @@ describe('Teams API', () => {
 
       const res = await request(app)
         .get('/api/teams/current')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(200);
       expect(res.body.id).toBe(team.id);
@@ -88,7 +88,7 @@ describe('Teams API', () => {
 
       const res = await request(app)
         .get('/api/teams/current')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(200);
       expect(res.body.isLeader).toBe(true);
@@ -105,19 +105,19 @@ describe('Teams API', () => {
 
       const inviteRes = await request(app)
         .post(`/api/teams/${team.id}/invites`)
-        .set('Authorization', `Bearer ${leaderToken}`)
+        .set(authHeader(leaderToken))
         .send({ expiresInHours: 24, maxUses: 1 });
       expect(inviteRes.status).toBe(201);
 
       const { token: memberToken } = await createAuthenticatedUser();
       await request(app)
         .post(`/api/invites/${inviteRes.body.code}/join`)
-        .set('Authorization', `Bearer ${memberToken}`)
+        .set(authHeader(memberToken))
         .expect(200);
 
       const res = await request(app)
         .get('/api/teams/current')
-        .set('Authorization', `Bearer ${memberToken}`);
+        .set(authHeader(memberToken));
 
       expect(res.status).toBe(200);
       expect(res.body.isLeader).toBe(false);
@@ -129,7 +129,7 @@ describe('Teams API', () => {
 
       const res = await request(app)
         .get('/api/teams/current')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(404);
       expect(res.body.errors).toContain(ERROR.teamNotFound);
@@ -157,7 +157,7 @@ describe('Teams API', () => {
 
       const res = await request(app)
         .get('/api/teams/current')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(200);
       expect(res.body.favoriteVenueIds).toEqual([]);
@@ -169,7 +169,7 @@ describe('Teams API', () => {
 
       const res = await request(app)
         .put('/api/teams/current')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ favoriteVenueIds: [third, first] });
 
       expect(res.status).toBe(200);
@@ -177,7 +177,7 @@ describe('Teams API', () => {
 
       const read = await request(app)
         .get('/api/teams/current')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
       expect(read.body.favoriteVenueIds).toEqual([third, first]);
       expect(read.body.favoriteVenueIds).not.toContain(second);
     });
@@ -188,13 +188,13 @@ describe('Teams API', () => {
 
       await request(app)
         .put('/api/teams/current')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ favoriteVenueIds: [first, second] })
         .expect(200);
 
       const res = await request(app)
         .put('/api/teams/current')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ favoriteVenueIds: [second] });
 
       expect(res.status).toBe(200);
@@ -207,13 +207,13 @@ describe('Teams API', () => {
 
       await request(app)
         .put('/api/teams/current')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ favoriteVenueIds: [venueId] })
         .expect(200);
 
       const res = await request(app)
         .put('/api/teams/current')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ name: VALID_TEAM_NAME });
 
       expect(res.status).toBe(200);
@@ -226,7 +226,7 @@ describe('Teams API', () => {
 
       const res = await request(app)
         .put('/api/teams/current')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ favoriteVenueIds: [venueId, venueId] });
 
       expect(res.status).toBe(200);
@@ -239,7 +239,7 @@ describe('Teams API', () => {
 
       const res = await request(app)
         .put('/api/teams/current')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ favoriteVenueIds: venueIds });
 
       expect(res.status).toBe(400);
@@ -252,7 +252,7 @@ describe('Teams API', () => {
 
       const res = await request(app)
         .put('/api/teams/current')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ favoriteVenueIds: [venueId, 'no-such-venue'] });
 
       expect(res.status).toBe(400);
@@ -265,7 +265,7 @@ describe('Teams API', () => {
       for (const favoriteVenueIds of ['abc', [42], [''], { id: 'x' }]) {
         const res = await request(app)
           .put('/api/teams/current')
-          .set('Authorization', `Bearer ${token}`)
+          .set(authHeader(token))
           .send({ favoriteVenueIds });
 
         expect(res.status).toBe(400);
@@ -279,13 +279,13 @@ describe('Teams API', () => {
 
       await request(app)
         .put('/api/teams/current')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ favoriteVenueIds: [venueId] })
         .expect(200);
 
       await request(app)
         .delete('/api/teams/current')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .expect(200);
 
       expect(await prisma.teamFavoriteVenue.count({ where: { teamId: team.id } })).toBe(0);
@@ -299,19 +299,19 @@ describe('Teams API', () => {
 
       const inviteRes = await request(app)
         .post(`/api/teams/${team.id}/invites`)
-        .set('Authorization', `Bearer ${leaderToken}`)
+        .set(authHeader(leaderToken))
         .send({ expiresInHours: 24, maxUses: 1 });
       expect(inviteRes.status).toBe(201);
 
       const { user: member, token: memberToken } = await createAuthenticatedUser();
       await request(app)
         .post(`/api/invites/${inviteRes.body.code}/join`)
-        .set('Authorization', `Bearer ${memberToken}`)
+        .set(authHeader(memberToken))
         .expect(200);
 
       const res = await request(app)
         .delete('/api/teams/current')
-        .set('Authorization', `Bearer ${leaderToken}`);
+        .set(authHeader(leaderToken));
 
       expect(res.status).toBe(200);
       expect(await prisma.team.findUnique({ where: { id: team.id } })).toBeNull();
@@ -329,19 +329,19 @@ describe('Teams API', () => {
 
       const inviteRes = await request(app)
         .post(`/api/teams/${team.id}/invites`)
-        .set('Authorization', `Bearer ${leaderToken}`)
+        .set(authHeader(leaderToken))
         .send({ expiresInHours: 24, maxUses: 1 });
       expect(inviteRes.status).toBe(201);
 
       const { token: memberToken } = await createAuthenticatedUser();
       await request(app)
         .post(`/api/invites/${inviteRes.body.code}/join`)
-        .set('Authorization', `Bearer ${memberToken}`)
+        .set(authHeader(memberToken))
         .expect(200);
 
       const res = await request(app)
         .delete('/api/teams/current')
-        .set('Authorization', `Bearer ${memberToken}`);
+        .set(authHeader(memberToken));
 
       expect(res.status).toBe(403);
       expect(res.body.errors).toContain(ERROR.onlyLeaderCanDelete);
@@ -353,7 +353,7 @@ describe('Teams API', () => {
 
       const res = await request(app)
         .delete('/api/teams/current')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(404);
       expect(res.body.errors).toContain(ERROR.teamNotFound);
@@ -367,7 +367,7 @@ describe('Teams API', () => {
       // Create invitation via API
       const inviteRes = await request(app)
         .post(`/api/teams/${team.id}/invites`)
-        .set('Authorization', `Bearer ${leaderToken}`)
+        .set(authHeader(leaderToken))
         .send({ expiresInHours: 24, maxUses: 5 });
 
       expect(inviteRes.status).toBe(201);
@@ -378,7 +378,7 @@ describe('Teams API', () => {
 
       const res = await request(app)
         .post(`/api/invites/${inviteRes.body.code}/join`)
-        .set('Authorization', `Bearer ${joinerToken}`);
+        .set(authHeader(joinerToken));
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty('teamId');
@@ -410,7 +410,7 @@ describe('Teams API', () => {
 
       const res = await request(app)
         .post('/api/invites/EXPIREDCODE/join')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(400);
       expect(res.body.errors).toContain(ERROR.inviteExpired);
@@ -421,7 +421,7 @@ describe('Teams API', () => {
 
       const res = await request(app)
         .post('/api/invites/INVALIDCODE/join')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(404);
       expect(res.body.errors).toContain(ERROR.inviteInvalid);
@@ -435,7 +435,7 @@ describe('Teams API', () => {
       // Leader has canInviteMembers by default
       const res = await request(app)
         .post(`/api/teams/${team.id}/invites`)
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ expiresInHours: 24, maxUses: 5 });
 
       expect(res.status).toBe(201);
@@ -464,7 +464,7 @@ describe('Teams API', () => {
       );
 
       expect(res.status).toBe(401);
-      expect(res.body.errors).toContain(ERROR.tokenMissing);
+      expect(res.body.errors).toContain(ERROR.unauthorized);
     });
 
     it('should reject user without canInviteMembers permission', async () => {
@@ -478,20 +478,20 @@ describe('Teams API', () => {
       // Create invitation with leader
       const inviteRes = await request(app)
         .post(`/api/teams/${team.id}/invites`)
-        .set('Authorization', `Bearer ${leaderToken}`)
+        .set(authHeader(leaderToken))
         .send({ expiresInHours: 24, maxUses: 1 });
 
       // Member joins via invite (they don't have canInviteMembers by default)
       await request(app)
         .post(`/api/invites/${inviteRes.body.code}/join`)
-        .set('Authorization', `Bearer ${memberToken}`);
+        .set(authHeader(memberToken));
 
       // Member tries to create an invite (should fail - no permission)
       const res = await expectNoRecordCreated(
         () => prisma.teamInvite.count({ where: { teamId: team.id } }),
         () => request(app)
           .post(`/api/teams/${team.id}/invites`)
-          .set('Authorization', `Bearer ${memberToken}`)
+          .set(authHeader(memberToken))
           .send({ expiresInHours: 24, maxUses: 1 })
       );
 
@@ -505,7 +505,7 @@ describe('Teams API', () => {
         () => prisma.teamInvite.count({ where: { teamId: team.id } }),
         () => request(app)
           .post(`/api/teams/${team.id}/invites`)
-          .set('Authorization', `Bearer ${token}`)
+          .set(authHeader(token))
           .send({ expiresInHours: 200, maxUses: 1 }) // Max is 168
       );
 
@@ -520,7 +520,7 @@ describe('Teams API', () => {
         () => prisma.teamInvite.count({ where: { teamId: team.id } }),
         () => request(app)
           .post(`/api/teams/${team.id}/invites`)
-          .set('Authorization', `Bearer ${token}`)
+          .set(authHeader(token))
           .send({ expiresInHours: 24, maxUses: 100 }) // Max is 50
       );
 
@@ -536,7 +536,7 @@ describe('Teams API', () => {
         () => prisma.teamInvite.count({ where: { teamId: team.id } }),
         () => request(app)
           .post(`/api/teams/${team.id}/invites`)
-          .set('Authorization', `Bearer ${otherToken}`)
+          .set(authHeader(otherToken))
           .send({ expiresInHours: 24, maxUses: 1 })
       );
 
@@ -556,7 +556,7 @@ describe('Team logo API', () => {
   function upload(token: string, body: Buffer, type = 'image/png') {
     return request(app)
       .put('/api/teams/current/logo')
-      .set('Authorization', `Bearer ${token}`)
+      .set(authHeader(token))
       .set('Content-Type', type)
       .send(body);
   }
@@ -579,7 +579,7 @@ describe('Team logo API', () => {
 
     const current = await request(app)
       .get('/api/teams/current')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authHeader(token));
     expect(current.body.logoUrl).toBe(res.body.logoUrl);
   });
 
@@ -628,11 +628,11 @@ describe('Team logo API', () => {
     const member = await createAuthenticatedUser({ email: 'member@example.com' });
     const invite = await request(app)
       .post(`/api/teams/${team.id}/invites`)
-      .set('Authorization', `Bearer ${leaderToken}`)
+      .set(authHeader(leaderToken))
       .send({ expiresInHours: 24, maxUses: 1 });
     await request(app)
       .post(`/api/invites/${invite.body.code}/join`)
-      .set('Authorization', `Bearer ${member.token}`)
+      .set(authHeader(member.token))
       .expect(200);
 
     const res = await upload(member.token, PNG);
@@ -646,7 +646,7 @@ describe('Team logo API', () => {
 
     const res = await request(app)
       .delete('/api/teams/current/logo')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authHeader(token));
 
     expect(res.status).toBe(204);
     const image = await request(app).get(uploaded.body.logoUrl);

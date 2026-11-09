@@ -28,7 +28,7 @@ services:
       - "3000:3000"
     environment:
       DATABASE_URL: postgresql://eva_user:eva_secret_password@postgres:5432/eva_db
-      JWT_SECRET: votre_secret_jwt_a_changer
+      APP_URL: http://localhost:3000
       NODE_ENV: production
     depends_on:
       postgres:

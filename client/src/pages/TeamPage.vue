@@ -33,7 +33,7 @@ import TeamPermissionsModal from '@/components/team/TeamPermissionsModal.vue';
 import TeamInviteModal from '@/components/team/TeamInviteModal.vue';
 
 const router = useRouter();
-const { token, permissions, account } = useAuth();
+const { isAuthenticated, permissions, account } = useAuth();
 const { set: setTeamLogo } = useTeamLogo();
 
 
@@ -73,7 +73,7 @@ const generatedInvite = ref<TeamInvite | null>(null);
 
 // Load data
 async function loadData() {
-  if (!token.value) return;
+  if (!isAuthenticated.value) return;
 
   isLoading.value = true;
   clearErrors();
@@ -112,7 +112,7 @@ function showSuccess(message: string) {
 
 // Team info handlers
 async function handleSaveTeam(data: { name: string; venueId: string | null; favoriteVenueIds: string[] }) {
-  if (!token.value || !team.value) return;
+  if (!isAuthenticated.value || !team.value) return;
 
   try {
     const saved = await updateTeam(data);
@@ -164,7 +164,7 @@ async function handleRemoveLogo() {
 }
 
 async function handleDeleteTeam() {
-  if (!token.value || !isLeader.value) return;
+  if (!isAuthenticated.value || !isLeader.value) return;
 
   try {
     await deleteTeam();
@@ -177,7 +177,7 @@ async function handleDeleteTeam() {
 }
 
 async function handleLeaveTeam() {
-  if (!token.value || isLeader.value) return;
+  if (!isAuthenticated.value || isLeader.value) return;
 
   try {
     await leaveTeam();
@@ -199,7 +199,7 @@ function openPermissionsModal(member: TeamMember) {
 }
 
 async function savePermissions(perms: AccountPermissions) {
-  if (!token.value || !selectedMember.value) return;
+  if (!isAuthenticated.value || !selectedMember.value) return;
 
   try {
     await updateMemberPermissions(selectedMember.value.id, perms);
@@ -224,7 +224,7 @@ function openRemoveModal(member: TeamMember) {
 }
 
 async function confirmRemoveMember() {
-  if (!token.value || !memberToRemove.value) return;
+  if (!isAuthenticated.value || !memberToRemove.value) return;
 
   try {
     await removeMember(memberToRemove.value.id);

@@ -3,7 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import { app } from '../../server/src/app';
-import { createAuthenticatedUser } from './helpers/auth';
+import { createAuthenticatedUser, authHeader, sessionToken } from './helpers/auth';
 import { prisma } from './helpers/db';
 import { ERROR } from '@shared/constants/error.constants';
 import { PASSWORD_MIN_LENGTH } from '@shared/constants/validation.constants';
@@ -20,7 +20,7 @@ describe('Linked Accounts API', () => {
 
       const res = await request(app)
         .post('/api/auth/link-account')
-        .set('Authorization', `Bearer ${token1}`)
+        .set(authHeader(token1))
         .send({ email: email2, password });
 
       expect(res.status).toBe(200);
@@ -34,7 +34,7 @@ describe('Linked Accounts API', () => {
 
       const res = await request(app)
         .post('/api/auth/link-account')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ email, password });
 
       expect(res.status).toBe(400);
@@ -47,7 +47,7 @@ describe('Linked Accounts API', () => {
 
       const res = await request(app)
         .post('/api/auth/link-account')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ email: target.email, password: 'wrongpassword123A' });
 
       expect(res.status).toBe(401);
@@ -73,12 +73,12 @@ describe('Linked Accounts API', () => {
       // Link accounts
       await request(app)
         .post('/api/auth/link-account')
-        .set('Authorization', `Bearer ${token1}`)
+        .set(authHeader(token1))
         .send({ email: email2, password });
 
       const res = await request(app)
         .get('/api/auth/linked-accounts')
-        .set('Authorization', `Bearer ${token1}`);
+        .set(authHeader(token1));
 
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
@@ -97,7 +97,7 @@ describe('Linked Accounts API', () => {
 
       const res = await request(app)
         .get('/api/auth/linked-accounts')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authHeader(token));
 
       expect(res.status).toBe(200);
       expect(res.body.length).toBe(1);
@@ -116,18 +116,22 @@ describe('Linked Accounts API', () => {
       // Link accounts
       await request(app)
         .post('/api/auth/link-account')
-        .set('Authorization', `Bearer ${token1}`)
+        .set(authHeader(token1))
         .send({ email: email2, password });
 
       // Switch to second account
       const res = await request(app)
         .post('/api/auth/switch-account')
-        .set('Authorization', `Bearer ${token1}`)
+        .set(authHeader(token1))
         .send({ targetAccountId: user2.id });
 
       expect(res.status).toBe(200);
-      expect(res.body).toHaveProperty('token');
       expect(res.body.account.id).toBe(user2.id);
+
+      // The session moves: the new one acts for the second account, the first one ended
+      const me = await request(app).get('/api/auth/me').set(authHeader(sessionToken(res)));
+      expect(me.body.account.id).toBe(user2.id);
+      expect((await request(app).get('/api/auth/me').set(authHeader(token1))).status).toBe(401);
     });
 
     it('should reject switch to non-linked account', async () => {
@@ -136,7 +140,7 @@ describe('Linked Accounts API', () => {
 
       const res = await request(app)
         .post('/api/auth/switch-account')
-        .set('Authorization', `Bearer ${token1}`)
+        .set(authHeader(token1))
         .send({ targetAccountId: unlinkedUser.id });
 
       expect(res.status).toBe(403);
@@ -148,7 +152,7 @@ describe('Linked Accounts API', () => {
 
       const res = await request(app)
         .post('/api/auth/switch-account')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({});
 
       expect(res.status).toBe(400);

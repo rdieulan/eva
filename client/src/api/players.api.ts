@@ -3,32 +3,33 @@
 import type { Player, PlayerSubscription, EvaAccountLink, LinkEvaAccountRequest } from '@shared/types';
 import { ERROR } from '@shared/constants';
 import { authFetch } from '@/api/utils';
+import { markedAccountId } from '@/api/session-mark';
 import { ApiError } from '@/api/error';
 
-// Cache for players - keyed by token to invalidate on account change
+// Cache for players - keyed by account to invalidate on account change
 let cachedPlayers: Player[] | null = null;
-let cachedForToken: string | null = null;
+let cachedForAccountId: string | null = null;
 
 /**
  * Clear players cache (call on logout or team change)
  */
 export function clearPlayersCache(): void {
   cachedPlayers = null;
-  cachedForToken = null;
+  cachedForAccountId = null;
 }
 
 /**
  * Load all players from API (with caching)
  * Requires authentication - returns team members only
- * Cache is invalidated when token changes
+ * Cache is invalidated when the account changes
  */
 export async function fetchPlayers(): Promise<Player[]> {
-  const currentToken = localStorage.getItem('token');
+  const currentAccountId = markedAccountId();
 
-  // Invalidate cache if token changed
-  if (cachedForToken !== currentToken) {
+  // Invalidate cache if the account changed
+  if (cachedForAccountId !== currentAccountId) {
     cachedPlayers = null;
-    cachedForToken = currentToken;
+    cachedForAccountId = currentAccountId;
   }
 
   if (cachedPlayers) {

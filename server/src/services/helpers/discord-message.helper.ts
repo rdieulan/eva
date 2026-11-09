@@ -5,6 +5,7 @@
 
 import type { NotificationContent, NotificationKind } from '@shared/types';
 import { calendarTargetPath, describeNotification } from '@shared/utils';
+import { appUrl } from '@utils/app-url';
 import type { DiscordMessage } from '../../integrations/discord/discord-webhook';
 
 // The name the cards are posted under, whatever the team named its webhook
@@ -68,16 +69,10 @@ function quoted(text: string): string {
   return text.split(/\r?\n/).map(line => `> ${escapeMarkdown(line)}`).join('\n');
 }
 
-// The app's public address, for the links of the cards: none set, no link
-function appUrl(): string | null {
-  const url = process.env.APP_URL?.trim();
-  return url ? url.replace(/\/+$/, '') : null;
-}
-
 /**
  * A notification as a Discord card. The other team's logo is a file sent with
  * the message, named here when there is one. The links into the app need its
- * public address (APP_URL): Discord follows no local address.
+ * public address (APP_URL): none set, no link.
  */
 export function notificationMessage(
   content: NotificationContent,

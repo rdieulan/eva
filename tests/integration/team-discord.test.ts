@@ -6,7 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
 import { app } from '../../server/src/app';
-import { createTeamMember, createUserWithTeam } from './helpers/auth';
+import { createTeamMember, createUserWithTeam, authHeader } from './helpers/auth';
 import { prisma } from './helpers/db';
 import { ERROR } from '@shared/constants/error.constants';
 import type { NotificationContent } from '@shared/types';
@@ -32,14 +32,13 @@ const RECEIVED: NotificationContent = {
   },
 };
 
-const auth = (token: string) => ({ Authorization: `Bearer ${token}` });
 
 function link(token: string, webhookUrl: unknown) {
-  return request(app).put('/api/teams/current/discord').set(auth(token)).send({ webhookUrl });
+  return request(app).put('/api/teams/current/discord').set(authHeader(token)).send({ webhookUrl });
 }
 
 async function statusOf(token: string) {
-  return (await request(app).get('/api/teams/current').set(auth(token)).expect(200)).body.discord;
+  return (await request(app).get('/api/teams/current').set(authHeader(token)).expect(200)).body.discord;
 }
 
 beforeEach(() => {
@@ -62,8 +61,8 @@ describe('PUT /api/teams/current/discord', () => {
     expect(await statusOf(leader.token)).toBe('linked');
 
     // Nothing the app reads of the team carries it
-    const team = await request(app).get('/api/teams/current').set(auth(leader.token));
-    const renamed = await request(app).put('/api/teams/current').set(auth(leader.token)).send({ name: 'Nouveau nom' });
+    const team = await request(app).get('/api/teams/current').set(authHeader(leader.token));
+    const renamed = await request(app).put('/api/teams/current').set(authHeader(leader.token)).send({ name: 'Nouveau nom' });
     for (const body of [team.body, renamed.body]) {
       expect(JSON.stringify(body)).not.toContain('api/webhooks');
     }
@@ -102,7 +101,7 @@ describe('PUT /api/teams/current/discord', () => {
     const member = await createTeamMember(leader.token, leader.team.id);
 
     expect((await link(member.token, WEBHOOK)).status).toBe(403);
-    expect((await request(app).delete('/api/teams/current/discord').set(auth(member.token))).status).toBe(403);
+    expect((await request(app).delete('/api/teams/current/discord').set(authHeader(member.token))).status).toBe(403);
     expect(webhook).not.toHaveBeenCalled();
     // The members see whether it is there
     await link(leader.token, WEBHOOK).expect(200);
@@ -115,7 +114,7 @@ describe('DELETE /api/teams/current/discord', () => {
     const leader = await createUserWithTeam();
     await link(leader.token, WEBHOOK).expect(200);
 
-    await request(app).delete('/api/teams/current/discord').set(auth(leader.token)).expect(204);
+    await request(app).delete('/api/teams/current/discord').set(authHeader(leader.token)).expect(204);
 
     expect(await statusOf(leader.token)).toBe('none');
     webhook.mockClear();

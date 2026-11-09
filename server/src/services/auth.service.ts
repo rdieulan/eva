@@ -1,9 +1,7 @@
 // Authentication service - business logic
 
-import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@db/prisma';
-import type { JwtPayload } from '@middleware/auth.middleware';
 import type { AccountPermissions, AdminPermissions, Account, AccountType } from '@shared/types';
 
 // Re-export validation functions from shared (single source of truth)
@@ -19,21 +17,8 @@ export {
   type ValidationResult,
 } from '@shared/utils';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
-
-
 // Re-export Account type for backward compatibility
 export type { Account, AccountType };
-
-/**
- * Generate a JWT token
- */
-export function generateToken(payload: JwtPayload): string {
-  return jwt.sign(payload as object, JWT_SECRET, {
-    expiresIn: JWT_EXPIRES_IN as jwt.SignOptions['expiresIn']
-  });
-}
 
 /**
  * Hash a password
@@ -47,30 +32,6 @@ export async function hashPassword(password: string): Promise<string> {
  */
 export async function comparePassword(password: string, hash: string): Promise<boolean> {
   return bcrypt.compare(password, hash);
-}
-
-/**
- * Create a session for a user
- */
-export async function createSession(userId: string, token: string): Promise<void> {
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + 7);
-
-  await prisma.session.create({
-    data: {
-      userId,
-      token,
-      expiresAt,
-    },
-  });
-}
-
-/**
- * Delete a session by token
- */
-export async function deleteSession(token: string): Promise<number> {
-  const result = await prisma.session.deleteMany({ where: { token } });
-  return result.count;
 }
 
 /**

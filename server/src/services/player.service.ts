@@ -110,17 +110,6 @@ export async function getPlayerTeam(playerId: string) {
 }
 
 /**
- * Get player's team ID directly from Player table
- */
-export async function getPlayerTeamId(playerId: string): Promise<string | undefined> {
-  const player = await prisma.player.findUnique({
-    where: { id: playerId },
-    select: { teamId: true },
-  });
-  return player?.teamId ?? undefined;
-}
-
-/**
  * Update player permissions
  */
 export async function updatePlayerPermissions(playerId: string, permissions: object) {
