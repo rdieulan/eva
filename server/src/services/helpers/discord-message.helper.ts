@@ -13,6 +13,7 @@ const POSTED_AS = 'EVA';
 const MATCHMAKING_FOOTER = 'EVA · Matchmaking';
 const TEAM_FOOTER = 'EVA · Équipe';
 const LEAGUE_FOOTER = 'EVA · Ligue';
+const COMPETITION_FOOTER = 'EVA · Compétition';
 
 // The part of the app each kind comes from, at the foot of its card
 const KIND_FOOTERS: Record<NotificationKind, string> = {
@@ -25,6 +26,9 @@ const KIND_FOOTERS: Record<NotificationKind, string> = {
   TEAM_JOIN_REQUESTED: TEAM_FOOTER,
   LEAGUE_REGISTRATION_OPEN: LEAGUE_FOOTER,
   LEAGUE_REGISTRATION_CLOSING: LEAGUE_FOOTER,
+  COMPETITION_OFFERED: COMPETITION_FOOTER,
+  COMPETITION_ADDED: COMPETITION_FOOTER,
+  COMPETITION_WITHDRAWN: COMPETITION_FOOTER,
 };
 
 // The bar of a card, coloured as the bell colours the same notification
@@ -68,6 +72,9 @@ const ACTION_ICONS: Record<NotificationKind, string> = {
   TEAM_JOIN_REQUESTED: '👥',
   LEAGUE_REGISTRATION_OPEN: '👥',
   LEAGUE_REGISTRATION_CLOSING: '👥',
+  COMPETITION_OFFERED: '💬',
+  COMPETITION_ADDED: '🏆',
+  COMPETITION_WITHDRAWN: '📆',
 };
 const ELSEWHERE_ICON = '🎟️';
 
@@ -82,6 +89,9 @@ const KIND_ICONS: Record<NotificationKind, string> = {
   TEAM_JOIN_REQUESTED: '🙋',
   LEAGUE_REGISTRATION_OPEN: '📝',
   LEAGUE_REGISTRATION_CLOSING: '⏰',
+  COMPETITION_OFFERED: '🏆',
+  COMPETITION_ADDED: '✅',
+  COMPETITION_WITHDRAWN: '🗑️',
 };
 
 // What Discord would read as formatting or a link in a team's name or message

@@ -4,9 +4,14 @@
 // month past say nothing of the next ones.
 
 import { prisma } from '@db/prisma';
-import { ERROR, VENUE_COMPETITION_TITLE_MAX } from '@shared/constants';
-import type { VenueCompetitionView } from '@shared/types';
+import { ERROR, VENUE_COMPETITION_DESCRIPTION_MAX, VENUE_COMPETITION_TITLE_MAX } from '@shared/constants';
+import type { CompetitionFacts, VenueCompetitionView } from '@shared/types';
 import { toParisTime } from '@shared/utils/date.utils';
+import {
+  notifyCompetitionAdded,
+  notifyCompetitionOffered,
+  notifyCompetitionWithdrawn,
+} from '@services/competition-notification.service';
 import { formatDateStr } from './helpers/date.helper';
 import { isValidDate, isValidTime, isValidTimeRange } from './helpers/validation.helper';
 
@@ -35,9 +40,31 @@ function toView({ offers, ...row }: CompetitionRow): VenueCompetitionView {
   return { ...row, date: formatDateStr(row.date), answers: { pending: count('PENDING'), accepted: count('ACCEPTED'), refused: count('REFUSED') } };
 }
 
+// What a competition's notifications tell of it
+const FACTS_SELECT = {
+  title: true, date: true, startTime: true, endTime: true, description: true, venue: { select: { name: true } },
+} as const;
+
+type FactsRow = {
+  title: string; date: Date; startTime: string; endTime: string; description: string | null; venue: { name: string };
+};
+
+// Field by field: a notification keeps its facts as they are, nothing more
+function toFacts(row: FactsRow): CompetitionFacts {
+  return {
+    title: row.title,
+    venueName: row.venue.name,
+    date: formatDateStr(row.date),
+    startTime: row.startTime,
+    endTime: row.endTime,
+    description: row.description,
+  };
+}
+
 // The teams of ours a competition goes to: for a division's day, those whose
 // league team the manager placed in that division; for an event of the
 // venue's own, every team of the venue, of its league or affiliated to it
+//TODO(compétitions de salle) read once, at publication: a team placed or moved in the divisions afterwards does not follow the competitions already published
 async function teamsFor(venueId: string, division: number | null): Promise<string[]> {
   const teams = await prisma.team.findMany({
     where: division === null
@@ -61,8 +88,9 @@ export async function listVenueCompetitions(venueId: string, now: Date = new Dat
 /**
  * Publish a competition: a title, a day from today in Paris on, hours that
  * end after they start, and for a division's day a division the venue's
- * league has. A description is optional. It goes at once to the teams it
- * is for, to accept into their calendar or refuse.
+ * league has. A description is optional, a few lines at most. It goes at once
+ * to the teams it is for, to accept into their calendar or refuse, and those
+ * who answer for them are told.
  */
 export async function createVenueCompetition(
   venueId: string,
@@ -79,13 +107,14 @@ export async function createVenueCompetition(
   ) {
     return { error: ERROR.competitionInvalid };
   }
+  if (description && [...description].length > VENUE_COMPETITION_DESCRIPTION_MAX) {
+    return { error: ERROR.competitionDescriptionTooLong };
+  }
 
+  const venue = await prisma.venue.findUniqueOrThrow({ where: { id: venueId }, select: { name: true, leagueDivisionCount: true } });
   const division = input.division ?? null;
-  if (division !== null) {
-    const venue = await prisma.venue.findUniqueOrThrow({ where: { id: venueId }, select: { leagueDivisionCount: true } });
-    if (!Number.isInteger(division) || division < 1 || division > venue.leagueDivisionCount) {
-      return { error: ERROR.competitionDivisionInvalid };
-    }
+  if (division !== null && (!Number.isInteger(division) || division < 1 || division > venue.leagueDivisionCount)) {
+    return { error: ERROR.competitionDivisionInvalid };
   }
 
   const teamIds = await teamsFor(venueId, division);
@@ -96,24 +125,34 @@ export async function createVenueCompetition(
     },
     select: COMPETITION_SELECT,
   });
-  //TODO(compétitions de salle) prévenir les équipes dans la cloche et sur Discord : seule la carte de l'accueil la leur propose pour l'instant
+  await notifyCompetitionOffered({ title, venueName: venue.name, date, startTime, endTime, description }, teamIds);
   return toView(row);
 }
 
 /**
  * Withdraw a competition of a venue, and with it what the teams said and the
- * events of the teams that accepted it. False when the venue has no such competition.
+ * events of the teams that accepted it; the teams that accepted it or had not
+ * answered yet are told. False when the venue has no such competition.
  */
 export async function deleteVenueCompetition(venueId: string, competitionId: string): Promise<boolean> {
+  const competition = await prisma.venueCompetition.findFirst({
+    where: { id: competitionId, venueId },
+    select: { ...FACTS_SELECT, offers: { select: { teamId: true, status: true } } },
+  });
+  if (!competition) return false;
+
   const { count } = await prisma.venueCompetition.deleteMany({ where: { id: competitionId, venueId } });
-  return count > 0;
+  if (!count) return false; // Withdrawn meanwhile: told by that withdrawal
+  await notifyCompetitionWithdrawn(toFacts(competition), competition.offers);
+  return true;
 }
 
 /**
  * A team's answer to a competition its venue published for it, by one who can
  * create the team's events. Accepted, the competition joins the team's
  * calendar as a competition, the team's copy of the venue's: withdrawn by the
- * venue, it goes. Answered once: an offer no longer pending is not found.
+ * venue, it goes. The rest of the team is told of it; a refusal tells nobody.
+ * Answered once: an offer no longer pending is not found.
  */
 export async function answerCompetitionOffer(
   teamId: string,
@@ -121,23 +160,17 @@ export async function answerCompetitionOffer(
   competitionId: string,
   answer: 'ACCEPTED' | 'REFUSED',
 ): Promise<{ error: string } | { eventId: string | null }> {
-  return prisma.$transaction(async tx => {
-    const offer = await tx.venueCompetitionOffer.findUnique({
-      where: { competitionId_teamId: { competitionId, teamId } },
-      select: {
-        status: true,
-        competition: { select: { title: true, date: true, startTime: true, endTime: true, description: true } },
-      },
-    });
-    if (!offer || offer.status !== 'PENDING') return { error: ERROR.competitionOfferNotFound };
-
-    await tx.venueCompetitionOffer.update({
-      where: { competitionId_teamId: { competitionId, teamId } },
+  type Outcome = { error: string } | { added: { eventId: string; facts: CompetitionFacts } | null };
+  const outcome = await prisma.$transaction(async (tx): Promise<Outcome> => {
+    // Only while it is pending: of two answers at once, the first counts
+    const { count } = await tx.venueCompetitionOffer.updateMany({
+      where: { competitionId, teamId, status: 'PENDING' },
       data: { status: answer, answeredAt: new Date() },
     });
-    if (answer === 'REFUSED') return { eventId: null };
+    if (!count) return { error: ERROR.competitionOfferNotFound };
+    if (answer === 'REFUSED') return { added: null };
 
-    const { competition } = offer;
+    const competition = await tx.venueCompetition.findUniqueOrThrow({ where: { id: competitionId }, select: FACTS_SELECT });
     const event = await tx.calendarEvent.create({
       data: {
         type: 'COMPETITION',
@@ -152,6 +185,12 @@ export async function answerCompetitionOffer(
       },
       select: { id: true },
     });
-    return { eventId: event.id };
+    return { added: { eventId: event.id, facts: toFacts(competition) } };
   });
+
+  if ('error' in outcome) return outcome;
+  if (!outcome.added) return { eventId: null };
+  const { eventId, facts } = outcome.added;
+  await notifyCompetitionAdded(facts, { teamId, eventId, acceptedBy: playerId });
+  return { eventId };
 }

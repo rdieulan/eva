@@ -2,7 +2,7 @@
 
 import type { RouteLocationRaw } from 'vue-router';
 import type { NotificationTarget } from '@shared/types';
-import { formatShortDay } from '@shared/utils';
+import { formatShortDay, notificationTargetPath } from '@shared/utils';
 import { calendarRoute, formatDateStr } from '@/utils/calendar';
 
 const MINUTE_MS = 60 * 1000;
@@ -26,7 +26,7 @@ export function formatRelativeTime(iso: string, now: number = Date.now()): strin
   return `le ${formatShortDay(formatDateStr(new Date(iso)))}`;
 }
 
-/** Where a notification leads, as a route of the app: a day of the calendar, or the team page */
+/** Where a notification leads, as a route of the app: a day of the calendar, the team page, or the home */
 export function notificationRoute(target: NotificationTarget): RouteLocationRaw {
-  return target.page === 'team' ? { path: '/team' } : calendarRoute(target);
+  return target.page === 'calendar' ? calendarRoute(target) : { path: notificationTargetPath(target) };
 }

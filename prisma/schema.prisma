@@ -678,4 +678,7 @@ enum NotificationKind {
   TEAM_JOIN_REQUESTED // A player without a team asks to join it
   LEAGUE_REGISTRATION_OPEN // The registration to this month of the team's local league opened, the team not registered
   LEAGUE_REGISTRATION_CLOSING // It closes in a few days, the team still not registered
+  COMPETITION_OFFERED // The team's venue published a competition for it, to add to its calendar or refuse
+  COMPETITION_ADDED // A competition of the venue was accepted into the team's calendar
+  COMPETITION_WITHDRAWN // The venue withdrew a competition the team had accepted, or not answered yet
 }

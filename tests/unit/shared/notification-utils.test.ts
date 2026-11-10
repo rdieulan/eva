@@ -200,15 +200,72 @@ describe('describeNotification, the league', () => {
   });
 });
 
+describe('describeNotification, the competitions of the venue', () => {
+  const facts = {
+    title: 'Journée de la Division 2', venueName: 'Nîmes', date: '2026-11-28', startTime: '14:00', endTime: '19:00', description: null,
+  };
+  const PIECES_OF_DAY = {
+    body: 'Journée de la Division 2 · sam. 28/11 · 14:00 – 19:00 · Nîmes',
+    who: { name: 'Journée de la Division 2', teamId: null },
+    when: 'sam. 28/11 · 14:00 – 19:00',
+    where: 'Nîmes',
+  };
+
+  it('tells a competition offered, with the venue\'s word, and leads to the home to answer it', () => {
+    expect(describeNotification({ kind: 'COMPETITION_OFFERED', data: facts })).toEqual({
+      title: 'Compétition proposée par la salle',
+      ...PIECES_OF_DAY,
+      detail: 'À ajouter au calendrier de l\'équipe, ou à refuser.',
+      quote: null,
+      target: { page: 'home' },
+      action: 'Répondre',
+      elsewhere: null,
+    });
+    expect(describeNotification({ kind: 'COMPETITION_OFFERED', data: { ...facts, description: 'Convocation 13:30' } }))
+      .toMatchObject({ detail: '« Convocation 13:30 »', quote: 'Convocation 13:30' });
+  });
+
+  it('tells a competition added to the calendar, and opens the team\'s copy', () => {
+    expect(describeNotification({ kind: 'COMPETITION_ADDED', data: { ...facts, eventId: 'event-1' } })).toEqual({
+      title: 'Compétition ajoutée au calendrier',
+      ...PIECES_OF_DAY,
+      detail: null,
+      quote: null,
+      target: { page: 'calendar', date: '2026-11-28', mode: 'team', open: { kind: 'event', id: 'event-1' } },
+      action: 'Voir la compétition',
+      elsewhere: null,
+    });
+  });
+
+  it('tells a competition withdrawn, gone from the calendar or no longer to answer, and leads to its day', () => {
+    const withdrawn = (accepted: boolean) => describeNotification({
+      kind: 'COMPETITION_WITHDRAWN', data: { ...facts, description: 'Convocation 13:30', accepted },
+    });
+
+    expect(withdrawn(true)).toEqual({
+      title: 'Compétition retirée par la salle',
+      ...PIECES_OF_DAY,
+      detail: 'Elle quitte le calendrier de l\'équipe.',
+      quote: null,
+      target: { page: 'calendar', date: '2026-11-28', mode: 'team' },
+      action: 'Ouvrir le calendrier',
+      elsewhere: null,
+    });
+    expect(withdrawn(false).detail).toBe('Elle n\'attend plus votre réponse.');
+  });
+});
+
 describe('notificationTargetPath', () => {
-  it('leads to a day of the calendar, or to the team page', () => {
+  it('leads to a day of the calendar, to the team page, or to the home', () => {
     expect(notificationTargetPath({ page: 'calendar', date: '2026-11-25', mode: 'team' })).toBe('/calendar?date=2026-11-25&mode=team');
     expect(notificationTargetPath({ page: 'team' })).toBe('/team');
+    expect(notificationTargetPath({ page: 'home' })).toBe('/');
   });
 });
 
 describe('notificationLook', () => {
   const LEAGUE = { tournamentId: '2570489683180220415', tournamentName: 'NEMAUSUS LEAGUE - NOVEMBRE', closesAt: '2026-11-29T23:00:00.000Z' };
+  const COMPETITION = { title: 'Nocturne', venueName: 'Nîmes', date: '2026-11-28', startTime: '21:00', endTime: '23:59', description: null };
 
   it('shows each notification with the symbol and colour of its subject', () => {
     expect(notificationLook({ kind: 'SCRIM_PROPOSAL_RECEIVED', data: { ...FACTS, searchId: 's', teamName: 'Les Rivaux', message: null } }))
@@ -219,6 +276,8 @@ describe('notificationLook', () => {
       .toEqual({ subject: 'team', tone: 'subject' });
     expect(notificationLook({ kind: 'LEAGUE_REGISTRATION_OPEN', data: LEAGUE })).toEqual({ subject: 'competition', tone: 'subject' });
     expect(notificationLook({ kind: 'LEAGUE_REGISTRATION_CLOSING', data: LEAGUE })).toEqual({ subject: 'competition', tone: 'subject' });
+    expect(notificationLook({ kind: 'COMPETITION_OFFERED', data: COMPETITION })).toEqual({ subject: 'competition', tone: 'subject' });
+    expect(notificationLook({ kind: 'COMPETITION_ADDED', data: { ...COMPETITION, eventId: 'e' } })).toEqual({ subject: 'competition', tone: 'subject' });
   });
 
   it('shows in red what was refused or called off, in grey what came to nothing', () => {
@@ -235,5 +294,10 @@ describe('notificationLook', () => {
       .toEqual({ subject: 'matchmaking', tone: 'fell-through' });
     expect(notificationLook({ kind: 'SCRIM_SEARCH_EXPIRED', data: { searchId: 's', date: '2026-11-25' } }))
       .toEqual({ subject: 'matchmaking', tone: 'fell-through' });
+    // A competition withdrawn: called off from the calendar, or come to nothing before an answer
+    expect(notificationLook({ kind: 'COMPETITION_WITHDRAWN', data: { ...COMPETITION, accepted: true } }))
+      .toEqual({ subject: 'competition', tone: 'refused' });
+    expect(notificationLook({ kind: 'COMPETITION_WITHDRAWN', data: { ...COMPETITION, accepted: false } }))
+      .toEqual({ subject: 'competition', tone: 'fell-through' });
   });
 });

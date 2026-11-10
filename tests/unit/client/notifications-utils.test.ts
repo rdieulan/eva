@@ -1,6 +1,17 @@
-// Tests for notifications in the app: how long ago one came
+// Tests for notifications in the app: how long ago one came, and where it leads
 import { describe, it, expect } from 'vitest';
-import { formatRelativeTime } from '@/utils/notifications';
+import { formatRelativeTime, notificationRoute } from '@/utils/notifications';
+import { calendarRoute } from '@/utils/calendar';
+
+describe('notificationRoute', () => {
+  it('leads to a day of the calendar, to the team page, or to the home', () => {
+    const day = { page: 'calendar', date: '2026-11-28', mode: 'team', open: { kind: 'event', id: 'event-1' } } as const;
+
+    expect(notificationRoute(day)).toEqual(calendarRoute(day));
+    expect(notificationRoute({ page: 'team' })).toEqual({ path: '/team' });
+    expect(notificationRoute({ page: 'home' })).toEqual({ path: '/' });
+  });
+});
 
 describe('formatRelativeTime', () => {
   const now = new Date(2026, 10, 25, 20, 0).getTime();

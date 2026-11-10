@@ -20,6 +20,9 @@ export const NOTIFICATION_KINDS = [
   'TEAM_JOIN_REQUESTED',
   'LEAGUE_REGISTRATION_OPEN',
   'LEAGUE_REGISTRATION_CLOSING',
+  'COMPETITION_OFFERED',
+  'COMPETITION_ADDED',
+  'COMPETITION_WITHDRAWN',
 ] as const;
 
 export type NotificationKind = typeof NOTIFICATION_KINDS[number];
@@ -42,6 +45,16 @@ export interface LeagueRegistrationFacts {
   closesAt: string;       // ISO date-time: the registration closes then
 }
 
+/** A competition the team's venue published for it: a day of the team's division, or an event of the venue's own */
+export interface CompetitionFacts {
+  title: string;              // "Journée de la Division 2"
+  venueName: string;
+  date: string;               // YYYY-MM-DD
+  startTime: string;          // HH:mm
+  endTime: string;            // HH:mm
+  description: string | null; // The venue's own words
+}
+
 /** What a notification tells, kind by kind: the facts it needs, as they were when it happened */
 export type NotificationContent =
   | { kind: 'SCRIM_PROPOSAL_RECEIVED'; data: ScrimMatchFacts & OtherTeam<'team'> & { searchId: string; message: string | null } }
@@ -52,7 +65,10 @@ export type NotificationContent =
   | { kind: 'SCRIM_SEARCH_EXPIRED'; data: { searchId: string; date: string } }
   | { kind: 'TEAM_JOIN_REQUESTED'; data: { requestId: string; playerName: string; evaUsername: string | null } }
   | { kind: 'LEAGUE_REGISTRATION_OPEN'; data: LeagueRegistrationFacts }
-  | { kind: 'LEAGUE_REGISTRATION_CLOSING'; data: LeagueRegistrationFacts };
+  | { kind: 'LEAGUE_REGISTRATION_CLOSING'; data: LeagueRegistrationFacts }
+  | { kind: 'COMPETITION_OFFERED'; data: CompetitionFacts }
+  | { kind: 'COMPETITION_ADDED'; data: CompetitionFacts & { eventId: string } }
+  | { kind: 'COMPETITION_WITHDRAWN'; data: CompetitionFacts & { accepted: boolean } }; // accepted: it was in the team's calendar
 
 /**
  * The other team of a notification, its name and its id (for the media that
@@ -87,8 +103,13 @@ export interface TeamPageTarget {
   page: 'team';
 }
 
-/** Where a notification leads, whatever the medium: a day of the calendar, or the team page */
-export type NotificationTarget = CalendarTarget | TeamPageTarget;
+/** The home of the player told: what the team has to do, a competition to answer among it */
+export interface HomePageTarget {
+  page: 'home';
+}
+
+/** Where a notification leads, whatever the medium: a day of the calendar, the team page, or the home */
+export type NotificationTarget = CalendarTarget | TeamPageTarget | HomePageTarget;
 
 /**
  * A notification put in words, for any medium: whole lines for a list (the
@@ -102,7 +123,7 @@ export interface NotificationDescription {
   who: { name: string; teamId: string | null } | null; // Who or what it is about, when there is one: the other team, the player, the tournament; a team's id, for its logo
   when: string | null;   // The day, and the hours of the match when there is one; null when nothing is dated
   where: string | null;  // The venue, and its arena when it is named
-  quote: string | null;  // The other team's own words
+  quote: string | null;  // The other side's own words: the other team's message, the venue's word on its competition
   action: string;        // What following the target does, for a medium that shows the link
   elsewhere: { label: string; url: string } | null; // A step to take outside the app: booking on eva.gg, registering on competitive.eva.gg
 }

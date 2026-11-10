@@ -24,7 +24,11 @@ import {
   SCRIM_MATCH_COUNT_MAX,
   SCRIM_SEARCH_VENUES_MAX,
 } from '@shared/constants/eva.constants';
-import { LEAGUE_DIVISIONS_MAX, VENUE_COMPETITION_TITLE_MAX } from '@shared/constants/league.constants';
+import {
+  LEAGUE_DIVISIONS_MAX,
+  VENUE_COMPETITION_DESCRIPTION_MAX,
+  VENUE_COMPETITION_TITLE_MAX,
+} from '@shared/constants/league.constants';
 import { EVENT_TYPES, VOICE_MEDIUMS } from '@shared/types/calendar.types';
 import { SUBSCRIPTION_TIERS } from '@shared/types/subscription.types';
 
@@ -334,6 +338,7 @@ export const ERROR = {
   competitionNotFound: 'Compétition non trouvée',
   competitionInvalid: `Il faut un titre de ${VENUE_COMPETITION_TITLE_MAX} caractères au plus, un jour à venir, et une heure de fin après celle de début`,
   competitionDivisionInvalid: 'Cette division n\'existe pas dans la ligue de la salle',
+  competitionDescriptionTooLong: `La description ne peut pas dépasser ${VENUE_COMPETITION_DESCRIPTION_MAX} caractères`,
   competitionOfferNotFound: 'Cette compétition n\'attend plus de réponse de l\'équipe',
   competitionOfferFailed: 'Impossible de répondre à la compétition',
 } as const;

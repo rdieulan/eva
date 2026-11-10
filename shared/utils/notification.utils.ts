@@ -2,6 +2,7 @@
 // app's bell shows it whole, a Discord card in pieces.
 
 import type {
+  CompetitionFacts,
   LeagueRegistrationFacts,
   NotificationContent,
   NotificationDescription,
@@ -33,11 +34,29 @@ function registrationPieces(facts: LeagueRegistrationFacts): Omit<NotificationDe
   };
 }
 
+// A day and its hours: "mer. 25/11 · 19:20 – 20:40"
+function dayAndHours({ date, startTime, endTime }: { date: string; startTime: string; endTime: string }): string {
+  return `${formatShortDay(date)} · ${startTime} – ${endTime}`;
+}
+
 // The other team, the day, the hours and the place of a match, in pieces and in one line
 function matchPieces(teamName: string, teamId: string | undefined, facts: ScrimMatchFacts): Pieces {
-  const when = `${formatShortDay(facts.date)} · ${facts.startTime} – ${facts.endTime}`;
+  const when = dayAndHours(facts);
   const where = formatVenuePlace(facts.venueName, facts.arenaNumber);
   return { body: `${teamName} · ${when} · ${where}`, who: { name: teamName, teamId: teamId ?? null }, when, where };
+}
+
+// A competition of the venue: its title, its day and hours, and the venue, in
+// pieces and in one line; the venue's word on it quoted
+function competitionPieces(facts: CompetitionFacts): Pieces & Pick<NotificationDescription, 'quote'> {
+  const when = dayAndHours(facts);
+  return {
+    body: `${facts.title} · ${when} · ${facts.venueName}`,
+    who: { name: facts.title, teamId: null },
+    when,
+    where: facts.venueName,
+    quote: facts.description,
+  };
 }
 
 /**
@@ -154,6 +173,40 @@ export function describeNotification(content: NotificationContent): Notification
         detail: 'L\'équipe n\'y est toujours pas inscrite.',
         ...registrationPieces(content.data),
       };
+    case 'COMPETITION_OFFERED': {
+      const { data } = content;
+      return {
+        title: 'Compétition proposée par la salle',
+        ...competitionPieces(data),
+        detail: data.description ? `« ${data.description} »` : 'À ajouter au calendrier de l\'équipe, ou à refuser.',
+        target: { page: 'home' },
+        action: 'Répondre',
+        elsewhere: null,
+      };
+    }
+    case 'COMPETITION_ADDED': {
+      const { data } = content;
+      return {
+        title: 'Compétition ajoutée au calendrier',
+        ...competitionPieces(data),
+        detail: data.description ? `« ${data.description} »` : null,
+        target: { page: 'calendar', date: data.date, mode: 'team', open: { kind: 'event', id: data.eventId } },
+        action: 'Voir la compétition',
+        elsewhere: null,
+      };
+    }
+    case 'COMPETITION_WITHDRAWN': {
+      const { data } = content;
+      return {
+        title: 'Compétition retirée par la salle',
+        ...competitionPieces(data),
+        detail: data.accepted ? 'Elle quitte le calendrier de l\'équipe.' : 'Elle n\'attend plus votre réponse.',
+        quote: null,
+        target: { page: 'calendar', date: data.date, mode: 'team' },
+        action: 'Ouvrir le calendrier',
+        elsewhere: null,
+      };
+    }
   }
 }
 
@@ -179,11 +232,19 @@ export function notificationLook(content: NotificationContent): NotificationLook
       return { subject: 'team', tone: 'subject' };
     case 'LEAGUE_REGISTRATION_OPEN':
     case 'LEAGUE_REGISTRATION_CLOSING':
+    case 'COMPETITION_OFFERED':
+    case 'COMPETITION_ADDED':
       return { subject: 'competition', tone: 'subject' };
+    case 'COMPETITION_WITHDRAWN':
+      return { subject: 'competition', tone: content.data.accepted ? 'refused' : 'fell-through' };
   }
 }
 
 /** Where a notification leads, as a path of the app, for a link from outside it */
 export function notificationTargetPath(target: NotificationTarget): string {
-  return target.page === 'team' ? '/team' : calendarTargetPath(target);
+  switch (target.page) {
+    case 'home': return '/';
+    case 'team': return '/team';
+    case 'calendar': return calendarTargetPath(target);
+  }
 }

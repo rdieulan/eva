@@ -141,6 +141,31 @@ describe('notificationMessage', () => {
     });
   });
 
+  it('lays a competition offered out: its title, when and where, the venue\'s word, then answering from the home', () => {
+    const competition = {
+      title: 'Journée de la Division 2', venueName: 'Nîmes', date: '2026-11-28', startTime: '14:00', endTime: '19:00', description: 'Convocation 13:30',
+    };
+    const [embed] = notificationMessage({ kind: 'COMPETITION_OFFERED', data: competition }, { base: BASE }).embeds;
+
+    expect(embed).toMatchObject({
+      author: { name: 'Journée de la Division 2' },
+      title: `🏆${GAP}Compétition proposée par la salle`,
+      description: `📅${GAP}**sam. 28/11 · 14:00 – 19:00**\n\n📍${GAP}Nîmes\n\n> Convocation 13:30\n\n💬${GAP}[Répondre](${BASE}/)`,
+      color: CARD_COLORS.competition,
+      footer: { text: 'EVA · Compétition' },
+    });
+
+    // Withdrawn from the calendar it was in: called off, in red; before an answer: come to nothing, in grey
+    const withdrawn = (accepted: boolean) => notificationMessage({ kind: 'COMPETITION_WITHDRAWN', data: { ...competition, accepted } }, { base: BASE }).embeds[0]!;
+    expect(withdrawn(true)).toMatchObject({
+      title: `🗑️${GAP}Compétition retirée par la salle`,
+      description: `📅${GAP}**sam. 28/11 · 14:00 – 19:00**\n\n📍${GAP}Nîmes\n\nElle quitte le calendrier de l'équipe.\n\n`
+        + `📆${GAP}[Ouvrir le calendrier](${BASE}/calendar?date=2026-11-28&mode=team)`,
+      color: CARD_COLORS.refused,
+    });
+    expect(withdrawn(false).color).toBe(CARD_COLORS.fellThrough);
+  });
+
   it('lays a search closed with no match out with its day alone', () => {
     const [embed] = notificationMessage({ kind: 'SCRIM_SEARCH_EXPIRED', data: { searchId: 'search-1', date: '2026-11-25' } }, { base: BASE }).embeds;
 

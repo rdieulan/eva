@@ -16,3 +16,7 @@ export const LEAGUE_DIVISIONS_MAX = 8;
 
 // The longest title of a competition a venue's manager publishes
 export const VENUE_COMPETITION_TITLE_MAX = 80;
+
+// The longest description of such a competition: a few lines of format and
+// convocation, which a Discord card quotes whole
+export const VENUE_COMPETITION_DESCRIPTION_MAX = 500;

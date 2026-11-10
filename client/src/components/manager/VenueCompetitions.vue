@@ -5,7 +5,7 @@
 // month past say nothing of the next ones.
 import { computed, onMounted, ref, watch } from 'vue';
 import type { VenueCompetitionView } from '@shared/types';
-import { ERROR, VENUE_COMPETITION_TITLE_MAX } from '@shared/constants';
+import { ERROR, VENUE_COMPETITION_DESCRIPTION_MAX, VENUE_COMPETITION_TITLE_MAX } from '@shared/constants';
 import { formatShortDay, toParisTime } from '@shared/utils';
 import { createVenueCompetition, deleteVenueCompetition, fetchVenueCompetitions, fetchVenueDivisions } from '@/api';
 import { useErrors } from '@/composables/useErrors';
@@ -170,7 +170,12 @@ onMounted(load);
 
       <label class="form-field">
         <span>Description (facultatif)</span>
-        <textarea v-model="description" rows="2" placeholder="Format, horaires de convocation…"></textarea>
+        <textarea
+          v-model="description"
+          rows="2"
+          :maxlength="VENUE_COMPETITION_DESCRIPTION_MAX"
+          placeholder="Format, horaires de convocation…"
+        ></textarea>
       </label>
 
       <div class="form-actions">
