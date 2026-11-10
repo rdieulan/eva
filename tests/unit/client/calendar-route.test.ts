@@ -12,4 +12,9 @@ describe('calendarRoute', () => {
       page: 'calendar', date: '2026-11-25', mode: 'matchmaking', venueId: 'venue-nimes', open: { kind: 'scrimSearch', id: 'search-1' },
     })).toEqual({ path: '/calendar', query: { date: '2026-11-25', mode: 'matchmaking', venue: 'venue-nimes', search: 'search-1' } });
   });
+
+  it('asks for the reader\'s availability open, ready to give it', () => {
+    expect(calendarRoute({ page: 'calendar', date: '2026-11-25', mode: 'team', dispos: true }))
+      .toEqual({ path: '/calendar', query: { date: '2026-11-25', mode: 'team', dispos: '1' } });
+  });
 });

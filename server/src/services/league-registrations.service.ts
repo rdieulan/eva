@@ -8,6 +8,7 @@
 // never twice the same. What a night finds stays for the home dashboard to come.
 
 import { prisma } from '@db/prisma';
+import { ERROR } from '@shared/constants';
 import { notify } from '@services/notification.service';
 import { venueOfLeagueTournament } from '@services/league-directory.service';
 import {
@@ -163,4 +164,43 @@ export async function checkLeagueRegistrations(options: { now?: Date; pauseMs?: 
   });
   report.removed = count;
   return report;
+}
+
+// When each team last had its registrations read at its manager's asking
+const recheckedAt = new Map<string, number>();
+
+// The least time between two such reads for a team
+export const LEAGUE_RECHECK_PAUSE_MS = 5 * 60 * 1000;
+
+/**
+ * Read a team's registrations again at once, as whoever manages it asks once
+ * the team is registered on the site: the months found registered stop being
+ * reminded. Once every five minutes at most for a team, whatever came of the
+ * read before. Answers the months the team is now registered to.
+ */
+export async function recheckTeamRegistrations(teamId: string, now: Date = new Date()): Promise<{ error: string } | { registered: string[] }> {
+  const last = recheckedAt.get(teamId);
+  if (last !== undefined && now.getTime() - last < LEAGUE_RECHECK_PAUSE_MS) return { error: ERROR.leagueCheckTooSoon };
+  const team = await prisma.team.findUnique({ where: { id: teamId }, select: { leagueTeamId: true } });
+  if (!team?.leagueTeamId) return { error: ERROR.leagueTeamNotLinked };
+  recheckedAt.set(teamId, now.getTime());
+
+  let tournaments: LeagueTournament[];
+  try {
+    tournaments = await fetchLeagueTeamTournaments(team.leagueTeamId);
+  } catch (error) {
+    logger.warn(`League registrations: competitive.eva.gg could not answer for team ${teamId}`, error);
+    return { error: ERROR.leagueCheckFailed };
+  }
+
+  const listed = new Set(tournaments.map(tournament => tournament.id));
+  const entries = await prisma.leagueEntry.findMany({ where: { teamId }, select: { tournamentId: true, registeredAt: true } });
+  for (const entry of entries) {
+    const isRegistered = listed.has(entry.tournamentId);
+    await prisma.leagueEntry.update({
+      where: { teamId_tournamentId: { teamId, tournamentId: entry.tournamentId } },
+      data: { registeredAt: isRegistered ? (entry.registeredAt ?? now) : null, checkedAt: now },
+    });
+  }
+  return { registered: entries.filter(entry => listed.has(entry.tournamentId)).map(entry => entry.tournamentId) };
 }

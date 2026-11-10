@@ -115,6 +115,7 @@ export interface CalendarTarget {
   mode: 'team' | 'matchmaking';
   venueId?: string;               // In matchmaking, a venue to tick: where the search is
   open?: { kind: 'scrimSearch' | 'event'; id: string }; // What to open on that day, when it is still there
+  dispos?: boolean;               // In team mode, the reader's availability, ready to give it
 }
 
 export interface MonthData {

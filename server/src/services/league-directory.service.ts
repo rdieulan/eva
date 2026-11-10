@@ -7,6 +7,7 @@
 
 import { prisma } from '@db/prisma';
 import { foldForSearch } from '@shared/utils/search.utils';
+import { toParisTime } from '@shared/utils/date.utils';
 import { TEAM_LOGO_MAX_BYTES, type TeamLogoMimeType } from '@shared/constants/team.constants';
 import { LEAGUE_SEARCH_MIN_LENGTH } from '@shared/constants/league.constants';
 import type { LeagueTeamSummary, LeagueVenueProposal } from '@shared/types';
@@ -149,7 +150,7 @@ export async function syncLeagueDirectory(options: { now?: Date; pauseMs?: numbe
 
 // The hour it is in Paris, 0 to 23
 function hourInParis(date: Date): number {
-  return Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Paris', hour: 'numeric', hourCycle: 'h23' }).format(date));
+  return Number(toParisTime(date).time.slice(0, 2));
 }
 
 /**

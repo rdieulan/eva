@@ -248,6 +248,18 @@ describe('Calendar Integration Tests', () => {
       await new Promise(resolve => setTimeout(resolve, 50));
       expect(again.findComponent({ name: 'EventViewerModal' }).props('events')).toEqual([]);
     });
+
+    it('opens the team\'s view ready to give one\'s availability, when the link asks for it', async () => {
+      routing.route.query = { date: '2026-01-20', mode: 'team', dispos: '1' };
+      const wrapper = mount(CalendarPage);
+      await new Promise(resolve => setTimeout(resolve, 50));
+      expect(wrapper.findComponent({ name: 'CalendarBody' }).props('editMode')).toBe(true);
+
+      routing.route.query = { date: '2026-01-20', mode: 'team' };
+      const plain = mount(CalendarPage);
+      await new Promise(resolve => setTimeout(resolve, 50));
+      expect(plain.findComponent({ name: 'CalendarBody' }).props('editMode')).toBe(false);
+    });
   });
 
   describe('matchmaking venues', () => {

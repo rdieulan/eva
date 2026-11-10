@@ -137,6 +137,12 @@ export const ERROR = {
   joinRequestAnswerFailed: 'Erreur lors de la réponse à la demande',
   joinRequestsFetchFailed: 'Erreur lors du chargement des demandes',
 
+  // Home dashboard
+  dashboardFetchFailed: 'Erreur lors du chargement de ce qu\'il y a à faire',
+  leagueCheckTooSoon: 'Inscription vérifiée il y a moins de 5 minutes : réessaie un peu plus tard',
+  leagueCheckFailed: 'competitive.eva.gg n\'a pas répondu : réessaie dans un moment',
+  leagueTeamNotLinked: 'L\'équipe n\'est reliée à aucune équipe de ligue',
+
   // Venues
   venueNotFound: 'Salle non trouvée',
   venueBoardFetchFailed: 'Erreur lors de la récupération des recherches de la salle',

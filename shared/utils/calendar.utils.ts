@@ -5,12 +5,13 @@ import type { CalendarTarget } from '@shared/types/calendar.types';
 
 /**
  * The query the calendar reads a target from: the day, the mode, the venue to
- * tick and what to open
+ * tick, what to open, and whether to open the reader's availability
  */
 export function calendarTargetQuery(target: CalendarTarget): Record<string, string> {
   const query: Record<string, string> = { date: target.date, mode: target.mode };
   if (target.venueId) query.venue = target.venueId;
   if (target.open) query[target.open.kind === 'scrimSearch' ? 'search' : 'event'] = target.open.id;
+  if (target.dispos) query.dispos = '1';
   return query;
 }
 

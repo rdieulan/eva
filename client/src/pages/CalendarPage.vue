@@ -309,6 +309,8 @@ async function followLink(query: LocationQuery) {
   router.replace({ query: {} });
 
   calendarMode.value = query.mode === 'matchmaking' ? 'matchmaking' : 'team';
+  // Opened to give one's availability: the days answer at once
+  if (query.dispos === '1' && calendarMode.value === 'team') editMode.value = true;
   const venueId = queryText(query.venue);
   if (venueId && venues.value.some(venue => venue.id === venueId) && !matchmakingVenueIds.value.includes(venueId)) {
     matchmakingVenueIds.value = [...matchmakingVenueIds.value, venueId].slice(-SCRIM_SEARCH_VENUES_MAX);

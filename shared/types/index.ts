@@ -82,6 +82,16 @@ export type { JoinRequestStatus, MyJoinRequest, TeamJoinRequestView } from './jo
 export type { NotificationLook, Subject, SubjectTone } from './subject.types';
 
 export type {
+  Dashboard,
+  DashboardItem,
+  DashboardMatch,
+  DashboardAvailability,
+  DashboardLeagueRegistration,
+  DashboardNextMatch,
+  DashboardScrimProposal,
+} from './dashboard.types';
+
+export type {
   SubscriptionTier,
   PlayerSubscription,
   SubscriptionRenewal,

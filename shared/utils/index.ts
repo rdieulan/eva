@@ -23,7 +23,7 @@ export {
 
 export { addMinutesToTime } from './time.utils';
 
-export { formatShortDay } from './date.utils';
+export { formatShortDay, shiftDay, toParisTime } from './date.utils';
 
 export { buildEvaBookingUrl, assessSlotHeadcount, type SlotHeadcount, type SlotHeadcountStatus } from './eva.utils';
 

@@ -1,55 +1,28 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router';
+// Home. A player of a team finds what they have to do soon, the most pressing
+// first; the tabs of the top bar, at the foot of the screen on a phone, lead to
+// the team's pages. A player with no team finds how to make or join one.
 import { useAuth } from '@/composables/useAuth';
-import { PLANNER_ENABLED } from '@shared/constants';
+import HomeDashboard from '@/components/home/HomeDashboard.vue';
 import NoTeamMessage from '@/components/common/NoTeamMessage.vue';
 
-const router = useRouter();
 const { hasTeam } = useAuth();
-
-function goToPlanner() {
-  router.push('/planner');
-}
-
-function goToCalendar() {
-  router.push('/calendar');
-}
-
-function goToTeam() {
-  router.push('/team');
-}
 </script>
 
 <template>
   <div class="home-page">
-    <div class="hero">
-      <h1>EVA</h1>
-      <p class="subtitle">Outil de gestion d'équipe FPS 4v4</p>
+    <div v-if="hasTeam" class="home-dashboard">
+      <h1 class="home-title">À faire</h1>
+      <HomeDashboard />
     </div>
 
-    <!-- Show navigation only if user has a team -->
-    <nav v-if="hasTeam" class="nav-cards">
-      <button v-if="PLANNER_ENABLED" class="nav-card" @click="goToPlanner">
-        <div class="card-icon">📋</div>
-        <h2>Planificateur</h2>
-        <p>Organisez les postes de votre équipe par map</p>
-      </button>
-
-      <button class="nav-card" @click="goToCalendar">
-        <div class="card-icon">📅</div>
-        <h2>Calendrier</h2>
-        <p>Planifiez vos sessions d'entraînement</p>
-      </button>
-
-      <button class="nav-card" @click="goToTeam">
-        <div class="card-icon">👥</div>
-        <h2>Mon équipe</h2>
-        <p>Gérez les membres et paramètres de votre équipe</p>
-      </button>
-    </nav>
-
-    <!-- Show no team message if user has no team -->
-    <NoTeamMessage v-else />
+    <template v-else>
+      <div class="hero">
+        <h1>EVA</h1>
+        <p class="subtitle">Outil de gestion d'équipe FPS 4v4</p>
+      </div>
+      <NoTeamMessage />
+    </template>
   </div>
 </template>
 
@@ -85,6 +58,30 @@ function goToTeam() {
   @include mobile {
     padding: 0.75rem;
     padding-top: $spacing-lg;
+  }
+}
+
+// What to do reads from the top, in a column a line of text stays readable in
+.home-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+  width: 100%;
+  max-width: 720px;
+
+  @include mobile-lg {
+    gap: $spacing-md;
+  }
+}
+
+.home-title {
+  margin: 0;
+  font-size: $font-size-2xl;
+  font-weight: 800;
+  color: $color-text-primary;
+
+  @include mobile-lg {
+    font-size: $font-size-xl;
   }
 }
 
@@ -137,100 +134,6 @@ function goToTeam() {
 
   @include mobile {
     font-size: 0.9rem;
-  }
-}
-
-.nav-cards {
-  display: flex;
-  gap: $spacing-xl;
-  flex-wrap: wrap;
-  justify-content: center;
-
-  @include mobile-lg {
-    flex-direction: column;
-    gap: $spacing-md;
-    width: 100%;
-    max-width: 400px;
-  }
-
-  @include mobile {
-    gap: 0.75rem;
-  }
-}
-
-.nav-card {
-  background: $color-bg-tertiary;
-  border: $border-thick solid $color-border-light;
-  border-radius: $radius-xl;
-  padding: $spacing-xl;
-  width: 280px;
-  cursor: pointer;
-  transition: all 0.3s;
-  text-align: center;
-  position: relative;
-
-  &:hover {
-    transform: translateY(-8px);
-    border-color: $color-accent;
-    box-shadow: 0 12px 40px with-alpha($color-accent, 0.2);
-  }
-
-  @include tablet {
-    width: 240px;
-    padding: $spacing-lg;
-  }
-
-  @include mobile-lg {
-    width: 100%;
-    padding: 1.25rem;
-
-    &:hover {
-      transform: translateY(-4px);
-    }
-  }
-
-  @include mobile {
-    padding: $spacing-md;
-    border-radius: $radius-lg;
-  }
-
-  h2 {
-    color: $color-white;
-    margin: 0 0 $spacing-sm;
-    font-size: 1.5rem;
-
-    @include tablet {
-      font-size: 1.25rem;
-    }
-
-    @include mobile {
-      font-size: 1.1rem;
-      margin-bottom: $spacing-xs;
-    }
-  }
-
-  p {
-    color: $color-text-secondary;
-    margin: 0;
-    font-size: 0.9rem;
-
-    @include mobile {
-      font-size: 0.8rem;
-    }
-  }
-}
-
-.card-icon {
-  font-size: 3rem;
-  margin-bottom: $spacing-md;
-
-  @include tablet {
-    font-size: 2.5rem;
-  }
-
-  @include mobile {
-    font-size: 2rem;
-    margin-bottom: $spacing-sm;
   }
 }
 </style>

@@ -86,6 +86,9 @@ export {
 } from '@/api/teams.api';
 export type { TeamMember, TeamWithMembers, CreatedTeam, TeamLeagueLink, TeamInvite, InviteValidation, JoinResult } from '@/api/teams.api';
 
+// Home dashboard API
+export { fetchDashboard, checkLeagueRegistration } from '@/api/dashboard.api';
+
 // League teams API
 export { searchLeagueTeams, fetchLeagueTeam, fetchLeagueVenueProposal } from '@/api/league.api';
 
