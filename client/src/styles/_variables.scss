@@ -58,6 +58,11 @@ $font-size-4xl: 3rem;
 // ===== Touch Target =====
 $touch-target-min: 44px;
 
+// ===== Page tabs at the foot of a phone's screen =====
+// Their height, the border above them and the phone's own inset aside: what is
+// fixed to the bottom of the screen reads the whole as --app-bottom-inset (App.vue)
+$bottom-nav-height: 56px;
+
 // ===========================================
 // THEME TOKENS
 // Values live in styles/themes/_<theme>.scss. Add a token there first, then

@@ -2,6 +2,7 @@
 import { computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import DynamicTopBar from '@/components/common/layout/DynamicTopBar.vue';
+import AppNavTabs from '@/components/common/layout/AppNavTabs.vue';
 import { useAuth } from '@/composables/useAuth';
 import { useBalanceRules } from '@/composables/useBalanceRules';
 import { useTeamLogo } from '@/composables/useTeamLogo';
@@ -36,15 +37,21 @@ watch(() => account.value?.teamId ?? null, async (teamId) => {
 // Account name for the TopBar
 const userName = computed(() => account.value?.name);
 
-// The bell tells a team what happened: only a player in a team has one
-const showNotifications = computed(() => account.value?.accountType === 'player' && !!account.value.teamId);
+// A player in a team has the bell, which tells the team what happened, and the tabs between its pages
+const isTeamPlayer = computed(() => account.value?.accountType === 'player' && !!account.value.teamId);
+
+// The tabs between the team's pages, for a player in a team
+const showNav = computed(() => isTeamPlayer.value);
 
 // The TopBar hides on the pages that stand alone (signing in, the first-login walk-through)
 const showTopBar = computed(() => !route.meta.hideTopBar);
+
+// The tabs between the team's pages, at the foot of the screen on a phone
+const showBottomNav = computed(() => showTopBar.value && showNav.value);
 </script>
 
 <template>
-  <div class="app">
+  <div class="app" :class="{ 'has-bottom-nav': showBottomNav }">
     <!-- Loading state while checking auth -->
     <div v-if="isLoading" class="loading-screen">
       <div class="spinner"></div>
@@ -57,7 +64,8 @@ const showTopBar = computed(() => !route.meta.hideTopBar);
         :isAuthenticated="isAuthenticated"
         :userName="userName"
         :teamLogoUrl="teamLogoUrl"
-        :showNotifications="showNotifications"
+        :showNotifications="isTeamPlayer"
+        :showNav="showNav"
       >
         <!-- Dynamic content will be injected by each page via teleport -->
         <div id="topbar-dynamic-content" class="dynamic-content"></div>
@@ -67,6 +75,9 @@ const showTopBar = computed(() => !route.meta.hideTopBar);
       <main class="page-content" :class="{ 'no-topbar': !showTopBar }">
         <RouterView />
       </main>
+
+      <!-- On a phone, the tabs between the team's pages sit at the foot of the screen -->
+      <AppNavTabs v-if="showBottomNav" placement="bottom" :team-logo-url="teamLogoUrl" />
     </template>
   </div>
 </template>
@@ -81,6 +92,16 @@ const showTopBar = computed(() => !route.meta.hideTopBar);
   width: 100vw;
   background: $texture-bg $color-bg-primary;
   overflow: hidden;
+
+  // What the tabs take at the foot of a phone's screen: whatever is fixed to the
+  // bottom of the screen (a selection bar, a drawer) stands above them by this much
+  --app-bottom-inset: 0px;
+
+  &.has-bottom-nav {
+    @include mobile-lg {
+      --app-bottom-inset: calc(#{$bottom-nav-height} + #{$border-thin} + env(safe-area-inset-bottom));
+    }
+  }
 }
 
 .loading-screen {

@@ -2,12 +2,14 @@
 import { useRoute, useRouter } from 'vue-router';
 import SvgIcon from '@/components/common/SvgIcon.vue';
 import NotificationBell from '@/components/common/layout/NotificationBell.vue';
+import AppNavTabs from '@/components/common/layout/AppNavTabs.vue';
 
 defineProps<{
   isAuthenticated?: boolean;
   userName?: string;
-  teamLogoUrl?: string | null; // Logo of the player's team, next to the home button when it has one
+  teamLogoUrl?: string | null; // Logo of the player's team, when it has one: on the team's tab, or next to the home button
   showNotifications?: boolean; // The bell, for a player in a team: what the matchmaking tells the team
+  showNav?: boolean; // The tabs between the team's pages, for a player in a team; the home button otherwise
 }>();
 
 const router = useRouter();
@@ -29,12 +31,15 @@ function goToProfile() {
 
 <template>
   <header class="top-bar">
-    <!-- Section Logo - tout à gauche (immuable) -->
-    <div class="section-logo">
-      <button class="btn-home" @click="goToHome" title="Retour à l'accueil">
-        <SvgIcon name="home" class="home-icon" />
-      </button>
-      <img v-if="teamLogoUrl" class="team-logo" :src="teamLogoUrl" alt="Logo de l'équipe" />
+    <!-- Section Logo - tout à gauche (immuable): the team's pages, or the way home -->
+    <div class="section-logo" :class="{ 'section-logo--nav': showNav }">
+      <AppNavTabs v-if="showNav" placement="top" :team-logo-url="teamLogoUrl ?? null" />
+      <template v-else>
+        <button class="btn-home" @click="goToHome" title="Retour à l'accueil">
+          <SvgIcon name="home" class="home-icon" />
+        </button>
+        <img v-if="teamLogoUrl" class="team-logo" :src="teamLogoUrl" alt="Logo de l'équipe" />
+      </template>
     </div>
 
     <!-- Section centrale - Dynamique (slot) -->
@@ -98,6 +103,16 @@ function goToProfile() {
   align-items: center;
   padding: $spacing-sm $spacing-md;
   border-right: $border-thin solid $color-border;
+
+  // The tabs run the full height of the bar; on a phone they go to the foot of the screen
+  &.section-logo--nav {
+    align-items: stretch;
+    padding: 0;
+
+    @include mobile-lg {
+      display: none;
+    }
+  }
 
   @include tablet {
     padding: $spacing-sm 0.75rem;

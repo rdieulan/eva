@@ -188,7 +188,7 @@ $tab-top: $spacing-md;
   @include mobile-lg {
     position: fixed;
     top: auto;
-    bottom: 0;
+    bottom: var(--app-bottom-inset, 0px); // Above the page tabs
     left: 0;
     right: 0;
     width: 100%;

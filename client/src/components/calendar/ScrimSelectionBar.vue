@@ -27,7 +27,7 @@ defineEmits<{
 .selection-bar {
   position: fixed;
   left: 50%;
-  bottom: $spacing-lg;
+  bottom: calc(#{$spacing-lg} + var(--app-bottom-inset, 0px)); // Above the page tabs on a phone
   transform: translateX(-50%);
   z-index: 50;
   display: flex;

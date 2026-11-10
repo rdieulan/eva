@@ -39,4 +39,18 @@ describe('DynamicTopBar', () => {
 
     expect(push).toHaveBeenCalledWith('/login');
   });
+
+  it('gives a player in a team the tabs between its pages, in place of the way home', () => {
+    const withTabs = mount(DynamicTopBar, {
+      props: { isAuthenticated: true, showNav: true, teamLogoUrl: '/api/teams/team-1/logo?v=1' },
+      global: { stubs: { NotificationBell: true, AppNavTabs: true } },
+    });
+    const tabs = withTabs.findComponent({ name: 'AppNavTabs' });
+    expect(tabs.props()).toEqual({ placement: 'top', teamLogoUrl: '/api/teams/team-1/logo?v=1' });
+    expect(withTabs.find('.btn-home').exists()).toBe(false);
+
+    const without = mount(DynamicTopBar, { props: { isAuthenticated: true }, global: { stubs: { NotificationBell: true, AppNavTabs: true } } });
+    expect(without.findComponent({ name: 'AppNavTabs' }).exists()).toBe(false);
+    expect(without.find('.btn-home').exists()).toBe(true);
+  });
 });

@@ -59,21 +59,23 @@ defineEmits<{
   }
 }
 
+// Short of room beside the page tabs, its items go on a second row; a label never breaks
 .availability-legend {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: $spacing-md;
+  gap: 0.2rem $spacing-md;
   padding: 0.4rem 0.75rem;
   background: with-alpha($color-bg-tertiary, 0.5);
   border-radius: $radius-md;
   font-size: 0.8rem;
 
   @include tablet {
-    gap: $spacing-sm;
+    gap: 0.2rem $spacing-sm;
   }
 
   @include mobile-lg {
-    gap: 0.35rem;
+    gap: 0.2rem 0.35rem;
     padding: 0.3rem 0.5rem;
     font-size: 0.7rem;
   }
@@ -133,6 +135,7 @@ defineEmits<{
 
 .legend-label {
   color: $color-text-secondary;
+  white-space: nowrap;
 
   @each $status, $color in $team-availability-colors {
     .team-availability--#{$status} & {

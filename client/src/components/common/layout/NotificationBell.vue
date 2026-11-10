@@ -212,7 +212,7 @@ $panel-layer: 900; // Over the page, under any modal (Modal.vue opens them from 
     left: 0;
     right: 0;
     width: auto;
-    max-height: calc(100vh - var(--panel-top));
+    max-height: calc(100vh - var(--panel-top) - var(--app-bottom-inset, 0px)); // The page tabs stay in sight
     border-radius: 0;
     border-left: none;
     border-right: none;
