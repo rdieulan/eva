@@ -47,12 +47,25 @@ export interface DashboardScrimProposal {
   arenaNumber: number | null;
 }
 
+/** A competition the team's venue published for it, to add to its calendar or refuse */
+export interface DashboardCompetitionOffer {
+  competitionId: string;
+  venueName: string;
+  division: number | null; // The division whose day it is; null for an event of the venue's own
+  title: string;
+  date: string;      // YYYY-MM-DD
+  startTime: string; // HH:mm
+  endTime: string;   // HH:mm
+  description: string | null;
+}
+
 /** What the dashboard lists, kind by kind. `due` is the moment it stops being of use, in Paris time (YYYY-MM-DDTHH:mm). */
 export type DashboardItem =
   | { kind: 'MATCH'; due: string; data: DashboardMatch }
   | { kind: 'AVAILABILITY'; due: string; data: DashboardAvailability }
   | { kind: 'LEAGUE_REGISTRATION'; due: string; data: DashboardLeagueRegistration }
   | { kind: 'SCRIM_PROPOSAL'; due: string; data: DashboardScrimProposal }
+  | { kind: 'COMPETITION_OFFER'; due: string; data: DashboardCompetitionOffer }
   | { kind: 'JOIN_REQUESTS'; due: null; data: { count: number } };
 
 /** The team's next match beyond the coming week */

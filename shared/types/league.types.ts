@@ -38,6 +38,19 @@ export interface VenueDivisions {
   places: DivisionPlace[];
 }
 
+/** A competition a venue's manager publishes: a day of a division of its league, or an event of the venue's own */
+export interface VenueCompetitionView {
+  id: string;
+  division: number | null; // The division whose day it is; null for an event of the venue's own
+  title: string;
+  date: string;      // YYYY-MM-DD
+  startTime: string; // HH:mm
+  endTime: string;   // HH:mm
+  description: string | null;
+  // What the teams it went to said of it
+  answers: { pending: number; accepted: number; refused: number };
+}
+
 /** The divisions of the last drawn month of a venue's league, read from competitive.eva.gg */
 export interface VenueDivisionsRead {
   tournamentName: string; // "NEMAUSUS LEAGUE - OCTOBRE"

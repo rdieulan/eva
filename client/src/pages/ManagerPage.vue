@@ -8,6 +8,7 @@ import { fetchManagedVenues } from '@/api';
 import { useErrors } from '@/composables/useErrors';
 import SubjectIcon from '@/components/common/SubjectIcon.vue';
 import DivisionBoard from '@/components/manager/DivisionBoard.vue';
+import VenueCompetitions from '@/components/manager/VenueCompetitions.vue';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 
 const { errors, setErrorFromException } = useErrors();
@@ -66,6 +67,14 @@ onMounted(async () => {
           <DivisionBoard :key="venue.id" :venue-id="venue.id" />
         </section>
 
+        <section class="manager-section">
+          <h2><SubjectIcon subject="competition" size="22px" />Compétitions de la salle</h2>
+          <p class="manager-intro">
+            Publie les journées de chaque division, et les événements de la salle : nocturnes, tournois. C'est toi qui
+            donnes les dates.
+          </p>
+          <VenueCompetitions :key="venue.id" :venue-id="venue.id" />
+        </section>
       </template>
     </div>
   </div>

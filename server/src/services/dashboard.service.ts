@@ -165,6 +165,38 @@ async function proposalItems(reader: DashboardReader, today: string, nowTime: st
     }));
 }
 
+// The competitions the team's venues published for it, still to come and not answered
+async function competitionOfferItems(reader: DashboardReader, today: string, nowTime: string): Promise<DashboardItem[]> {
+  const offers = await prisma.venueCompetitionOffer.findMany({
+    where: { teamId: reader.teamId, status: 'PENDING', competition: { date: { gte: new Date(today) } } },
+    select: {
+      competition: {
+        select: {
+          id: true, division: true, title: true, date: true, startTime: true, endTime: true, description: true,
+          venue: { select: { name: true } },
+        },
+      },
+    },
+  });
+  return offers
+    .map(({ competition }) => ({ competition, date: formatDateStr(competition.date) }))
+    .filter(({ competition, date }) => date > today || competition.endTime > nowTime)
+    .map(({ competition, date }) => ({
+      kind: 'COMPETITION_OFFER',
+      due: `${date}T${competition.startTime}`,
+      data: {
+        competitionId: competition.id,
+        venueName: competition.venue.name,
+        division: competition.division,
+        title: competition.title,
+        date,
+        startTime: competition.startTime,
+        endTime: competition.endTime,
+        description: competition.description,
+      },
+    }));
+}
+
 // How many players wait for an answer to join the team
 async function joinRequestItems(reader: DashboardReader): Promise<DashboardItem[]> {
   const count = await prisma.teamJoinRequest.count({ where: { teamId: reader.teamId, status: 'PENDING' } });
@@ -184,8 +216,8 @@ async function nextMatchBeyondWeek(reader: DashboardReader, today: string): Prom
 /**
  * The dashboard of a player of a team: their team's matches of the coming week,
  * their own availability left to give, and, as their permissions let them, the
- * league registration, the proposals of matches and the requests to join to
- * answer. The soonest due first; what has none, last. With nothing to do, the
+ * league registration, the proposals of matches, the competitions of their
+ * venues and the requests to join to answer. The soonest due first; what has none, last. With nothing to do, the
  * team's next match all the same, when it has one.
  */
 export async function getDashboard(reader: DashboardReader, now: Date = new Date()): Promise<Dashboard> {
@@ -195,6 +227,7 @@ export async function getDashboard(reader: DashboardReader, now: Date = new Date
     availabilityItem(reader, today),
     reader.permissions.team.canManageTeam ? leagueItems(reader, now) : [],
     reader.permissions.matchmaking.canRespond ? proposalItems(reader, today, nowTime) : [],
+    reader.permissions.calendar.canCreateEvents ? competitionOfferItems(reader, today, nowTime) : [],
     reader.permissions.team.canInviteMembers ? joinRequestItems(reader) : [],
   ]);
   const items = groups.flat().sort((a, b) => Number(a.due === null) - Number(b.due === null) || (a.due ?? '').localeCompare(b.due ?? ''));

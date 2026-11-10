@@ -86,6 +86,7 @@ export type {
   DashboardItem,
   DashboardMatch,
   DashboardAvailability,
+  DashboardCompetitionOffer,
   DashboardLeagueRegistration,
   DashboardNextMatch,
   DashboardScrimProposal,
@@ -133,6 +134,7 @@ export type {
   LeagueTeamSummary,
   LeagueVenueProposal,
   ManagedVenue,
+  VenueCompetitionView,
   VenueDivisions,
   VenueDivisionsRead,
 } from './league.types';

@@ -87,7 +87,7 @@ export {
 export type { TeamMember, TeamWithMembers, CreatedTeam, TeamLeagueLink, TeamInvite, InviteValidation, JoinResult } from '@/api/teams.api';
 
 // Home dashboard API
-export { fetchDashboard, checkLeagueRegistration } from '@/api/dashboard.api';
+export { fetchDashboard, checkLeagueRegistration, answerCompetitionOffer } from '@/api/dashboard.api';
 
 // League teams API
 export { searchLeagueTeams, fetchLeagueTeam, fetchLeagueVenueProposal } from '@/api/league.api';
@@ -142,4 +142,7 @@ export {
   fetchVenueDivisions,
   saveVenueDivisions,
   readVenueDivisions,
+  fetchVenueCompetitions,
+  createVenueCompetition,
+  deleteVenueCompetition,
 } from '@/api/manager.api';

@@ -13,3 +13,6 @@ export const COMPETITIVE_SITE_URL = 'https://competitive.eva.gg/fr';
 // The divisions a venue's manager arranges its local league in, at most: a
 // league seen has 3, of 4 teams each
 export const LEAGUE_DIVISIONS_MAX = 8;
+
+// The longest title of a competition a venue's manager publishes
+export const VENUE_COMPETITION_TITLE_MAX = 80;

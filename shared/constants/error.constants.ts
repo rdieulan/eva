@@ -24,7 +24,7 @@ import {
   SCRIM_MATCH_COUNT_MAX,
   SCRIM_SEARCH_VENUES_MAX,
 } from '@shared/constants/eva.constants';
-import { LEAGUE_DIVISIONS_MAX } from '@shared/constants/league.constants';
+import { LEAGUE_DIVISIONS_MAX, VENUE_COMPETITION_TITLE_MAX } from '@shared/constants/league.constants';
 import { EVENT_TYPES, VOICE_MEDIUMS } from '@shared/types/calendar.types';
 import { SUBSCRIPTION_TIERS } from '@shared/types/subscription.types';
 
@@ -326,6 +326,16 @@ export const ERROR = {
   divisionsMonthNotDrawn: 'Les divisions de ce mois ne sont pas encore tirées sur competitive.eva.gg',
   divisionsReadTooSoon: 'Les divisions ont été relues il y a moins de 5 minutes : réessaie dans un instant',
   divisionsReadFailed: 'competitive.eva.gg n\'a pas pu donner les divisions : réessaie plus tard',
+
+  // Venue manager: the competitions of the venue
+  competitionsFetchFailed: 'Impossible de charger les compétitions de la salle',
+  competitionSaveFailed: 'Impossible de publier la compétition',
+  competitionDeleteFailed: 'Impossible de retirer la compétition',
+  competitionNotFound: 'Compétition non trouvée',
+  competitionInvalid: `Il faut un titre de ${VENUE_COMPETITION_TITLE_MAX} caractères au plus, un jour à venir, et une heure de fin après celle de début`,
+  competitionDivisionInvalid: 'Cette division n\'existe pas dans la ligue de la salle',
+  competitionOfferNotFound: 'Cette compétition n\'attend plus de réponse de l\'équipe',
+  competitionOfferFailed: 'Impossible de répondre à la compétition',
 } as const;
 
 export type ErrorMessageKey = keyof typeof ERROR;

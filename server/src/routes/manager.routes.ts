@@ -1,5 +1,6 @@
-// Venue manager routes: the venues an account manages, and the divisions of
-// each one's local league as its manager arranges them
+// Venue manager routes: the venues an account manages, the divisions of each
+// one's local league as its manager arranges them, and the competitions the
+// manager publishes in the venue's calendar
 
 import { Router } from 'express';
 import type { NextFunction, Response } from 'express';
@@ -14,6 +15,11 @@ import {
   readVenueDivisions,
   saveVenueDivisions,
 } from '@services/venue-divisions.service';
+import {
+  createVenueCompetition,
+  deleteVenueCompetition,
+  listVenueCompetitions,
+} from '@services/venue-competitions.service';
 
 const router = Router();
 
@@ -87,6 +93,40 @@ router.post('/venues/:venueId/divisions/read', requireManagedVenue, async (req: 
   } catch (error) {
     apiLogger.error('Error reading divisions from competitive.eva.gg:', error);
     res.status(500).json({ errors: [ERROR.divisionsReadFailed] });
+  }
+});
+
+// GET /api/manager/venues/:venueId/competitions - The venue's competitions to come, the soonest first
+router.get('/venues/:venueId/competitions', requireManagedVenue, async (req: ManagerRequest, res: Response) => {
+  try {
+    res.json(await listVenueCompetitions(req.params.venueId as string));
+  } catch (error) {
+    apiLogger.error('Error listing venue competitions:', error);
+    res.status(500).json({ errors: [ERROR.competitionsFetchFailed] });
+  }
+});
+
+// POST /api/manager/venues/:venueId/competitions - Publish a competition: a division's day, or an event of the venue's own
+router.post('/venues/:venueId/competitions', requireManagedVenue, async (req: ManagerRequest, res: Response) => {
+  try {
+    const result = await createVenueCompetition(req.params.venueId as string, req.body ?? {});
+    if ('error' in result) return res.status(400).json({ errors: [result.error] });
+    res.status(201).json(result);
+  } catch (error) {
+    apiLogger.error('Error publishing a venue competition:', error);
+    res.status(500).json({ errors: [ERROR.competitionSaveFailed] });
+  }
+});
+
+// DELETE /api/manager/venues/:venueId/competitions/:competitionId - Withdraw a competition
+router.delete('/venues/:venueId/competitions/:competitionId', requireManagedVenue, async (req: ManagerRequest, res: Response) => {
+  try {
+    const deleted = await deleteVenueCompetition(req.params.venueId as string, req.params.competitionId as string);
+    if (!deleted) return res.status(404).json({ errors: [ERROR.competitionNotFound] });
+    res.status(204).end();
+  } catch (error) {
+    apiLogger.error('Error withdrawing a venue competition:', error);
+    res.status(500).json({ errors: [ERROR.competitionDeleteFailed] });
   }
 });
 

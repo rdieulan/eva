@@ -10,6 +10,7 @@ import type { Dashboard } from '@shared/types';
 import { apiLogger } from '@utils/logger';
 import { getDashboard } from '@services/dashboard.service';
 import { recheckTeamRegistrations } from '@services/league-registrations.service';
+import { answerCompetitionOffer } from '@services/venue-competitions.service';
 
 const router = Router();
 
@@ -62,5 +63,28 @@ router.post(
     }
   },
 );
+
+// POST /api/dashboard/competition-offers/:competitionId/(accept|refuse) - The
+// team's answer to a competition its venue published: accepted, it joins the
+// team's calendar
+for (const [path, answer] of [['accept', 'ACCEPTED'], ['refuse', 'REFUSED']] as const) {
+  router.post(
+    `/competition-offers/:competitionId/${path}`,
+    authMiddleware,
+    requirePermission('calendar', 'canCreateEvents'),
+    async (req: AuthRequest, res: Response) => {
+      const { teamId, playerId } = req.account!;
+      if (!teamId || !playerId) return res.status(404).json({ errors: [ERROR.teamNotFound] });
+      try {
+        const result = await answerCompetitionOffer(teamId, playerId, req.params.competitionId as string, answer);
+        if ('error' in result) return res.status(404).json({ errors: [result.error] });
+        res.json(result);
+      } catch (error) {
+        apiLogger.error('Error answering a venue competition:', error);
+        res.status(500).json({ errors: [ERROR.competitionOfferFailed] });
+      }
+    },
+  );
+}
 
 export default router;

@@ -145,6 +145,30 @@ describe('describeDashboardItem', () => {
     });
   });
 
+  it('offers a competition of the venue to add to the calendar, or to refuse', () => {
+    const offer = (division: number | null, description: string | null = null): DashboardItem => ({
+      kind: 'COMPETITION_OFFER',
+      due: '2030-06-15T14:00',
+      data: { competitionId: 'c1', venueName: 'Nîmes', division, title: 'Journée de la Division 2', date: '2030-06-15', startTime: '14:00', endTime: '19:00', description },
+    });
+
+    expect(describeDashboardItem(offer(2), NOW)).toEqual({
+      subject: 'competition',
+      title: 'Journée de la Division 2',
+      body: line('sam. 15/06', '14:00 – 19:00', 'Nîmes'),
+      detail: 'La salle publie la journée de ta division, la Division 2.',
+      headcountStatus: null,
+      when: 'Dans 5 jours',
+      isUrgent: false,
+      actions: [
+        { kind: 'answerCompetition', label: 'Ajouter au calendrier', answer: 'accept' },
+        { kind: 'answerCompetition', label: 'Refuser', answer: 'refuse' },
+      ],
+    });
+    expect(describeDashboardItem(offer(null), NOW).detail).toBe('Un événement publié par la salle.');
+    expect(describeDashboardItem(offer(2, 'Convocation 13:30'), NOW).detail).toBe('Convocation 13:30');
+  });
+
   it('counts the players waiting to join, with no due', () => {
     const one = describeDashboardItem({ kind: 'JOIN_REQUESTS', due: null, data: { count: 1 } }, NOW);
     const two = describeDashboardItem({ kind: 'JOIN_REQUESTS', due: null, data: { count: 2 } }, NOW);

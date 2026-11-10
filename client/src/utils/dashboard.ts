@@ -17,11 +17,12 @@ import {
 } from '@shared/utils';
 import { calendarRoute } from '@/utils/calendar';
 
-/** Something to do about an item: go to a page of the app, open another site, or read the league again */
+/** Something to do about an item: go to a page of the app, open another site, read the league again, or answer a competition */
 export type DashboardAction =
   | { kind: 'route'; label: string; to: RouteLocationRaw }
   | { kind: 'link'; label: string; url: string }
-  | { kind: 'checkLeague'; label: string };
+  | { kind: 'checkLeague'; label: string }
+  | { kind: 'answerCompetition'; label: string; answer: 'accept' | 'refuse' };
 
 /** An item of the dashboard as a card shows it */
 export interface DashboardCardView {
@@ -72,6 +73,7 @@ export function dashboardItemKey(item: DashboardItem): string {
     case 'AVAILABILITY': return 'availability';
     case 'LEAGUE_REGISTRATION': return `league-${item.data.tournamentId}`;
     case 'SCRIM_PROPOSAL': return `proposal-${item.data.proposalId}`;
+    case 'COMPETITION_OFFER': return `competition-${item.data.competitionId}`;
     case 'JOIN_REQUESTS': return 'join-requests';
   }
 }
@@ -155,6 +157,23 @@ export function describeDashboardItem(item: DashboardItem, now: Date = new Date(
             open: { kind: 'scrimSearch', id: data.searchId },
           }),
         }],
+      };
+    }
+    case 'COMPETITION_OFFER': {
+      const { data } = item;
+      return {
+        subject: 'competition',
+        title: data.title,
+        body: dayHoursPlace(data.date, data.startTime, data.endTime, data.venueName),
+        detail: data.description ?? (data.division
+          ? `La salle publie la journée de ta division, la Division ${data.division}.`
+          : 'Un événement publié par la salle.'),
+        headcountStatus: null,
+        ...due,
+        actions: [
+          { kind: 'answerCompetition', label: 'Ajouter au calendrier', answer: 'accept' },
+          { kind: 'answerCompetition', label: 'Refuser', answer: 'refuse' },
+        ],
       };
     }
     case 'JOIN_REQUESTS': {

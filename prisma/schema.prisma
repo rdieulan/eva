@@ -114,7 +114,7 @@ model Admin {
 // ============================================
 
 model Team {
-  id                      String              @id @default(cuid())
+  id                      String                  @id @default(cuid())
   name                    String
   // The team's logo, a small image kept in the database so it survives redeploys
   logoData                Bytes?
@@ -128,17 +128,17 @@ model Team {
   venueId                 String?
   // The league team it is on competitive.eva.gg, one team of ours for each:
   // whoever finds that league team in the directory finds this team with it
-  leagueTeamId            String?             @unique
+  leagueTeamId            String?                 @unique
   // How many days ahead, today included, its players are asked for their
   // availability; set by whoever manages the team (AVAILABILITY_HORIZON_* in shared/constants)
-  availabilityHorizonDays Int                 @default(15)
-  leaderId                String              @unique
-  createdAt               DateTime            @default(now())
-  updatedAt               DateTime            @updatedAt
-  venue                   Venue?              @relation(fields: [venueId], references: [id])
-  leagueTeam              LeagueTeam?         @relation(fields: [leagueTeamId], references: [id], onDelete: SetNull)
-  leader                  Player              @relation("TeamLeader", fields: [leaderId], references: [id])
-  members                 Player[]            @relation("TeamMembers")
+  availabilityHorizonDays Int                     @default(15)
+  leaderId                String                  @unique
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
+  venue                   Venue?                  @relation(fields: [venueId], references: [id])
+  leagueTeam              LeagueTeam?             @relation(fields: [leagueTeamId], references: [id], onDelete: SetNull)
+  leader                  Player                  @relation("TeamLeader", fields: [leaderId], references: [id])
+  members                 Player[]                @relation("TeamMembers")
   balanceRules            BalanceRule[]
   gamePlans               GamePlan[]
   calendarEvents          CalendarEvent[]
@@ -149,6 +149,7 @@ model Team {
   notifications           Notification[]
   joinRequests            TeamJoinRequest[]
   leagueEntries           LeagueEntry[]
+  competitionOffers       VenueCompetitionOffer[]
 
   @@index([venueId])
 }
@@ -196,6 +197,7 @@ model Venue {
   scrimRuns            ScrimProposal[]
   leagueTournaments    LeagueTournament[]
   leagueDivisionPlaces LeagueDivisionPlace[]
+  competitions         VenueCompetition[]
 }
 
 model VenueManager {
@@ -242,6 +244,51 @@ model LeagueDivisionPlace {
   venue        Venue      @relation(fields: [venueId], references: [id], onDelete: Cascade)
 
   @@index([venueId])
+}
+
+// A competition a venue's manager publishes in the venue's calendar: a day of
+// a division of its local league, or an event of the venue's own (a night
+// session, a tournament). The manager gives the dates: those of a month past
+// say nothing of the next ones.
+model VenueCompetition {
+  id          String                  @id @default(cuid())
+  venueId     String
+  division    Int? // The division whose day it is; null for an event of the venue's own
+  title       String
+  date        DateTime                @db.Date
+  startTime   String // HH:mm
+  endTime     String // HH:mm
+  description String?
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+  venue       Venue                   @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  offers      VenueCompetitionOffer[]
+  teamEvents  CalendarEvent[]
+
+  @@index([venueId, date])
+}
+
+// What a team says of a competition a venue published for it: a division's day
+// goes to the teams of that division, an event of the venue's own to all its
+// teams. Those who can create the team's events accept it into its calendar,
+// or refuse it.
+model VenueCompetitionOffer {
+  competitionId String
+  teamId        String
+  status        VenueCompetitionOfferStatus @default(PENDING)
+  answeredAt    DateTime?
+  createdAt     DateTime                    @default(now())
+  competition   VenueCompetition            @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  team          Team                        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@id([competitionId, teamId])
+  @@index([teamId, status])
+}
+
+enum VenueCompetitionOfferStatus {
+  PENDING
+  ACCEPTED
+  REFUSED
 }
 
 // A tournament of a local league of competitive.eva.gg: each month of a league
@@ -344,32 +391,36 @@ model Availability {
 }
 
 model CalendarEvent {
-  id            String       @id @default(cuid())
-  date          DateTime     @db.Date
-  startTime     String
-  endTime       String
-  type          EventType
-  title         String
-  description   String?
-  teamId        String?
-  venueId       String? // Where a MATCH is played; other event types have none
-  arenaNumber   Int? // Which arena of that venue, when the team knows it
-  evaSlotIds    String[]     @default([]) // The eva.gg slots the match runs on, consecutive on one arena, in order; empty when none picked
-  voiceMedium   VoiceMedium? // Where a VOICE_MEETING is held; other event types have none
-  scrimSearchId String? // The search this match came out of, when the matchmaking created it
-  createdById   String
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  gamePlan      Json?
-  team          Team?        @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  venue         Venue?       @relation(fields: [venueId], references: [id], onDelete: SetNull)
-  createdBy     Player       @relation(fields: [createdById], references: [id])
-  scrimSearch   ScrimSearch? @relation(fields: [scrimSearchId], references: [id], onDelete: SetNull)
+  id                 String            @id @default(cuid())
+  date               DateTime          @db.Date
+  startTime          String
+  endTime            String
+  type               EventType
+  title              String
+  description        String?
+  teamId             String?
+  venueId            String? // Where a MATCH is played; other event types have none
+  arenaNumber        Int? // Which arena of that venue, when the team knows it
+  evaSlotIds         String[]          @default([]) // The eva.gg slots the match runs on, consecutive on one arena, in order; empty when none picked
+  voiceMedium        VoiceMedium? // Where a VOICE_MEETING is held; other event types have none
+  scrimSearchId      String? // The search this match came out of, when the matchmaking created it
+  // The venue competition this one is the team's copy of, once the team accepted it: withdrawn by the venue, it goes
+  venueCompetitionId String?
+  createdById        String
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  gamePlan           Json?
+  team               Team?             @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  venue              Venue?            @relation(fields: [venueId], references: [id], onDelete: SetNull)
+  createdBy          Player            @relation(fields: [createdById], references: [id])
+  scrimSearch        ScrimSearch?      @relation(fields: [scrimSearchId], references: [id], onDelete: SetNull)
+  venueCompetition   VenueCompetition? @relation(fields: [venueCompetitionId], references: [id], onDelete: Cascade)
 
   @@index([date])
   @@index([teamId])
   @@index([venueId])
   @@index([scrimSearchId])
+  @@index([venueCompetitionId])
 }
 
 // A team's offer for a day: slots of one venue or more, and how many matches

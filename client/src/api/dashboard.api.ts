@@ -19,3 +19,12 @@ export async function checkLeagueRegistration(): Promise<string[]> {
   );
   return registered;
 }
+
+/** The team's answer to a competition its venue published: accepted, it joins the team's calendar */
+export async function answerCompetitionOffer(competitionId: string, answer: 'accept' | 'refuse'): Promise<void> {
+  await authFetch<{ eventId: string | null }>(
+    `/api/dashboard/competition-offers/${encodeURIComponent(competitionId)}/${answer}`,
+    { method: 'POST' },
+    ERROR.competitionOfferFailed,
+  );
+}

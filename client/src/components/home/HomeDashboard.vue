@@ -8,7 +8,7 @@
 import { computed, onMounted, ref } from 'vue';
 import type { Dashboard } from '@shared/types';
 import { ERROR } from '@shared/constants';
-import { checkLeagueRegistration, fetchDashboard } from '@/api';
+import { answerCompetitionOffer, checkLeagueRegistration, fetchDashboard } from '@/api';
 import { useErrors } from '@/composables/useErrors';
 import { dashboardItemKey, describeDashboardItem, describeNextMatch } from '@/utils/dashboard';
 import SubjectIcon from '@/components/common/SubjectIcon.vue';
@@ -61,6 +61,22 @@ async function checkLeague(tournamentId: string) {
     leagueNote.value = { tournamentId, text: error instanceof Error ? error.message : ERROR.leagueCheckFailed };
   } finally {
     isChecking.value = false;
+  }
+}
+
+// Accepted, the competition joins the team's calendar; either way its card goes
+const answering = ref<string | null>(null);
+async function answer(competitionId: string, choice: 'accept' | 'refuse') {
+  if (answering.value) return;
+  answering.value = competitionId;
+  clearErrors();
+  try {
+    await answerCompetitionOffer(competitionId, choice);
+    await load();
+  } catch (error) {
+    setErrorFromException(error, ERROR.competitionOfferFailed);
+  } finally {
+    answering.value = null;
   }
 }
 
@@ -125,6 +141,14 @@ onMounted(load);
                 class="dashboard-action"
                 :class="{ 'dashboard-action--main': index === 0 }"
               >{{ action.label }} ↗</a>
+              <button
+                v-else-if="action.kind === 'answerCompetition' && item.kind === 'COMPETITION_OFFER'"
+                type="button"
+                class="dashboard-action"
+                :class="{ 'dashboard-action--main': index === 0, 'dashboard-action--refuse': action.answer === 'refuse' }"
+                :disabled="answering !== null"
+                @click="answer(item.data.competitionId, action.answer)"
+              >{{ action.label }}</button>
               <button
                 v-else-if="item.kind === 'LEAGUE_REGISTRATION'"
                 type="button"
@@ -313,6 +337,11 @@ onMounted(load);
   // What the card is there for, in the colour of its subject
   &--main {
     @include btn-base(var(--subject-color));
+  }
+
+  // Refusing: the state's red, as everywhere a refusal shows
+  &--refuse {
+    @include btn-base($color-danger);
   }
 }
 </style>
