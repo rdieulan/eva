@@ -623,17 +623,14 @@ const modalSize = computed(() => {
   }
 }
 
+// Four types, two by two: each name whole, on the narrowest form
 .type-selector {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: $spacing-sm;
-
-  @include mobile-lg {
-    gap: $spacing-sm;
-  }
 }
 
 .type-btn {
-  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;

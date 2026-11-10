@@ -299,6 +299,7 @@ $team-availability-colors: (
 // `.event-type--<key>` modifiers (see getEventTypeClass in utils/calendar.ts)
 $event-type-colors: (
   match: $color-match,
+  competition: $color-competition,
   event: $color-event,
   voice-meeting: $color-voice-meeting,
 );

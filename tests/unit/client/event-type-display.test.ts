@@ -7,6 +7,7 @@ import { getEventTypeClass, getEventTypeTitle, getVoiceMediumLabel, sortEventsBy
 describe('event type display', () => {
   it('gives every event type an icon-prefixed title', () => {
     expect(getEventTypeTitle('MATCH')).toBe('🎮 Match');
+    expect(getEventTypeTitle('COMPETITION')).toBe('🏆 Compétition');
     expect(getEventTypeTitle('EVENT')).toBe('📅 Événement');
     expect(getEventTypeTitle('VOICE_MEETING')).toBe('🎧 Réunion vocale');
   });
@@ -14,7 +15,7 @@ describe('event type display', () => {
   it('gives every event type a distinct CSS modifier', () => {
     const classes = EVENT_TYPES.map(getEventTypeClass);
 
-    expect(classes).toEqual(['event-type--match', 'event-type--event', 'event-type--voice-meeting']);
+    expect(classes).toEqual(['event-type--match', 'event-type--competition', 'event-type--event', 'event-type--voice-meeting']);
     expect(new Set(classes).size).toBe(EVENT_TYPES.length);
   });
 });

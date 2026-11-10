@@ -36,6 +36,7 @@ export interface EventTypeDisplay {
 // Colours live alongside in $event-type-colors (styles/_variables.scss).
 const EVENT_TYPE_DISPLAY: Record<EventType, EventTypeDisplay> = {
   MATCH: { label: 'Match', emoji: '🎮', icon: 'sword' },
+  COMPETITION: { label: 'Compétition', emoji: '🏆', icon: 'trophy' },
   EVENT: { label: 'Événement', emoji: '📅', icon: 'flag' },
   VOICE_MEETING: { label: 'Réunion vocale', emoji: '🎧', icon: 'headset' },
 };

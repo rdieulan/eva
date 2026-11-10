@@ -537,6 +537,7 @@ enum EventType {
   MATCH
   EVENT
   VOICE_MEETING
+  COMPETITION // A tournament the team plays, a month of its local league for one
 }
 
 enum VoiceMedium {

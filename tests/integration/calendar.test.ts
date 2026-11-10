@@ -432,6 +432,29 @@ describe('Calendar API', () => {
       expect(event!.teamId).toBe(team.id);
     });
 
+    it('should create a competition the team plays, with no venue of its own', async () => {
+      const { token, team } = await createUserWithTeam();
+      await createVenue({ teamId: team.id });
+
+      const res = await request(app)
+        .post('/api/calendar/events')
+        .set(authHeader(token))
+        .send({
+          date: getFutureDate(),
+          startTime: '14:00',
+          endTime: '19:00',
+          type: 'COMPETITION',
+          title: 'NEMAUSUS LEAGUE - DÉCEMBRE',
+          description: 'Rendez-vous 13:30 à la salle',
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body).toMatchObject({ type: 'COMPETITION', title: 'NEMAUSUS LEAGUE - DÉCEMBRE' });
+      expect(res.body.venue).toBeUndefined();
+      const event = await prisma.calendarEvent.findUniqueOrThrow({ where: { id: res.body.id } });
+      expect(event).toMatchObject({ type: 'COMPETITION', teamId: team.id, venueId: null, evaSlotIds: [] });
+    });
+
     it('should create a voice meeting on the platform it is held on', async () => {
       const { token, team } = await createUserWithTeam();
       const date = getFutureDate();
@@ -1030,7 +1053,7 @@ describe('Calendar API', () => {
       expect(res.body.errors).toContain(ERROR.venueNotFound);
     });
 
-    it.each(['EVENT', 'VOICE_MEETING'])('should reject a venue on a %s', async (type) => {
+    it.each(['COMPETITION', 'EVENT', 'VOICE_MEETING'])('should reject a venue on a %s', async (type) => {
       const { token, team } = await createUserWithTeam();
       const venue = await createVenue({ teamId: team.id });
 

@@ -24,9 +24,11 @@ export interface AvailabilityHours {
 
 /**
  * Calendar event types — single source of truth for validation and the
- * creation form. Mirrors the EventType enum in prisma/schema.prisma.
+ * creation form, in the order the form offers them. Mirrors the EventType
+ * enum in prisma/schema.prisma. A competition is a tournament the team plays,
+ * a month of its local league for one.
  */
-export const EVENT_TYPES = ['MATCH', 'EVENT', 'VOICE_MEETING'] as const;
+export const EVENT_TYPES = ['MATCH', 'COMPETITION', 'EVENT', 'VOICE_MEETING'] as const;
 
 export type EventType = typeof EVENT_TYPES[number];
 

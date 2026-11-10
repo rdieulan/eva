@@ -75,10 +75,10 @@ describe('EventFormModal Component', () => {
 
     const typeButtons = wrapper.findAll('.type-btn');
     expect(typeButtons.map(b => b.find('.type-btn-label').text()))
-      .toEqual(['Match', 'Événement', 'Réunion vocale']);
+      .toEqual(['Match', 'Compétition', 'Événement', 'Réunion vocale']);
 
-    await typeButtons[2]!.trigger('click');
-    expect(typeButtons[2]!.classes()).toContain('active');
+    await typeButtons[3]!.trigger('click');
+    expect(typeButtons[3]!.classes()).toContain('active');
 
     await wrapper.find('#event-title').setValue('Strat Polaris');
     await wrapper.findAll('button').find(b => b.text() === 'Créer')!.trigger('click');
@@ -88,6 +88,27 @@ describe('EventFormModal Component', () => {
       type: 'VOICE_MEETING',
       title: 'Strat Polaris',
     });
+  });
+
+  it('should create a competition in its own colour, with no venue to pick', async () => {
+    const wrapper = mount(EventFormModal, {
+      props: { open: false, canCreate: true, selectedDate: '2026-11-03', maps: mockMaps, players: mockPlayers },
+      global: { stubs: { Teleport: true } },
+    });
+    await wrapper.setProps({ open: true });
+
+    const competition = wrapper.findAll('.type-btn').find(b => b.find('.type-btn-label').text() === 'Compétition')!;
+    expect(competition.classes()).toContain('event-type--competition');
+    expect(competition.find('.type-btn-icon').text()).toBe('🏆');
+    await competition.trigger('click');
+    expect(wrapper.find('.venue-picker, #event-venue').exists()).toBe(false);
+
+    await wrapper.find('#event-title').setValue('NEMAUSUS LEAGUE - DÉCEMBRE');
+    await wrapper.findAll('button').find(b => b.text() === 'Créer')!.trigger('click');
+
+    const submitted = wrapper.emitted('submit')?.[0]?.[0] as Record<string, unknown>;
+    expect(submitted).toMatchObject({ date: '2026-11-03', type: 'COMPETITION', title: 'NEMAUSUS LEAGUE - DÉCEMBRE' });
+    expect(submitted.venueId ?? null).toBeNull();
   });
 
   it('should emit close event when close is triggered', async () => {
