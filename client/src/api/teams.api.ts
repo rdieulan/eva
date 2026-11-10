@@ -84,9 +84,9 @@ export async function fetchVenueSlots(venueId: string, date: string): Promise<Ve
  * Update team info
  */
 export async function updateTeam(
-  teamData: { name?: string; venueId?: string | null; favoriteVenueIds?: string[] }
-): Promise<Team> {
-  return authFetch<Team>(
+  teamData: { name?: string; venueId?: string | null; favoriteVenueIds?: string[]; availabilityHorizonDays?: number }
+): Promise<Pick<Team, 'id' | 'name' | 'favoriteVenueIds' | 'availabilityHorizonDays'> & { venueId: string | null }> {
+  return authFetch<Pick<Team, 'id' | 'name' | 'favoriteVenueIds' | 'availabilityHorizonDays'> & { venueId: string | null }>(
     `${API_BASE}/current`,
     { method: 'PUT', body: JSON.stringify(teamData) },
     ERROR.teamUpdateFailed

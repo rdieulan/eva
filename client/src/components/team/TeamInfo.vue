@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import type { Venue } from '@shared/types';
-import { TEAM_LOGO_MIME_TYPES, TEAM_FAVORITE_VENUES_MAX } from '@shared/constants';
+import {
+  AVAILABILITY_HORIZON_MAX_DAYS,
+  AVAILABILITY_HORIZON_MIN_DAYS,
+  ERROR,
+  TEAM_FAVORITE_VENUES_MAX,
+  TEAM_LOGO_MIME_TYPES,
+} from '@shared/constants';
 import SvgIcon from '@/components/common/SvgIcon.vue';
 import TeamLogo from '@/components/common/TeamLogo.vue';
 import VenueChecklist from '@/components/common/VenueChecklist.vue';
@@ -13,6 +19,7 @@ interface TeamData {
   logoUrl: string | null;
   venueId?: string;
   favoriteVenueIds: string[];
+  availabilityHorizonDays: number;
   leader: { id: string; name: string } | null;
 }
 
@@ -24,7 +31,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  save: [data: { name: string; venueId: string | null; favoriteVenueIds: string[] }];
+  save: [data: { name: string; venueId: string | null; favoriteVenueIds: string[]; availabilityHorizonDays: number }];
   uploadLogo: [file: File];
   removeLogo: [];
   deleteTeam: [];
@@ -70,12 +77,22 @@ const isEditing = ref(false);
 const editName = ref('');
 const editVenueId = ref<string | null>(null);
 const editFavoriteVenueIds = ref<string[]>([]);
+// An empty field reads as an empty string, whatever its type
+const editHorizonDays = ref<number | ''>(0);
+
+// Whole days, within the bounds the server keeps too
+const isHorizonValid = computed(() =>
+  Number.isInteger(editHorizonDays.value)
+    && Number(editHorizonDays.value) >= AVAILABILITY_HORIZON_MIN_DAYS
+    && Number(editHorizonDays.value) <= AVAILABILITY_HORIZON_MAX_DAYS,
+);
 
 // Start editing
 function startEdit() {
   editName.value = props.team.name;
   editVenueId.value = props.team.venueId ?? null;
   editFavoriteVenueIds.value = [...props.team.favoriteVenueIds];
+  editHorizonDays.value = props.team.availabilityHorizonDays;
   isEditing.value = true;
 }
 
@@ -86,10 +103,12 @@ function cancelEdit() {
 
 // Save changes
 function saveChanges() {
+  if (!isHorizonValid.value) return;
   emit('save', {
     name: editName.value,
     venueId: editVenueId.value,
     favoriteVenueIds: editFavoriteVenueIds.value,
+    availabilityHorizonDays: Number(editHorizonDays.value),
   });
   isEditing.value = false;
 }
@@ -146,9 +165,31 @@ function saveChanges() {
         :max="TEAM_FAVORITE_VENUES_MAX"
         :legend="`Salles favorites (${TEAM_FAVORITE_VENUES_MAX} au plus)`"
       />
+      <div class="form-group">
+        <label for="team-horizon">Dispos demandées sur</label>
+        <div class="form-inline">
+          <input
+            id="team-horizon"
+            v-model.number="editHorizonDays"
+            class="form-days"
+            type="number"
+            inputmode="numeric"
+            :min="AVAILABILITY_HORIZON_MIN_DAYS"
+            :max="AVAILABILITY_HORIZON_MAX_DAYS"
+            step="1"
+            aria-describedby="team-horizon-hint"
+          />
+          <span>jours</span>
+        </div>
+        <p id="team-horizon-hint" class="form-hint" :class="{ invalid: !isHorizonValid }">
+          {{ isHorizonValid
+            ? 'L\'accueil rappelle à chaque joueur les jours sans dispos sur cette période, aujourd\'hui compris.'
+            : ERROR.availabilityHorizonInvalid }}
+        </p>
+      </div>
       <div class="form-actions">
         <button class="btn-cancel" @click="cancelEdit">Annuler</button>
-        <button class="btn-save" @click="saveChanges">Enregistrer</button>
+        <button class="btn-save" :disabled="!isHorizonValid" @click="saveChanges">Enregistrer</button>
       </div>
     </div>
 
@@ -180,6 +221,10 @@ function saveChanges() {
         <label>Salles favorites</label>
         <span v-if="favoriteVenueNames.length === 0" class="info-empty">Aucune</span>
         <span v-else>{{ favoriteVenueNames.join(', ') }}</span>
+      </div>
+      <div class="info-item">
+        <label>Dispos demandées sur</label>
+        <span>{{ team.availabilityHorizonDays }} jours</span>
       </div>
       <div class="info-item">
         <label>Leader</label>
@@ -296,6 +341,31 @@ function saveChanges() {
       outline: none;
       border-color: $color-accent;
     }
+  }
+}
+
+// A number and its unit on one line
+.form-inline {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+
+  span {
+    color: $color-text-primary;
+  }
+}
+
+.form-group .form-days {
+  width: 6rem;
+}
+
+.form-hint {
+  margin: 0;
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+
+  &.invalid {
+    color: $color-danger;
   }
 }
 

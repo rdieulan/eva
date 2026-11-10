@@ -26,6 +26,16 @@ export interface TeamUpdateData {
   name?: string;
   venueId?: string | null;
   favoriteVenueIds?: string[]; // Distinct, bounded by the caller; replaces the whole list
+  availabilityHorizonDays?: number; // Within the bounds, checked by the caller
+}
+
+/** A team's information as saved, back to whoever saved it: never its logo's bytes nor its Discord webhook */
+export interface TeamInformation {
+  id: string;
+  name: string;
+  venueId: string | null;
+  favoriteVenueIds: string[];
+  availabilityHorizonDays: number;
 }
 
 // What identifies a team's logo without loading its bytes
@@ -68,6 +78,7 @@ export interface TeamView {
   isLeader: boolean;
   discord: TeamDiscordStatus; // Whether its notifications go to a Discord channel; never the webhook itself
   leagueTeam: LeagueTeamSummary | null; // The league team it is on competitive.eva.gg, when linked
+  availabilityHorizonDays: number; // How many days ahead its players are asked for their availability
 }
 
 /**
@@ -106,6 +117,7 @@ export async function getTeamViewForPlayer(playerId: string): Promise<TeamView |
     isLeader: !!playerData!.ledTeam,
     discord: await teamDiscordStatus(team.id),
     leagueTeam: team.leagueTeamId ? await getLeagueTeamSummary(team.leagueTeamId) : null,
+    availabilityHorizonDays: team.availabilityHorizonDays,
   };
 }
 
@@ -218,6 +230,7 @@ export interface CreatedTeam {
   leaderId: string;
   createdAt: Date;
   updatedAt: Date;
+  availabilityHorizonDays: number;
   isLeader: true;
   // Created from a league team with a logo: whether its logo came along. Null
   // when there was none to take.
@@ -301,6 +314,7 @@ export async function createTeam(data: TeamCreateData): Promise<{ error: string 
         leaderId: team.leaderId,
         createdAt: team.createdAt,
         updatedAt: team.updatedAt,
+        availabilityHorizonDays: team.availabilityHorizonDays,
         isLeader: true,
         logoCopied: hasLeagueLogo ? logo !== null : null,
       },
@@ -377,7 +391,7 @@ export async function setTeamLeagueTeam(teamId: string, leagueTeamId: string | n
  * Update team info. The favorite venues, when given, replace the current list
  * in the order received.
  */
-export async function updateTeam(teamId: string, data: TeamUpdateData) {
+export async function updateTeam(teamId: string, data: TeamUpdateData): Promise<{ error: string; team?: undefined } | { error?: undefined; team: TeamInformation }> {
   // Every venue named has to exist
   const venueIds = [...(data.venueId ? [data.venueId] : []), ...(data.favoriteVenueIds ?? [])];
   if (venueIds.length) {
@@ -393,6 +407,7 @@ export async function updateTeam(teamId: string, data: TeamUpdateData) {
     data: {
       ...(data.name && { name: data.name.trim() }),
       ...(data.venueId !== undefined && { venueId: data.venueId }),
+      ...(data.availabilityHorizonDays !== undefined && { availabilityHorizonDays: data.availabilityHorizonDays }),
       ...(favoriteVenueIds && {
         favoriteVenues: {
           deleteMany: {},
@@ -400,7 +415,13 @@ export async function updateTeam(teamId: string, data: TeamUpdateData) {
         },
       }),
     },
-    include: { favoriteVenues: { select: { venueId: true }, orderBy: { position: 'asc' } } },
+    select: {
+      id: true,
+      name: true,
+      venueId: true,
+      availabilityHorizonDays: true,
+      favoriteVenues: { select: { venueId: true }, orderBy: { position: 'asc' } },
+    },
   });
 
   const { favoriteVenues, ...rest } = team;

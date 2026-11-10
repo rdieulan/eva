@@ -11,7 +11,12 @@ import {
   SCRIM_OFFER_SLOTS_MAX,
   SCRIM_PROPOSAL_MESSAGE_MAX_LENGTH,
 } from '@shared/constants/validation.constants';
-import { TEAM_LOGO_MAX_BYTES, TEAM_FAVORITE_VENUES_MAX } from '@shared/constants/team.constants';
+import {
+  TEAM_LOGO_MAX_BYTES,
+  TEAM_FAVORITE_VENUES_MAX,
+  AVAILABILITY_HORIZON_MIN_DAYS,
+  AVAILABILITY_HORIZON_MAX_DAYS,
+} from '@shared/constants/team.constants';
 import {
   SCRIM_MATCH_SLOTS_MIN,
   SCRIM_MATCH_SLOTS_MAX,
@@ -95,6 +100,7 @@ export const ERROR = {
   discordLinkFailed: 'Erreur lors de la liaison du salon Discord',
   discordUnlinkFailed: 'Erreur lors du retrait du salon Discord',
   teamFavoriteVenuesInvalid: 'La liste des salles favorites est invalide',
+  availabilityHorizonInvalid: `Les dispos se demandent sur ${AVAILABILITY_HORIZON_MIN_DAYS} à ${AVAILABILITY_HORIZON_MAX_DAYS} jours`,
   teamFavoriteVenuesTooMany: `Au plus ${TEAM_FAVORITE_VENUES_MAX} salles favorites`,
   teamRequiredForMaps: 'Vous devez appartenir à une équipe pour accéder aux cartes',
   teamRequiredForPlans: 'Vous devez appartenir à une équipe pour accéder aux plans',

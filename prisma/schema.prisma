@@ -114,38 +114,41 @@ model Admin {
 // ============================================
 
 model Team {
-  id                     String              @id @default(cuid())
-  name                   String
+  id                      String              @id @default(cuid())
+  name                    String
   // The team's logo, a small image kept in the database so it survives redeploys
-  logoData               Bytes?
-  logoType               String? // image/png, image/jpeg or image/webp, as read from the file itself
-  logoUpdatedAt          DateTime? // Changes the logo URL, so browsers drop their cached copy
+  logoData                Bytes?
+  logoType                String? // image/png, image/jpeg or image/webp, as read from the file itself
+  logoUpdatedAt           DateTime? // Changes the logo URL, so browsers drop their cached copy
   // Where the team's notifications are posted on Discord: the webhook of one of
   // its channels. A secret, since whoever holds it posts there: never sent back
   // to the app, and left out of every team query that does not ask for it
-  discordWebhookUrl      String?
-  discordWebhookBrokenAt DateTime? // When Discord refused to post there (webhook deleted): nothing more goes until it is replaced
-  venueId                String?
+  discordWebhookUrl       String?
+  discordWebhookBrokenAt  DateTime? // When Discord refused to post there (webhook deleted): nothing more goes until it is replaced
+  venueId                 String?
   // The league team it is on competitive.eva.gg, one team of ours for each:
   // whoever finds that league team in the directory finds this team with it
-  leagueTeamId           String?             @unique
-  leaderId               String              @unique
-  createdAt              DateTime            @default(now())
-  updatedAt              DateTime            @updatedAt
-  venue                  Venue?              @relation(fields: [venueId], references: [id])
-  leagueTeam             LeagueTeam?         @relation(fields: [leagueTeamId], references: [id], onDelete: SetNull)
-  leader                 Player              @relation("TeamLeader", fields: [leaderId], references: [id])
-  members                Player[]            @relation("TeamMembers")
-  balanceRules           BalanceRule[]
-  gamePlans              GamePlan[]
-  calendarEvents         CalendarEvent[]
-  invites                TeamInvite[]
-  favoriteVenues         TeamFavoriteVenue[]
-  scrimSearches          ScrimSearch[]
-  scrimProposals         ScrimProposal[]
-  notifications          Notification[]
-  joinRequests           TeamJoinRequest[]
-  leagueEntries          LeagueEntry[]
+  leagueTeamId            String?             @unique
+  // How many days ahead, today included, its players are asked for their
+  // availability; set by whoever manages the team (AVAILABILITY_HORIZON_* in shared/constants)
+  availabilityHorizonDays Int                 @default(15)
+  leaderId                String              @unique
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+  venue                   Venue?              @relation(fields: [venueId], references: [id])
+  leagueTeam              LeagueTeam?         @relation(fields: [leagueTeamId], references: [id], onDelete: SetNull)
+  leader                  Player              @relation("TeamLeader", fields: [leaderId], references: [id])
+  members                 Player[]            @relation("TeamMembers")
+  balanceRules            BalanceRule[]
+  gamePlans               GamePlan[]
+  calendarEvents          CalendarEvent[]
+  invites                 TeamInvite[]
+  favoriteVenues          TeamFavoriteVenue[]
+  scrimSearches           ScrimSearch[]
+  scrimProposals          ScrimProposal[]
+  notifications           Notification[]
+  joinRequests            TeamJoinRequest[]
+  leagueEntries           LeagueEntry[]
 
   @@index([venueId])
 }

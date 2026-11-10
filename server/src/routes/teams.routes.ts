@@ -6,7 +6,14 @@ import { authMiddleware, requirePermission } from '@middleware/auth.middleware';
 import type { AuthRequest } from '@middleware/auth.middleware';
 import type { AccountPermissions } from '@shared/types';
 import { validateTeamName, detectImageType } from '@shared/utils';
-import { ERROR, TEAM_LOGO_MAX_BYTES, TEAM_LOGO_MIME_TYPES, TEAM_FAVORITE_VENUES_MAX } from '@shared/constants';
+import {
+  ERROR,
+  TEAM_LOGO_MAX_BYTES,
+  TEAM_LOGO_MIME_TYPES,
+  TEAM_FAVORITE_VENUES_MAX,
+  AVAILABILITY_HORIZON_MIN_DAYS,
+  AVAILABILITY_HORIZON_MAX_DAYS,
+} from '@shared/constants';
 import { apiLogger } from '@utils/logger';
 import * as teamsService from '@services/teams.service';
 import { linkTeamDiscord, unlinkTeamDiscord, type LinkTeamDiscordRefusal } from '@services/team-discord.service';
@@ -95,7 +102,7 @@ router.put('/current', authMiddleware, requirePermission('team', 'canManageTeam'
       return res.status(404).json({ errors: [ERROR.teamNotFound] });
     }
 
-    const { name, venueId, favoriteVenueIds } = req.body;
+    const { name, venueId, favoriteVenueIds, availabilityHorizonDays } = req.body;
 
     if (name !== undefined) {
       const nameValid = validateTeamName(name);
@@ -113,7 +120,15 @@ router.put('/current', authMiddleware, requirePermission('team', 'canManageTeam'
       favorites = read.venueIds;
     }
 
-    const result = await teamsService.updateTeam(team.id, { name, venueId, favoriteVenueIds: favorites });
+    if (availabilityHorizonDays !== undefined && !(
+      Number.isInteger(availabilityHorizonDays)
+      && availabilityHorizonDays >= AVAILABILITY_HORIZON_MIN_DAYS
+      && availabilityHorizonDays <= AVAILABILITY_HORIZON_MAX_DAYS
+    )) {
+      return res.status(400).json({ errors: [ERROR.availabilityHorizonInvalid] });
+    }
+
+    const result = await teamsService.updateTeam(team.id, { name, venueId, favoriteVenueIds: favorites, availabilityHorizonDays });
 
     if (result.error) {
       return res.status(400).json({ errors: [result.error] });
