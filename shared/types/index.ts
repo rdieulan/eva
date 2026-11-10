@@ -128,7 +128,14 @@ export type {
 } from './team.types';
 export { TEAM_LOCATIONS } from './team.types';
 
-export type { LeagueTeamSummary, LeagueVenueProposal } from './league.types';
+export type {
+  DivisionPlace,
+  LeagueTeamSummary,
+  LeagueVenueProposal,
+  ManagedVenue,
+  VenueDivisions,
+  VenueDivisionsRead,
+} from './league.types';
 
 export type {
   BalanceSeverity,

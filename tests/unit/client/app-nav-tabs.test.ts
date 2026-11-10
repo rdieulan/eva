@@ -1,5 +1,6 @@
-// Tests for the tabs between the pages of a player's team: the home, the
-// calendar and the team; the one in sight marked, the team's tab showing its logo
+// Tests for the tabs between the pages of the role the session acts as: a
+// player's home and team, a manager's venue; the one in sight marked, the
+// team's tab showing its logo
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ref } from 'vue';
 import { mount, RouterLinkStub } from '@vue/test-utils';
@@ -33,6 +34,16 @@ describe('AppNavTabs', () => {
 
     expect(tabs.map(tab => tab.text())).toEqual(['Accueil', 'Calendrier', ...(PLANNER_ENABLED ? ['Planificateur'] : []), 'Équipe']);
     expect(tabs.map(tab => tab.props('to'))).toEqual(['/', '/calendar', ...(PLANNER_ENABLED ? ['/planner'] : []), '/team']);
+  });
+
+  it('keeps each role to its own pages: a player\'s team, a manager\'s venue', () => {
+    account.value = { accountType: 'player', teamId: 'team-1', roles: ['player', 'manager'] };
+    expect(labels(mountTabs('/'))).toEqual(['Accueil', 'Calendrier', ...(PLANNER_ENABLED ? ['Planificateur'] : []), 'Équipe']);
+
+    account.value = { accountType: 'manager', teamId: null, roles: ['player', 'manager'] };
+    const manager = mountTabs('/gestion');
+    expect(labels(manager)).toEqual(['Ma salle']);
+    expect(manager.findAll('[aria-current="page"]').map(tab => tab.text())).toEqual(['Ma salle']);
   });
 
   it('marks the page in sight, and only it', () => {

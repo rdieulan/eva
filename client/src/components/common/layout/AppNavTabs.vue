@@ -1,8 +1,10 @@
 <script setup lang="ts">
-// The way between the pages of a player's team, always at hand: the home,
-// the calendar and the team's page. In the top bar on a wide screen; at the
-// foot of a phone's screen, within reach of the thumb. The page in sight is
-// marked.
+// The way between the pages of the role the session acts as, always at hand:
+// for a player, the home dashboard, and in a team its calendar and its page;
+// for a venue manager, the space of their venue. Each role keeps to its own
+// pages: the top bar switches roles (see RoleSwitch). In the top bar on a
+// wide screen; at the foot of a phone's screen, within reach of the thumb.
+// The page in sight is marked.
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { PLANNER_ENABLED } from '@shared/constants';
@@ -20,7 +22,7 @@ const { account } = useAuth();
 interface Tab {
   to: string;
   label: string;
-  icon: 'home' | 'calendar' | 'notes' | 'users';
+  icon: 'home' | 'calendar' | 'notes' | 'users' | 'place';
   isCurrent: boolean;
 }
 
@@ -34,6 +36,9 @@ const tabs = computed<Tab[]>(() => {
       ? [{ to: '/planner', label: 'Planificateur', icon: 'notes' as const, isCurrent: route.path.startsWith('/planner') }]
       : []),
     ...(inTeam ? [{ to: '/team', label: 'Équipe', icon: 'users' as const, isCurrent: route.path.startsWith('/team') }] : []),
+    ...(account.value?.accountType === 'manager'
+      ? [{ to: '/gestion', label: 'Ma salle', icon: 'place' as const, isCurrent: route.path.startsWith('/gestion') }]
+      : []),
   ];
 });
 </script>

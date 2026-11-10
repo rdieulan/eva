@@ -11,7 +11,7 @@ import { ERROR } from '@shared/constants';
 import { devLogin, fetchDevLoginAccounts } from '@/api/auth.api';
 import { useAuth } from '@/composables/useAuth';
 import { useErrors } from '@/composables/useErrors';
-import { landingPathForAccount } from '@/router';
+import { landingPathForAccount } from '@/utils/landing';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 
 const props = defineProps<{

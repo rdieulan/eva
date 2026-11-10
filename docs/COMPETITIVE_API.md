@@ -111,6 +111,69 @@ L'inscription se fait sur la page du tournoi :
 
 ---
 
+## Matchs — `GET /api/matches` **[vérifié le 2026-11-10]**
+
+| Élément | Valeur |
+|---|---|
+| Adresse | `https://competitive.eva.gg/api/matches?tournament_ids={tournamentId}&team_id={teamId}&sort=scheduled_asc&offset=0&limit=50` |
+| Jeton | aucun |
+| Réponse | `200`, JSON `{ items, range: { offset, length, total } }` |
+| Filtres | `tournament_ids`, `team_id`, `participant_ids`, `stage_ids`, `group_ids`, `round_ids`, `circuit_region_ids`, `is_scheduled`, `statuses` **[lu dans leurs pages]** |
+| Tri | `sort` : `structure`, `scheduled_asc`, `scheduled_desc`, `latest_results` **[lu dans leurs pages]** |
+
+Le filtre `team_id` rend les matchs d'une équipe, alors que ses adversaires y sont nommés
+par leur participation au tournoi, un autre identifiant que celui de l'équipe.
+
+**Un mois de ligue** (RONIN en octobre, lu le 2026-11-10, gardé dans
+`tmp-eva-probe/competitive/matches-ronin-2026-10/`) :
+
+- une phase (`stage`) par mois, du nom du mois (« NEMAUSUS LEAGUE - OCTOBRE 26 ») :
+  12 équipes, en 3 groupes de 4 ;
+- chaque groupe est une division : « Division 2 » ; chacun y joue les trois autres, un
+  tour (`round`) par adversaire, « Day 1 » à « Day 3 » ;
+- un match se joue en 3 manches au plus ; il rapporte 3 points gagné, 1 nul, 0 perdu ;
+- `scheduledDatetime` est vide : aucun match n'est programmé à une date ;
+- `playedAt` semble être l'heure où le résultat a été saisi : deux matchs à une minute
+  d'écart le 26/10 vers 17:53, le jour où l'inscription d'octobre fermait, et un forfait
+  saisi le 15/10 ;
+- chaque adversaire porte son `score`, son `result` (`win`, `loss`) et `forfeit` ; une
+  équipe qui a déclaré forfait n'a plus d'équipe (`participant` vide).
+
+La division d'une équipe se lit donc sur un mois déjà tiré. Le 10 novembre, RONIN n'a aucun
+match dans le tournoi de novembre : le tournoi n'a pas commencé (`status` `pending`) et
+son inscription reste ouverte jusqu'au 30. Les divisions d'un mois ne se lisent qu'une fois
+ses matchs créés, sans doute à la clôture de son inscription.
+
+La structure d'un tournoi a ses propres listes, filtrées par `tournament_ids` :
+`/api/stages`, `/api/groups` (aussi par `stage_ids`) et `/api/rounds`.
+
+Les dates d'un mois ne disent pas son jour de match **[vérifié le 2026-11-10]** : la fin du
+tournoi tombe le jour où son inscription ferme en mai (25/05), juillet (27/07), septembre
+(30/09) et novembre (30/11), mais pas en avril (fermeture le 14/04, fin le 30/04), juin
+(03/06, 22/06) ni octobre (26/10, 31/10).
+
+---
+
+## Classements et participants **[lu dans leurs pages]**
+
+Leurs pages déclarent aussi, hors de `/me/` : le classement de chaque phase ou groupe
+(`/api/ranking-items`), le classement final d'un tournoi (`/api/standing-items`), le
+classement d'une saison du circuit (`/api/circuit-rankings`, `/api/circuit-ranking-items`)
+et les participants d'un tournoi (`/api/participants`). Jamais appelés. Le classement d'une
+division dirait la place d'une équipe à la fin d'un mois ; la division où elle joue le mois
+suivant reste la décision de l'organisateur, qui répartit les équipes en créant le mois.
+
+---
+
+## Fiche d'un tournoi — `GET /api/tournaments/{tournamentId}` **[lu dans leurs pages]**
+
+En plus de ce que donne la liste : ses textes, par langue, écrits par l'organisateur, la
+description, le programme (`schedule`), le règlement (`rules`) et les récompenses
+(`prize`). Le programme peut dire les jours de chaque division : lisible par un joueur, pas
+une donnée que l'app peut lire de façon sûre.
+
+---
+
 ## Ce qui n'est pas public
 
 - **Les équipes d'un joueur.** Rien de public ne relie un compte eva.gg à ses équipes : un

@@ -167,31 +167,35 @@ model TeamFavoriteVenue {
 }
 
 model Venue {
-  id         String              @id @default(cuid())
-  externalId Int?                @unique // Location id on eva.gg, for venues filled by scripts/sync-venues.ts
-  slug       String              @unique // Its name in the address of its public board, set once: renamed, it keeps the links already shared
-  name       String
-  city       String
-  address    String
-  phone      String?
-  arenaCount Int                 @default(1) // Arenas the venue runs for the competitive game
+  id                   String                @id @default(cuid())
+  externalId           Int?                  @unique // Location id on eva.gg, for venues filled by scripts/sync-venues.ts
+  slug                 String                @unique // Its name in the address of its public board, set once: renamed, it keeps the links already shared
+  name                 String
+  city                 String
+  address              String
+  phone                String?
+  arenaCount           Int                   @default(1) // Arenas the venue runs for the competitive game
   // Where the venue can be reached online, as eva.gg publishes them; hand-made venues fill them in the admin
-  website    String?
-  discord    String?
-  facebook   String?
-  instagram  String?
-  x          String?
-  tiktok     String?
-  youtube    String?
-  twitch     String?
-  createdAt  DateTime            @default(now())
-  updatedAt  DateTime            @updatedAt
-  teams      Team[]
-  managers   VenueManager[]
-  matches    CalendarEvent[]
-  favoredBy  TeamFavoriteVenue[]
-  scrimSlots ScrimSearchSlot[]
-  scrimRuns  ScrimProposal[]
+  website              String?
+  discord              String?
+  facebook             String?
+  instagram            String?
+  x                    String?
+  tiktok               String?
+  youtube              String?
+  twitch               String?
+  // How many divisions its local league has, as its manager arranges them
+  leagueDivisionCount  Int                   @default(0)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  teams                Team[]
+  managers             VenueManager[]
+  matches              CalendarEvent[]
+  favoredBy            TeamFavoriteVenue[]
+  scrimSlots           ScrimSearchSlot[]
+  scrimRuns            ScrimProposal[]
+  leagueTournaments    LeagueTournament[]
+  leagueDivisionPlaces LeagueDivisionPlace[]
 }
 
 model VenueManager {
@@ -211,17 +215,33 @@ model VenueManager {
 // of After-H teams shows it, read again every night: a player finds their team
 // there by its name and knows it by its logo. Who plays in it is not kept.
 model LeagueTeam {
-  id           String   @id // Its id on competitive.eva.gg
-  name         String
-  searchName   String // The name as a search compares it: lowercase, no accents, one space between words
-  memberCount  Int
-  logoId       String? // Its current logo there, a new id for each new logo; null when it has none
+  id            String               @id // Its id on competitive.eva.gg
+  name          String
+  searchName    String // The name as a search compares it: lowercase, no accents, one space between words
+  memberCount   Int
+  logoId        String? // Its current logo there, a new id for each new logo; null when it has none
   // Its logo, copied the first time it is shown, for whoever looks next
-  logoData     Bytes?
-  logoType     String? // image/png, image/jpeg or image/webp, as read from the image itself
-  logoCopiedId String? // Which of its logos logoData holds: a stale copy once logoId moves on
-  seenAt       DateTime // The last read of the list it was in
-  team         Team? // The team of ours it is, when one is linked to it
+  logoData      Bytes?
+  logoType      String? // image/png, image/jpeg or image/webp, as read from the image itself
+  logoCopiedId  String? // Which of its logos logoData holds: a stale copy once logoId moves on
+  seenAt        DateTime // The last read of the list it was in
+  team          Team? // The team of ours it is, when one is linked to it
+  divisionPlace LeagueDivisionPlace?
+}
+
+// Where a league team plays in the local league of a venue, as the venue's
+// manager arranges its divisions: competitive.eva.gg tells a month's
+// divisions only once the month is drawn, too late to plan its days
+model LeagueDivisionPlace {
+  leagueTeamId String     @id // A league team plays in one local league
+  venueId      String
+  division     Int? // 1 is the top division; null while it waits to be placed
+  position     Int // Its rank in its column, from 0
+  updatedAt    DateTime   @updatedAt
+  leagueTeam   LeagueTeam @relation(fields: [leagueTeamId], references: [id], onDelete: Cascade)
+  venue        Venue      @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@index([venueId])
 }
 
 // A tournament of a local league of competitive.eva.gg: each month of a league
@@ -231,13 +251,16 @@ model LeagueTournament {
   id                   String        @id // Its id on competitive.eva.gg
   name                 String
   regionId             String // The league it is a month of: one region of the local leagues per venue
+  venueId              String? // That venue, when it is one of ours
   startsOn             DateTime?     @db.Date
   registrationOpensAt  DateTime?
   registrationClosesAt DateTime?
   seenAt               DateTime // The last night it was read
+  venue                Venue?        @relation(fields: [venueId], references: [id], onDelete: SetNull)
   entries              LeagueEntry[]
 
   @@index([regionId])
+  @@index([venueId])
 }
 
 // A team of ours and a tournament of its local league whose registration is

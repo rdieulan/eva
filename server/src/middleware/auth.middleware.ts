@@ -185,6 +185,31 @@ export function requireAdmin(req: AuthRequest, res: Response, next: NextFunction
   next();
 }
 
+/** A request of an account that holds the manager role, with the manager it is */
+export interface ManagerRequest extends AuthRequest {
+  managerId?: string;
+}
+
+/**
+ * Manager middleware - requires the session to act as a venue manager.
+ * Everyone is a player: a manager is a player with that role on top, who
+ * switches the session to it to reach the space of their venues, each role
+ * keeping to its own. Which venues it manages is the route's to check. Must
+ * be chained after authMiddleware.
+ */
+export function requireManager(req: ManagerRequest, res: Response, next: NextFunction) {
+  if (!req.account) {
+    return res.status(401).json({ errors: [ERROR.unauthorized] });
+  }
+
+  if (req.account.accountType !== 'manager' || !req.account.managerId) {
+    return res.status(403).json({ errors: [ERROR.managerOnly] });
+  }
+
+  req.managerId = req.account.managerId;
+  next();
+}
+
 /**
  * Admin permission middleware factory - checks for a specific admin permission
  * Usage: requireAdminPermission('canManageVenues')

@@ -3,6 +3,7 @@ import { useRoute, useRouter } from 'vue-router';
 import SvgIcon from '@/components/common/SvgIcon.vue';
 import NotificationBell from '@/components/common/layout/NotificationBell.vue';
 import AppNavTabs from '@/components/common/layout/AppNavTabs.vue';
+import RoleSwitch from '@/components/common/layout/RoleSwitch.vue';
 
 defineProps<{
   isAuthenticated?: boolean;
@@ -50,6 +51,8 @@ function goToProfile() {
     <!-- Section Login/Profile - tout à droite (immuable) -->
     <div class="section-auth">
       <template v-if="isAuthenticated">
+        <!-- An account with several roles switches between them here, in one click -->
+        <RoleSwitch />
         <NotificationBell v-if="showNotifications" />
         <button class="btn-user" @click="goToProfile" title="Mon profil">
           <span>{{ userName || 'Mon compte' }}</span>

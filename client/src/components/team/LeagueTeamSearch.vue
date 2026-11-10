@@ -13,9 +13,11 @@ import TeamLogo from '@/components/common/TeamLogo.vue';
 withDefaults(defineProps<{
   disabled?: boolean;
   autofocus?: boolean;
+  placeholder?: string; // What the field asks for, to whoever searches
 }>(), {
   disabled: false,
   autofocus: false,
+  placeholder: 'Le nom de ton équipe de ligue',
 });
 
 const emit = defineEmits<{ select: [leagueTeam: LeagueTeamSummary] }>();
@@ -81,8 +83,8 @@ onBeforeUnmount(stop);
       v-model="query"
       class="league-search-field"
       type="search"
-      aria-label="Nom de ton équipe de ligue"
-      placeholder="Le nom de ton équipe de ligue"
+      :aria-label="placeholder"
+      :placeholder="placeholder"
       autocomplete="off"
       spellcheck="false"
       :maxlength="LEAGUE_SEARCH_MAX_LENGTH"

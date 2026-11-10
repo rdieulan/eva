@@ -184,7 +184,7 @@ function matchRank(searchName: string, wanted: string): number {
 }
 
 // What a summary of a league team reads from the directory
-const SUMMARY_SELECT = {
+export const LEAGUE_TEAM_SUMMARY_SELECT = {
   id: true,
   name: true,
   memberCount: true,
@@ -210,7 +210,7 @@ export async function searchLeagueTeams(query: string): Promise<LeagueTeamSummar
 
   const found = await prisma.leagueTeam.findMany({
     where: { searchName: { contains: wanted } },
-    select: { ...SUMMARY_SELECT, searchName: true },
+    select: { ...LEAGUE_TEAM_SUMMARY_SELECT, searchName: true },
   });
   return found
     .map(team => ({ team, rank: matchRank(team.searchName, wanted) }))
@@ -221,7 +221,7 @@ export async function searchLeagueTeams(query: string): Promise<LeagueTeamSummar
 
 /** One league team of the directory, null when it is not there */
 export async function getLeagueTeamSummary(leagueTeamId: string): Promise<LeagueTeamSummary | null> {
-  const row = await prisma.leagueTeam.findUnique({ where: { id: leagueTeamId }, select: SUMMARY_SELECT });
+  const row = await prisma.leagueTeam.findUnique({ where: { id: leagueTeamId }, select: LEAGUE_TEAM_SUMMARY_SELECT });
   return row ? toLeagueTeamSummary(row) : null;
 }
 

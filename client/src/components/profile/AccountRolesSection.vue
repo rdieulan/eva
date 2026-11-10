@@ -1,40 +1,13 @@
 <script setup lang="ts">
 // The roles of the account: player always, venue manager and admin when given
-// by invitation. The session acts as one of them; switching changes this
-// session only, and the app reloads on the role's own pages.
-import { computed } from 'vue';
+// by invitation, each with what it opens. The session acts as one of them; the
+// top bar switches too, in one click (see RoleSwitch).
+import { ROLE_LABELS as ROLES, useRoleSwitch } from '@/composables/useRoleSwitch';
 import { useAuth } from '@/composables/useAuth';
-import { useErrors } from '@/composables/useErrors';
-import { switchRole } from '@/api/auth.api';
-import { ERROR } from '@shared/constants';
-import type { AccountType } from '@shared/types';
-import { landingPathForAccount } from '@/router';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 
-const { account, setAuth } = useAuth();
-const { errors, setErrorFromException, clearErrors } = useErrors();
-
-const ROLES: Record<AccountType, { label: string; hint: string }> = {
-  player: { label: 'Joueur', hint: 'Ton équipe, son calendrier, le matchmaking' },
-  manager: { label: 'Gérant', hint: 'Les salles que tu gères' },
-  admin: { label: 'Administrateur', hint: 'Les salles, les managers, les administrateurs' },
-};
-
-const roles = computed(() => account.value?.roles ?? []);
-
-async function actAs(role: AccountType) {
-  if (role === account.value?.accountType) return;
-  clearErrors();
-  try {
-    const switched = await switchRole(role);
-    setAuth(switched);
-    // Hard-navigate to the role's landing page so all component state is
-    // dropped and the global guards re-run against the role now acted as
-    window.location.href = landingPathForAccount(switched);
-  } catch (error) {
-    setErrorFromException(error, ERROR.roleSwitchFailed);
-  }
-}
+const { account } = useAuth();
+const { roles, actAs, errors } = useRoleSwitch();
 </script>
 
 <template>

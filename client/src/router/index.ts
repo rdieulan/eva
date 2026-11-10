@@ -1,14 +1,15 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import type { RouteRecordRaw } from 'vue-router';
-import type { Account } from '@shared/types';
 import { PLANNER_ENABLED } from '@shared/constants';
 import { useAuth } from '@/composables/useAuth';
+import { landingPathForAccount } from '@/utils/landing';
 
 // Pages allowed without team membership
 const ALLOWED_WITHOUT_TEAM = [
   'welcome',
   'home',
   'profile',
+  'manager',
   'team',
   'create-team',
   'join-team',
@@ -33,24 +34,14 @@ const PLAYER_ONLY_ROUTES = [
   'join-team',
 ] as const;
 
-/**
- * Default landing page based on the account's role.
- * - admin → /admin/venues
- * - manager → /profile (no manager dashboard yet)
- * - player → /
- */
-export function landingPathForAccount(account: Account | null): string {
-  if (!account) return '/login';
-  if (account.adminId) return '/admin/venues';
-  if (account.managerId) return '/profile';
-  return '/';
-}
+export { landingPathForAccount };
 
 // Lazy loading des pages
 const HomePage = () => import('@/pages/HomePage.vue');
 const PlannerPage = () => import('@/pages/PlannerPage.vue');
 const CalendarPage = () => import('@/pages/CalendarPage.vue');
 const ProfilePage = () => import('@/pages/ProfilePage.vue');
+const ManagerPage = () => import('@/pages/ManagerPage.vue');
 const TeamPage = () => import('@/pages/TeamPage.vue');
 const CreateTeamPage = () => import('@/pages/CreateTeamPage.vue');
 const JoinTeamPage = () => import('@/pages/JoinTeamPage.vue');
@@ -104,6 +95,13 @@ const routes: RouteRecordRaw[] = [
     name: 'profile',
     component: ProfilePage,
     meta: { title: 'Profil', requiresAuth: true }
+  },
+  {
+    // The space of a venue manager, for the venues they manage
+    path: '/gestion',
+    name: 'manager',
+    component: ManagerPage,
+    meta: { title: 'Espace gérant', requiresAuth: true, requiresManager: true }
   },
   {
     path: '/join/:code',
@@ -218,6 +216,12 @@ router.beforeEach(async (to, _from, next) => {
     && !account.value.isOnboarded
   ) {
     next({ name: 'welcome', query: to.fullPath === '/' ? {} : { next: to.fullPath } });
+    return;
+  }
+
+  // The manager's space, for a session acting as a venue manager
+  if (to.meta.requiresManager && !account.value?.managerId) {
+    next(landingPathForAccount(account.value));
     return;
   }
 

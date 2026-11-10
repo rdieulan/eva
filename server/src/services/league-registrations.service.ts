@@ -115,6 +115,7 @@ export async function checkLeagueRegistrations(options: { now?: Date; pauseMs?: 
       const kept = {
         name: tournament.name,
         regionId: leagueId,
+        venueId: venueOfLeagueTournament(tournament, venues)?.id ?? null,
         startsOn: tournament.startsOn ? new Date(tournament.startsOn) : null,
         registrationOpensAt: tournament.registration.opensAt ? new Date(tournament.registration.opensAt) : null,
         registrationClosesAt: tournament.registration.closesAt ? new Date(tournament.registration.closesAt) : null,

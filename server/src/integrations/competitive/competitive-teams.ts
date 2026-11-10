@@ -202,6 +202,64 @@ export async function fetchLeagueTeamTournaments(teamId: string): Promise<League
   return fetchTournaments(`team_id=${teamId}`, TEAM_TOURNAMENTS_READ);
 }
 
+/** A division of a month of a league, as its matches tell it: its number, its name, and its league teams */
+export interface LeagueMonthDivision {
+  number: number; // 1 is the top division
+  name: string;   // "Division 2"
+  leagueTeamIds: string[];
+}
+
+// A page of the matches of a month: 3 divisions of 4 play 18
+const MONTH_MATCHES_PAGE_SIZE = 50;
+// The pages of a month read at most: a league far larger than any seen stops there
+const MONTH_MATCHES_PAGES_MAX = 4;
+
+/**
+ * The divisions of a month of a league, read from its matches: each match
+ * belongs to a group, which is a division ("Division 2"), and each of its
+ * opponents names the league team it is. Empty while the month is not drawn:
+ * its matches only exist once its registration has closed.
+ */
+export async function fetchLeagueMonthDivisions(tournamentId: string): Promise<LeagueMonthDivision[]> {
+  if (!SITE_ID.test(tournamentId)) throw new CompetitiveApiError(`Not a tournament id: ${tournamentId}`);
+  const divisions = new Map<number, { name: string; leagueTeamIds: Set<string> }>();
+  let offset = 0;
+  for (let page = 0; page < MONTH_MATCHES_PAGES_MAX; page += 1) {
+    const response = await call(
+      `/api/matches?tournament_ids=${tournamentId}&sort=structure&offset=${offset}&limit=${MONTH_MATCHES_PAGE_SIZE}`,
+      { accept: 'application/json' },
+    );
+    if (!response.ok) throw new CompetitiveApiError(`Match list refused: HTTP ${response.status}`, response.status);
+    const body = await response.json().catch(() => null) as { items?: unknown; range?: { total?: unknown } } | null;
+    const total = body?.range?.total;
+    if (!body || !Array.isArray(body.items) || typeof total !== 'number') {
+      throw new CompetitiveApiError('Match list unreadable', response.status);
+    }
+
+    for (const item of body.items) {
+      const match = item && typeof item === 'object' ? item as Record<string, unknown> : null;
+      const group = match?.group && typeof match.group === 'object' ? match.group as Record<string, unknown> : null;
+      if (!group || typeof group.number !== 'number' || !Number.isInteger(group.number) || group.number < 1) continue;
+      const name = typeof group.name === 'string' && cleanForeignName(group.name) ? cleanForeignName(group.name) : `Division ${group.number}`;
+      const division = divisions.get(group.number) ?? { name, leagueTeamIds: new Set<string>() };
+      divisions.set(group.number, division);
+      for (const opponent of Array.isArray(match!.opponents) ? match!.opponents : []) {
+        const participant = opponent && typeof opponent === 'object' ? (opponent as Record<string, unknown>).participant : null;
+        const team = participant && typeof participant === 'object' ? (participant as Record<string, unknown>).team : null;
+        const id = team && typeof team === 'object' ? (team as Record<string, unknown>).id : null;
+        if (typeof id === 'string' && SITE_ID.test(id)) division.leagueTeamIds.add(id);
+      }
+    }
+
+    offset += body.items.length;
+    if (!body.items.length || offset >= total) break;
+  }
+
+  return [...divisions.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([number, division]) => ({ number, name: division.name, leagueTeamIds: [...division.leagueTeamIds] }));
+}
+
 /** The most recent tournaments of a league (a region of a circuit), latest first */
 export async function fetchLeagueRegionTournaments(regionId: string): Promise<LeagueTournament[]> {
   if (!SITE_ID.test(regionId)) throw new CompetitiveApiError(`Not a region id: ${regionId}`);

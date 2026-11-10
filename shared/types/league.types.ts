@@ -16,3 +16,31 @@ export interface LeagueVenueProposal {
   venueName: string;
   leagueName: string; // The tournament it is read from, the most recent: "NEMAUSUS LEAGUE - NOVEMBRE"
 }
+
+/** A venue a manager manages */
+export interface ManagedVenue {
+  id: string;
+  name: string;
+  city: string;
+}
+
+/** A league team where the manager of a venue places it: a division, 1 the top, or none yet */
+export interface DivisionPlace {
+  leagueTeam: LeagueTeamSummary;
+  division: number | null;
+}
+
+/** The divisions of a venue's local league, as its manager arranges them; each column in order */
+export interface VenueDivisions {
+  venueId: string;
+  venueName: string;
+  divisionCount: number;
+  places: DivisionPlace[];
+}
+
+/** The divisions of the last drawn month of a venue's league, read from competitive.eva.gg */
+export interface VenueDivisionsRead {
+  tournamentName: string; // "NEMAUSUS LEAGUE - OCTOBRE"
+  divisionCount: number;
+  places: DivisionPlace[];
+}

@@ -40,8 +40,8 @@ const userName = computed(() => account.value?.name);
 // A player in a team has the bell, which tells the team what happened, and the tabs between its pages
 const isTeamPlayer = computed(() => account.value?.accountType === 'player' && !!account.value.teamId);
 
-// The tabs between the team's pages, for a player in a team
-const showNav = computed(() => isTeamPlayer.value);
+// The tabs: for a player in a team, and for a session acting as a venue manager
+const showNav = computed(() => isTeamPlayer.value || account.value?.accountType === 'manager');
 
 // The TopBar hides on the pages that stand alone (signing in, the first-login walk-through)
 const showTopBar = computed(() => !route.meta.hideTopBar);

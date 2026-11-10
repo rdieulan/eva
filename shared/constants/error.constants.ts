@@ -24,6 +24,7 @@ import {
   SCRIM_MATCH_COUNT_MAX,
   SCRIM_SEARCH_VENUES_MAX,
 } from '@shared/constants/eva.constants';
+import { LEAGUE_DIVISIONS_MAX } from '@shared/constants/league.constants';
 import { EVENT_TYPES, VOICE_MEDIUMS } from '@shared/types/calendar.types';
 import { SUBSCRIPTION_TIERS } from '@shared/types/subscription.types';
 
@@ -311,6 +312,20 @@ export const ERROR = {
   balanceRulesLoadFailed: 'Erreur lors du chargement des règles d\'équilibrage',
   balanceRuleUpdateFailed: 'Erreur lors de la mise à jour de la règle',
   balanceRulesResetFailed: 'Erreur lors de la réinitialisation des règles',
+
+  // Venue manager: the divisions of the venue's local league
+  managerOnly: 'Réservé aux gérants de salle',
+  venueNotManaged: 'Cette salle n\'est pas une de celles que tu gères',
+  managedVenuesFetchFailed: 'Impossible de charger tes salles',
+  divisionsFetchFailed: 'Impossible de charger les divisions',
+  divisionsSaveFailed: 'Impossible d\'enregistrer les divisions',
+  divisionsInvalid: `Les divisions sont mal formées : de 0 à ${LEAGUE_DIVISIONS_MAX} divisions, chaque équipe une seule fois`,
+  divisionsTeamUnknown: 'Une des équipes n\'est pas dans l\'annuaire des équipes de ligue',
+  divisionsTeamElsewhere: 'Une des équipes est déjà placée dans la ligue d\'une autre salle',
+  divisionsMonthUnknown: 'Aucun mois tiré de la ligue de cette salle n\'est encore connu de l\'app',
+  divisionsMonthNotDrawn: 'Les divisions de ce mois ne sont pas encore tirées sur competitive.eva.gg',
+  divisionsReadTooSoon: 'Les divisions ont été relues il y a moins de 5 minutes : réessaie dans un instant',
+  divisionsReadFailed: 'competitive.eva.gg n\'a pas pu donner les divisions : réessaie plus tard',
 } as const;
 
 export type ErrorMessageKey = keyof typeof ERROR;

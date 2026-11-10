@@ -9,3 +9,7 @@ export const LEAGUE_SEARCH_MAX_LENGTH = 64;
 
 // The pages of competitive.eva.gg, in French as our players read them
 export const COMPETITIVE_SITE_URL = 'https://competitive.eva.gg/fr';
+
+// The divisions a venue's manager arranges its local league in, at most: a
+// league seen has 3, of 4 teams each
+export const LEAGUE_DIVISIONS_MAX = 8;

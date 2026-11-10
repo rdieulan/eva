@@ -135,3 +135,11 @@ export type {
   TeamAdminDetail,
   TeamAdminMember,
 } from '@/api/admin.api';
+
+// Venue manager API
+export {
+  fetchManagedVenues,
+  fetchVenueDivisions,
+  saveVenueDivisions,
+  readVenueDivisions,
+} from '@/api/manager.api';
