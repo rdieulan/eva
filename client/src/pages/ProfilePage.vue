@@ -317,9 +317,10 @@ h1 {
   font-weight: 600;
   text-transform: uppercase;
 
+  // The main role, in the star's colour, as everywhere a leader shows
   &.leader {
-    background: with-alpha($color-success, 0.2);
-    color: $color-success;
+    background: with-alpha($color-star, 0.2);
+    color: $color-star;
   }
 
   &.player {

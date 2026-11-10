@@ -102,7 +102,7 @@ async function actAs(account: DevLoginAccount) {
     margin: 0;
     font-size: $font-size-sm;
     font-weight: 600;
-    color: $color-warning;
+    color: $color-accent;
   }
 }
 
@@ -146,8 +146,8 @@ async function actAs(account: DevLoginAccount) {
 .dev-role {
   padding: 0 $spacing-xs;
   border-radius: $radius-sm;
-  background: with-alpha($color-warning, 0.15);
-  color: $color-warning;
+  background: with-alpha($color-accent, 0.15);
+  color: $color-accent;
   font-size: $font-size-xs;
   font-weight: 600;
 }

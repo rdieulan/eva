@@ -189,6 +189,7 @@ describe('ScrimSearchViewerModal on another team\'s search', () => {
     await flushPromises();
 
     expect(wrapper.find('.outcome .status').text()).toBe('Proposition refusée');
+    expect(wrapper.find('.outcome .status').classes()).toContain('status--refused');
     expect(wrapper.find('.outcome-detail').text()).toBe('Leur équipe a dit non.');
     expect(button(wrapper, 'Proposer un match')).toBeDefined();
   });
@@ -198,6 +199,7 @@ describe('ScrimSearchViewerModal on another team\'s search', () => {
     await flushPromises();
 
     expect(wrapper.find('.outcome .status').text()).toBe('Proposition annulée');
+    expect(wrapper.find('.outcome .status').classes()).toContain('status--fell-through');
     expect(wrapper.find('.outcome-detail').text()).toBe('Un des créneaux a été réservé à la salle entre-temps.');
     expect(wrapper.text()).not.toContain('refusée');
     expect(button(wrapper, 'Proposer un match')).toBeDefined();
@@ -221,6 +223,7 @@ describe('ScrimSearchViewerModal on another team\'s search', () => {
     await flushPromises();
 
     expect(wrapper.find('.outcome .status').text()).toBe('Match annulé');
+    expect(wrapper.find('.outcome .status').classes()).toContain('status--refused');
     expect(wrapper.find('.outcome-detail').exists()).toBe(false);
   });
 

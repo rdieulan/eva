@@ -114,7 +114,7 @@ function formatExpiration(dateStr: string): string {
 }
 
 .btn-copy {
-  @include btn-icon($color-info);
+  @include btn-icon($color-accent);
 }
 
 .btn-revoke {

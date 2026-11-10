@@ -227,7 +227,7 @@ function handleSave() {
 }
 
 .btn-cancel {
-  @include btn-base($color-danger);
+  @include btn-base($color-text-secondary);
 }
 
 .btn-save {

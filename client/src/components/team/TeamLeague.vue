@@ -11,6 +11,7 @@ import { useErrors } from '@/composables/useErrors';
 import { formatMemberCount } from '@/utils/league';
 import LeagueTeamSearch from '@/components/team/LeagueTeamSearch.vue';
 import TeamLogo from '@/components/common/TeamLogo.vue';
+import SubjectIcon from '@/components/common/SubjectIcon.vue';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 
 const props = defineProps<{
@@ -60,7 +61,8 @@ function cancelChange() {
 
 <template>
   <section class="team-league">
-    <h2>Équipe de ligue</h2>
+    <!-- The symbol and colour of competitions, as the league's reminders show them -->
+    <h2><SubjectIcon subject="competition" size="22px" />Équipe de ligue</h2>
 
     <template v-if="leagueTeam && !isChanging">
       <div class="league-linked">
@@ -111,6 +113,9 @@ function cancelChange() {
   border-radius: $radius-lg;
 
   h2 {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
     margin: 0;
     font-size: $font-size-xl;
     color: $color-white;

@@ -79,6 +79,8 @@ export { NOTIFICATION_KINDS } from './notification.types';
 
 export type { JoinRequestStatus, MyJoinRequest, TeamJoinRequestView } from './join-request.types';
 
+export type { NotificationLook, Subject, SubjectTone } from './subject.types';
+
 export type {
   SubscriptionTier,
   PlayerSubscription,

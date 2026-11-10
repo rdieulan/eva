@@ -897,17 +897,17 @@ const modalSize = computed(() => {
 .btn-set-gameplan {
   width: 100%;
   padding: 0.75rem;
-  background: with-alpha($color-warning, 0.2);
-  border: 2px dashed $color-warning;
+  background: with-alpha($color-accent, 0.2);
+  border: 2px dashed $color-accent;
   border-radius: $radius-md;
-  color: $color-warning;
+  color: $color-accent;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover {
-    background: with-alpha($color-warning, 0.3);
+    background: with-alpha($color-accent, 0.3);
     border-style: solid;
   }
 

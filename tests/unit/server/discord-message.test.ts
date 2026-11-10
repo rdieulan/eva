@@ -1,6 +1,9 @@
-// Tests for notifications as Discord cards: the other team, what happened, when and where, their word, what to do
+// Tests for notifications as Discord cards: the other team, what happened, when and where, their word, what to do,
+// coloured as the bell colours them
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
-import { linkedMessage, notificationMessage } from '../../../server/src/services/helpers/discord-message.helper';
+import { CARD_COLORS, linkedMessage, notificationMessage } from '../../../server/src/services/helpers/discord-message.helper';
 import { buildEvaBookingUrl } from '@shared/utils';
 import type { ScrimMatchFacts } from '@shared/types';
 
@@ -29,7 +32,7 @@ describe('notificationMessage', () => {
       description: [WHEN_WHERE, '> On est quatre,\n> dispo pour un bo3 ?', `💬${GAP}[Répondre](${link})`].join('\n\n'),
       // The logo goes with the message as a file
       thumbnail: { url: 'attachment://logo.png' },
-      color: 0x5865f2,
+      color: CARD_COLORS.matchmaking,
       footer: { text: 'EVA · Matchmaking' },
     });
     expect(Date.parse(message.embeds[0]!.timestamp!)).not.toBeNaN();
@@ -50,7 +53,7 @@ describe('notificationMessage', () => {
     const [embed] = notificationMessage({ kind: 'SCRIM_MATCH_MADE', data: { ...FACTS, eventId: 'event-1', opponentName: 'Nova' } }, { base: BASE }).embeds;
 
     expect(embed!.title).toBe(`✅${GAP}Match calé`);
-    expect(embed!.color).toBe(0x3ba55d);
+    expect(embed!.color).toBe(CARD_COLORS.match);
     expect(embed!.description).toBe([
       WHEN_WHERE,
       'Chacun réserve sa place sur eva.gg.',
@@ -60,18 +63,25 @@ describe('notificationMessage', () => {
     expect(embed).not.toHaveProperty('thumbnail');
   });
 
-  it('says why a proposal fell, and colours what fell through, what was called off and what is to answer apart', () => {
+  it('says why a proposal fell, and colours what came to nothing apart from what was refused or called off', () => {
     const declined = notificationMessage({
       kind: 'SCRIM_PROPOSAL_DECLINED', data: { ...FACTS, searchId: 'search-1', teamName: 'Les Faucons', reason: 'RUN_TAKEN' },
     }, { base: BASE }).embeds[0]!;
+    const refused = notificationMessage({
+      kind: 'SCRIM_PROPOSAL_DECLINED', data: { ...FACTS, searchId: 'search-1', teamName: 'Les Faucons', reason: 'BY_TEAM' },
+    }, { base: BASE }).embeds[0]!;
     const cancelled = notificationMessage({ kind: 'SCRIM_MATCH_CANCELLED', data: { ...FACTS, opponentName: 'Nova', byOpponent: true } }, { base: BASE }).embeds[0]!;
+    const expired = notificationMessage({ kind: 'SCRIM_SEARCH_EXPIRED', data: { searchId: 'search-1', date: '2026-11-25' } }, { base: BASE }).embeds[0]!;
 
     expect(declined.title).toBe(`🚫${GAP}Proposition annulée`);
     expect(declined.description).toContain(`\n\nUn des créneaux a été réservé à la salle entre-temps.\n\n🔎${GAP}[Voir leur recherche](`);
-    expect(declined.color).toBe(0x99aab5);
+    expect(declined.color).toBe(CARD_COLORS.fellThrough);
+    expect(expired.color).toBe(CARD_COLORS.fellThrough);
+    expect(refused.title).toBe(`🚫${GAP}Proposition refusée`);
+    expect(refused.color).toBe(CARD_COLORS.refused);
     expect(cancelled.title).toBe(`❌${GAP}Match annulé`);
     expect(cancelled.description).toContain(`📆${GAP}[Ouvrir le calendrier](`);
-    expect(cancelled.color).toBe(0xed4245);
+    expect(cancelled.color).toBe(CARD_COLORS.refused);
   });
 
   it('keeps what a team wrote as text: no formatting, no hidden link', () => {
@@ -110,6 +120,7 @@ describe('notificationMessage', () => {
       title: `🙋${GAP}Demande pour rejoindre l'équipe`,
       // The # escaped, which Discord would read as a heading: it still shows as #
       description: `Compte eva.gg : RONxSib\\#177352\n\n👥${GAP}[Répondre](${BASE}/team)`,
+      color: CARD_COLORS.team,
       footer: { text: 'EVA · Équipe' },
     });
   });
@@ -125,7 +136,7 @@ describe('notificationMessage', () => {
       title: `⏰${GAP}Inscription à la ligue : dernier rappel`,
       description: `📅${GAP}**Jusqu'au dim. 29/11**\n\nL'équipe n'y est toujours pas inscrite.\n\n`
         + `👥${GAP}[Voir l'équipe](${BASE}/team)${LINKS_APART}🎟️${GAP}[S'inscrire sur competitive.eva.gg](https://competitive.eva.gg/fr/tournaments/2570489683180220415/registration)`,
-      color: 0xed4245,
+      color: CARD_COLORS.competition,
       footer: { text: 'EVA · Ligue' },
     });
   });
@@ -144,8 +155,32 @@ describe('linkedMessage', () => {
     expect(linkedMessage('Les_Rivaux').embeds[0]).toEqual({
       title: `🔗${GAP}Salon relié`,
       description: 'Les notifications de l\'équipe Les\\_Rivaux arriveront ici.',
-      color: 0x3ba55d,
+      color: CARD_COLORS.good,
       footer: { text: 'EVA · Équipe' },
+    });
+  });
+});
+
+describe('CARD_COLORS', () => {
+  // The night theme, where the app reads its colours: a card stays the colour the bell shows
+  const night = readFileSync(resolve(__dirname, '../../../client/src/styles/themes/_night.scss'), 'utf-8');
+
+  function themeColor(token: string): number {
+    const value = new RegExp(`--${token}:\\s*#([0-9a-f]{3}|[0-9a-f]{6});`, 'i').exec(night)?.[1];
+    if (!value) throw new Error(`--${token} is not a colour of the night theme`);
+    const full = value.length === 3 ? [...value].map(digit => digit + digit).join('') : value;
+    return Number.parseInt(full, 16);
+  }
+
+  it('takes each colour from the night theme, the app\'s default', () => {
+    expect(CARD_COLORS).toEqual({
+      match: themeColor('color-match'),
+      matchmaking: themeColor('color-success'),
+      competition: themeColor('color-competition'),
+      team: themeColor('color-team'),
+      good: themeColor('color-success'),
+      refused: themeColor('color-danger'),
+      fellThrough: themeColor('color-text-secondary'),
     });
   });
 });

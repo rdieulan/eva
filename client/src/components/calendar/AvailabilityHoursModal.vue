@@ -161,7 +161,7 @@ function save() {
 
 // The same pair as a confirmation (see ConfirmModal)
 .btn-cancel {
-  @include btn-base($color-danger);
+  @include btn-base($color-text-secondary);
 }
 
 .btn-confirm {

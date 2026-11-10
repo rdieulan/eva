@@ -1,7 +1,8 @@
-// What became of a proposal, in words, for the team that sent it: the same on
-// the sheet of the search it answered and in every medium that tells it
+// What became of a proposal, in words and in colour, for the team that sent
+// it: the same on the sheet of the search it answered and in every medium
+// that tells it
 
-import type { ScrimDeclineReason } from '@shared/types/scrim.types';
+import type { ScrimDeclineReason, ScrimProposalOutcome } from '@shared/types/scrim.types';
 
 /** A declined proposal in words */
 export interface ProposalDeclineDescription {
@@ -27,4 +28,26 @@ const DECLINES: Record<ScrimDeclineReason, ProposalDeclineDescription> = {
  */
 export function describeProposalDecline(reason: ScrimDeclineReason): ProposalDeclineDescription {
   return DECLINES[reason];
+}
+
+/** Whether their team said no to a proposal, rather than the proposal coming to nothing */
+export function isRefusal(reason: ScrimDeclineReason): boolean {
+  return reason === 'BY_TEAM';
+}
+
+/**
+ * What became of a proposal, as the colour code reads it: an answer awaited,
+ * accepted, refused (their team said no, or the match was called off), or
+ * fallen through (withdrawn, not retained, cancelled by the app, unanswered).
+ */
+export type ProposalState = 'pending' | 'accepted' | 'refused' | 'fell-through';
+
+export function proposalState(outcome: ScrimProposalOutcome): ProposalState {
+  switch (outcome.status) {
+    case 'PENDING': return 'pending';
+    case 'ACCEPTED': return 'accepted';
+    case 'CANCELLED': return 'refused';
+    case 'WITHDRAWN': return 'fell-through';
+    case 'DECLINED': return isRefusal(outcome.declineReason) ? 'refused' : 'fell-through';
+  }
 }

@@ -390,9 +390,9 @@ function hasParams(rule: BalanceRule): boolean {
 
   // Warning active state
   &:last-child.active {
-    color: $color-warning;
-    background: with-alpha($color-warning, 0.15);
-    border-color: with-alpha($color-warning, 0.3);
+    color: $color-conditional;
+    background: with-alpha($color-conditional, 0.15);
+    border-color: with-alpha($color-conditional, 0.3);
   }
 
   &:disabled {

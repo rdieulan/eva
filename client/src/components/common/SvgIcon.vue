@@ -26,6 +26,8 @@ import placeIcon from '@/assets/icons/place.svg?raw';
 import bellIcon from '@/assets/icons/bell.svg?raw';
 import clockIcon from '@/assets/icons/clock.svg?raw';
 import calendarIcon from '@/assets/icons/calendar.svg?raw';
+import trophyIcon from '@/assets/icons/trophy.svg?raw';
+import searchIcon from '@/assets/icons/search.svg?raw';
 
 const icons: Record<string, string> = {
   home: homeIcon,
@@ -52,6 +54,8 @@ const icons: Record<string, string> = {
   bell: bellIcon,
   clock: clockIcon,
   calendar: calendarIcon,
+  trophy: trophyIcon,
+  search: searchIcon,
 };
 
 const props = defineProps<{

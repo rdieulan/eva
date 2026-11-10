@@ -308,7 +308,7 @@ describe('Permissions Tests', () => {
         },
       });
 
-      const editBtn = wrapper.find('.btn-primary');
+      const editBtn = wrapper.find('.btn-edit');
       expect(editBtn.exists()).toBe(true);
       expect(editBtn.text()).toContain('Modifier');
     });
@@ -323,7 +323,7 @@ describe('Permissions Tests', () => {
         },
       });
 
-      const editBtn = wrapper.find('.btn-primary');
+      const editBtn = wrapper.find('.btn-edit');
       expect(editBtn.exists()).toBe(false);
     });
 

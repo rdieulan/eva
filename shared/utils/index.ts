@@ -39,7 +39,13 @@ export {
   type TimeSpan,
 } from './scrim.utils';
 
-export { describeProposalDecline, type ProposalDeclineDescription } from './scrim-proposal.utils';
+export {
+  describeProposalDecline,
+  isRefusal,
+  proposalState,
+  type ProposalDeclineDescription,
+  type ProposalState,
+} from './scrim-proposal.utils';
 
 export {
   normalizeLinkUrl,
@@ -68,6 +74,6 @@ export {
 
 export { normalizeAccountPermissions } from './permissions.utils';
 
-export { describeNotification, notificationTargetPath } from './notification.utils';
+export { describeNotification, notificationLook, notificationTargetPath } from './notification.utils';
 
 export { calendarTargetQuery, calendarTargetPath } from './calendar.utils';

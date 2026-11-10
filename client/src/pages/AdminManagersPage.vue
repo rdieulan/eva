@@ -372,8 +372,8 @@ onMounted(loadData);
   font-weight: 600;
 
   &--pending {
-    background: with-alpha($color-warning, 0.15);
-    color: $color-warning;
+    background: with-alpha($color-conditional, 0.15);
+    color: $color-conditional;
   }
 
   &--active {

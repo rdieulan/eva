@@ -100,26 +100,61 @@ $color-text-primary: var(--color-text-primary);
 $color-text-secondary: var(--color-text-secondary);
 $color-text-muted: var(--color-text-muted);
 
-// ===== Accent (primary actions, buttons, links) =====
+// ===========================================
+// THE COLOUR CODE (docs/PRODUIT.md, *Code couleur*): two families that never
+// share a colour. The state says what is happening; the subject says what an
+// item is about. A button takes the colour of the state it gives (accept,
+// refuse, cancel), of the subject it acts on (book a seat, give one's
+// availability), or else the accent.
+// ===========================================
+
+// ===== Accent: the way around the app, and the actions of no state or subject =====
 $color-accent: var(--color-accent);
 
-// ===== Semantic =====
-// Success: validations, confirmations, available
+// ===== State: what is happening =====
+// Green: it is good, or it is to accept: available, a full lineup, accepted, saved
 $color-success: var(--color-success);
-// Danger: errors, deletions, cancellations, unavailable
+// Red: refused, deleted, impossible: unavailable, an error, a match called off
 $color-danger: var(--color-danger);
-// Warning: alerts, attention required
-$color-warning: var(--color-warning);
-// Info: information, help
-$color-info: var(--color-info);
-// Yellow: a partial availability, a lineup on part of the day, what is pending
+// Yellow: partial, or pending: an availability on part of the day, players missing, an answer awaited
 $color-conditional: var(--color-conditional);
+// Grey, to cancel and for what came to nothing: the secondary text ($color-text-secondary)
+
+// ===== Subject: what an item is about =====
+// One colour and one symbol per subject, on the icon, the left border and the
+// main button of an item, wherever it shows. The calendar's types of event
+// are subjects too (see $event-type-colors).
+$color-match: var(--color-match);
+$color-event: var(--color-event);
+$color-competition: var(--color-competition);
+$color-team: var(--color-team);
 
 // ===== Special =====
 // Star/favorite (main role)
 $color-star: var(--color-star);
 // Edit/modify actions (buttons, icons)
 $color-edit: var(--color-edit);
+
+// The subjects of what a player is told or has to do: home, bell, Discord.
+// Giving one's availability is editing it: the colour of the Dispos button. A
+// match offered is to accept: the green round of a search with proposals.
+$subject-colors: (
+  match: $color-match,
+  dispos: $color-edit,
+  matchmaking: $color-success,
+  competition: $color-competition,
+  team: $color-team,
+);
+
+// Gives each `.subject--<subject>` its colour as --subject-color, for its
+// border, its due, its button to read
+@mixin subject-color-classes {
+  @each $subject, $color in $subject-colors {
+    .subject--#{$subject} {
+      --subject-color: #{$color};
+    }
+  }
+}
 // Interactive handles (resize, drag, manipulation)
 $color-handle: var(--color-handle);
 // Voice meeting events: a blue-violet, kept distinct from $color-voice so a
@@ -263,7 +298,7 @@ $team-availability-colors: (
 // Calendar event types — keys are the kebab-case EventType values, used as
 // `.event-type--<key>` modifiers (see getEventTypeClass in utils/calendar.ts)
 $event-type-colors: (
-  match: $color-warning,
-  event: $color-info,
+  match: $color-match,
+  event: $color-event,
   voice-meeting: $color-voice-meeting,
 );

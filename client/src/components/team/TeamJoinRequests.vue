@@ -10,6 +10,7 @@ import { useErrors } from '@/composables/useErrors';
 import { formatRelativeTime } from '@/utils/notifications';
 import ConfirmModal from '@/components/common/ConfirmModal.vue';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
+import SubjectIcon from '@/components/common/SubjectIcon.vue';
 
 const emit = defineEmits<{
   // A player came in: the members follow
@@ -57,7 +58,8 @@ onMounted(load);
 
 <template>
   <section v-if="requests.length || errors.length" class="team-join-requests">
-    <h2>Demandes pour rejoindre <span class="count">{{ requests.length }}</span></h2>
+    <!-- The team's symbol and colour, as the reminder of the home shows them -->
+    <h2><SubjectIcon subject="team" size="22px" />Demandes pour rejoindre <span class="count">{{ requests.length }}</span></h2>
     <ErrorDisplay :errors="errors" />
 
     <ul class="request-list">
@@ -114,7 +116,7 @@ onMounted(load);
 .count {
   min-width: 1.6em;
   padding: 0 $spacing-xs;
-  background: $color-accent;
+  background: $color-team;
   border-radius: 999px;
   color: $color-white;
   font-size: $font-size-sm;

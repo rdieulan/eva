@@ -141,14 +141,15 @@ defineEmits<{
   font-size: $font-size-xs;
   font-weight: 600;
 
+  // The main role, in the star's colour, as everywhere a leader shows
   &.leader {
-    background: $color-accent;
+    background: $color-star;
     color: $color-bg-primary;
   }
 
   &.me {
-    background: $color-info;
-    color: $color-white;
+    background: $color-border-light;
+    color: $color-text-primary;
   }
 }
 

@@ -69,7 +69,3 @@
 .btn-accent {
   @include btn-base($color-accent);
 }
-
-.btn-info {
-  @include btn-base($color-info);
-}

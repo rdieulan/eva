@@ -40,6 +40,6 @@ The logo itself is a trademark of Discord Inc., shown on the button that signs i
 
 ## Material Icons
 
-`client/src/assets/icons/bell.svg` and `client/src/assets/icons/clock.svg` are the "notifications" and "schedule" icons of Material Icons by Google: https://github.com/google/material-design-icons
+`client/src/assets/icons/bell.svg`, `client/src/assets/icons/clock.svg`, `client/src/assets/icons/calendar.svg`, `client/src/assets/icons/trophy.svg` and `client/src/assets/icons/search.svg` are the "notifications", "schedule", "calendar_today", "emoji_events" and "search" icons of Material Icons by Google: https://github.com/google/material-design-icons
 
 Licensed under the Apache License, Version 2.0: https://www.apache.org/licenses/LICENSE-2.0

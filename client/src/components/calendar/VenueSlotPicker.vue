@@ -661,8 +661,9 @@ const emptyHint = computed(() => {
   white-space: nowrap;
 }
 
-// HP or HC, the token of EVA Pass holders: peak hours in the warm tone,
-// off-peak hours in the cool one, like the hours on a power bill
+// HP or HC, the token of EVA Pass holders, told apart by their letters, peak
+// hours the stronger: the colours of a slot's list say what it is about
+// (docs/PRODUIT.md, *Code couleur*), and a token is about none
 .slot-token {
   flex-shrink: 0;
   padding: 0 0.4em;
@@ -674,13 +675,13 @@ const emptyHint = computed(() => {
   line-height: 1.45;
 
   &--peak {
-    color: $color-warning;
-    border-color: with-alpha($color-warning, 0.55);
+    color: $color-text-primary;
+    border-color: $color-text-secondary;
   }
 
   &--offPeak {
-    color: $color-info;
-    border-color: with-alpha($color-info, 0.55);
+    color: $color-text-secondary;
+    border-color: $color-border-light;
   }
 
   .slot-row--closed & {

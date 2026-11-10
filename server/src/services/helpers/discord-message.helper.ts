@@ -4,7 +4,7 @@
 // then what there is to do
 
 import type { NotificationContent, NotificationKind } from '@shared/types';
-import { describeNotification, notificationTargetPath } from '@shared/utils';
+import { describeNotification, notificationLook, notificationTargetPath } from '@shared/utils';
 import { appUrl } from '@utils/app-url';
 import type { DiscordMessage } from '../../integrations/discord/discord-webhook';
 
@@ -27,23 +27,25 @@ const KIND_FOOTERS: Record<NotificationKind, string> = {
   LEAGUE_REGISTRATION_CLOSING: LEAGUE_FOOTER,
 };
 
-// The bar of a card: an answer awaited, a match made, a match called off, what fell through
-const ANSWER_AWAITED = 0x5865f2;
-const MATCH_MADE = 0x3ba55d;
-const MATCH_CALLED_OFF = 0xed4245;
-const FELL_THROUGH = 0x99aab5;
+// The bar of a card, coloured as the bell colours the same notification
+// (docs/PRODUIT.md, *Code couleur*), in the colours of the night theme, the
+// app's default: Discord shows a card the same in every theme
+export const CARD_COLORS = {
+  match: 0xfb923c,       // --color-match
+  matchmaking: 0x4ade80, // --color-success: a match offered is to accept
+  competition: 0x2dd4bf, // --color-competition
+  team: 0xf472b6,        // --color-team
+  good: 0x4ade80,        // --color-success
+  refused: 0x981b1b,     // --color-danger
+  fellThrough: 0x888888, // --color-text-secondary
+} as const;
 
-export const KIND_COLORS: Record<NotificationKind, number> = {
-  SCRIM_PROPOSAL_RECEIVED: ANSWER_AWAITED,
-  SCRIM_MATCH_MADE: MATCH_MADE,
-  SCRIM_MATCH_CANCELLED: MATCH_CALLED_OFF,
-  SCRIM_PROPOSAL_DECLINED: FELL_THROUGH,
-  SCRIM_SEARCH_WITHDRAWN: FELL_THROUGH,
-  SCRIM_SEARCH_EXPIRED: FELL_THROUGH,
-  TEAM_JOIN_REQUESTED: ANSWER_AWAITED,
-  LEAGUE_REGISTRATION_OPEN: ANSWER_AWAITED,
-  LEAGUE_REGISTRATION_CLOSING: MATCH_CALLED_OFF,
-};
+function cardColor(content: NotificationContent): number {
+  const { subject, tone } = notificationLook(content);
+  if (tone === 'refused') return CARD_COLORS.refused;
+  if (tone === 'fell-through') return CARD_COLORS.fellThrough;
+  return CARD_COLORS[subject];
+}
 
 // An icon is wider and taller than a letter: a plain space leaves it glued to
 // its text, and two lines of icons in a row touch
@@ -125,7 +127,7 @@ export function notificationMessage(
       // Blank lines between when and where, the word, and what to do
       description: [facts, word, links].filter(Boolean).join('\n\n'),
       ...(logo && { thumbnail: { url: `attachment://${logo}` } }),
-      color: KIND_COLORS[content.kind],
+      color: cardColor(content),
       footer: { text: KIND_FOOTERS[content.kind] },
       timestamp: new Date().toISOString(),
     }],
@@ -139,7 +141,7 @@ export function linkedMessage(teamName: string): DiscordMessage {
     embeds: [{
       title: withIcon('🔗', 'Salon relié'),
       description: `Les notifications de l'équipe ${escapeMarkdown(teamName)} arriveront ici.`,
-      color: MATCH_MADE,
+      color: CARD_COLORS.good,
       footer: { text: TEAM_FOOTER },
     }],
   };

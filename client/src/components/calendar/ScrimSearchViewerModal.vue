@@ -15,7 +15,7 @@ import {
 import { useErrors } from '@/composables/useErrors';
 import type { CalendarEvent, ScrimProposal, ScrimProposalStatus, ScrimSearch, Venue, VenueSlot } from '@shared/types';
 import { ERROR, SCRIM_PROPOSAL_MESSAGE_MAX_LENGTH } from '@shared/constants';
-import { describeProposalDecline } from '@shared/utils';
+import { describeProposalDecline, proposalState } from '@shared/utils';
 import { formatLongDate, isPastDateStr } from '@/utils/calendar';
 import { describeMatchesWanted, searchVenueIds } from '@/utils/scrims';
 import { formatVenueLabel } from '@/utils/venues';
@@ -262,7 +262,7 @@ function decline(proposal: ScrimProposal) {
         </template>
         <template v-else>
           <div v-if="ownProposal && ownOutcome" class="outcome">
-            <p class="status" :class="`status--${ownProposal.status.toLowerCase()}`">{{ ownOutcome.title }}</p>
+            <p class="status" :class="`status--${proposalState(ownProposal)}`">{{ ownOutcome.title }}</p>
             <p v-if="ownOutcome.detail" class="outcome-detail">{{ ownOutcome.detail }}</p>
           </div>
           <PlannedEventsNote :events="plannedEvents" />
@@ -443,6 +443,8 @@ function decline(proposal: ScrimProposal) {
   border-top: $border-thin solid $color-border-light;
 }
 
+// What became of our proposal, in the colours of its state: awaited, accepted,
+// refused or called off, come to nothing
 .status {
   margin: 0;
   font-weight: 600;
@@ -451,14 +453,16 @@ function decline(proposal: ScrimProposal) {
     color: $color-conditional;
   }
 
-  &--declined,
-  &--withdrawn,
-  &--cancelled {
-    color: $color-text-secondary;
-  }
-
   &--accepted {
     color: $color-success;
+  }
+
+  &--refused {
+    color: $color-danger;
+  }
+
+  &--fell-through {
+    color: $color-text-secondary;
   }
 }
 

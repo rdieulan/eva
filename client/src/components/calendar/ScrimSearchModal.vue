@@ -506,20 +506,20 @@ async function submit() {
   font-size: 0.85rem;
 }
 
-// The teams already searching at the hours picked, on a tint of information
+// The teams already searching at the hours picked, in the colour of matchmaking
 .day-rivals {
   display: flex;
   flex-direction: column;
   gap: $spacing-xs;
   padding: $spacing-sm $spacing-md;
-  border-left: 3px solid $color-info;
+  border-left: 3px solid $color-success;
   border-radius: $radius-sm;
-  background: with-alpha($color-info, 0.08);
+  background: with-alpha($color-success, 0.08);
 }
 
 .day-rivals-title {
   margin: 0;
-  color: $color-info;
+  color: $color-success;
   font-size: 0.8rem;
   font-weight: 600;
 }
@@ -562,7 +562,7 @@ async function submit() {
 }
 
 .btn-rival {
-  @include btn-base($color-info);
+  @include btn-base($color-success);
   padding: $spacing-xs $spacing-md;
 }
 

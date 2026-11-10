@@ -1,5 +1,5 @@
-// Notifications put in words. One wording for every medium: the app's bell
-// shows it whole, a Discord card in pieces.
+// Notifications put in words and in colour. One wording for every medium: the
+// app's bell shows it whole, a Discord card in pieces.
 
 import type {
   LeagueRegistrationFacts,
@@ -8,11 +8,12 @@ import type {
   NotificationTarget,
   ScrimMatchFacts,
 } from '@shared/types/notification.types';
+import type { NotificationLook } from '@shared/types/subject.types';
 import { calendarTargetPath } from '@shared/utils/calendar.utils';
 import { competitiveRegistrationUrl, formatRegistrationDeadline } from '@shared/utils/competitive.utils';
 import { formatShortDay } from '@shared/utils/date.utils';
 import { buildEvaBookingUrl } from '@shared/utils/eva.utils';
-import { describeProposalDecline } from '@shared/utils/scrim-proposal.utils';
+import { describeProposalDecline, isRefusal } from '@shared/utils/scrim-proposal.utils';
 import { formatVenuePlace } from '@shared/utils/venue.utils';
 
 type Pieces = Pick<NotificationDescription, 'body' | 'who' | 'when' | 'where'>;
@@ -153,6 +154,32 @@ export function describeNotification(content: NotificationContent): Notification
         detail: 'L\'équipe n\'y est toujours pas inscrite.',
         ...registrationPieces(content.data),
       };
+  }
+}
+
+/**
+ * How a notification shows, the same in the bell and on Discord: the symbol
+ * of its subject, in the subject's colour; gone wrong, in the colour of what
+ * it came to, red refused or called off, grey come to nothing.
+ */
+export function notificationLook(content: NotificationContent): NotificationLook {
+  switch (content.kind) {
+    case 'SCRIM_PROPOSAL_RECEIVED':
+      return { subject: 'matchmaking', tone: 'subject' };
+    case 'SCRIM_MATCH_MADE':
+      return { subject: 'match', tone: 'subject' };
+    case 'SCRIM_MATCH_CANCELLED':
+      return { subject: 'match', tone: 'refused' };
+    case 'SCRIM_PROPOSAL_DECLINED':
+      return { subject: 'matchmaking', tone: isRefusal(content.data.reason) ? 'refused' : 'fell-through' };
+    case 'SCRIM_SEARCH_WITHDRAWN':
+    case 'SCRIM_SEARCH_EXPIRED':
+      return { subject: 'matchmaking', tone: 'fell-through' };
+    case 'TEAM_JOIN_REQUESTED':
+      return { subject: 'team', tone: 'subject' };
+    case 'LEAGUE_REGISTRATION_OPEN':
+    case 'LEAGUE_REGISTRATION_CLOSING':
+      return { subject: 'competition', tone: 'subject' };
   }
 }
 

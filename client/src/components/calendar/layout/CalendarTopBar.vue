@@ -4,6 +4,7 @@ import {
   getTeamAvailabilityDisplay,
   TEAM_AVAILABILITY_STATUSES,
 } from '@/utils/availability';
+import SvgIcon from '@/components/common/SvgIcon.vue';
 
 defineProps<{
   editMode: boolean; // The days show every player's status; otherwise one colour, the team's lineup
@@ -40,7 +41,8 @@ defineEmits<{
       @pointerdown.prevent="$emit('toggleEditMode')"
       :title="editMode ? 'Quitter le mode édition' : 'Modifier mes disponibilités'"
     >
-      <span class="edit-icon">✏️</span>
+      <!-- The pencil of the Dispos subject, as on the home: no emoji on the commands -->
+      <SvgIcon name="edit" size="1.1em" class="edit-icon" />
       <span class="edit-label">{{ editMode ? 'Terminer' : 'Dispos' }}</span>
     </button>
   </div>
@@ -174,7 +176,7 @@ defineEmits<{
   }
 
   .edit-icon {
-    font-size: 1rem;
+    flex-shrink: 0;
   }
 
   @include mobile-lg {

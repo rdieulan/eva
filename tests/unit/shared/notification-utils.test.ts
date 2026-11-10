@@ -6,6 +6,7 @@ import {
   describeProposalDecline,
   formatShortDay,
   formatVenuePlace,
+  notificationLook,
   notificationTargetPath,
 } from '@shared/utils';
 import { SCRIM_DECLINE_REASONS, type ScrimDeclineReason, type ScrimMatchFacts } from '@shared/types';
@@ -203,5 +204,36 @@ describe('notificationTargetPath', () => {
   it('leads to a day of the calendar, or to the team page', () => {
     expect(notificationTargetPath({ page: 'calendar', date: '2026-11-25', mode: 'team' })).toBe('/calendar?date=2026-11-25&mode=team');
     expect(notificationTargetPath({ page: 'team' })).toBe('/team');
+  });
+});
+
+describe('notificationLook', () => {
+  const LEAGUE = { tournamentId: '2570489683180220415', tournamentName: 'NEMAUSUS LEAGUE - NOVEMBRE', closesAt: '2026-11-29T23:00:00.000Z' };
+
+  it('shows each notification with the symbol and colour of its subject', () => {
+    expect(notificationLook({ kind: 'SCRIM_PROPOSAL_RECEIVED', data: { ...FACTS, searchId: 's', teamName: 'Les Rivaux', message: null } }))
+      .toEqual({ subject: 'matchmaking', tone: 'subject' });
+    expect(notificationLook({ kind: 'SCRIM_MATCH_MADE', data: { ...FACTS, eventId: 'e', opponentName: 'Les Rivaux' } }))
+      .toEqual({ subject: 'match', tone: 'subject' });
+    expect(notificationLook({ kind: 'TEAM_JOIN_REQUESTED', data: { requestId: 'r', playerName: 'Raph', evaUsername: null } }))
+      .toEqual({ subject: 'team', tone: 'subject' });
+    expect(notificationLook({ kind: 'LEAGUE_REGISTRATION_OPEN', data: LEAGUE })).toEqual({ subject: 'competition', tone: 'subject' });
+    expect(notificationLook({ kind: 'LEAGUE_REGISTRATION_CLOSING', data: LEAGUE })).toEqual({ subject: 'competition', tone: 'subject' });
+  });
+
+  it('shows in red what was refused or called off, in grey what came to nothing', () => {
+    const declined = (reason: ScrimDeclineReason) => notificationLook({
+      kind: 'SCRIM_PROPOSAL_DECLINED', data: { ...FACTS, searchId: 's', teamName: 'Les Rivaux', reason },
+    });
+
+    expect(notificationLook({ kind: 'SCRIM_MATCH_CANCELLED', data: { ...FACTS, opponentName: 'Les Rivaux', byOpponent: true } }))
+      .toEqual({ subject: 'match', tone: 'refused' });
+    expect(declined('BY_TEAM')).toEqual({ subject: 'matchmaking', tone: 'refused' });
+    expect(SCRIM_DECLINE_REASONS.filter(reason => reason !== 'BY_TEAM').map(declined))
+      .toEqual(SCRIM_DECLINE_REASONS.filter(reason => reason !== 'BY_TEAM').map(() => ({ subject: 'matchmaking', tone: 'fell-through' })));
+    expect(notificationLook({ kind: 'SCRIM_SEARCH_WITHDRAWN', data: { ...FACTS, teamName: 'Les Rivaux' } }))
+      .toEqual({ subject: 'matchmaking', tone: 'fell-through' });
+    expect(notificationLook({ kind: 'SCRIM_SEARCH_EXPIRED', data: { searchId: 's', date: '2026-11-25' } }))
+      .toEqual({ subject: 'matchmaking', tone: 'fell-through' });
   });
 });

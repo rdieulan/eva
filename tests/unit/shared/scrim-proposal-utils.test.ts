@@ -1,6 +1,6 @@
-// Tests for a declined proposal put in words, for the team that sent it
+// Tests for a declined proposal put in words and in colour, for the team that sent it
 import { describe, it, expect } from 'vitest';
-import { describeProposalDecline } from '@shared/utils';
+import { describeProposalDecline, isRefusal, proposalState } from '@shared/utils';
 import { SCRIM_DECLINE_REASONS, type ScrimDeclineReason } from '@shared/types';
 
 describe('describeProposalDecline', () => {
@@ -29,5 +29,21 @@ describe('describeProposalDecline', () => {
     expect(describeProposalDecline('TIME_TAKEN').detail).toBe('Leur équipe a accepté un autre match à cette heure.');
     const details = SCRIM_DECLINE_REASONS.map(reason => describeProposalDecline(reason).detail);
     expect(new Set(details).size).toBe(SCRIM_DECLINE_REASONS.length);
+  });
+});
+
+describe('proposalState', () => {
+  it('reads a proposal as the colour code does: awaited, accepted, refused or called off, come to nothing', () => {
+    expect(proposalState({ status: 'PENDING', declineReason: null })).toBe('pending');
+    expect(proposalState({ status: 'ACCEPTED', declineReason: null })).toBe('accepted');
+    expect(proposalState({ status: 'CANCELLED', declineReason: null })).toBe('refused');
+    expect(proposalState({ status: 'WITHDRAWN', declineReason: null })).toBe('fell-through');
+  });
+
+  it('calls refused only what their team said no to; what the app declined came to nothing', () => {
+    const refused = SCRIM_DECLINE_REASONS.filter(reason => proposalState({ status: 'DECLINED', declineReason: reason }) === 'refused');
+
+    expect(refused).toEqual(['BY_TEAM']);
+    expect(SCRIM_DECLINE_REASONS.filter(isRefusal)).toEqual(refused);
   });
 });

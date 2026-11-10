@@ -4,6 +4,7 @@ import Modal from '@/components/common/Modal.vue';
 import ConfirmModal from '@/components/common/ConfirmModal.vue';
 import GamePlanViewer from '@/components/common/GamePlanViewer.vue';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
+import SvgIcon from '@/components/common/SvgIcon.vue';
 import { useErrors } from '@/composables/useErrors';
 import { useVenueSlots } from '@/composables/useVenueSlots';
 import { cancelScrimMatch } from '@/api';
@@ -263,7 +264,7 @@ function handleCreateEvent() {
           </div>
         </div>
 
-        <!-- Booking on eva.gg: a seat is taken there, not here -->
+        <!-- Booking on eva.gg: a seat is taken there, not here; in the match's colour, as on the home -->
         <a
           v-if="bookingUrl"
           class="btn-booking"
@@ -271,7 +272,7 @@ function handleCreateEvent() {
           target="_blank"
           rel="noopener noreferrer"
         >
-          🎟️ Réserver ma place sur eva.gg
+          Réserver ma place sur eva.gg ↗
         </a>
 
         <!-- Description -->
@@ -303,8 +304,9 @@ function handleCreateEvent() {
           >
             Annuler le match
           </button>
-          <button v-if="canEditEvent" class="btn btn-primary" @click="handleEditEvent" title="Modifier cet événement">
-            ✏️ Modifier
+          <button v-if="canEditEvent" class="btn btn-edit" @click="handleEditEvent" title="Modifier cet événement">
+            <SvgIcon name="edit" size="1em" />
+            Modifier
           </button>
           <button v-if="canCreateEvent" class="btn btn-accent" @click="handleCreateEvent" title="Ajouter un événement">
             ➕ Ajouter
@@ -447,13 +449,13 @@ function handleCreateEvent() {
     margin-top: 2px;
   }
 
-  // Against a full match of 8: short is a warning, extra players are a problem to sort out
+  // Against a full match of 8: short is a partial lineup, extra players a problem to sort out
   &.headcount-full {
     color: $color-success;
   }
 
   &.headcount-missing {
-    color: $color-warning;
+    color: $color-conditional;
   }
 
   &.headcount-over {
@@ -467,17 +469,17 @@ function handleCreateEvent() {
   justify-content: center;
   gap: $spacing-sm;
   padding: 0.75rem;
-  background: with-alpha($color-accent, 0.15);
-  border: $border-thin solid $color-accent;
+  background: with-alpha($color-match, 0.15);
+  border: $border-thin solid $color-match;
   border-radius: $radius-md;
-  color: $color-accent;
+  color: $color-match;
   font-size: 0.95rem;
   font-weight: 600;
   text-decoration: none;
   transition: background 0.2s;
 
   &:hover {
-    background: with-alpha($color-accent, 0.25);
+    background: with-alpha($color-match, 0.25);
   }
 }
 
@@ -570,17 +572,22 @@ function handleCreateEvent() {
   }
 }
 
-.btn-primary {
-  background: $color-accent;
-  color: $color-white;
+// Modifying, in the colour of every Modifier of the app
+.btn-edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
+  background: $color-edit;
+  color: $color-bg-primary;
 
   &:hover {
-    background: $color-accent;
+    filter: brightness(1.1);
   }
 }
 
 .btn-accent {
-  background: $color-success;
+  background: $color-accent;
   color: $color-white;
 
   &:hover {

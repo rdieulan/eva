@@ -2,10 +2,11 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import SvgIcon from '@/components/common/SvgIcon.vue';
+import SubjectIcon from '@/components/common/SubjectIcon.vue';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import { useNotifications } from '@/composables/useNotifications';
 import { useErrors } from '@/composables/useErrors';
-import { describeNotification } from '@shared/utils';
+import { describeNotification, notificationLook } from '@shared/utils';
 import { ERROR } from '@shared/constants';
 import type { InboxNotification } from '@shared/types';
 import { formatRelativeTime, notificationRoute } from '@/utils/notifications';
@@ -28,10 +29,12 @@ const buttonLabel = computed(() => (unreadCount.value
   ? `Notifications, ${unreadCount.value} non lue${unreadCount.value > 1 ? 's' : ''}`
   : 'Notifications'));
 
-// Each notification put in words once, with how long ago it came
+// Each notification put in words once, with how long ago it came, and the
+// symbol and colour of its subject, as on the home and on Discord
 const items = computed(() => notifications.value.map(notification => ({
   notification,
   description: describeNotification(notification),
+  look: notificationLook(notification),
   when: formatRelativeTime(notification.createdAt),
 })));
 
@@ -106,14 +109,21 @@ onBeforeUnmount(() => {
       <p v-if="isLoading && !items.length" class="panel-note">Chargement…</p>
       <p v-else-if="!items.length && !errors.length" class="panel-note">Aucune notification pour le moment.</p>
       <ul v-else class="list">
-        <li v-for="{ notification, description, when } in items" :key="notification.id" :class="{ unread: !notification.isRead }">
+        <li
+          v-for="{ notification, description, look, when } in items"
+          :key="notification.id"
+          :class="[`subject--${look.subject}`, { unread: !notification.isRead }]"
+        >
           <button type="button" class="item" @click="follow(notification)">
-            <span class="item-head">
-              <span class="item-title">{{ description.title }}</span>
-              <span class="item-when">{{ when }}</span>
+            <SubjectIcon :subject="look.subject" :tone="look.tone" size="20px" class="item-icon" />
+            <span class="item-text">
+              <span class="item-head">
+                <span class="item-title">{{ description.title }}</span>
+                <span class="item-when">{{ when }}</span>
+              </span>
+              <span class="item-body">{{ description.body }}</span>
+              <span v-if="description.detail" class="item-detail">{{ description.detail }}</span>
             </span>
-            <span class="item-body">{{ description.body }}</span>
-            <span v-if="description.detail" class="item-detail">{{ description.detail }}</span>
           </button>
           <!-- A step outside the app (booking on eva.gg, registering on competitive.eva.gg), in a tab of its own -->
           <a
@@ -184,7 +194,8 @@ $panel-layer: 900; // Over the page, under any modal (Modal.vue opens them from 
   padding: 0 4px;
   border: 2px solid $color-bg-secondary;
   border-radius: 999px;
-  background: $color-danger;
+  // What is new to read: the way around the app, not a refusal (red)
+  background: $color-accent;
   color: $color-white;
   font-size: 0.7rem;
   font-weight: 700;
@@ -256,10 +267,14 @@ $panel-layer: 900; // Over the page, under any modal (Modal.vue opens them from 
   }
 }
 
+$item-icon-size: 20px;
+$item-icon-gap: 0.6rem;
+
+@include subject-color-classes;
+
 .item {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  gap: $item-icon-gap;
   width: 100%;
   padding: 0.65rem $spacing-md;
   border: none;
@@ -277,6 +292,18 @@ $panel-layer: 900; // Over the page, under any modal (Modal.vue opens them from 
       background: with-alpha($color-accent, 0.14);
     }
   }
+}
+
+.item-icon {
+  margin-top: 1px;
+}
+
+.item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
 }
 
 .item-head {
@@ -308,12 +335,13 @@ $panel-layer: 900; // Over the page, under any modal (Modal.vue opens them from 
   font-size: $font-size-xs;
 }
 
-// Under its notification, in the same row
+// Under its notification, in the same row, under its text; in the colour of
+// its subject: booking a seat is about a match, registering about the league
 .item-elsewhere {
   display: block;
   margin-top: -0.35rem;
-  padding: 0 $spacing-md 0.65rem;
-  color: $color-accent;
+  padding: 0 $spacing-md 0.65rem calc(#{$spacing-md} + #{$item-icon-size} + #{$item-icon-gap});
+  color: var(--subject-color);
   font-size: $font-size-xs;
   font-weight: 600;
   text-decoration: none;

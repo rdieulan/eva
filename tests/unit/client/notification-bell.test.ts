@@ -89,6 +89,18 @@ describe('NotificationBell', () => {
     expect(bell.find('.badge').exists()).toBe(false);
   });
 
+  it('shows each notification with the symbol and colour of its subject, a match called off in red', async () => {
+    const bell = await mountBell();
+    await bell.find('button.btn-bell').trigger('click');
+    await flushPromises();
+
+    const [received, cancelled] = bell.findAllComponents({ name: 'SubjectIcon' });
+    expect(received!.props()).toMatchObject({ subject: 'matchmaking', tone: 'subject' });
+    expect(cancelled!.props()).toMatchObject({ subject: 'match', tone: 'refused' });
+    expect(received!.classes()).toContain('subject-icon--matchmaking');
+    expect(cancelled!.classes()).toContain('subject-icon--refused');
+  });
+
   it('leads to what a notification is about, and closes', async () => {
     const bell = await mountBell();
     await bell.find('button.btn-bell').trigger('click');

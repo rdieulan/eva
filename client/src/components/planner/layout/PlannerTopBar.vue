@@ -425,9 +425,9 @@ function isMainRoleForSelectedPlayer(assignmentId: number): boolean {
   }
 
   &.has-warnings {
-    background: with-alpha($color-warning, 0.15);
-    border: $border-thin solid with-alpha($color-warning, 0.3);
-    color: $color-warning;
+    background: with-alpha($color-conditional, 0.15);
+    border: $border-thin solid with-alpha($color-conditional, 0.3);
+    color: $color-conditional;
   }
 
   &.is-unbalanced {
@@ -486,7 +486,7 @@ function isMainRoleForSelectedPlayer(assignmentId: number): boolean {
   }
 
   &.warning {
-    color: $color-warning;
+    color: $color-conditional;
   }
 
   &.success {

@@ -352,7 +352,7 @@ function getBalanceClass(map: MapConfig): string {
   }
 
   &.status-warning {
-    color: $color-warning;
+    color: $color-conditional;
   }
 
   &.status-error {
@@ -479,11 +479,11 @@ function getBalanceClass(map: MapConfig): string {
 
 .edit-warning {
   padding: $spacing-sm;
-  background: with-alpha($color-warning, 0.1);
-  border: $border-thin solid with-alpha($color-warning, 0.3);
+  background: with-alpha($color-conditional, 0.1);
+  border: $border-thin solid with-alpha($color-conditional, 0.3);
   border-radius: $radius-sm;
   font-size: $font-size-xs;
-  color: $color-warning;
+  color: $color-conditional;
   text-align: center;
 
   @include mobile-lg {
