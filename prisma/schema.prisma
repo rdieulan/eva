@@ -145,6 +145,7 @@ model Team {
   scrimProposals         ScrimProposal[]
   notifications          Notification[]
   joinRequests           TeamJoinRequest[]
+  leagueEntries          LeagueEntry[]
 
   @@index([venueId])
 }
@@ -218,6 +219,39 @@ model LeagueTeam {
   logoCopiedId String? // Which of its logos logoData holds: a stale copy once logoId moves on
   seenAt       DateTime // The last read of the list it was in
   team         Team? // The team of ours it is, when one is linked to it
+}
+
+// A tournament of a local league of competitive.eva.gg: each month of a league
+// is one, with its own registration. Read every night for the leagues our
+// linked teams play in, and forgotten a month after its registration closed.
+model LeagueTournament {
+  id                   String        @id // Its id on competitive.eva.gg
+  name                 String
+  regionId             String // The league it is a month of: one region of the local leagues per venue
+  startsOn             DateTime?     @db.Date
+  registrationOpensAt  DateTime?
+  registrationClosesAt DateTime?
+  seenAt               DateTime // The last night it was read
+  entries              LeagueEntry[]
+
+  @@index([regionId])
+}
+
+// A team of ours and a tournament of its local league whose registration is
+// open: whether the team is registered, as the site lists it, and what those
+// who manage it were told. Each reminder goes once.
+model LeagueEntry {
+  teamId          String
+  tournamentId    String
+  registeredAt    DateTime? // When a night first found the team registered; null while it is not
+  openNoticeAt    DateTime? // When the team was told the registration opened
+  closingNoticeAt DateTime? // When the team was told it closes in a few days
+  checkedAt       DateTime // The last night the team's registration was read
+  team            Team             @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  tournament      LeagueTournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  @@id([teamId, tournamentId])
+  @@index([tournamentId])
 }
 
 // ============================================
@@ -563,4 +597,6 @@ enum NotificationKind {
   SCRIM_MATCH_CANCELLED // A match of the matchmaking was called off
   SCRIM_SEARCH_EXPIRED // The team's search closed with no match: its slots were booked
   TEAM_JOIN_REQUESTED // A player without a team asks to join it
+  LEAGUE_REGISTRATION_OPEN // The registration to this month of the team's local league opened, the team not registered
+  LEAGUE_REGISTRATION_CLOSING // It closes in a few days, the team still not registered
 }

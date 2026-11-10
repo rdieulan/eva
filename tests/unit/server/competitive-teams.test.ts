@@ -6,6 +6,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   CompetitiveApiError,
+  fetchLeagueRegionTournaments,
   fetchLeagueTeamLogo,
   fetchLeagueTeamTournaments,
   fetchLeagueTeamsPage,
@@ -179,33 +180,52 @@ describe('fetchLeagueTeamLogo', () => {
   });
 });
 
-describe('fetchLeagueTeamTournaments', () => {
-  // A tournament of a local league, the way the site gives it
-  function tournament(overrides: Record<string, unknown> = {}) {
-    return {
-      id: '2570489683180220415',
-      name: 'NEMAUSUS LEAGUE - NOVEMBRE',
-      location: null,
-      scheduledDateStart: '2026-11-01',
-      circuit: { id: '2395738311350114303', name: 'LOCAL LEAGUES' },
-      circuitRegion: { id: '2395742493876512767', name: 'NÎMES', machineName: 'nimes' },
-      ...overrides,
-    };
-  }
+// A tournament of a local league, the way the site gives it
+function tournament(overrides: Record<string, unknown> = {}) {
+  return {
+    id: '2570489683180220415',
+    name: 'NEMAUSUS LEAGUE - NOVEMBRE',
+    location: null,
+    scheduledDateStart: '2026-11-01',
+    circuit: { id: '2395738311350114303', name: 'LOCAL LEAGUES' },
+    circuitRegion: { id: '2395742493876512767', name: 'NÎMES', machineName: 'nimes' },
+    registrationStatus: 'open',
+    registrationOpeningDatetime: '2026-10-23T22:00:00+00:00',
+    registrationClosingDatetime: '2026-11-29T23:00:00+00:00',
+    ...overrides,
+  };
+}
 
-  it('asks for the latest tournaments of a team, and keeps their name, day and region', async () => {
+// The same, as we keep it
+const NOVEMBER = {
+  id: '2570489683180220415',
+  name: 'NEMAUSUS LEAGUE - NOVEMBRE',
+  startsOn: '2026-11-01',
+  region: { id: '2395742493876512767', name: 'NÎMES', machineName: 'nimes' },
+  registration: { status: 'open', opensAt: '2026-10-23T22:00:00.000Z', closesAt: '2026-11-29T23:00:00.000Z' },
+};
+
+describe('fetchLeagueTeamTournaments', () => {
+  it('asks for the latest tournaments of a team, and keeps their name, day, region and registration', async () => {
     fetchMock.mockResolvedValueOnce(json({ items: [tournament()], range: { offset: 0, length: 1, total: 7 } }));
 
     const tournaments = await fetchLeagueTeamTournaments(RONIN);
 
     expect(fetchMock.mock.calls[0]![0]).toBe(`https://competitive.eva.gg/api/tournaments?team_id=${RONIN}&sort=scheduled_desc&offset=0&limit=10`);
-    expect(tournaments).toEqual([{ name: 'NEMAUSUS LEAGUE - NOVEMBRE', startsOn: '2026-11-01', region: { name: 'NÎMES', machineName: 'nimes' } }]);
+    expect(tournaments).toEqual([NOVEMBER]);
   });
 
-  it('keeps a tournament with no region or no day, and leaves out what is none', async () => {
-    fetchMock.mockResolvedValueOnce(json({ items: [tournament({ circuitRegion: null, scheduledDateStart: null }), { name: 42 }, null] }));
+  it('keeps a tournament with no region, no day or no registration, and leaves out what is none', async () => {
+    fetchMock.mockResolvedValueOnce(json({ items: [
+      tournament({ circuitRegion: null, scheduledDateStart: null, registrationStatus: 'unknown', registrationOpeningDatetime: 'soon', registrationClosingDatetime: null }),
+      tournament({ id: 'not-an-id' }),
+      { name: 42 },
+      null,
+    ] }));
 
-    expect(await fetchLeagueTeamTournaments(RONIN)).toEqual([{ name: 'NEMAUSUS LEAGUE - NOVEMBRE', startsOn: null, region: null }]);
+    expect(await fetchLeagueTeamTournaments(RONIN)).toEqual([
+      { ...NOVEMBER, startsOn: null, region: null, registration: { status: null, opensAt: null, closesAt: null } },
+    ]);
   });
 
   it('fails on a refusal or an unreadable answer, and never calls the site for what is no team id', async () => {
@@ -217,6 +237,22 @@ describe('fetchLeagueTeamTournaments', () => {
 
     fetchMock.mockClear();
     await expect(fetchLeagueTeamTournaments('../admin')).rejects.toBeInstanceOf(CompetitiveApiError);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('fetchLeagueRegionTournaments', () => {
+  it('asks for the latest months of a league: this one and the next', async () => {
+    fetchMock.mockResolvedValueOnce(json({ items: [tournament()] }));
+
+    const tournaments = await fetchLeagueRegionTournaments('2395742493876512767');
+
+    expect(fetchMock.mock.calls[0]![0]).toBe('https://competitive.eva.gg/api/tournaments?circuit_region_ids=2395742493876512767&sort=scheduled_desc&offset=0&limit=3');
+    expect(tournaments).toEqual([NOVEMBER]);
+  });
+
+  it('never calls the site for what is no region id', async () => {
+    await expect(fetchLeagueRegionTournaments('1,2')).rejects.toBeInstanceOf(CompetitiveApiError);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

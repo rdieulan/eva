@@ -195,7 +195,13 @@ describe('PUT /api/teams/current/league-team', () => {
     const ronin = leagueTeam('RONIN');
     const other = leagueTeam('Other');
     await directoryHolds([ronin, other]);
-    tournamentsOf.mockResolvedValue([{ name: 'NEMAUSUS LEAGUE - NOVEMBRE', startsOn: '2026-11-01', region: { name: 'NÎMES', machineName: 'nimes' } }]);
+    tournamentsOf.mockResolvedValue([{
+      id: '2570489683180220415',
+      name: 'NEMAUSUS LEAGUE - NOVEMBRE',
+      startsOn: '2026-11-01',
+      region: { id: '2395742493876512767', name: 'NÎMES', machineName: 'nimes' },
+      registration: { status: 'open', opensAt: null, closesAt: null },
+    }]);
     const withoutVenue = await createUserWithTeam();
     const withVenue = await createUserWithTeam();
     await prisma.team.update({ where: { id: withVenue.team.id }, data: { venueId: avignon.id } });

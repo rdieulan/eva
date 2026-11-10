@@ -54,6 +54,8 @@ export { detectImageType } from './image.utils';
 
 export { foldForSearch } from './search.utils';
 
+export { competitiveRegistrationUrl, formatRegistrationDeadline } from './competitive.utils';
+
 export {
   assessTeamAvailability,
   windowCovers,

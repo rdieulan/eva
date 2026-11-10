@@ -6,3 +6,6 @@ export const LEAGUE_SEARCH_MIN_LENGTH = 2;
 
 // The longest search, as typed: longer than any team name
 export const LEAGUE_SEARCH_MAX_LENGTH = 64;
+
+// The pages of competitive.eva.gg, in French as our players read them
+export const COMPETITIVE_SITE_URL = 'https://competitive.eva.gg/fr';

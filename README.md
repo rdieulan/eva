@@ -107,6 +107,7 @@ L'app est disponible sur **http://localhost:5173**. Le backend tourne sur **http
 | `npm run db:seed` | Seed des maps (référence) |
 | `npm run db:sync-venues [-- <pays>]` | Remplit / met à jour les salles et leur nombre d'arènes depuis l'API eva.gg (FR par défaut) |
 | `npm run db:sync-league-teams` | Relit tout de suite la liste des équipes de ligue de competitive.eva.gg dans l'annuaire (le serveur de production la relit seul chaque nuit) |
+| `npm run db:check-league-registrations` | Relit tout de suite les inscriptions des équipes reliées à leur ligue locale et envoie les rappels dus (le serveur de production le fait seul chaque nuit) |
 | `npm run db:studio` | Ouvre Prisma Studio (UI d'inspection) |
 | `npm run db:generate` | Régénère le client Prisma après modif du schéma |
 | `npm run db:push` | Sync rapide schéma → DB sans créer de migration (dev only) |

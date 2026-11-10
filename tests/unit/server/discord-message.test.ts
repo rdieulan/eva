@@ -114,6 +114,22 @@ describe('notificationMessage', () => {
     });
   });
 
+  it('lays the last reminder of a league registration out: the month, until when, then the team and the registration page', () => {
+    const [embed] = notificationMessage({
+      kind: 'LEAGUE_REGISTRATION_CLOSING',
+      data: { tournamentId: '2570489683180220415', tournamentName: 'NEMAUSUS LEAGUE - NOVEMBRE', closesAt: '2026-11-29T23:00:00.000Z' },
+    }, { base: BASE }).embeds;
+
+    expect(embed).toMatchObject({
+      author: { name: 'NEMAUSUS LEAGUE - NOVEMBRE' },
+      title: `⏰${GAP}Inscription à la ligue : dernier rappel`,
+      description: `📅${GAP}**Jusqu'au dim. 29/11**\n\nL'équipe n'y est toujours pas inscrite.\n\n`
+        + `👥${GAP}[Voir l'équipe](${BASE}/team)${LINKS_APART}🎟️${GAP}[S'inscrire sur competitive.eva.gg](https://competitive.eva.gg/fr/tournaments/2570489683180220415/registration)`,
+      color: 0xed4245,
+      footer: { text: 'EVA · Ligue' },
+    });
+  });
+
   it('lays a search closed with no match out with its day alone', () => {
     const [embed] = notificationMessage({ kind: 'SCRIM_SEARCH_EXPIRED', data: { searchId: 'search-1', date: '2026-11-25' } }, { base: BASE }).embeds;
 

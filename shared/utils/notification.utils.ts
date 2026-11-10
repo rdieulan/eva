@@ -2,18 +2,35 @@
 // shows it whole, a Discord card in pieces.
 
 import type {
+  LeagueRegistrationFacts,
   NotificationContent,
   NotificationDescription,
   NotificationTarget,
   ScrimMatchFacts,
 } from '@shared/types/notification.types';
 import { calendarTargetPath } from '@shared/utils/calendar.utils';
+import { competitiveRegistrationUrl, formatRegistrationDeadline } from '@shared/utils/competitive.utils';
 import { formatShortDay } from '@shared/utils/date.utils';
 import { buildEvaBookingUrl } from '@shared/utils/eva.utils';
 import { describeProposalDecline } from '@shared/utils/scrim-proposal.utils';
 import { formatVenuePlace } from '@shared/utils/venue.utils';
 
 type Pieces = Pick<NotificationDescription, 'body' | 'who' | 'when' | 'where'>;
+
+// A month of the league to register to: the tournament, until when, and where
+function registrationPieces(facts: LeagueRegistrationFacts): Omit<NotificationDescription, 'title' | 'detail'> {
+  const deadline = formatRegistrationDeadline(facts.closesAt);
+  return {
+    body: `${facts.tournamentName} · ${deadline}`,
+    who: { name: facts.tournamentName, teamId: null },
+    when: deadline.charAt(0).toUpperCase() + deadline.slice(1),
+    where: null,
+    quote: null,
+    target: { page: 'team' },
+    action: 'Voir l\'équipe',
+    elsewhere: { label: 'S\'inscrire sur competitive.eva.gg', url: competitiveRegistrationUrl(facts.tournamentId) },
+  };
+}
 
 // The other team, the day, the hours and the place of a match, in pieces and in one line
 function matchPieces(teamName: string, teamId: string | undefined, facts: ScrimMatchFacts): Pieces {
@@ -124,6 +141,18 @@ export function describeNotification(content: NotificationContent): Notification
         elsewhere: null,
       };
     }
+    case 'LEAGUE_REGISTRATION_OPEN':
+      return {
+        title: 'Inscriptions ouvertes à la ligue',
+        detail: 'L\'équipe n\'y est pas encore inscrite.',
+        ...registrationPieces(content.data),
+      };
+    case 'LEAGUE_REGISTRATION_CLOSING':
+      return {
+        title: 'Inscription à la ligue : dernier rappel',
+        detail: 'L\'équipe n\'y est toujours pas inscrite.',
+        ...registrationPieces(content.data),
+      };
   }
 }
 

@@ -19,6 +19,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:sync-venues": "tsx --tsconfig scripts/tsconfig.json scripts/sync-venues.ts",
     "db:sync-league-teams": "tsx --tsconfig server/tsconfig.json scripts/sync-league-teams.ts",
+    "db:check-league-registrations": "tsx --tsconfig server/tsconfig.json scripts/check-league-registrations.ts",
     "eva:probe-me": "tsx --tsconfig scripts/tsconfig.json scripts/eva-probe-me.ts",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate",

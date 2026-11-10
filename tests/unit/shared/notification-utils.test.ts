@@ -171,6 +171,34 @@ describe('describeNotification', () => {
   });
 });
 
+describe('describeNotification, the league', () => {
+  const facts = { tournamentId: '2570489683180220415', tournamentName: 'NEMAUSUS LEAGUE - DÉCEMBRE', closesAt: '2026-12-30T23:00:00.000Z' };
+  const registering = { label: 'S\'inscrire sur competitive.eva.gg', url: 'https://competitive.eva.gg/fr/tournaments/2570489683180220415/registration' };
+
+  it('tells a month of the league open to registration, until when, and where to register', () => {
+    expect(describeNotification({ kind: 'LEAGUE_REGISTRATION_OPEN', data: facts })).toEqual({
+      title: 'Inscriptions ouvertes à la ligue',
+      body: 'NEMAUSUS LEAGUE - DÉCEMBRE · jusqu\'au mer. 30/12',
+      who: { name: 'NEMAUSUS LEAGUE - DÉCEMBRE', teamId: null },
+      when: 'Jusqu\'au mer. 30/12',
+      where: null,
+      detail: 'L\'équipe n\'y est pas encore inscrite.',
+      quote: null,
+      target: { page: 'team' },
+      action: 'Voir l\'équipe',
+      elsewhere: registering,
+    });
+  });
+
+  it('tells the last reminder, the team still not registered', () => {
+    expect(describeNotification({ kind: 'LEAGUE_REGISTRATION_CLOSING', data: facts })).toMatchObject({
+      title: 'Inscription à la ligue : dernier rappel',
+      detail: 'L\'équipe n\'y est toujours pas inscrite.',
+      elsewhere: registering,
+    });
+  });
+});
+
 describe('notificationTargetPath', () => {
   it('leads to a day of the calendar, or to the team page', () => {
     expect(notificationTargetPath({ page: 'calendar', date: '2026-11-25', mode: 'team' })).toBe('/calendar?date=2026-11-25&mode=team');

@@ -81,10 +81,10 @@ describe('NotificationBell', () => {
     expect(items[0]!.text()).toContain('Match proposé');
     expect(items[0]!.text()).toContain('Les Rivaux · mer. 25/11 · 19:20 – 20:40 · Nîmes');
     expect(items[0]!.text()).toContain('à l\'instant');
-    expect(items[0]!.classes()).toContain('unread');
+    expect(items[0]!.element.parentElement!.classList).toContain('unread');
     expect(items[1]!.text()).toContain('Match annulé');
     expect(items[1]!.text()).toContain('il y a 2 h');
-    expect(items[1]!.classes()).not.toContain('unread');
+    expect(items[1]!.element.parentElement!.classList).not.toContain('unread');
     expect(markNotificationsRead).toHaveBeenCalledWith(['n-2']);
     expect(bell.find('.badge').exists()).toBe(false);
   });
@@ -98,6 +98,30 @@ describe('NotificationBell', () => {
 
     expect(push).toHaveBeenCalledWith({ path: '/calendar', query: { date: '2026-11-25', mode: 'matchmaking', search: 'search-1' } });
     expect(bell.find('.panel').exists()).toBe(false);
+  });
+
+  it('offers the step to take outside the app under its notification, in a tab of its own, and leads to the team page', async () => {
+    const reminder: InboxNotification = {
+      id: 'n-3', createdAt: new Date().toISOString(), isRead: false,
+      kind: 'LEAGUE_REGISTRATION_OPEN',
+      data: { tournamentId: '2570489683180220415', tournamentName: 'NEMAUSUS LEAGUE - DÉCEMBRE', closesAt: '2026-12-30T23:00:00.000Z' },
+    };
+    vi.mocked(fetchNotifications).mockResolvedValue({ notifications: [reminder, CANCELLED], unreadCount: 1 });
+    const bell = await mountBell();
+    await bell.find('button.btn-bell').trigger('click');
+    await flushPromises();
+
+    const links = bell.findAll('a.item-elsewhere');
+    expect(links).toHaveLength(1);
+    expect(links[0]!.text()).toBe('S\'inscrire sur competitive.eva.gg ↗');
+    expect(links[0]!.attributes()).toMatchObject({
+      href: 'https://competitive.eva.gg/fr/tournaments/2570489683180220415/registration',
+      target: '_blank',
+      rel: 'noopener noreferrer',
+    });
+
+    await bell.findAll('button.item')[0]!.trigger('click');
+    expect(push).toHaveBeenCalledWith({ path: '/team' });
   });
 
   it('closes on a click elsewhere and on Escape', async () => {

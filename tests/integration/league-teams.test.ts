@@ -354,8 +354,17 @@ describe('GET /api/league-teams/:id/logo', () => {
 });
 
 describe('GET /api/league-teams/:id/venue', () => {
-  function played(name: string, startsOn: string, region: LeagueTournament['region']): LeagueTournament {
-    return { name, startsOn, region };
+  // A tournament the team played, its registration over
+  let lastTournamentId = 2570000000000000000n;
+  function played(name: string, startsOn: string, region: { name: string; machineName: string } | null): LeagueTournament {
+    lastTournamentId += 1n;
+    return {
+      id: String(lastTournamentId),
+      name,
+      startsOn,
+      region: region && { id: `region-${region.machineName}`, ...region },
+      registration: { status: 'finished', opensAt: null, closesAt: null },
+    };
   }
 
   async function venues() {

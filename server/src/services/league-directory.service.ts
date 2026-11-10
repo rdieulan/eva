@@ -162,28 +162,6 @@ export async function isLeagueDirectoryDue(now: Date = new Date()): Promise<bool
   return hour >= NIGHT_FIRST_HOUR && hour < NIGHT_END_HOUR;
 }
 
-let isReading = false;
-
-/**
- * Check every hour whether the directory is due, and read it when it is. The
- * first check comes an hour after the server starts: a server restarted again
- * and again never reads the site at each start.
- */
-export function startLeagueDirectorySync(): void {
-  setInterval(() => {
-    if (isReading) return;
-    isReading = true;
-    isLeagueDirectoryDue()
-      .then(async due => {
-        if (due) logger.info('League directory read', await syncLeagueDirectory());
-      })
-      .catch(error => logger.error('League directory read failed', error))
-      .finally(() => {
-        isReading = false;
-      });
-  }, LEAGUE_DIRECTORY_CHECK_INTERVAL_MS);
-}
-
 /**
  * Where the app loads a league team's logo from. The URL carries the logo's
  * id on the site, so a new logo gets a new URL and browsers never show a stale
@@ -271,9 +249,13 @@ const VENUE_PROPOSAL_RETRY_AFTER_MS = 15 * 60 * 1000;
 // The venues read from the tournaments of league teams, by league team, and until when they hold
 const venueProposals = new Map<string, { proposal: LeagueVenueProposal | null; until: number }>();
 
-// The venue of ours a tournament is played at: its region is a venue of the local leagues,
-// known by its short name (`nimes`, the address of our venue) or else by its name
-function venueOfTournament(
+/**
+ * The venue of ours a tournament is played at, null when none: its region is a
+ * venue of the local leagues, known by its short name (`nimes`, the address of
+ * our venue) or else by its name. A region that is no venue of ours is no
+ * local league of ours.
+ */
+export function venueOfLeagueTournament(
   tournament: LeagueTournament,
   venues: { id: string; name: string; slug: string }[],
 ): { id: string; name: string } | null {
@@ -307,7 +289,7 @@ export async function proposeLeagueTeamVenue(leagueTeamId: string): Promise<Leag
   const latestFirst = [...tournaments].sort((a, b) => (b.startsOn ?? '').localeCompare(a.startsOn ?? ''));
   let proposal: LeagueVenueProposal | null = null;
   for (const tournament of latestFirst) {
-    const venue = venueOfTournament(tournament, venues);
+    const venue = venueOfLeagueTournament(tournament, venues);
     if (venue) {
       proposal = { venueId: venue.id, venueName: venue.name, leagueName: tournament.name };
       break;

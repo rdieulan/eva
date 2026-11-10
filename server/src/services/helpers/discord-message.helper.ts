@@ -12,6 +12,7 @@ import type { DiscordMessage } from '../../integrations/discord/discord-webhook'
 const POSTED_AS = 'EVA';
 const MATCHMAKING_FOOTER = 'EVA · Matchmaking';
 const TEAM_FOOTER = 'EVA · Équipe';
+const LEAGUE_FOOTER = 'EVA · Ligue';
 
 // The part of the app each kind comes from, at the foot of its card
 const KIND_FOOTERS: Record<NotificationKind, string> = {
@@ -22,6 +23,8 @@ const KIND_FOOTERS: Record<NotificationKind, string> = {
   SCRIM_SEARCH_WITHDRAWN: MATCHMAKING_FOOTER,
   SCRIM_SEARCH_EXPIRED: MATCHMAKING_FOOTER,
   TEAM_JOIN_REQUESTED: TEAM_FOOTER,
+  LEAGUE_REGISTRATION_OPEN: LEAGUE_FOOTER,
+  LEAGUE_REGISTRATION_CLOSING: LEAGUE_FOOTER,
 };
 
 // The bar of a card: an answer awaited, a match made, a match called off, what fell through
@@ -38,6 +41,8 @@ export const KIND_COLORS: Record<NotificationKind, number> = {
   SCRIM_SEARCH_WITHDRAWN: FELL_THROUGH,
   SCRIM_SEARCH_EXPIRED: FELL_THROUGH,
   TEAM_JOIN_REQUESTED: ANSWER_AWAITED,
+  LEAGUE_REGISTRATION_OPEN: ANSWER_AWAITED,
+  LEAGUE_REGISTRATION_CLOSING: MATCH_CALLED_OFF,
 };
 
 // An icon is wider and taller than a letter: a plain space leaves it glued to
@@ -49,7 +54,8 @@ function withIcon(icon: string, text: string): string {
   return `${icon}${GAP}${text}`;
 }
 
-// The sign of each step to take, before its link; booking on eva.gg has its own
+// The sign of each step to take, before its link; a step outside the app (booking on
+// eva.gg, registering on competitive.eva.gg) has its own
 const ACTION_ICONS: Record<NotificationKind, string> = {
   SCRIM_PROPOSAL_RECEIVED: '💬',
   SCRIM_MATCH_MADE: '🎮',
@@ -58,8 +64,10 @@ const ACTION_ICONS: Record<NotificationKind, string> = {
   SCRIM_SEARCH_WITHDRAWN: '🔎',
   SCRIM_SEARCH_EXPIRED: '📆',
   TEAM_JOIN_REQUESTED: '👥',
+  LEAGUE_REGISTRATION_OPEN: '👥',
+  LEAGUE_REGISTRATION_CLOSING: '👥',
 };
-const BOOKING_ICON = '🎟️';
+const ELSEWHERE_ICON = '🎟️';
 
 // The sign before the title of each kind
 const KIND_ICONS: Record<NotificationKind, string> = {
@@ -70,6 +78,8 @@ const KIND_ICONS: Record<NotificationKind, string> = {
   SCRIM_SEARCH_WITHDRAWN: '🗑️',
   SCRIM_SEARCH_EXPIRED: '⌛',
   TEAM_JOIN_REQUESTED: '🙋',
+  LEAGUE_REGISTRATION_OPEN: '📝',
+  LEAGUE_REGISTRATION_CLOSING: '⏰',
 };
 
 // What Discord would read as formatting or a link in a team's name or message
@@ -103,7 +113,7 @@ export function notificationMessage(
   const word = quote ? quoted(quote) : detail ? escapeMarkdown(detail) : null;
   const links = [
     ...(appLink ? [withIcon(ACTION_ICONS[content.kind], `[${action}](${appLink})`)] : []),
-    ...(elsewhere ? [withIcon(BOOKING_ICON, `[${elsewhere.label}](${elsewhere.url})`)] : []),
+    ...(elsewhere ? [withIcon(ELSEWHERE_ICON, `[${elsewhere.label}](${elsewhere.url})`)] : []),
   ].join(LINKS_APART);
 
   return {

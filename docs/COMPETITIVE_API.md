@@ -83,6 +83,32 @@ région par salle : la région porte le nom de la salle (`NÎMES`) et un nom cou
 La salle d'une équipe de ligue se lit donc dans la région de son tournoi le plus
 récent joué dans une de nos salles : rapprochée par le nom court, sinon par le nom.
 
+Une équipe figure parmi les tournois auxquels elle est inscrite : RONIN figure dans
+celui de novembre, ouvert aux inscriptions. Un tournoi absent de sa liste est un mois
+où elle n'est pas inscrite. Une inscription en attente de validation par l'organisateur
+(les inscriptions passent par `pending`, `accepted`, `refused`, `cancelled` **[lu dans
+leurs pages]**) n'y figure sans doute qu'une fois acceptée **[jamais observé]**.
+
+---
+
+## Mois d'une ligue — `GET /api/tournaments?circuit_region_ids={regionId}` **[lu dans leurs pages]**
+
+Le même appel, filtré sur une région au lieu d'une équipe :
+`/api/tournaments?circuit_region_ids={regionId}&sort=scheduled_desc&offset=0&limit=3` donne
+les derniers mois d'une ligue locale, dont le prochain dès qu'il est publié.
+
+Chaque mois est un tournoi avec sa propre inscription **[vérifié le 2026-11-10]** :
+
+| Champ | Valeur |
+|---|---|
+| `registrationStatus` | `pending` (pas encore ouverte), `open`, `finished` |
+| `registrationOpeningDatetime` | environ une semaine avant le mois (le 24 octobre pour novembre) |
+| `registrationClosingDatetime` | variable : le 13 pour avril, le 26 pour octobre, le 30 pour novembre ; souvent minuit, heure de Paris |
+| `size` | 15 ou 16 équipes ; `teamMinSize` 4, `teamMaxSize` 7 |
+
+L'inscription se fait sur la page du tournoi :
+`https://competitive.eva.gg/fr/tournaments/{tournamentId}/registration` **[lu dans leurs pages]**.
+
 ---
 
 ## Ce qui n'est pas public
@@ -100,7 +126,9 @@ récent joué dans une de nos salles : rapprochée par le nom court, sinon par l
 
 | Élément | Rôle |
 |---|---|
-| `server/src/integrations/competitive/competitive-teams.ts` | une page de la liste ; un logo, taille plafonnée et type vérifié sur l'image ; les tournois d'une équipe |
+| `server/src/integrations/competitive/competitive-teams.ts` | une page de la liste ; un logo, taille plafonnée et type vérifié sur l'image ; les tournois d'une équipe, d'une ligue |
 | `server/src/services/league-directory.service.ts` | l'annuaire : relecture de nuit, recherche, copie des logos, salle d'une équipe de ligue |
+| `server/src/services/league-registrations.service.ts` | les inscriptions de nos équipes reliées à leur ligue locale, et leurs rappels |
 | `npm run db:sync-league-teams` | relit la liste tout de suite (base neuve, développement) |
+| `npm run db:check-league-registrations` | relit tout de suite les inscriptions (développement) |
 | `tmp-eva-probe/competitive/` | copie locale de leurs pages, référence hors ligne |

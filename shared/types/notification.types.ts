@@ -18,6 +18,8 @@ export const NOTIFICATION_KINDS = [
   'SCRIM_MATCH_CANCELLED',
   'SCRIM_SEARCH_EXPIRED',
   'TEAM_JOIN_REQUESTED',
+  'LEAGUE_REGISTRATION_OPEN',
+  'LEAGUE_REGISTRATION_CLOSING',
 ] as const;
 
 export type NotificationKind = typeof NOTIFICATION_KINDS[number];
@@ -33,6 +35,13 @@ export interface ScrimMatchFacts {
   evaLocationId?: number | null; // The venue on eva.gg, where to book a seat; missing from the notifications told before
 }
 
+/** A month of the team's local league whose registration is open, the team not registered to it */
+export interface LeagueRegistrationFacts {
+  tournamentId: string;   // Its id on competitive.eva.gg
+  tournamentName: string; // "NEMAUSUS LEAGUE - DÉCEMBRE"
+  closesAt: string;       // ISO date-time: the registration closes then
+}
+
 /** What a notification tells, kind by kind: the facts it needs, as they were when it happened */
 export type NotificationContent =
   | { kind: 'SCRIM_PROPOSAL_RECEIVED'; data: ScrimMatchFacts & OtherTeam<'team'> & { searchId: string; message: string | null } }
@@ -41,7 +50,9 @@ export type NotificationContent =
   | { kind: 'SCRIM_SEARCH_WITHDRAWN'; data: ScrimMatchFacts & OtherTeam<'team'> }
   | { kind: 'SCRIM_MATCH_CANCELLED'; data: ScrimMatchFacts & OtherTeam<'opponent'> & { byOpponent: boolean } }
   | { kind: 'SCRIM_SEARCH_EXPIRED'; data: { searchId: string; date: string } }
-  | { kind: 'TEAM_JOIN_REQUESTED'; data: { requestId: string; playerName: string; evaUsername: string | null } };
+  | { kind: 'TEAM_JOIN_REQUESTED'; data: { requestId: string; playerName: string; evaUsername: string | null } }
+  | { kind: 'LEAGUE_REGISTRATION_OPEN'; data: LeagueRegistrationFacts }
+  | { kind: 'LEAGUE_REGISTRATION_CLOSING'; data: LeagueRegistrationFacts };
 
 /**
  * The other team of a notification, its name and its id (for the media that
@@ -88,10 +99,10 @@ export interface NotificationDescription {
   body: string;          // Who, when and where, in one line
   detail: string | null; // A word more: the reason, the message, what to do next
   target: NotificationTarget;
-  who: { name: string; teamId: string | null } | null; // The other team, or the player, when there is one: a team's id, for its logo
+  who: { name: string; teamId: string | null } | null; // Who or what it is about, when there is one: the other team, the player, the tournament; a team's id, for its logo
   when: string | null;   // The day, and the hours of the match when there is one; null when nothing is dated
   where: string | null;  // The venue, and its arena when it is named
   quote: string | null;  // The other team's own words
   action: string;        // What following the target does, for a medium that shows the link
-  elsewhere: { label: string; url: string } | null; // A step to take outside the app: booking on eva.gg
+  elsewhere: { label: string; url: string } | null; // A step to take outside the app: booking on eva.gg, registering on competitive.eva.gg
 }

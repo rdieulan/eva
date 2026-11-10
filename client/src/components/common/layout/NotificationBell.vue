@@ -106,8 +106,8 @@ onBeforeUnmount(() => {
       <p v-if="isLoading && !items.length" class="panel-note">Chargement…</p>
       <p v-else-if="!items.length && !errors.length" class="panel-note">Aucune notification pour le moment.</p>
       <ul v-else class="list">
-        <li v-for="{ notification, description, when } in items" :key="notification.id">
-          <button type="button" class="item" :class="{ unread: !notification.isRead }" @click="follow(notification)">
+        <li v-for="{ notification, description, when } in items" :key="notification.id" :class="{ unread: !notification.isRead }">
+          <button type="button" class="item" @click="follow(notification)">
             <span class="item-head">
               <span class="item-title">{{ description.title }}</span>
               <span class="item-when">{{ when }}</span>
@@ -115,6 +115,14 @@ onBeforeUnmount(() => {
             <span class="item-body">{{ description.body }}</span>
             <span v-if="description.detail" class="item-detail">{{ description.detail }}</span>
           </button>
+          <!-- A step outside the app (booking on eva.gg, registering on competitive.eva.gg), in a tab of its own -->
+          <a
+            v-if="description.elsewhere"
+            class="item-elsewhere"
+            :href="description.elsewhere.url"
+            target="_blank"
+            rel="noopener noreferrer"
+          >{{ description.elsewhere.label }} ↗</a>
         </li>
       </ul>
     </div>
@@ -227,13 +235,24 @@ $panel-layer: 900; // Over the page, under any modal (Modal.vue opens them from 
   font-size: $font-size-sm;
 }
 
+// A notification is a row: what it tells, and the step to take outside the app when there is one
 .list {
   margin: 0;
   padding: 0;
   list-style: none;
 
+  li {
+    border-left: 3px solid transparent;
+  }
+
   li + li {
     border-top: $border-thin solid $color-border;
+  }
+
+  // New since the bell last opened
+  li.unread {
+    border-left-color: $color-accent;
+    background: with-alpha($color-accent, 0.08);
   }
 }
 
@@ -244,7 +263,6 @@ $panel-layer: 900; // Over the page, under any modal (Modal.vue opens them from 
   width: 100%;
   padding: 0.65rem $spacing-md;
   border: none;
-  border-left: 3px solid transparent;
   background: transparent;
   text-align: left;
   cursor: pointer;
@@ -254,11 +272,7 @@ $panel-layer: 900; // Over the page, under any modal (Modal.vue opens them from 
     background: $color-bg-tertiary;
   }
 
-  // New since the bell last opened
-  &.unread {
-    border-left-color: $color-accent;
-    background: with-alpha($color-accent, 0.08);
-
+  .unread > & {
     &:hover {
       background: with-alpha($color-accent, 0.14);
     }
@@ -292,5 +306,20 @@ $panel-layer: 900; // Over the page, under any modal (Modal.vue opens them from 
 .item-detail {
   color: $color-text-muted;
   font-size: $font-size-xs;
+}
+
+// Under its notification, in the same row
+.item-elsewhere {
+  display: block;
+  margin-top: -0.35rem;
+  padding: 0 $spacing-md 0.65rem;
+  color: $color-accent;
+  font-size: $font-size-xs;
+  font-weight: 600;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
 }
 </style>

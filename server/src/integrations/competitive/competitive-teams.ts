@@ -117,50 +117,95 @@ export async function fetchLeagueTeamsPage(offset: number, size = LEAGUE_TEAMS_P
   return { teams, skipped: body.items.length - teams.length, total };
 }
 
+/** Where the registration of a tournament stands: not open yet, open, or over */
+export type RegistrationStatus = 'pending' | 'open' | 'finished';
+
+const REGISTRATION_STATUSES: readonly string[] = ['pending', 'open', 'finished'];
+
 /**
- * A tournament a league team plays, as the site lists it. A local league is a
- * region of the "LOCAL LEAGUES" circuit, one region per venue, its short name
- * the venue's (`nimes`); the tournament's own place is left empty.
+ * A tournament of the site's leagues. A local league is a region of the "LOCAL
+ * LEAGUES" circuit, one region per venue, its short name the venue's (`nimes`);
+ * the tournament's own place is left empty. Each month of a league is a
+ * tournament of its own, with its own registration.
  */
 export interface LeagueTournament {
+  id: string;
   name: string;
   startsOn: string | null; // YYYY-MM-DD
-  region: { name: string; machineName: string } | null;
+  region: { id: string; name: string; machineName: string } | null;
+  registration: {
+    status: RegistrationStatus | null;
+    opensAt: string | null;  // ISO date-time
+    closesAt: string | null; // ISO date-time
+  };
 }
 
 // The most recent tournaments of a team read: its current league is among them
 const TEAM_TOURNAMENTS_READ = 10;
 
-// An entry of the tournament list as we use it, or null when it reads as none
+// The most recent tournaments of a league read: this month's and the next one's
+const LEAGUE_TOURNAMENTS_READ = 3;
+
+// A date-time as the site writes it (2026-11-29T23:00:00+00:00), or null
+function readDateTime(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const time = Date.parse(value);
+  return Number.isNaN(time) ? null : new Date(time).toISOString();
+}
+
+// An entry of a tournament list as we use it, or null when it reads as none
 function readTournament(item: unknown): LeagueTournament | null {
   if (!item || typeof item !== 'object') return null;
-  const { name, scheduledDateStart, circuitRegion } = item as Record<string, unknown>;
+  const {
+    id, name, scheduledDateStart, circuitRegion,
+    registrationStatus, registrationOpeningDatetime, registrationClosingDatetime,
+  } = item as Record<string, unknown>;
+  if (typeof id !== 'string' || !SITE_ID.test(id)) return null;
   const cleaned = typeof name === 'string' ? cleanForeignName(name) : '';
   if (!cleaned) return null;
 
   const region = circuitRegion && typeof circuitRegion === 'object' ? circuitRegion as Record<string, unknown> : null;
   return {
+    id,
     name: [...cleaned].slice(0, NAME_MAX_LENGTH).join('').trimEnd(),
     startsOn: typeof scheduledDateStart === 'string' && /^\d{4}-\d{2}-\d{2}/.test(scheduledDateStart) ? scheduledDateStart.slice(0, 10) : null,
-    region: region && typeof region.name === 'string' && typeof region.machineName === 'string'
-      ? { name: region.name, machineName: region.machineName }
+    region: region && typeof region.id === 'string' && SITE_ID.test(region.id) && typeof region.name === 'string' && typeof region.machineName === 'string'
+      ? { id: region.id, name: region.name, machineName: region.machineName }
       : null,
+    registration: {
+      status: typeof registrationStatus === 'string' && REGISTRATION_STATUSES.includes(registrationStatus)
+        ? registrationStatus as RegistrationStatus
+        : null,
+      opensAt: readDateTime(registrationOpeningDatetime),
+      closesAt: readDateTime(registrationClosingDatetime),
+    },
   };
 }
 
-/** The most recent tournaments a league team plays or played, latest first */
-export async function fetchLeagueTeamTournaments(teamId: string): Promise<LeagueTournament[]> {
-  if (!SITE_ID.test(teamId)) throw new CompetitiveApiError(`Not a team id: ${teamId}`);
-
-  const response = await call(
-    `/api/tournaments?team_id=${teamId}&sort=scheduled_desc&offset=0&limit=${TEAM_TOURNAMENTS_READ}`,
-    { accept: 'application/json' },
-  );
+// The `limit` latest tournaments the filter names, latest first
+async function fetchTournaments(filter: string, limit: number): Promise<LeagueTournament[]> {
+  const response = await call(`/api/tournaments?${filter}&sort=scheduled_desc&offset=0&limit=${limit}`, { accept: 'application/json' });
   if (!response.ok) throw new CompetitiveApiError(`Tournament list refused: HTTP ${response.status}`, response.status);
 
   const body = await response.json().catch(() => null) as { items?: unknown } | null;
   if (!body || !Array.isArray(body.items)) throw new CompetitiveApiError('Tournament list unreadable', response.status);
   return body.items.map(readTournament).filter((tournament): tournament is LeagueTournament => tournament !== null);
+}
+
+/**
+ * The most recent tournaments a league team plays or played, latest first. A
+ * team is listed in a tournament once registered to it: a tournament missing
+ * here is one the team is not registered to.
+ */
+export async function fetchLeagueTeamTournaments(teamId: string): Promise<LeagueTournament[]> {
+  if (!SITE_ID.test(teamId)) throw new CompetitiveApiError(`Not a team id: ${teamId}`);
+  return fetchTournaments(`team_id=${teamId}`, TEAM_TOURNAMENTS_READ);
+}
+
+/** The most recent tournaments of a league (a region of a circuit), latest first */
+export async function fetchLeagueRegionTournaments(regionId: string): Promise<LeagueTournament[]> {
+  if (!SITE_ID.test(regionId)) throw new CompetitiveApiError(`Not a region id: ${regionId}`);
+  return fetchTournaments(`circuit_region_ids=${regionId}`, LEAGUE_TOURNAMENTS_READ);
 }
 
 // The whole body of an answer, refused past `maxBytes`, whatever size it claims

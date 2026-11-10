@@ -72,6 +72,7 @@ export type {
   MarkNotificationsReadRequest,
   NotificationTarget,
   TeamPageTarget,
+  LeagueRegistrationFacts,
   NotificationDescription,
 } from './notification.types';
 export { NOTIFICATION_KINDS } from './notification.types';
