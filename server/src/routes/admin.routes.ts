@@ -13,6 +13,7 @@ import * as managerService from '@services/manager.service';
 import * as adminService from '@services/admin.service';
 import * as playerService from '@services/player.service';
 import * as teamsService from '@services/teams.service';
+import { freeEvaAccount } from '@services/eva-account.service';
 
 // The name an invitation shows until someone accepts it, saying who it is for:
 // the rules of a person's name, who will then go by their own
@@ -349,7 +350,7 @@ router.delete(
 );
 
 // ============================================
-// Players (read-only admin view)
+// Players (admin view: deleting one, freeing their eva.gg account)
 // ============================================
 
 // GET /api/admin/players - List all players
@@ -376,6 +377,20 @@ router.delete('/players/:id', async (req: AuthRequest, res: Response) => {
   } catch (error) {
     apiLogger.error('Admin: error deleting player:', error);
     res.status(500).json({ errors: [ERROR.playerDeleteFailed] });
+  }
+});
+
+// DELETE /api/admin/players/:id/eva-account - Free the eva.gg account a player
+// linked, for its owner to link it when it is not theirs
+router.delete('/players/:id/eva-account', async (req: AuthRequest, res: Response) => {
+  try {
+    if (!(await freeEvaAccount(req.params.id as string))) {
+      return res.status(404).json({ errors: [ERROR.evaAccountNotLinked] });
+    }
+    res.status(204).end();
+  } catch (error) {
+    apiLogger.error('Admin: error freeing an eva.gg account:', error);
+    res.status(500).json({ errors: [ERROR.evaAccountFreeFailed] });
   }
 });
 

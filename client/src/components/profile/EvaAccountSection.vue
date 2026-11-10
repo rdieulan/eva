@@ -9,13 +9,14 @@ const {
   linkedOn,
   isLoading,
   isLinking,
-  isUnlinking,
+  isChanging,
   isBusy,
   successMessage,
   errors,
   load,
   linkAccount,
-  unlinkAccount,
+  startChange,
+  cancelChange,
 } = useEvaAccount();
 
 onMounted(load);
@@ -28,26 +29,26 @@ onMounted(load);
     <div v-if="isLoading" class="loading-state">Chargement...</div>
 
     <div v-else class="section-body">
-      <!-- Linked: show the account and let the player drop the link -->
-      <div v-if="link" class="linked-account">
+      <!-- Linked: show the account, and let the player change it for another; never drop it -->
+      <div v-if="link && !isChanging" class="linked-account">
         <div class="linked-account-row">
           <div class="linked-account-info">
             <span class="linked-tag">{{ link.username }}</span>
             <span class="linked-since">Lié le {{ linkedOn }}</span>
           </div>
-          <button type="button" class="btn-unlink" :disabled="isBusy" @click="unlinkAccount">
-            {{ isUnlinking ? 'Suppression...' : 'Délier' }}
-          </button>
+          <button type="button" class="btn-change" :disabled="isBusy" @click="startChange">Changer</button>
         </div>
         <p class="form-hint">
           Ce lien suit ton compte eva.gg même si tu changes de pseudo là-bas.
         </p>
       </div>
 
-      <!-- Not linked: ask for the tag -->
+      <!-- Not linked, or being changed: ask for the tag -->
       <form v-else class="profile-form" @submit.prevent="linkAccount">
         <div class="form-group">
-          <label for="evaUsername">Tag eva.gg</label>
+          <label for="evaUsername">
+            {{ isChanging && link ? `Nouveau tag eva.gg, à la place de ${link.username}` : 'Tag eva.gg' }}
+          </label>
           <input
             id="evaUsername"
             v-model="username"
@@ -62,9 +63,12 @@ onMounted(load);
           </p>
         </div>
 
-        <button type="submit" class="btn-primary" :disabled="isBusy">
-          {{ isLinking ? 'Liaison...' : 'Lier mon compte eva.gg' }}
-        </button>
+        <div class="form-actions">
+          <button type="submit" class="btn-primary" :disabled="isBusy">
+            {{ isLinking ? 'Liaison...' : isChanging ? 'Lier ce compte à la place' : 'Lier mon compte eva.gg' }}
+          </button>
+          <button v-if="isChanging" type="button" class="btn-neutral" :disabled="isBusy" @click="cancelChange">Annuler</button>
+        </div>
       </form>
 
       <ErrorDisplay :errors="errors" />
@@ -127,9 +131,19 @@ onMounted(load);
   font-size: $font-size-xs;
 }
 
-.btn-unlink {
-  @include btn-base($color-danger);
+.btn-change {
+  @include btn-base($color-accent);
   flex-shrink: 0;
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+}
+
+.btn-neutral {
+  @include btn-base($color-text-secondary);
 }
 
 .profile-form {

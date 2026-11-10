@@ -861,6 +861,7 @@ describe('Admin API', () => {
       expect(leaderRow.teamId).toBe(team.id);
       expect(leaderRow.teamName).toBe(team.name);
       expect(leaderRow.roles).toEqual(['player']);
+      expect(leaderRow.evaUsername).toBeNull();
       expect(res.body.find((p: { userId: string }) => p.userId === admin.id).roles).toEqual(['player', 'admin']);
     });
 
@@ -945,6 +946,33 @@ describe('Admin API', () => {
         .delete('/api/admin/players/anything')
         .set(authHeader(token));
       expect(res.status).toBe(403);
+    });
+  });
+
+  describe('DELETE /api/admin/players/:id/eva-account', () => {
+    it('frees the eva.gg account a player holds, for its owner to link it', async () => {
+      const { token: adminToken } = await createAuthenticatedAdmin();
+      const { user, token } = await createAuthenticatedUser();
+      await prisma.player.update({ where: { id: user.playerId }, data: { evaUserId: 202617, evaUsername: 'Sib#202617', evaLinkedAt: new Date() } });
+      const listed = await request(app).get('/api/admin/players').set(authHeader(adminToken));
+      expect(listed.body.find((p: { id: string }) => p.id === user.playerId).evaUsername).toBe('Sib#202617');
+
+      const res = await request(app).delete(`/api/admin/players/${user.playerId}/eva-account`).set(authHeader(adminToken));
+
+      expect(res.status).toBe(204);
+      expect(await prisma.player.findUniqueOrThrow({ where: { id: user.playerId } })).toMatchObject({ evaUserId: null, evaUsername: null, evaLinkedAt: null });
+      // The player freed is asked for an account again at their next visit
+      expect((await request(app).get('/api/auth/me').set(authHeader(token))).body.account.hasEvaAccount).toBe(false);
+    });
+
+    it('says when there is none to free, and is for admins only', async () => {
+      const { token: adminToken } = await createAuthenticatedAdmin();
+      const { user, token } = await createAuthenticatedUser();
+
+      const none = await request(app).delete(`/api/admin/players/${user.playerId}/eva-account`).set(authHeader(adminToken));
+      expect(none.status).toBe(404);
+      expect(none.body.errors).toContain(ERROR.evaAccountNotLinked);
+      expect((await request(app).delete(`/api/admin/players/${user.playerId}/eva-account`).set(authHeader(token))).status).toBe(403);
     });
   });
 

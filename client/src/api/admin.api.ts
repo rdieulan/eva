@@ -3,6 +3,7 @@
 import type { AccountType, AdminPermissions, Venue, VenueLinks } from '@shared/types';
 import { ERROR } from '@shared/constants';
 import { authFetch } from '@/api/utils';
+import { ApiError } from '@/api/error';
 
 const VENUES_BASE = '/api/admin/venues';
 const MANAGERS_BASE = '/api/admin/managers';
@@ -161,7 +162,7 @@ export function deleteAdmin(id: string): Promise<void> {
 }
 
 // ============================================
-// Players (read-only)
+// Players
 // ============================================
 
 export interface PlayerAdminSummary {
@@ -172,6 +173,7 @@ export interface PlayerAdminSummary {
   teamId: string | null;
   teamName: string | null;
   isLeader: boolean;
+  evaUsername: string | null; // The eva.gg account linked, to free when it is not theirs
   createdAt: string;
 }
 
@@ -185,6 +187,13 @@ export function deletePlayer(id: string): Promise<void> {
     { method: 'DELETE' },
     ERROR.playerDeleteFailed,
   );
+}
+
+/** Free the eva.gg account a player linked, for its owner to link it when it is not theirs */
+export async function freePlayerEvaAccount(id: string): Promise<void> {
+  // Answers 204 with no body, so the JSON-parsing form of authFetch does not apply
+  const response = await authFetch(`${PLAYERS_BASE}/${encodeURIComponent(id)}/eva-account`, { method: 'DELETE' });
+  if (!response.ok) throw await ApiError.fromFailedResponse(response, ERROR.evaAccountFreeFailed);
 }
 
 // ============================================

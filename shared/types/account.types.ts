@@ -20,6 +20,7 @@ export interface Account {
   accountType: AccountType; // The role the session acts as
   roles: AccountType[];     // Every role of the account, to switch between
   isOnboarded: boolean;     // The first-login walk-through was done or skipped
+  hasEvaAccount: boolean;   // An eva.gg account is linked: every player has one, the app asks for it before anything else
   permissions: AccountPermissions;
   // Player-specific data (null if not a player)
   teamId: string | null;

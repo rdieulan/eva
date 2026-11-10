@@ -3,6 +3,7 @@ import { ref, onMounted, computed } from 'vue';
 import {
   fetchAdminPlayers,
   deleteAdminPlayer,
+  freePlayerEvaAccount,
 } from '@/api';
 import type { PlayerAdminSummary } from '@/api/admin.api';
 import { ERROR } from '@shared/constants';
@@ -22,13 +23,33 @@ const filteredPlayers = computed(() => {
   if (!q) return players.value;
   return players.value.filter(p =>
     (p.name ?? '').toLowerCase().includes(q)
-    || (p.teamName ?? '').toLowerCase().includes(q),
+    || (p.teamName ?? '').toLowerCase().includes(q)
+    || (p.evaUsername ?? '').toLowerCase().includes(q),
   );
 });
 
 // Delete modal
 const showDeleteModal = ref(false);
 const playerToDelete = ref<PlayerAdminSummary | null>(null);
+
+// The player whose eva.gg account is being freed: for its owner to link it,
+// when another player holds a tag that is not theirs
+const playerToFree = ref<PlayerAdminSummary | null>(null);
+
+async function confirmFree() {
+  const player = playerToFree.value;
+  if (!player) return;
+  clearErrors();
+  try {
+    await freePlayerEvaAccount(player.id);
+    players.value = players.value.map(p => (p.id === player.id ? { ...p, evaUsername: null } : p));
+    showSuccess('Compte eva.gg libéré');
+  } catch (e) {
+    setErrorFromException(e, ERROR.evaAccountFreeFailed);
+  } finally {
+    playerToFree.value = null;
+  }
+}
 
 async function loadPlayers() {
   isLoading.value = true;
@@ -88,7 +109,7 @@ onMounted(loadPlayers);
       <input
         v-model="search"
         type="search"
-        placeholder="Rechercher par pseudo ou équipe..."
+        placeholder="Pseudo, équipe, tag eva.gg..."
         class="search"
       />
     </header>
@@ -110,6 +131,7 @@ onMounted(loadPlayers);
       <thead>
         <tr>
           <th>Pseudo</th>
+          <th>Compte eva.gg</th>
           <th>Équipe</th>
           <th>Rôle</th>
           <th>Inscrit le</th>
@@ -124,6 +146,10 @@ onMounted(loadPlayers);
             <span v-if="p.roles.includes('admin')" class="badge badge--role">Admin</span>
           </td>
           <td>
+            <span v-if="p.evaUsername" class="eva-tag">{{ p.evaUsername }}</span>
+            <span v-else class="muted">Aucun</span>
+          </td>
+          <td>
             <span v-if="p.teamName">{{ p.teamName }}</span>
             <span v-else class="muted">Sans équipe</span>
           </td>
@@ -134,6 +160,12 @@ onMounted(loadPlayers);
           </td>
           <td>{{ formatDate(p.createdAt) }}</td>
           <td class="col-actions">
+            <button
+              v-if="p.evaUsername"
+              class="btn-link"
+              title="Pour que son propriétaire le relie, quand ce joueur tient un compte qui n'est pas le sien"
+              @click="playerToFree = p"
+            >Libérer eva.gg</button>
             <button
               class="btn-link btn-link--danger"
               :disabled="!!deleteBlockedReason(p)"
@@ -154,6 +186,16 @@ onMounted(loadPlayers);
       :danger="true"
       @confirm="confirmDelete"
       @cancel="showDeleteModal = false; playerToDelete = null"
+    />
+
+    <ConfirmModal
+      :open="!!playerToFree"
+      title="Libérer le compte eva.gg"
+      :message="playerToFree ? `Libérer ${playerToFree.evaUsername} de '${playerToFree.name}' ? Son propriétaire pourra le relier, et '${playerToFree.name}' devra relier le sien à sa prochaine visite.` : ''"
+      confirm-text="Libérer"
+      :danger="true"
+      @confirm="confirmFree"
+      @cancel="playerToFree = null"
     />
   </section>
 </template>
@@ -259,6 +301,11 @@ onMounted(loadPlayers);
 .muted {
   color: $color-text-secondary;
   font-style: italic;
+}
+
+// A tag reads whole: a few characters, never cut at its #
+.eva-tag {
+  white-space: nowrap;
 }
 
 .badge {

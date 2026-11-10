@@ -1,14 +1,14 @@
-// Tests for the useEvaAccount composable (profile page, eva.gg section)
+// Tests for the useEvaAccount composable (profile page and walk-through, the
+// eva.gg account): linked, changed for another, never dropped
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useEvaAccount } from '@/composables/useEvaAccount';
-import { fetchMyEvaAccount, linkMyEvaAccount, unlinkMyEvaAccount } from '@/api/players.api';
+import { fetchMyEvaAccount, linkMyEvaAccount } from '@/api/players.api';
 import { ApiError } from '@/api/error';
 import { ERROR } from '@shared/constants';
 
 vi.mock('@/api/players.api', () => ({
   fetchMyEvaAccount: vi.fn(),
   linkMyEvaAccount: vi.fn(),
-  unlinkMyEvaAccount: vi.fn(),
 }));
 
 const SIB = { userId: 202617, username: 'Sib#202617', linkedAt: '2026-10-31T21:00:00.000Z' };
@@ -16,7 +16,6 @@ const SIB = { userId: 202617, username: 'Sib#202617', linkedAt: '2026-10-31T21:0
 beforeEach(() => {
   vi.mocked(fetchMyEvaAccount).mockReset();
   vi.mocked(linkMyEvaAccount).mockReset();
-  vi.mocked(unlinkMyEvaAccount).mockReset();
 });
 
 describe('useEvaAccount', () => {
@@ -67,28 +66,41 @@ describe('useEvaAccount', () => {
     expect(eva.errors.value).toEqual([ERROR.evaPlayerNotFound]);
   });
 
-  it('forgets the account once unlinked', async () => {
+  it('changes the account for another, the one linked kept until the new one is', async () => {
+    const other = { userId: 724190, username: 'RONxSib#177352', linkedAt: '2026-11-10T12:00:00.000Z' };
     vi.mocked(fetchMyEvaAccount).mockResolvedValue(SIB);
-    vi.mocked(unlinkMyEvaAccount).mockResolvedValue();
+    vi.mocked(linkMyEvaAccount).mockResolvedValue(other);
     const eva = useEvaAccount();
     await eva.load();
 
-    await eva.unlinkAccount();
+    eva.startChange();
+    expect(eva.isChanging.value).toBe(true);
+    expect(eva.link.value).toEqual(SIB);
+    eva.username.value = 'RONxSib#177352';
+    await eva.linkAccount();
 
-    expect(unlinkMyEvaAccount).toHaveBeenCalled();
-    expect(eva.link.value).toBeNull();
-    expect(eva.linkedOn.value).toBeNull();
+    expect(eva.link.value).toEqual(other);
+    expect(eva.isChanging.value).toBe(false);
+    expect(eva.successMessage.value).toBe('Compte eva.gg changé');
   });
 
-  it('keeps the account when unlinking fails', async () => {
+  it('keeps the account linked when the change is called off, or refused', async () => {
     vi.mocked(fetchMyEvaAccount).mockResolvedValue(SIB);
-    vi.mocked(unlinkMyEvaAccount).mockRejectedValue(new Error('boom'));
+    vi.mocked(linkMyEvaAccount).mockRejectedValue(new ApiError([ERROR.evaAccountAlreadyLinked], ERROR.evaAccountLinkFailed));
     const eva = useEvaAccount();
     await eva.load();
 
-    await eva.unlinkAccount();
-
+    eva.startChange();
+    eva.username.value = 'Taken#000001';
+    await eva.linkAccount();
     expect(eva.link.value).toEqual(SIB);
-    expect(eva.errors.value).toEqual(['boom']);
+    expect(eva.isChanging.value).toBe(true);
+    expect(eva.errors.value).toEqual([ERROR.evaAccountAlreadyLinked]);
+
+    eva.cancelChange();
+    expect(eva.isChanging.value).toBe(false);
+    expect(eva.username.value).toBe('');
+    expect(eva.errors.value).toEqual([]);
+    expect(eva.link.value).toEqual(SIB);
   });
 });

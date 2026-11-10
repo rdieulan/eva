@@ -30,7 +30,7 @@ const ACCOUNT_SELECT = {
   playerId: true,
   managerId: true,
   adminId: true,
-  player: { select: { teamId: true, ...PERMISSIONS_INCLUDE.player.select } },
+  player: { select: { teamId: true, evaUserId: true, ...PERMISSIONS_INCLUDE.player.select } },
   manager: { select: { managedVenues: { select: { venueId: true } }, ...PERMISSIONS_INCLUDE.manager.select } },
   admin: PERMISSIONS_INCLUDE.admin,
 } as const;
@@ -55,6 +55,7 @@ export async function getAccount(userId: string, accountType: AccountType): Prom
     accountType: actingAs,
     roles,
     isOnboarded: user.onboardedAt !== null,
+    hasEvaAccount: user.player.evaUserId !== null,
     permissions: permissionsFor(user, actingAs),
     teamId: actingAs === 'player' ? user.player.teamId : null,
     isLeader: actingAs === 'player' && !!user.player.ledTeam,
@@ -63,9 +64,16 @@ export async function getAccount(userId: string, accountType: AccountType): Prom
   };
 }
 
-/** The first-login walk-through is over, done or skipped: it no longer shows. The first time is kept. */
-export async function finishOnboarding(userId: string): Promise<void> {
+/**
+ * The first-login walk-through is over, done or skipped: it no longer shows.
+ * The first time is kept. False while the player has no eva.gg account
+ * linked: every player has one, and the walk-through does not end without it.
+ */
+export async function finishOnboarding(userId: string): Promise<boolean> {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { player: { select: { evaUserId: true } } } });
+  if (!user || user.player.evaUserId === null) return false;
   await prisma.user.updateMany({ where: { id: userId, onboardedAt: null }, data: { onboardedAt: new Date() } });
+  return true;
 }
 
 /** Change the name a person shows the others; the errors of a name that breaks the rule */

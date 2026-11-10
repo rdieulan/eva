@@ -4,7 +4,6 @@ import type { Player, PlayerSubscription, EvaAccountLink, LinkEvaAccountRequest 
 import { ERROR } from '@shared/constants';
 import { authFetch } from '@/api/utils';
 import { currentSessionMark } from '@/api/session-mark';
-import { ApiError } from '@/api/error';
 
 // Cache for players - keyed by session to invalidate on a change of account or role
 let cachedPlayers: Player[] | null = null;
@@ -90,7 +89,8 @@ export function fetchMyEvaAccount(): Promise<EvaAccountLink | null> {
 }
 
 /**
- * Link the current player to the eva.gg account behind a tag (Pseudo#123456)
+ * Link the current player to the eva.gg account behind a tag (Pseudo#123456),
+ * in place of the one linked before: a player changes it, never goes without one
  */
 export function linkMyEvaAccount(username: string): Promise<EvaAccountLink> {
   const body: LinkEvaAccountRequest = { username };
@@ -101,13 +101,3 @@ export function linkMyEvaAccount(username: string): Promise<EvaAccountLink> {
   );
 }
 
-/**
- * Forget the current player's eva.gg account
- */
-export async function unlinkMyEvaAccount(): Promise<void> {
-  // Answers 204 with no body, so the JSON-parsing form of authFetch does not apply
-  const response = await authFetch('/api/players/me/eva-account', { method: 'DELETE' });
-  if (!response.ok) {
-    throw await ApiError.fromFailedResponse(response, ERROR.evaAccountUnlinkFailed);
-  }
-}

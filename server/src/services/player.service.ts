@@ -157,6 +157,7 @@ export interface PlayerAdminSummary {
   teamId: string | null;
   teamName: string | null;
   isLeader: boolean;
+  evaUsername: string | null; // The eva.gg account linked, for an administrator to free it when it is not theirs
   createdAt: Date;
 }
 
@@ -185,6 +186,8 @@ export async function listAllPlayers(): Promise<PlayerAdminSummary[]> {
     teamId: p.team?.id ?? null,
     teamName: p.team?.name ?? null,
     isLeader: !!p.ledTeam,
+    // The three columns of a link are written together: the id says whether there is one
+    evaUsername: p.evaUserId !== null ? p.evaUsername : null,
     createdAt: p.createdAt,
   }));
 }

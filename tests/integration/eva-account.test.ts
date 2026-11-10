@@ -239,50 +239,28 @@ describe('eva.gg account API', () => {
     });
   });
 
-  describe('DELETE /api/players/me/eva-account', () => {
-    it('should forget the linked account', async () => {
+  describe('the account a player has', () => {
+    it('should keep the account: a player changes it, never drops it', async () => {
       const { token, user } = await createAuthenticatedUser();
       lookup.mockResolvedValue({ player: SIB });
-      await request(app)
-        .put('/api/players/me/eva-account')
-        .set(authHeader(token))
-        .send({ username: 'Sib#202617' })
-        .expect(200);
+      await request(app).put('/api/players/me/eva-account').set(authHeader(token)).send({ username: 'Sib#202617' }).expect(200);
 
-      const res = await request(app)
-        .delete('/api/players/me/eva-account')
-        .set(authHeader(token));
+      const res = await request(app).delete('/api/players/me/eva-account').set(authHeader(token));
 
-      expect(res.status).toBe(204);
-      const player = await prisma.player.findUnique({ where: { id: user.playerId! } });
-      expect(player!.evaUserId).toBeNull();
-      expect(player!.evaUsername).toBeNull();
-      expect(player!.evaLinkedAt).toBeNull();
-
-      const reread = await request(app)
-        .get('/api/players/me/eva-account')
-        .set(authHeader(token));
-      expect(reread.body).toBeNull();
+      expect(res.status).toBe(404);
+      const player = await prisma.player.findUniqueOrThrow({ where: { id: user.playerId! } });
+      expect(player.evaUserId).toBe(SIB.userId);
     });
 
-    it('should succeed for a player who linked nothing', async () => {
+    it('should tell the account whether it has one, for the app to ask for it first', async () => {
       const { token } = await createAuthenticatedUser();
+      const me = () => request(app).get('/api/auth/me').set(authHeader(token));
+      expect((await me()).body.account.hasEvaAccount).toBe(false);
 
-      const res = await request(app)
-        .delete('/api/players/me/eva-account')
-        .set(authHeader(token));
+      lookup.mockResolvedValue({ player: SIB });
+      await request(app).put('/api/players/me/eva-account').set(authHeader(token)).send({ username: 'Sib#202617' }).expect(200);
 
-      expect(res.status).toBe(204);
-    });
-
-    it('should reject an account that is not a player', async () => {
-      const { token } = await createAuthenticatedAdmin();
-
-      const res = await request(app)
-        .delete('/api/players/me/eva-account')
-        .set(authHeader(token));
-
-      expect(res.status).toBe(403);
+      expect((await me()).body.account.hasEvaAccount).toBe(true);
     });
   });
 });

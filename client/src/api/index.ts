@@ -11,7 +11,6 @@ export {
   updateMySubscription,
   fetchMyEvaAccount,
   linkMyEvaAccount,
-  unlinkMyEvaAccount,
 } from '@/api/players.api';
 
 // Maps API
@@ -119,6 +118,7 @@ export {
   deleteAdmin as deleteAdminAdmin,
   fetchAdminPlayers,
   deletePlayer as deleteAdminPlayer,
+  freePlayerEvaAccount,
   fetchAdminTeams,
   fetchAdminTeamDetail,
   deleteTeam as deleteAdminTeam,

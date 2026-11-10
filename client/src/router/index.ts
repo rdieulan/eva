@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import type { RouteRecordRaw } from 'vue-router';
 import { PLANNER_ENABLED } from '@shared/constants';
 import { useAuth } from '@/composables/useAuth';
-import { landingPathForAccount } from '@/utils/landing';
+import { landingPathForAccount, needsWalkThrough } from '@/utils/landing';
 
 // Pages allowed without team membership
 const ALLOWED_WITHOUT_TEAM = [
@@ -208,13 +208,8 @@ router.beforeEach(async (to, _from, next) => {
     return;
   }
 
-  // A player's first login goes through the walk-through first, then on where they were going
-  if (
-    to.meta.requiresAuth
-    && to.name !== 'welcome'
-    && account.value?.accountType === 'player'
-    && !account.value.isOnboarded
-  ) {
+  // A player goes through the walk-through first, then on where they were going
+  if (to.meta.requiresAuth && to.name !== 'welcome' && needsWalkThrough(account.value)) {
     next({ name: 'welcome', query: to.fullPath === '/' ? {} : { next: to.fullPath } });
     return;
   }

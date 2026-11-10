@@ -1,4 +1,5 @@
-// eva.gg account service - link a player to their eva.gg account
+// eva.gg account service - link a player to their eva.gg account: every player
+// has one, changed at will, freed only by an administrator
 
 import { prisma } from '@db/prisma';
 import { isUniqueViolation } from '@db/prisma-errors';
@@ -74,11 +75,15 @@ export async function linkEvaAccount(playerId: string, username: string): Promis
 }
 
 /**
- * Forget the eva.gg account a player linked
+ * Free the eva.gg account a player linked, as an administrator does: when a
+ * player holds a tag that is not theirs, its owner can then link it. A player
+ * never unlinks their own: the one freed is asked for one again at their next
+ * visit. False when the player has none linked, or does not exist.
  */
-export async function unlinkEvaAccount(playerId: string): Promise<void> {
-  await prisma.player.update({
-    where: { id: playerId },
+export async function freeEvaAccount(playerId: string): Promise<boolean> {
+  const { count } = await prisma.player.updateMany({
+    where: { id: playerId, evaUserId: { not: null } },
     data: { evaUserId: null, evaUsername: null, evaLinkedAt: null },
   });
+  return count > 0;
 }

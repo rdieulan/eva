@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Walk-through, the eva.gg account: the tag that links it, checked on eva.gg
-// as on the profile; skipped when the player has none at hand
+// as on the profile. Not to skip: every player has one
 import { onMounted } from 'vue';
 import { useEvaAccount } from '@/composables/useEvaAccount';
 import OnboardingStepLayout from '@/components/onboarding/layout/OnboardingStepLayout.vue';
@@ -54,9 +54,6 @@ async function next() {
         <button type="submit" class="primary" :disabled="isBusy || (!link && !username.trim())">
           {{ isLinking ? 'Vérification sur eva.gg…' : link ? 'Continuer' : 'Lier mon compte' }}
         </button>
-        <button v-if="!link" type="button" class="skip" :disabled="isBusy" @click="emit('done')">
-          Passer cette étape
-        </button>
       </template>
     </OnboardingStepLayout>
   </form>
@@ -85,9 +82,5 @@ async function next() {
 
 .primary {
   @include onboarding-primary;
-}
-
-.skip {
-  @include onboarding-skip;
 }
 </style>

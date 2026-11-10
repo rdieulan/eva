@@ -198,11 +198,13 @@ export const ERROR = {
   evaUsernameTooLong: `Le tag eva.gg ne peut pas dépasser ${EVA_USERNAME_MAX_LENGTH} caractères`,
   evaPlayerNotFound: 'Aucun joueur eva.gg avec ce tag. Vérifie le suffixe #123456 affiché sur ta page compte eva.gg',
   evaProfilePrivate: 'Ce profil eva.gg est privé. Passe-le en public dans tes informations eva.gg, puis réessaie',
-  evaAccountAlreadyLinked: 'Ce compte eva.gg est déjà lié à un autre joueur',
+  evaAccountAlreadyLinked: 'Ce compte eva.gg est déjà lié à un autre joueur. Si c\'est le tien, un administrateur peut le libérer',
   evaUnavailable: 'eva.gg est injoignable pour le moment, réessaie plus tard',
   evaAccountFetchFailed: 'Erreur lors de la récupération du compte eva.gg',
   evaAccountLinkFailed: 'Erreur lors de la liaison du compte eva.gg',
-  evaAccountUnlinkFailed: 'Erreur lors de la suppression du lien eva.gg',
+  evaAccountRequired: 'Relie ton compte eva.gg pour continuer',
+  evaAccountNotLinked: 'Ce joueur n\'a pas de compte eva.gg lié',
+  evaAccountFreeFailed: 'Impossible de libérer le compte eva.gg',
 
   // Invitations
   inviteNotFound: 'Invitation non trouvée',

@@ -1,21 +1,23 @@
-// eva.gg section of the profile page: load, link and unlink the current player's eva.gg account
+// The current player's eva.gg account, for the profile and the walk-through:
+// load it, link one, change it for another. A player never goes without one:
+// there is no unlinking, only an administrator frees an account.
 
 import { ref, computed } from 'vue';
 import type { EvaAccountLink } from '@shared/types';
 import { ERROR } from '@shared/constants';
-import { fetchMyEvaAccount, linkMyEvaAccount, unlinkMyEvaAccount } from '@/api';
+import { fetchMyEvaAccount, linkMyEvaAccount } from '@/api';
 import { useErrors } from '@/composables/useErrors';
 
 export function useEvaAccount() {
   const link = ref<EvaAccountLink | null>(null);
   const username = ref(''); // The tag being typed, cleared once linked
+  const isChanging = ref(false); // The linked account being changed for another
   const isLoading = ref(false);
   const isLinking = ref(false);
-  const isUnlinking = ref(false);
   const successMessage = ref('');
   const { errors, setError, setErrorFromException, clearErrors } = useErrors();
 
-  const isBusy = computed(() => isLoading.value || isLinking.value || isUnlinking.value);
+  const isBusy = computed(() => isLoading.value || isLinking.value);
 
   // Day the account was linked, in the player's own timezone
   const linkedOn = computed(() =>
@@ -36,6 +38,7 @@ export function useEvaAccount() {
     }
   }
 
+  // Link the tag typed, in place of the account linked before if there is one
   async function linkAccount() {
     clearErrors();
     successMessage.value = '';
@@ -48,9 +51,11 @@ export function useEvaAccount() {
 
     isLinking.value = true;
     try {
+      const wasLinked = link.value !== null;
       link.value = await linkMyEvaAccount(tag);
       username.value = '';
-      successMessage.value = 'Compte eva.gg lié';
+      isChanging.value = false;
+      successMessage.value = wasLinked ? 'Compte eva.gg changé' : 'Compte eva.gg lié';
     } catch (e) {
       setErrorFromException(e, ERROR.evaAccountLinkFailed);
     } finally {
@@ -58,19 +63,18 @@ export function useEvaAccount() {
     }
   }
 
-  async function unlinkAccount() {
+  // Change the linked account for another: the one linked stays until the new one is
+  function startChange() {
     clearErrors();
     successMessage.value = '';
-    isUnlinking.value = true;
-    try {
-      await unlinkMyEvaAccount();
-      link.value = null;
-      successMessage.value = 'Lien eva.gg supprimé';
-    } catch (e) {
-      setErrorFromException(e, ERROR.evaAccountUnlinkFailed);
-    } finally {
-      isUnlinking.value = false;
-    }
+    username.value = '';
+    isChanging.value = true;
+  }
+
+  function cancelChange() {
+    clearErrors();
+    username.value = '';
+    isChanging.value = false;
   }
 
   return {
@@ -79,12 +83,13 @@ export function useEvaAccount() {
     linkedOn,
     isLoading,
     isLinking,
-    isUnlinking,
+    isChanging,
     isBusy,
     successMessage,
     errors,
     load,
     linkAccount,
-    unlinkAccount,
+    startChange,
+    cancelChange,
   };
 }

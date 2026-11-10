@@ -1,7 +1,17 @@
-// Where an account lands, by the role its session acts as: kept apart from the
-// router so a component can tell it without loading the router itself
+// Where an account lands, by the role its session acts as, and whether the
+// walk-through comes first: kept apart from the router so a component can
+// tell it without loading the router itself
 
 import type { Account } from '@shared/types';
+
+/**
+ * Whether a player goes through the walk-through before anything else: at
+ * their first login, and while they have no eva.gg account linked, every
+ * player having one. Not a manager nor an admin at work.
+ */
+export function needsWalkThrough(account: Account | null): boolean {
+  return account?.accountType === 'player' && (!account.isOnboarded || !account.hasEvaAccount);
+}
 
 /**
  * Default landing page based on the account's role.

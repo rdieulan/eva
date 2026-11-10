@@ -1,6 +1,7 @@
 // Tests for the first-login walk-through: one question a page, in order, the
-// team step only when the player did not come to join one, and an end that
-// marks it done and goes on where the player was going
+// team step only when the player did not come to join one, the eva.gg account
+// never skipped, and an end that marks it done and goes on where the player
+// was going; a player without an eva.gg account comes back for that step alone
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { defineComponent, h, ref } from 'vue';
 import { mount, flushPromises } from '@vue/test-utils';
@@ -46,7 +47,7 @@ async function answer(wrapper: ReturnType<typeof mountPage>, step: string) {
 
 beforeEach(() => {
   route.query = {};
-  auth.account = ref({ id: 'user-1', name: 'Raph', teamId: null, isOnboarded: false });
+  auth.account = ref({ id: 'user-1', name: 'Raph', teamId: null, isOnboarded: false, hasEvaAccount: false });
   auth.setAuth.mockReset();
   replace.mockReset();
   vi.mocked(finishOnboarding).mockReset().mockResolvedValue(DONE as never);
@@ -86,26 +87,51 @@ describe('WelcomePage', () => {
   });
 
   it('leaves the team step out for a player who already has a team', () => {
-    auth.account = ref({ id: 'user-1', name: 'Raph', teamId: 'team-1', isOnboarded: false });
+    auth.account = ref({ id: 'user-1', name: 'Raph', teamId: 'team-1', isOnboarded: false, hasEvaAccount: false });
 
     expect(mountPage().text()).toContain('Étape 1 sur 3');
   });
 
-  it('goes back a step, and skips everything at once with "Plus tard"', async () => {
+  it('never skips the eva.gg account: "Plus tard" waits for it, then skips everything left at once', async () => {
     route.query = { next: '/salles/nimes' };
     const wrapper = mountPage();
+    expect(wrapper.find('.later').exists()).toBe(false);
     await answer(wrapper, 'name');
+    expect(wrapper.find('.later').exists()).toBe(false);
 
-    await wrapper.get('.back').trigger('click');
-    expect(wrapper.find('.stub-name').exists()).toBe(true);
-
+    await answer(wrapper, 'eva');
     await wrapper.get('.later').trigger('click');
     await flushPromises();
+
     expect(finishOnboarding).toHaveBeenCalledTimes(1);
     expect(replace).toHaveBeenCalledWith('/salles/nimes');
   });
 
+  it('goes back a step', async () => {
+    const wrapper = mountPage();
+    await answer(wrapper, 'name');
+
+    await wrapper.get('.back').trigger('click');
+
+    expect(wrapper.find('.stub-name').exists()).toBe(true);
+  });
+
+  it('brings a player without an eva.gg account back for that step alone, then on where they were going', async () => {
+    auth.account = ref({ id: 'user-1', name: 'Raph', teamId: 'team-1', isOnboarded: true, hasEvaAccount: false });
+    route.query = { next: '/calendar' };
+    const wrapper = mountPage();
+
+    expect(wrapper.text()).toContain('Il te reste une étape, Raph');
+    expect(wrapper.find('.progress').exists()).toBe(false);
+    expect(wrapper.find('.later').exists()).toBe(false);
+    await answer(wrapper, 'eva');
+
+    expect(finishOnboarding).toHaveBeenCalledTimes(1);
+    expect(replace).toHaveBeenCalledWith('/calendar');
+  });
+
   it('never ends on another site', async () => {
+    auth.account = ref({ id: 'user-1', name: 'Raph', teamId: null, isOnboarded: false, hasEvaAccount: true });
     route.query = { next: '//evil.example' };
     const wrapper = mountPage();
 
@@ -116,6 +142,7 @@ describe('WelcomePage', () => {
   });
 
   it('stays when the end cannot be saved, and says so', async () => {
+    auth.account = ref({ id: 'user-1', name: 'Raph', teamId: null, isOnboarded: false, hasEvaAccount: true });
     vi.mocked(finishOnboarding).mockRejectedValueOnce(new Error('down'));
     const wrapper = mountPage();
 

@@ -77,8 +77,14 @@ describe('PUT /api/auth/name', () => {
 });
 
 describe('POST /api/auth/onboarding', () => {
+  // The eva.gg account the walk-through asks for, as linking it leaves it
+  async function linkEva(playerId: string) {
+    await prisma.player.update({ where: { id: playerId }, data: { evaUserId: 202617, evaUsername: 'Sib#202617', evaLinkedAt: new Date() } });
+  }
+
   it('marks the first-login walk-through over, once: the first time stays', async () => {
     const { user, token } = await createAuthenticatedUser();
+    await linkEva(user.playerId);
     expect((await request(app).get('/api/auth/me').set(authHeader(token))).body.account.isOnboarded).toBe(false);
 
     const done = await request(app).post('/api/auth/onboarding').set(authHeader(token));
@@ -89,6 +95,18 @@ describe('POST /api/auth/onboarding', () => {
     await request(app).post('/api/auth/onboarding').set(authHeader(token)).expect(200);
     const { onboardedAt: again } = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
     expect(again).toEqual(first);
+  });
+
+  it('does not end without an eva.gg account: every player has one', async () => {
+    const { user, token } = await createAuthenticatedUser();
+
+    const refused = await request(app).post('/api/auth/onboarding').set(authHeader(token));
+
+    expect(refused.status).toBe(409);
+    expect(refused.body.errors).toContain(ERROR.evaAccountRequired);
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: user.id } })).onboardedAt).toBeNull();
+    await linkEva(user.playerId);
+    await request(app).post('/api/auth/onboarding').set(authHeader(token)).expect(200);
   });
 
   it('is for a signed-in person', async () => {

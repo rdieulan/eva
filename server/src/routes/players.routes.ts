@@ -115,7 +115,9 @@ router.get('/me/eva-account', authMiddleware, async (req: AuthRequest, res: Resp
   }
 });
 
-// PUT /api/players/me/eva-account - Resolve an eva.gg tag and link that account to the current player
+// PUT /api/players/me/eva-account - Resolve an eva.gg tag and link that account
+// to the current player, in place of the one linked before: a player changes
+// it, never goes without one
 router.put('/me/eva-account', authMiddleware, async (req: AuthRequest, res: Response) => {
   const playerId = req.account?.playerId;
   if (!playerId) {
@@ -146,23 +148,6 @@ router.put('/me/eva-account', authMiddleware, async (req: AuthRequest, res: Resp
     return;
   }
   res.json(result.link);
-});
-
-// DELETE /api/players/me/eva-account - Forget the current player's eva.gg account
-router.delete('/me/eva-account', authMiddleware, async (req: AuthRequest, res: Response) => {
-  const playerId = req.account?.playerId;
-  if (!playerId) {
-    res.status(403).json({ errors: [ERROR.playerAccountRequired] });
-    return;
-  }
-
-  try {
-    await evaAccountService.unlinkEvaAccount(playerId);
-    res.status(204).end();
-  } catch (error) {
-    apiLogger.error('Error unlinking eva.gg account:', error);
-    res.status(500).json({ errors: [ERROR.evaAccountUnlinkFailed] });
-  }
 });
 
 export default router;

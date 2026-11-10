@@ -196,10 +196,13 @@ router.put('/name', authMiddleware, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// POST /api/auth/onboarding - The first-login walk-through is over, done or skipped
+// POST /api/auth/onboarding - The first-login walk-through is over, done or
+// skipped; not without an eva.gg account linked
 router.post('/onboarding', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    await finishOnboarding(req.account!.userId);
+    if (!(await finishOnboarding(req.account!.userId))) {
+      return res.status(409).json({ errors: [ERROR.evaAccountRequired] });
+    }
     res.json({ account: await getAccount(req.account!.userId, req.account!.accountType) });
   } catch (error) {
     authLogger.error('Onboarding error:', error);

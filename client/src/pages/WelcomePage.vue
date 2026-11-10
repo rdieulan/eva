@@ -2,7 +2,10 @@
 // The first-login walk-through: one question a page (pseudo, eva.gg account,
 // EVA Pass, team), shown once; each answer stays to be changed on the
 // profile. It ends where the player was going, or where its last step leads.
-// A step is a component in STEPS: adding one is adding it there.
+// The eva.gg account is the one step that cannot be skipped: every player has
+// one, and a player who has none, whenever they signed up, comes back here
+// for that step alone. A step is a component in STEPS: adding one is adding
+// it there.
 import { computed, ref } from 'vue';
 import type { Component } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -39,10 +42,22 @@ const next = computed(() => {
   return typeof value === 'string' && value.startsWith('/') && !value.startsWith('//') ? value : null;
 });
 
+// Sent back for the eva.gg account alone: the walk-through was over before it was required
+const isReturning = account.value?.isOnboarded === true;
+
 // The team step goes when the player came to join a team, or already has one
-const steps = computed(() => STEPS.filter(step =>
-  step.key !== 'team' || !(next.value?.startsWith('/join/') || account.value?.teamId),
-));
+const steps = computed(() => (isReturning
+  ? STEPS.filter(step => step.key === 'eva')
+  : STEPS.filter(step => step.key !== 'team' || !(next.value?.startsWith('/join/') || account.value?.teamId))));
+
+// "Plus tard" skips what can wait, never the eva.gg account: it shows once one is linked
+const isEvaLinked = ref(account.value?.hasEvaAccount === true);
+
+const hello = computed(() => {
+  const name = account.value?.name;
+  if (isReturning) return `Il te reste une étape${name ? `, ${name}` : ''}`;
+  return `Bienvenue${name ? `, ${name}` : ''} !`;
+});
 
 const index = ref(0);
 const direction = ref<'forward' | 'back'>('forward');
@@ -60,6 +75,8 @@ function back() {
 }
 
 function advance() {
+  // The eva.gg step is done only once an account is linked
+  if (current.value.key === 'eva') isEvaLinked.value = true;
   if (isLastStep.value) {
     void finish(next.value ?? '/');
     return;
@@ -88,22 +105,25 @@ async function finish(destination: string) {
     <div class="welcome">
       <header class="welcome-header">
         <div class="welcome-top">
-          <span class="welcome-hello">Bienvenue{{ account ? `, ${account.name}` : '' }} !</span>
-          <button v-if="!isLastStep" type="button" class="later" :disabled="isFinishing" @click="finish(next ?? '/')">
+          <span class="welcome-hello">{{ hello }}</span>
+          <button v-if="!isLastStep && isEvaLinked" type="button" class="later" :disabled="isFinishing" @click="finish(next ?? '/')">
             Plus tard
           </button>
         </div>
-        <div
-          class="progress"
-          role="progressbar"
-          :aria-valuenow="index + 1"
-          aria-valuemin="1"
-          :aria-valuemax="steps.length"
-          :aria-label="`Étape ${index + 1} sur ${steps.length}`"
-        >
-          <div class="progress-fill" :style="{ width: `${progress}%` }" />
-        </div>
-        <span class="step-count">Étape {{ index + 1 }} sur {{ steps.length }}</span>
+        <!-- A single step has no way to go -->
+        <template v-if="steps.length > 1">
+          <div
+            class="progress"
+            role="progressbar"
+            :aria-valuenow="index + 1"
+            aria-valuemin="1"
+            :aria-valuemax="steps.length"
+            :aria-label="`Étape ${index + 1} sur ${steps.length}`"
+          >
+            <div class="progress-fill" :style="{ width: `${progress}%` }" />
+          </div>
+          <span class="step-count">Étape {{ index + 1 }} sur {{ steps.length }}</span>
+        </template>
       </header>
 
       <Transition :name="`step-${direction}`" mode="out-in">
