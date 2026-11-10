@@ -54,6 +54,18 @@ function linkTeam(token: string, leagueTeamId: string | null) {
   return request(app).put('/api/teams/current/league-team').set(authHeader(token)).send({ leagueTeamId });
 }
 
+// A month of a local league the team was read in, as a night leaves it
+async function leagueMonthRead(teamId: string, tournamentId: string) {
+  await prisma.leagueTournament.create({
+    data: { id: tournamentId, name: 'NEMAUSUS LEAGUE - JUILLET', regionId: 'region-nimes', registrationClosesAt: new Date('2030-06-29T22:00:00Z'), seenAt: new Date() },
+  });
+  await prisma.leagueEntry.create({ data: { teamId, tournamentId, openNoticeAt: new Date(), checkedAt: new Date() } });
+}
+
+function leagueEntriesOf(teamId: string) {
+  return prisma.leagueEntry.count({ where: { teamId } });
+}
+
 beforeEach(() => {
   listPage.mockReset();
   logoOf.mockReset();
@@ -243,6 +255,25 @@ describe('PUT /api/teams/current/league-team', () => {
     expect((await prisma.team.findUniqueOrThrow({ where: { id: team.id } })).leagueTeamId).toBeNull();
   });
 
+  it('drops what was read of the league registrations with the link it was read for', async () => {
+    const first = leagueTeam('First');
+    const second = leagueTeam('Second');
+    await directoryHolds([first, second]);
+    const { token, team } = await createUserWithTeam();
+    await linkTeam(token, first.id).expect(200);
+    await leagueMonthRead(team.id, '2570000000000000201');
+
+    await linkTeam(token, first.id).expect(200);
+    expect(await leagueEntriesOf(team.id)).toBe(1);
+
+    await linkTeam(token, second.id).expect(200);
+    expect(await leagueEntriesOf(team.id)).toBe(0);
+
+    await leagueMonthRead(team.id, '2570000000000000202');
+    await linkTeam(token, null).expect(200);
+    expect(await leagueEntriesOf(team.id)).toBe(0);
+  });
+
   it('refuses a league team another team is, and one the directory does not hold', async () => {
     const ronin = leagueTeam('RONIN');
     await directoryHolds([ronin]);
@@ -274,10 +305,12 @@ describe('PUT /api/teams/current/league-team', () => {
     await directoryHolds([ronin], night(0));
     const { token, team } = await createUserWithTeam();
     await linkTeam(token, ronin.id).expect(200);
+    await leagueMonthRead(team.id, '2570000000000000203');
 
     await directoryHolds([leagueTeam('Another')], night(8));
 
     expect((await prisma.team.findUniqueOrThrow({ where: { id: team.id } })).leagueTeamId).toBeNull();
     expect((await request(app).get('/api/teams/current').set(authHeader(token))).body.leagueTeam).toBeNull();
+    expect(await leagueEntriesOf(team.id)).toBe(0);
   });
 });

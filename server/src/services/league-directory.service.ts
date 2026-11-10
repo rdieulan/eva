@@ -137,9 +137,11 @@ export async function syncLeagueDirectory(options: { now?: Date; pauseMs?: numbe
       });
     }
     await tx.leagueTeam.updateMany({ where: { id: { in: [...teams.keys()] } }, data: { seenAt: readAt } });
-    const removed = await tx.leagueTeam.deleteMany({
-      where: { seenAt: { lt: new Date(readAt.getTime() - MISSING_TEAM_KEPT_MS) } },
-    });
+    const gone = { seenAt: { lt: new Date(readAt.getTime() - MISSING_TEAM_KEPT_MS) } };
+    // A team linked to a league team that goes is left unlinked, and what was
+    // read of that league team's registrations goes with the link
+    await tx.leagueEntry.deleteMany({ where: { team: { leagueTeam: { is: gone } } } });
+    const removed = await tx.leagueTeam.deleteMany({ where: gone });
 
     return { pages, teams: teams.size, skipped, added: added.length, changed: changed.length, removed: removed.count };
   }, { timeout: 60_000 });

@@ -239,7 +239,8 @@ model LeagueTournament {
 
 // A team of ours and a tournament of its local league whose registration is
 // open: whether the team is registered, as the site lists it, and what those
-// who manage it were told. Each reminder goes once.
+// who manage it were told. Each reminder goes once. Read for the league team
+// the team is linked to: dropped when the team leaves that link.
 model LeagueEntry {
   teamId          String
   tournamentId    String

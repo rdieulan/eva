@@ -327,15 +327,20 @@ export interface TeamLeagueLink {
  * Link a team to its league team of the directory, or unlink it (null). A team
  * with no logo of its own takes the league team's, when the site gives it, and
  * a team with no venue the venue of its local league, when the site tells it.
+ * What was read of the league registrations goes with the link: it was the
+ * former league team's, not the one the team is now.
  */
 export async function setTeamLeagueTeam(teamId: string, leagueTeamId: string | null): Promise<{ error: string } | TeamLeagueLink> {
   if (leagueTeamId === null) {
-    const updated = await prisma.team.update({ where: { id: teamId }, data: { leagueTeamId: null }, select: TEAM_LINKED_REF });
+    const [, updated] = await prisma.$transaction([
+      prisma.leagueEntry.deleteMany({ where: { teamId } }),
+      prisma.team.update({ where: { id: teamId }, data: { leagueTeamId: null }, select: TEAM_LINKED_REF }),
+    ]);
     return { leagueTeam: null, logoUrl: logoUrlOf(updated), venueId: updated.venueId };
   }
 
   const [team, leagueTeam] = await Promise.all([
-    prisma.team.findUnique({ where: { id: teamId }, select: { logoType: true, venueId: true } }),
+    prisma.team.findUnique({ where: { id: teamId }, select: { leagueTeamId: true, logoType: true, venueId: true } }),
     prisma.leagueTeam.findUnique({ where: { id: leagueTeamId }, select: { team: { select: { id: true } } } }),
   ]);
   if (!team) return { error: ERROR.teamNotFound };
@@ -348,14 +353,17 @@ export async function setTeamLeagueTeam(teamId: string, leagueTeamId: string | n
   ]);
   let updated: { id: string; logoType: string | null; logoUpdatedAt: Date | null; venueId: string | null };
   try {
-    updated = await prisma.team.update({
-      where: { id: teamId },
-      data: {
-        leagueTeamId,
-        ...(logo && { logoData: new Uint8Array(logo.data), logoType: logo.type, logoUpdatedAt: new Date() }),
-        ...(venue && { venueId: venue.venueId }),
-      },
-      select: TEAM_LINKED_REF,
+    updated = await prisma.$transaction(async tx => {
+      if (team.leagueTeamId !== leagueTeamId) await tx.leagueEntry.deleteMany({ where: { teamId } });
+      return tx.team.update({
+        where: { id: teamId },
+        data: {
+          leagueTeamId,
+          ...(logo && { logoData: new Uint8Array(logo.data), logoType: logo.type, logoUpdatedAt: new Date() }),
+          ...(venue && { venueId: venue.venueId }),
+        },
+        select: TEAM_LINKED_REF,
+      });
     });
   } catch (error) {
     // Another team linked itself to the same league team meanwhile
