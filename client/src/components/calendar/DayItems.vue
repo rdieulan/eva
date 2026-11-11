@@ -1,6 +1,6 @@
-<script setup lang="ts">
+<script setup lang="ts" generic="T extends DayRowItem">
 import { computed } from 'vue';
-import type { CalendarEvent, ScrimSearch, SubscriptionRenewal, VenueEventView } from '@shared/types';
+import type { DayRowItem, ScrimSearch, SubscriptionRenewal, VenueEventView } from '@shared/types';
 import { getEventTypeClass, getEventTypeIcon, sortEventsByTime } from '@/utils/calendar';
 import { SUBSCRIPTION_TIER_LABELS } from '@/utils/subscription';
 import { ownSearchLabel, pendingProposalCount } from '@/utils/scrims';
@@ -23,7 +23,7 @@ import PendingCount from '@/components/calendar/PendingCount.vue';
 const props = withDefaults(defineProps<{
   ownSearch?: ScrimSearch | null; // Ours, first and never left out
   searches: ScrimSearch[]; // The other teams'
-  events: CalendarEvent[];
+  events: T[]; // What is planned: the team's events, or what a venue's calendar shows
   renewals: SubscriptionRenewal[];
   venueEvents?: VenueEventView[]; // The venue's, open to all, the team has not added
   limit?: number; // Rows at most, the one counting the rest included; every row without
@@ -35,7 +35,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   'open-search': [search: ScrimSearch];
-  'open-event-viewer': [events: CalendarEvent[], initialIndex: number];
+  'open-event-viewer': [events: T[], initialIndex: number];
   'open-venue-event': [event: VenueEventView];
   'open-day': []; // From the row counting the rest: the whole day is wanted
 }>();

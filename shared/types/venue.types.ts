@@ -1,6 +1,7 @@
 // Venue types
 
-import type { DiscordChannelStatus } from './team.types';
+import type { DiscordChannelStatus, Team } from './team.types';
+import type { VenueCompetitionView } from './league.types';
 
 /**
  * Where a venue can be reached online. The same list eva.gg publishes for its
@@ -43,6 +44,29 @@ export interface VenueEventView {
 export interface VenueEventSummary extends VenueEventView {
   teamsAdding: number;
 }
+
+/**
+ * A match between teams in a venue, as the venue's calendar shows it: once,
+ * whichever of its teams entered it. Only a match on eva.gg slots is there:
+ * without slots, nothing says it is played in the venue.
+ */
+export interface VenueMatchView {
+  id: string;        // The event of the first team that entered it
+  date: string;      // YYYY-MM-DD
+  startTime: string; // HH:mm
+  endTime: string;   // HH:mm
+  title: string;     // "A vs B" when both teams entered it; otherwise the team, then what it calls the match
+  arenaNumber: number | null;
+  slotCount: number; // The eva.gg slots it runs on
+  teams: Pick<Team, 'id' | 'name' | 'logoUrl'>[]; // Our teams that entered it, by name
+  fromMatchmaking: boolean; // Made by the matchmaking; otherwise entered by a team, its slots taken on trust
+}
+
+/** What a venue's calendar shows on a day: a competition or an event it published, or a match played there */
+export type VenueCalendarItem =
+  | (VenueCompetitionView & { type: 'COMPETITION' })
+  | (VenueEventSummary & { type: 'EVENT' })
+  | (VenueMatchView & { type: 'MATCH' });
 
 /**
  * Public venue data (visible by all authenticated users)

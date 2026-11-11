@@ -32,6 +32,7 @@ interface Tab {
 // own address, the others' lie under it
 const MANAGER_TABS: { to: string; label: string; icon: TabIcon }[] = [
   { to: '/gestion', label: 'Ma salle', icon: 'place' },
+  { to: '/gestion/calendrier', label: 'Calendrier', icon: 'calendar' },
   { to: '/gestion/competition', label: 'Compétition', icon: 'trophy' },
   { to: '/gestion/evenements', label: 'Événements', icon: 'flag' },
 ];

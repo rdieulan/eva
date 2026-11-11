@@ -1,7 +1,8 @@
 // Venue manager routes: the venues an account manages, the settings of each
 // (its public information, its Discord channel), the divisions of its local
-// league as its manager arranges them, and what the manager publishes in the
-// venue's calendar: competitions offered to its teams, events open to all
+// league as its manager arranges them, what the manager publishes in the
+// venue's calendar, competitions offered to its teams and events open to all,
+// and that calendar with the matches played in the venue
 
 import { Router } from 'express';
 import type { NextFunction, Response } from 'express';
@@ -23,6 +24,8 @@ import {
 } from '@services/venue-competitions.service';
 import { getVenueSettings, refreshVenueFromEva } from '@services/venue-settings.service';
 import { createVenueEvent, deleteVenueEvent, listVenueEvents } from '@services/venue-events.service';
+import { venueCalendarMonth } from '@services/venue-calendar.service';
+import { isValidMonth } from '@services/helpers/validation.helper';
 import { DISCORD_LINK_REFUSALS, linkDiscordChannel, unlinkDiscordChannel } from '@services/discord-channel.service';
 
 const router = Router();
@@ -224,6 +227,19 @@ router.delete('/venues/:venueId/events/:eventId', requireManagedVenue, async (re
   } catch (error) {
     apiLogger.error('Error withdrawing a venue event:', error);
     res.status(500).json({ errors: [ERROR.venueEventDeleteFailed] });
+  }
+});
+
+// GET /api/manager/venues/:venueId/calendar?month=YYYY-MM - A month of the
+// venue's calendar: its competitions, its events, and the matches played there
+router.get('/venues/:venueId/calendar', requireManagedVenue, async (req: ManagerRequest, res: Response) => {
+  const { month } = req.query;
+  if (!isValidMonth(month)) return res.status(400).json({ errors: [ERROR.monthParamRequired] });
+  try {
+    res.json(await venueCalendarMonth(req.params.venueId as string, month));
+  } catch (error) {
+    apiLogger.error('Error loading a venue calendar:', error);
+    res.status(500).json({ errors: [ERROR.venueCalendarFetchFailed] });
   }
 });
 

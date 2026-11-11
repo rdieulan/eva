@@ -39,14 +39,22 @@ function toFacts(view: VenueEventView): VenuePublicationFacts {
   return { title, venueName, date, startTime, endTime, description };
 }
 
-/** The events of a venue still to come, from today in Paris on, the soonest first, and how many teams added each */
-export async function listVenueEvents(venueId: string, now: Date = new Date()): Promise<VenueEventSummary[]> {
+/**
+ * The events of a venue from a day on, up to another when given, the soonest
+ * first, and how many teams added each
+ */
+export async function venueEventsBetween(venueId: string, from: Date, to?: Date): Promise<VenueEventSummary[]> {
   const rows = await prisma.venueEvent.findMany({
-    where: { venueId, date: { gte: new Date(toParisTime(now).day) } },
+    where: { venueId, date: { gte: from, ...(to ? { lte: to } : {}) } },
     select: { ...EVENT_SELECT, _count: { select: { teamEvents: true } } },
     orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
   });
   return rows.map(row => ({ ...toView(row), teamsAdding: row._count.teamEvents }));
+}
+
+/** The events of a venue still to come, from today in Paris on, the soonest first, and how many teams added each */
+export async function listVenueEvents(venueId: string, now: Date = new Date()): Promise<VenueEventSummary[]> {
+  return venueEventsBetween(venueId, new Date(toParisTime(now).day));
 }
 
 /**

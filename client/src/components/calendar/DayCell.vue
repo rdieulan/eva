@@ -1,10 +1,10 @@
-<script setup lang="ts">
+<script setup lang="ts" generic="T extends DayRowItem">
 import { computed, onBeforeUnmount, ref } from 'vue';
 import type {
   AvailabilityHours,
   AvailabilityStatus,
   PlayerAvailability,
-  CalendarEvent,
+  DayRowItem,
   SubscriptionRenewal,
   ScrimSearch,
   VenueEventView,
@@ -34,6 +34,8 @@ import { useCornerClearance } from '@/composables/useCornerClearance';
 // day picked for a search, or of our own search that day.
 // Edit mode: the day opens the wheel of the reader's answer, and the whole
 // card lists who said what, name by name.
+// A venue's day (see VenueCalendar) is neither: no team, so no lineup nor
+// reader, only what is planned in the venue, which it opens.
 interface Props {
   date: string; // YYYY-MM-DD
   dayNumber: number;
@@ -44,7 +46,7 @@ interface Props {
   currentPlayerHours?: AvailabilityHours | null; // The reader's hours, when available on part of the day
   currentPlayerId?: string; // Leaves the reader out of the roster: the cell already shows their status
   playerAvailabilities: PlayerAvailability[];
-  events: CalendarEvent[];
+  events: T[]; // What is planned: the team's events, or what is planned in the venue
   renewals?: SubscriptionRenewal[]; // Players whose subscription renews that day
   venueEvents?: VenueEventView[]; // The events of the team's venue, open to all, the team has not added
   showDayNumber?: boolean;
@@ -53,6 +55,7 @@ interface Props {
   scrimSearches?: ScrimSearch[]; // The searches of that day: ours, and in matchmaking the other teams'
   selectable?: boolean; // Matchmaking: clicking the day picks it for a search
   selected?: boolean;
+  venue?: boolean; // A day of a venue's calendar, read by no team
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -66,11 +69,12 @@ const props = withDefaults(defineProps<Props>(), {
   scrimSearches: () => [],
   selectable: false,
   selected: false,
+  venue: false,
 });
 
 const emit = defineEmits<{
   'open-availability': [opening: WheelOpening]; // Edit mode: the wheel of the reader's answer for the day
-  'open-event-viewer': [events: CalendarEvent[], initialIndex: number];
+  'open-event-viewer': [events: T[], initialIndex: number];
   'open-create-event': [date: string];
   'toggle-select': [date: string];
   'open-search': [search: ScrimSearch];
@@ -132,7 +136,7 @@ const rowLimit = computed(() => (canPick.value || ownSearch.value || windowMark.
 // team cannot use.
 const cellStatusClass = computed(() => {
   if (props.isPast) return 'status-past';
-  if (!props.isCurrentMonth) return '';
+  if (!props.isCurrentMonth || props.venue) return '';
   return teamAvailability.value.status === 'unknown' ? 'availability--unset' : getTeamAvailabilityClass(teamAvailability.value.status);
 });
 
@@ -166,7 +170,7 @@ function handleCellClick() {
   } else if (hasEvents.value) {
     // With events: open event viewer (even for past days)
     emit('open-event-viewer', sortedEvents.value, 0);
-  } else if (!props.isPast && !props.matchmaking) {
+  } else if (!props.isPast && !props.matchmaking && !props.venue) {
     // Team mode without events: emit to open create modal (for admins, not past)
     emit('open-create-event', props.date);
   }
@@ -245,9 +249,10 @@ onBeforeUnmount(endPress);
         'matchmaking': matchmaking,
         'is-selectable': canPick,
         'is-selected': selected,
+        'venue-day': venue,
       }
     ]"
-    :title="!editMode && !isPast && isCurrentMonth ? lineupTitle : undefined"
+    :title="!editMode && !isPast && isCurrentMonth && !venue ? lineupTitle : undefined"
     @click="handleCellClick"
     @pointerdown="onPressStart"
   >
@@ -258,7 +263,7 @@ onBeforeUnmount(endPress);
          day outside the month: its availabilities are not loaded, so there is
          nothing to say, and a "?" would read as an unanswered day -->
     <div
-      v-if="!isPast && isCurrentMonth"
+      v-if="!isPast && isCurrentMonth && !venue"
       class="corner"
       :class="ownStatusClass"
       :title="ownTitle"
@@ -467,6 +472,16 @@ onBeforeUnmount(endPress);
 
     &:hover {
       background-color: with-alpha($color-bg-primary, 0.6);
+    }
+  }
+
+  // A venue's day: no reader, so no corner to keep clear of; a day with
+  // nothing planned opens nothing
+  &.venue-day {
+    --corner-leg: 0px;
+
+    &:not(.has-events) {
+      pointer-events: none;
     }
   }
 

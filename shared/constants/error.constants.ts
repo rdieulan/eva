@@ -326,6 +326,7 @@ export const ERROR = {
   venueEventNotFound: 'Événement non trouvé',
   venueEventAlreadyAdded: 'Cet événement est déjà dans le calendrier de l\'équipe',
   venueEventPast: 'Cet événement est passé',
+  venueCalendarFetchFailed: 'Impossible de charger le calendrier de la salle',
   venueEventAddFailed: 'Impossible d\'ajouter l\'événement au calendrier',
 
   // Venue manager: the venue's settings

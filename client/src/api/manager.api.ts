@@ -1,9 +1,10 @@
 // Venue manager API client: the venues an account manages, their settings, the divisions of
-// each one's local league as its manager arranges them, and the competitions
-// the manager publishes in the venue's calendar
+// each one's local league as its manager arranges them, what the manager
+// publishes in the venue's calendar, and that calendar
 
 import type {
   ManagedVenue,
+  VenueCalendarItem,
   VenueCompetitionView,
   VenueDivisions,
   VenueDivisionsRead,
@@ -121,4 +122,13 @@ export async function deleteVenueEvent(venueId: string, eventId: string): Promis
     { method: 'DELETE' },
   );
   if (!response.ok) throw await ApiError.fromFailedResponse(response, ERROR.venueEventDeleteFailed);
+}
+
+/** A month of the venue's calendar (YYYY-MM): its competitions, its events and the matches played there */
+export async function fetchVenueCalendar(venueId: string, month: string): Promise<VenueCalendarItem[]> {
+  return authFetch<VenueCalendarItem[]>(
+    `${API_BASE}/venues/${encodeURIComponent(venueId)}/calendar?month=${encodeURIComponent(month)}`,
+    undefined,
+    ERROR.venueCalendarFetchFailed,
+  );
 }

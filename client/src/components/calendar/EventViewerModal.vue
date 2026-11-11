@@ -447,16 +447,6 @@ function handleCreateEvent() {
   }
 }
 
-.detail-tag {
-  margin-left: $spacing-sm;
-  padding: 2px 8px;
-  border-radius: $radius-sm;
-  background: with-alpha($color-accent, 0.2);
-  color: $color-accent;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
 .game-plan-section {
   padding: $spacing-md;
   background: with-alpha($color-bg-tertiary, 0.5);

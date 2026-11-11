@@ -3,9 +3,10 @@ import { formatLongDate } from '@/utils/calendar';
 
 // The sheet of an event as the calendar shows it: its title, its day and its
 // hours, then its description. Whoever shows it adds the rest: a tag beside
-// the hours (`hours`), rows of their own among the details (`details`, each a
-// `.detail-row` of a `.detail-label` and a `.detail-value`, dressed here), and
-// what comes between the details and the description (the default slot).
+// the hours (`hours`, a `.detail-tag`), rows of their own among the details
+// (`details`, each a `.detail-row` of a `.detail-label` and a
+// `.detail-value`), all dressed here, and what comes between the details and
+// the description (the default slot).
 defineProps<{
   title: string;
   date: string; // YYYY-MM-DD
@@ -72,12 +73,15 @@ defineProps<{
   border-radius: $radius-md;
 }
 
-// The rows of the sheet, and the ones its reader adds
+// The rows of the sheet, and the ones its reader adds. A long value, the
+// names of two teams, wraps against the right edge where the others end, and
+// leaves its label whole.
 .detail-row,
 :slotted(.detail-row) {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: $spacing-md;
 
   @include mobile {
     flex-direction: column;
@@ -88,6 +92,7 @@ defineProps<{
 
 .detail-label,
 :slotted(.detail-label) {
+  flex-shrink: 0;
   color: $color-text-secondary;
   font-size: 0.9rem;
 }
@@ -96,6 +101,22 @@ defineProps<{
 :slotted(.detail-value) {
   color: $color-white;
   font-weight: 500;
+  text-align: right;
+
+  @include mobile {
+    text-align: left;
+  }
+}
+
+// A tag beside the hours: how many slots a match takes
+:slotted(.detail-tag) {
+  margin-left: $spacing-sm;
+  padding: 2px 8px;
+  border-radius: $radius-sm;
+  background: with-alpha($color-accent, 0.2);
+  color: $color-accent;
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 .event-description {

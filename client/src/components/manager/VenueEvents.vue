@@ -8,6 +8,7 @@ import type { VenueEventSummary } from '@shared/types';
 import { ERROR } from '@shared/constants';
 import { formatShortDay, toParisTime } from '@shared/utils';
 import { createVenueEvent, deleteVenueEvent, fetchVenueEvents } from '@/api';
+import { describeTeamsAdding } from '@/utils/venue-publications';
 import { useErrors } from '@/composables/useErrors';
 import ConfirmModal from '@/components/common/ConfirmModal.vue';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
@@ -82,12 +83,6 @@ async function withdraw() {
   }
 }
 
-// How many teams put it in their calendar, in words
-function addedBy({ teamsAdding }: VenueEventSummary): string {
-  if (!teamsAdding) return 'Aucune équipe ne l\'a ajouté à son calendrier pour l\'instant.';
-  return `Ajouté au calendrier de ${teamsAdding} équipe${teamsAdding > 1 ? 's' : ''}.`;
-}
-
 onMounted(load);
 </script>
 
@@ -130,7 +125,7 @@ onMounted(load);
         :date="event.date"
         :start-time="event.startTime"
         :end-time="event.endTime"
-        :outcome="addedBy(event)"
+        :outcome="describeTeamsAdding(event.teamsAdding)"
         :description="event.description"
         @withdraw="withdrawing = event"
       />

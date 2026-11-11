@@ -1,7 +1,7 @@
 // Calendar utility functions
 
 import type { RouteLocationRaw } from 'vue-router';
-import type { CalendarEvent, CalendarTarget, EventType, VoiceMedium } from '@shared/types';
+import type { CalendarTarget, EventType, VoiceMedium } from '@shared/types';
 import { calendarTargetQuery } from '@shared/utils';
 
 /**
@@ -104,8 +104,54 @@ export function getEventTypeClass(type: EventType): string {
  * @param events - The events, in any order
  * @returns The events by start time
  */
-export function sortEventsByTime(events: CalendarEvent[]): CalendarEvent[] {
+export function sortEventsByTime<T extends { startTime: string }>(events: T[]): T[] {
   return [...events].sort((a, b) => a.startTime.localeCompare(b.startTime));
+}
+
+/** A day as a calendar lays it out, before what it holds */
+export interface CalendarDay {
+  date: string; // YYYY-MM-DD
+  dayNumber: number;
+  isCurrentMonth: boolean; // Of the month in sight; the days around it only fill its weeks
+  isToday: boolean;
+  isPast: boolean;
+}
+
+function calendarDay(date: Date, month: number, today: string): CalendarDay {
+  const dateStr = formatDateStr(date);
+  return {
+    date: dateStr,
+    dayNumber: date.getDate(),
+    isCurrentMonth: date.getMonth() + 1 === month,
+    isToday: dateStr === today,
+    isPast: isPastDateStr(dateStr),
+  };
+}
+
+/**
+ * The days of a month by week, Monday first: six weeks, the days of the
+ * months around filling the first and the last
+ * @param year - The year
+ * @param month - The month, 1-12
+ */
+export function monthDays(year: number, month: number): CalendarDay[] {
+  const today = formatDateStr(new Date());
+  const before = (new Date(year, month - 1, 1).getDay() + 6) % 7; // Days of the first week before the 1st
+  return Array.from({ length: 42 }, (_, index) => calendarDay(new Date(year, month - 1, 1 - before + index), month, today));
+}
+
+/**
+ * The seven days of a week
+ * @param weekStart - Its Monday
+ * @param month - The month in sight, 1-12: its own days are told apart
+ */
+export function weekDays(weekStart: Date, month: number): CalendarDay[] {
+  const today = formatDateStr(new Date());
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(weekStart);
+    date.setDate(date.getDate() + index);
+    return calendarDay(date, month, today);
+  });
 }
 
 /**

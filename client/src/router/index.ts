@@ -10,6 +10,7 @@ const ALLOWED_WITHOUT_TEAM = [
   'home',
   'profile',
   'manager',
+  'manager-calendar',
   'manager-competition',
   'manager-events',
   'team',
@@ -46,6 +47,7 @@ const ProfilePage = () => import('@/pages/ProfilePage.vue');
 const ManagerVenuePage = () => import('@/pages/ManagerVenuePage.vue');
 const ManagerCompetitionPage = () => import('@/pages/ManagerCompetitionPage.vue');
 const ManagerEventsPage = () => import('@/pages/ManagerEventsPage.vue');
+const ManagerCalendarPage = () => import('@/pages/ManagerCalendarPage.vue');
 const TeamPage = () => import('@/pages/TeamPage.vue');
 const CreateTeamPage = () => import('@/pages/CreateTeamPage.vue');
 const JoinTeamPage = () => import('@/pages/JoinTeamPage.vue');
@@ -107,6 +109,13 @@ const routes: RouteRecordRaw[] = [
     name: 'manager',
     component: ManagerVenuePage,
     meta: { title: 'Ma salle', requiresAuth: true, requiresManager: true }
+  },
+  {
+    // The venue's calendar: what it publishes, and the matches played there
+    path: '/gestion/calendrier',
+    name: 'manager-calendar',
+    component: ManagerCalendarPage,
+    meta: { title: 'Calendrier', requiresAuth: true, requiresManager: true }
   },
   {
     // The league's divisions and the competitions the venue offers its teams

@@ -1,19 +1,20 @@
 <script lang="ts">
-import type { CalendarEvent, ScrimSearch, SubscriptionRenewal, VenueEventView } from '@shared/types';
+import type { CalendarEvent, DayRowItem, ScrimSearch, SubscriptionRenewal, VenueEventView } from '@shared/types';
 
 // What a day holds, all of it, as the calendar reads it: in matchmaking, the
-// searches alone, ours and the other teams'
-export interface DayAgenda {
+// searches alone, ours and the other teams'; in a venue's calendar, what is
+// planned there alone
+export interface DayAgenda<T extends DayRowItem = CalendarEvent> {
   date: string; // YYYY-MM-DD
   searches: ScrimSearch[];
-  events: CalendarEvent[];
+  events: T[];
   renewals: SubscriptionRenewal[];
   venueEvents: VenueEventView[]; // The venue's the team has not added
 }
 </script>
 
-<script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+<script setup lang="ts" generic="T extends DayRowItem">
+import { computed, ref, watch, type Ref } from 'vue';
 import Modal from '@/components/common/Modal.vue';
 import DayItems from '@/components/calendar/DayItems.vue';
 import { formatLongDate } from '@/utils/calendar';
@@ -23,18 +24,18 @@ import { formatLongDate } from '@/utils/calendar';
 // the day, takes the first row; a row opens what it shows, as it does in the
 // day.
 const props = defineProps<{
-  day: DayAgenda | null; // Open while set
+  day: DayAgenda<T> | null; // Open while set
 }>();
 
 const emit = defineEmits<{
   close: [];
   'open-search': [search: ScrimSearch];
-  'open-event-viewer': [events: CalendarEvent[], initialIndex: number];
+  'open-event-viewer': [events: T[], initialIndex: number];
   'open-venue-event': [event: VenueEventView];
 }>();
 
 // The day stays on screen while the window fades out
-const shown = ref<DayAgenda | null>(props.day);
+const shown = ref<DayAgenda<T> | null>(props.day) as Ref<DayAgenda<T> | null>;
 watch(() => props.day, day => {
   if (day) shown.value = day;
 });

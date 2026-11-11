@@ -69,6 +69,19 @@ export interface EventVenue {
   discord: string | null; // The venue's Discord, where the team finds the staff and the other teams
 }
 
+/**
+ * What the row of a day shows of something planned, whoever plans it: its
+ * kind, which gives its symbol and its colour, its title and its hours. An
+ * event of a team is one, and so is what the calendar of a venue shows.
+ */
+export interface DayRowItem {
+  id: string;
+  type: EventType;
+  title: string;
+  startTime: string; // HH:mm
+  endTime: string;   // HH:mm
+}
+
 // Calendar event (match or event)
 export interface CalendarEvent {
   id: string;

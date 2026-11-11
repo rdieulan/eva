@@ -34,6 +34,7 @@ export type {
   EventType,
   VoiceMedium,
   Availability,
+  DayRowItem,
   CalendarEvent,
   EventVenue,
   PlayerAvailability,
@@ -170,6 +171,8 @@ export type {
   VenueSettings,
   VenueEventView,
   VenueEventSummary,
+  VenueMatchView,
+  VenueCalendarItem,
 } from './venue.types';
 export { VENUE_LINK_KEYS } from './venue.types';
 

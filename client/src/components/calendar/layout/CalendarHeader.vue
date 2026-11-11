@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import SvgIcon from '@/components/common/SvgIcon.vue';
 import SegmentedControl, { type SegmentedOption } from '@/components/common/SegmentedControl.vue';
 import MatchmakingVenuePicker from '@/components/calendar/MatchmakingVenuePicker.vue';
-import type { ViewMode, CalendarMode } from '@/composables/useCalendar';
+import CalendarNav from '@/components/calendar/layout/CalendarNav.vue';
+import CalendarViewSwitch from '@/components/calendar/layout/CalendarViewSwitch.vue';
+import WeekdayNames from '@/components/calendar/layout/WeekdayNames.vue';
+import type { CalendarMode } from '@/composables/useCalendar';
+import type { ViewMode } from '@/composables/useCalendarNavigation';
 import type { MatchmakingVenues } from '@/utils/venues';
 
 defineProps<{
@@ -27,16 +30,9 @@ const emit = defineEmits<{
 // Matchmaking: the venues whose searches the calendar shows
 const venueIds = defineModel<string[]>('venueIds', { required: true });
 
-const weekdays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
-
 const MODE_OPTIONS: SegmentedOption<CalendarMode>[] = [
   { value: 'team', label: 'Équipe' },
   { value: 'matchmaking', label: 'Matchmaking' },
-];
-
-const VIEW_OPTIONS: SegmentedOption<ViewMode>[] = [
-  { value: 'month', label: 'Mois' },
-  { value: 'week', label: 'Semaine' },
 ];
 </script>
 
@@ -52,28 +48,10 @@ const VIEW_OPTIONS: SegmentedOption<ViewMode>[] = [
         @update:model-value="mode => emit('update:calendarMode', mode)"
       />
 
-      <div class="nav-header">
-        <button
-          class="nav-btn"
-          @click="$emit('prev')"
-          :title="viewMode === 'month' ? 'Mois précédent' : 'Semaine précédente'"
-        >
-          <SvgIcon name="chevron-right" class="nav-icon nav-icon-left" />
-        </button>
-        <h2 class="nav-title">{{ navigationTitle }}</h2>
-        <button
-          class="nav-btn"
-          @click="$emit('next')"
-          :title="viewMode === 'month' ? 'Mois suivant' : 'Semaine suivante'"
-        >
-          <SvgIcon name="chevron-right" class="nav-icon" />
-        </button>
-      </div>
+      <CalendarNav :view-mode="viewMode" :title="navigationTitle" @prev="emit('prev')" @next="emit('next')" />
 
-      <SegmentedControl
+      <CalendarViewSwitch
         class="view-switch"
-        label="Affichage"
-        :options="VIEW_OPTIONS"
         :model-value="viewMode"
         @update:model-value="mode => emit('update:viewMode', mode)"
       />
@@ -95,11 +73,7 @@ const VIEW_OPTIONS: SegmentedOption<ViewMode>[] = [
     </div>
 
     <!-- Weekdays header (only for month view) -->
-    <div v-if="viewMode === 'month'" class="weekdays-header">
-      <div v-for="dayName in weekdays" :key="dayName" class="weekday-name">
-        {{ dayName }}
-      </div>
-    </div>
+    <WeekdayNames v-if="viewMode === 'month'" />
   </div>
 </template>
 
@@ -172,133 +146,5 @@ const VIEW_OPTIONS: SegmentedOption<ViewMode>[] = [
   margin: 0;
   color: $color-text-secondary;
   font-size: 0.8rem;
-}
-
-.nav-header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: $spacing-lg;
-
-  @include tablet {
-    gap: $spacing-md;
-  }
-
-  @include mobile-lg {
-    gap: 0.75rem;
-  }
-
-  @include mobile {
-    gap: $spacing-sm;
-  }
-}
-
-.nav-btn {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: $color-bg-tertiary;
-  border: $border-thin solid $color-border;
-  border-radius: $radius-md;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover {
-    background: $color-border-light;
-    border-color: $color-accent;
-  }
-
-  @include mobile-lg {
-    width: 36px;
-    height: 36px;
-  }
-
-  @include mobile {
-    width: 32px;
-    height: 32px;
-  }
-}
-
-.nav-icon {
-  width: 20px;
-  height: 20px;
-  fill: $color-text-secondary;
-
-  &.nav-icon-left {
-    transform: rotate(180deg);
-  }
-
-  .nav-btn:hover & {
-    fill: $color-white;
-  }
-
-  @include mobile {
-    width: 16px;
-    height: 16px;
-  }
-}
-
-.nav-title {
-  margin: 0;
-  font-size: 1.3rem;
-  font-weight: 600;
-  color: $color-white;
-  text-align: center;
-  min-width: 200px;
-
-  @include tablet {
-    font-size: 1.15rem;
-    min-width: 180px;
-  }
-
-  @include mobile-lg {
-    font-size: 1rem;
-    min-width: 150px;
-  }
-
-  @include mobile {
-    font-size: 0.9rem;
-    min-width: 130px;
-  }
-}
-
-.weekdays-header {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr)); // Same columns as the grid below
-  gap: $spacing-sm;
-  width: 100%;
-  max-width: 1200px;
-
-  @include tablet {
-    gap: 0.35rem;
-  }
-
-  @include mobile-lg {
-    gap: $spacing-xs;
-  }
-
-  @include mobile {
-    gap: 0.15rem;
-  }
-}
-
-.weekday-name {
-  text-align: center;
-  font-weight: 600;
-  font-size: 0.85rem;
-  color: $color-accent;
-  padding: $spacing-xs;
-
-  @include mobile-lg {
-    font-size: 0.7rem;
-    padding: 0.15rem;
-  }
-
-  @include mobile {
-    font-size: 0.65rem;
-    padding: 0.1rem;
-  }
 }
 </style>

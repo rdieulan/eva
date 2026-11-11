@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import DayCell from './DayCell.vue';
-import { formatDateStr, isPastDateStr } from '@/utils/calendar';
+import MonthLayout from './layout/MonthLayout.vue';
+import type { CalendarDay } from '@/utils/calendar';
 import type { DayData, CalendarEvent, ScrimSearch, VenueEventView } from '@shared/types';
 import type { WheelOpening } from './AvailabilityWheel.vue';
 
+// A month of the team's calendar: each day in the team's reading, its days
+// alone; the days of the months around only fill its weeks
 const props = defineProps<{
   year: number;
   month: number; // 1-12
@@ -29,107 +31,32 @@ const emit = defineEmits<{
   'open-day': [date: string];
 }>();
 
-// Today's date string for comparison
-const todayStr = computed(() => formatDateStr(new Date()));
-
-// Generate calendar grid (6 weeks x 7 days)
-const calendarGrid = computed(() => {
-  const grid: Array<{
-    date: string;
-    dayNumber: number;
-    isCurrentMonth: boolean;
-    isToday: boolean;
-    isPast: boolean;
-    data: DayData | null;
-  }> = [];
-
-  // First day of the month
-  const firstDay = new Date(props.year, props.month - 1, 1);
-  // Last day of the month
-  const lastDay = new Date(props.year, props.month, 0);
-
-  // Day of week for first day (0 = Sunday, convert to Monday = 0)
-  let startDayOfWeek = firstDay.getDay() - 1;
-  if (startDayOfWeek < 0) startDayOfWeek = 6; // Sunday becomes 6
-
-  // Days from previous month to fill
-  const prevMonth = new Date(props.year, props.month - 1, 0);
-  const prevMonthDays = prevMonth.getDate();
-
-  // Fill previous month days
-  for (let i = startDayOfWeek - 1; i >= 0; i--) {
-    const day = prevMonthDays - i;
-    const date = new Date(props.year, props.month - 2, day);
-    const dateStr = formatDateStr(date);
-    grid.push({
-      date: dateStr,
-      dayNumber: day,
-      isCurrentMonth: false,
-      isToday: dateStr === todayStr.value,
-      isPast: isPastDateStr(dateStr),
-      data: null,
-    });
-  }
-
-  // Fill current month days
-  for (let day = 1; day <= lastDay.getDate(); day++) {
-    const date = new Date(props.year, props.month - 1, day);
-    const dateStr = formatDateStr(date);
-    grid.push({
-      date: dateStr,
-      dayNumber: day,
-      isCurrentMonth: true,
-      isToday: dateStr === todayStr.value,
-      isPast: isPastDateStr(dateStr),
-      data: props.days[dateStr] ?? null,
-    });
-  }
-
-  // Fill next month days to complete the grid (up to 42 cells = 6 weeks)
-  const remaining = 42 - grid.length;
-  for (let day = 1; day <= remaining; day++) {
-    const date = new Date(props.year, props.month, day);
-    const dateStr = formatDateStr(date);
-    grid.push({
-      date: dateStr,
-      dayNumber: day,
-      isCurrentMonth: false,
-      isToday: dateStr === todayStr.value,
-      isPast: isPastDateStr(dateStr),
-      data: null,
-    });
-  }
-
-  return grid;
-});
-
+// What the calendar loaded for a day of the month; nothing for the days around it
+function dataOf(day: CalendarDay): DayData | null {
+  return day.isCurrentMonth ? props.days[day.date] ?? null : null;
+}
 </script>
 
 <template>
-  <div class="calendar-grid">
-
-
-    <!-- Calendar grid -->
-    <div class="days-grid">
+  <MonthLayout :year="year" :month="month">
+    <template #day="{ day }">
       <DayCell
-        v-for="cell in calendarGrid"
-        :key="cell.date"
-        :date="cell.date"
-        :day-number="cell.dayNumber"
-        :is-current-month="cell.isCurrentMonth"
-        :is-today="cell.isToday"
-        :is-past="cell.isPast"
-        :current-player-status="cell.data?.currentPlayerStatus ?? null"
-        :current-player-hours="cell.data?.currentPlayerHours ?? null"
-        :player-availabilities="cell.data?.playerAvailabilities ?? []"
-        :events="cell.data?.events ?? []"
-        :renewals="cell.data?.renewals ?? []"
-        :venue-events="cell.data?.venueEvents ?? []"
+        :date="day.date"
+        :day-number="day.dayNumber"
+        :is-current-month="day.isCurrentMonth"
+        :is-today="day.isToday"
+        :is-past="day.isPast"
+        :current-player-status="dataOf(day)?.currentPlayerStatus ?? null"
+        :current-player-hours="dataOf(day)?.currentPlayerHours ?? null"
+        :player-availabilities="dataOf(day)?.playerAvailabilities ?? []"
+        :events="dataOf(day)?.events ?? []"
+        :renewals="dataOf(day)?.renewals ?? []"
+        :venue-events="dataOf(day)?.venueEvents ?? []"
         :edit-mode="props.editMode"
         :matchmaking="props.matchmaking"
-        :scrim-searches="props.scrimSearches?.[cell.date] ?? []"
+        :scrim-searches="props.scrimSearches?.[day.date] ?? []"
         :selectable="props.selectable"
-        :selected="props.selectedDates?.includes(cell.date) ?? false"
+        :selected="props.selectedDates?.includes(day.date) ?? false"
         :current-player-id="props.currentPlayerId"
         @open-availability="(opening) => emit('open-availability', opening)"
         @open-event-viewer="(events, index) => emit('open-event-viewer', events, index)"
@@ -139,53 +66,6 @@ const calendarGrid = computed(() => {
         @open-venue-event="(venueEvent) => emit('open-venue-event', venueEvent)"
         @open-day="(date) => emit('open-day', date)"
       />
-    </div>
-  </div>
+    </template>
+  </MonthLayout>
 </template>
-
-<style scoped lang="scss">
-@use '@/styles/variables' as *;
-
-.calendar-grid {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-sm;
-  width: 100%;
-  max-width: 1200px;
-
-  @include tablet {
-    gap: 0.35rem;
-  }
-
-  @include mobile-lg {
-    gap: $spacing-xs;
-  }
-}
-
-
-.days-grid {
-  display: grid;
-  // minmax(0, 1fr), not 1fr: a column must not grow to fit a long title
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: $spacing-sm;
-
-  @include tablet {
-    gap: 0.35rem;
-  }
-
-  @include mobile-lg {
-    gap: $spacing-xs;
-  }
-
-  @include mobile {
-    gap: 0.15rem;
-  }
-
-  // Prevent cells from overflowing their grid area
-  :deep(.day-cell) {
-    min-width: 0;
-    overflow: hidden;
-  }
-}
-</style>
-

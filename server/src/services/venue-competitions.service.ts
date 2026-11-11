@@ -70,14 +70,19 @@ async function teamsFor(venueId: string, division: number | null): Promise<strin
   return teams.map(team => team.id);
 }
 
-/** The competitions of a venue still to come, from today in Paris on, the soonest first */
-export async function listVenueCompetitions(venueId: string, now: Date = new Date()): Promise<VenueCompetitionView[]> {
+/** The competitions of a venue from a day on, up to another when given, the soonest first */
+export async function venueCompetitionsBetween(venueId: string, from: Date, to?: Date): Promise<VenueCompetitionView[]> {
   const rows = await prisma.venueCompetition.findMany({
-    where: { venueId, date: { gte: new Date(toParisTime(now).day) } },
+    where: { venueId, date: { gte: from, ...(to ? { lte: to } : {}) } },
     select: COMPETITION_SELECT,
     orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
   });
   return rows.map(toView);
+}
+
+/** The competitions of a venue still to come, from today in Paris on, the soonest first */
+export async function listVenueCompetitions(venueId: string, now: Date = new Date()): Promise<VenueCompetitionView[]> {
+  return venueCompetitionsBetween(venueId, new Date(toParisTime(now).day));
 }
 
 /**

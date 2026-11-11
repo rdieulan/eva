@@ -153,4 +153,5 @@ export {
   fetchVenueEvents,
   createVenueEvent,
   deleteVenueEvent,
+  fetchVenueCalendar,
 } from '@/api/manager.api';

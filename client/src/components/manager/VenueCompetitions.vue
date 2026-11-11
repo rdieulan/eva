@@ -9,6 +9,7 @@ import { ERROR } from '@shared/constants';
 import { formatShortDay, toParisTime } from '@shared/utils';
 import { createVenueCompetition, deleteVenueCompetition, fetchVenueCompetitions, fetchVenueDivisions } from '@/api';
 import { useErrors } from '@/composables/useErrors';
+import { competitionKind, describeCompetitionAnswers } from '@/utils/venue-publications';
 import ConfirmModal from '@/components/common/ConfirmModal.vue';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import VenuePublicationFields from '@/components/manager/VenuePublicationFields.vue';
@@ -106,17 +107,6 @@ async function withdraw() {
   }
 }
 
-// What the teams it went to said of it, in words
-function answersOf({ answers }: VenueCompetitionView): string {
-  const sent = answers.pending + answers.accepted + answers.refused;
-  if (!sent) return 'Aucune équipe de l\'app n\'est concernée pour l\'instant.';
-  const parts = [`Proposée à ${sent} équipe${sent > 1 ? 's' : ''}`];
-  if (answers.accepted) parts.push(`${answers.accepted} l'${answers.accepted > 1 ? 'ont' : 'a'} ajoutée`);
-  if (answers.refused) parts.push(`${answers.refused} refus`);
-  if (answers.pending) parts.push(`${answers.pending} sans réponse`);
-  return `${parts.join(' · ')}.`;
-}
-
 onMounted(load);
 </script>
 
@@ -173,11 +163,11 @@ onMounted(load);
         :key="competition.id"
         subject="competition"
         :title="competition.title"
-        :kind="competition.division ? `Division ${competition.division}` : 'Tournoi'"
+        :kind="competitionKind(competition)"
         :date="competition.date"
         :start-time="competition.startTime"
         :end-time="competition.endTime"
-        :outcome="answersOf(competition)"
+        :outcome="describeCompetitionAnswers(competition.answers)"
         :description="competition.description"
         @withdraw="withdrawing = competition"
       />
