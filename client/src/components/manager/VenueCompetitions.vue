@@ -3,11 +3,17 @@
 // offers its teams: the days of a division of its local league, and the
 // venue's tournaments. The manager gives the dates: those of a month past
 // say nothing of the next ones.
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import type { VenueCompetitionView } from '@shared/types';
 import { ERROR } from '@shared/constants';
 import { competitionKind, formatShortDay, toParisTime } from '@shared/utils';
-import { createVenueCompetition, deleteVenueCompetition, fetchVenueCompetitions, fetchVenueDivisions } from '@/api';
+import {
+  createVenueCompetition,
+  deleteVenueCompetition,
+  fetchVenueCompetitions,
+  fetchVenueDivisions,
+  updateVenueCompetition,
+} from '@/api';
 import { useErrors } from '@/composables/useErrors';
 import { describeCompetitionAnswers } from '@/utils/venue-publications';
 import ConfirmModal from '@/components/common/ConfirmModal.vue';
@@ -24,6 +30,9 @@ const isLoading = ref(true);
 const isFormOpen = ref(false);
 const isPublishing = ref(false);
 const withdrawing = ref<VenueCompetitionView | null>(null);
+// The competition being changed, in the form, rather than a new one
+const editing = ref<VenueCompetitionView | null>(null);
+const formRef = ref<HTMLFormElement | null>(null);
 
 const today = toParisTime(new Date()).day;
 
@@ -58,37 +67,75 @@ async function load() {
   }
 }
 
-async function openForm() {
-  // The divisions may have changed on the board since the page opened
+// The divisions may have changed on the board since the page opened
+async function readDivisionCount() {
   try {
     divisionCount.value = (await fetchVenueDivisions(props.venueId)).divisionCount;
   } catch (error) {
     setErrorFromException(error, ERROR.divisionsFetchFailed);
   }
+}
+
+// The form in sight, wherever the list was scrolled to
+async function showForm() {
+  isFormOpen.value = true;
+  await nextTick();
+  formRef.value?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+async function openForm() {
+  await readDivisionCount();
+  editing.value = null;
   if (division.value > divisionCount.value) division.value = 1;
   title.value = suggestedTitle.value;
-  isFormOpen.value = true;
+  date.value = today;
+  startTime.value = '20:00';
+  endTime.value = '23:00';
+  description.value = '';
+  await showForm();
+}
+
+// The form on a competition published, to change it
+async function edit(competition: VenueCompetitionView) {
+  await readDivisionCount();
+  editing.value = competition;
+  kind.value = competition.division ? 'division' : 'tournament';
+  if (competition.division) division.value = competition.division;
+  title.value = competition.title;
+  date.value = competition.date;
+  startTime.value = competition.startTime;
+  endTime.value = competition.endTime;
+  description.value = competition.description ?? '';
+  await showForm();
+}
+
+function closeForm() {
+  isFormOpen.value = false;
+  editing.value = null;
 }
 
 async function publish() {
   if (!canPublish.value || isPublishing.value) return;
   isPublishing.value = true;
   clearErrors();
+  const changed = editing.value;
+  const competition = {
+    division: kind.value === 'division' ? division.value : null,
+    title: title.value.trim(),
+    date: date.value,
+    startTime: startTime.value,
+    endTime: endTime.value,
+    description: description.value.trim() || null,
+  };
   try {
-    const published = await createVenueCompetition(props.venueId, {
-      division: kind.value === 'division' ? division.value : null,
-      title: title.value.trim(),
-      date: date.value,
-      startTime: startTime.value,
-      endTime: endTime.value,
-      description: description.value.trim() || null,
-    });
-    competitions.value = [...competitions.value, published]
+    const saved = changed
+      ? await updateVenueCompetition(props.venueId, changed.id, competition)
+      : await createVenueCompetition(props.venueId, competition);
+    competitions.value = [...competitions.value.filter(candidate => candidate.id !== saved.id), saved]
       .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
-    isFormOpen.value = false;
-    description.value = '';
+    closeForm();
   } catch (error) {
-    setErrorFromException(error, ERROR.competitionSaveFailed);
+    setErrorFromException(error, changed ? ERROR.competitionUpdateFailed : ERROR.competitionSaveFailed);
   } finally {
     isPublishing.value = false;
   }
@@ -116,7 +163,11 @@ onMounted(load);
       <button v-if="!isFormOpen" type="button" class="btn-publish" @click="openForm">Publier une compétition</button>
     </div>
 
-    <form v-if="isFormOpen" class="competition-form" @submit.prevent="publish">
+    <form v-if="isFormOpen" ref="formRef" class="competition-form" @submit.prevent="publish">
+      <p v-if="editing" class="form-hint">
+        Les équipes qui l'ont reçue sont prévenues du changement, et celles qui l'ont ajoutée voient leur calendrier suivre.
+      </p>
+
       <div class="form-kinds" role="radiogroup" aria-label="Type de compétition">
         <button type="button" class="form-kind" :class="{ active: kind === 'division' }" :aria-checked="kind === 'division'" role="radio" @click="kind = 'division'">
           Journée de division
@@ -146,9 +197,10 @@ onMounted(load);
       />
 
       <div class="form-actions">
-        <button type="button" class="btn-neutral" @click="isFormOpen = false">Annuler</button>
+        <button type="button" class="btn-neutral" @click="closeForm">Annuler</button>
         <button type="submit" class="btn-publish" :disabled="!canPublish || isPublishing">
-          {{ isPublishing ? 'Publication…' : 'Publier' }}
+          <template v-if="editing">{{ isPublishing ? 'Enregistrement…' : 'Enregistrer' }}</template>
+          <template v-else>{{ isPublishing ? 'Publication…' : 'Publier' }}</template>
         </button>
       </div>
     </form>
@@ -169,6 +221,7 @@ onMounted(load);
         :end-time="competition.endTime"
         :outcome="describeCompetitionAnswers(competition.answers)"
         :description="competition.description"
+        @edit="edit(competition)"
         @withdraw="withdrawing = competition"
       />
     </ol>
@@ -251,6 +304,7 @@ onMounted(load);
 }
 
 .form-hint {
+  margin: 0;
   color: $color-text-secondary;
 }
 

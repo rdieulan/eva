@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // What a venue's manager published, in the list of its tab: the symbol of its
 // subject, its title and kind, its day and hours, what came of it, the word on
-// it, and the way to withdraw it
+// it, and the ways to change it or withdraw it
 import type { Subject } from '@shared/types';
 import { formatShortDay } from '@shared/utils';
 import SubjectIcon from '@/components/common/SubjectIcon.vue';
@@ -18,6 +18,7 @@ defineProps<{
 }>();
 
 defineEmits<{
+  edit: [];
   withdraw: [];
 }>();
 </script>
@@ -34,8 +35,10 @@ defineEmits<{
       <span class="publication-outcome">{{ outcome }}</span>
       <span v-if="description" class="publication-description">{{ description }}</span>
     </div>
-    <!-- //TODO(salle : modifier une publication) une publication ne se modifie pas : on la retire et on la republie pour l'instant -->
-    <button type="button" class="btn-withdraw" @click="$emit('withdraw')">Retirer</button>
+    <div class="publication-actions">
+      <button type="button" class="btn-edit" @click="$emit('edit')">Modifier</button>
+      <button type="button" class="btn-withdraw" @click="$emit('withdraw')">Retirer</button>
+    </div>
   </li>
 </template>
 
@@ -54,6 +57,11 @@ defineEmits<{
   border: $border-thin solid $color-border-light;
   border-left: 4px solid var(--subject-color);
   border-radius: $radius-lg;
+
+  // On a phone the buttons go under the text, which keeps the width
+  @include mobile-lg {
+    flex-wrap: wrap;
+  }
 }
 
 .publication-text {
@@ -92,9 +100,26 @@ defineEmits<{
   font-size: $font-size-sm;
 }
 
+.publication-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: $spacing-xs;
+  flex-shrink: 0;
+
+  @include mobile-lg {
+    width: 100%;
+  }
+}
+
+// Changing, in the colour of every Modifier of the app
+.btn-edit {
+  @include btn-base($color-edit);
+  padding: $spacing-xs $spacing-md;
+}
+
 .btn-withdraw {
   @include btn-base($color-danger);
   padding: $spacing-xs $spacing-md;
-  flex-shrink: 0;
 }
 </style>

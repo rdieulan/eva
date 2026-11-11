@@ -4,7 +4,7 @@
 // then what there is to do. And what a venue publishes, as a card of its own
 // Discord.
 
-import type { NotificationContent, NotificationKind, VenuePublicationFacts } from '@shared/types';
+import type { NotificationContent, NotificationKind, PublicationTiming, VenuePublicationFacts } from '@shared/types';
 import { dayAndHours, describeNotification, notificationLook, notificationTargetPath } from '@shared/utils';
 import { appUrl } from '@utils/app-url';
 import type { DiscordMessage } from '../../integrations/discord/discord-webhook';
@@ -31,7 +31,9 @@ const KIND_FOOTERS: Record<NotificationKind, string> = {
   COMPETITION_OFFERED: COMPETITION_FOOTER,
   COMPETITION_ADDED: COMPETITION_FOOTER,
   COMPETITION_WITHDRAWN: COMPETITION_FOOTER,
+  COMPETITION_CHANGED: COMPETITION_FOOTER,
   VENUE_EVENT_WITHDRAWN: VENUE_FOOTER,
+  VENUE_EVENT_CHANGED: VENUE_FOOTER,
 };
 
 // The bar of a card, coloured as the bell colours the same notification
@@ -79,7 +81,9 @@ const ACTION_ICONS: Record<NotificationKind, string> = {
   COMPETITION_OFFERED: '💬',
   COMPETITION_ADDED: '🏆',
   COMPETITION_WITHDRAWN: '📆',
+  COMPETITION_CHANGED: '📆',
   VENUE_EVENT_WITHDRAWN: '📆',
+  VENUE_EVENT_CHANGED: '📆',
 };
 const ELSEWHERE_ICON = '🎟️';
 
@@ -97,7 +101,9 @@ const KIND_ICONS: Record<NotificationKind, string> = {
   COMPETITION_OFFERED: '🏆',
   COMPETITION_ADDED: '✅',
   COMPETITION_WITHDRAWN: '🗑️',
+  COMPETITION_CHANGED: '✏️',
   VENUE_EVENT_WITHDRAWN: '🗑️',
+  VENUE_EVENT_CHANGED: '✏️',
 };
 
 // What Discord would read as formatting or a link in a team's name or message
@@ -152,37 +158,41 @@ export function notificationMessage(
 
 /**
  * What a venue tells the channel of its own Discord: a competition or an
- * event its manager published, or withdrew
+ * event its manager published, changed, or withdrew
  */
 export interface VenueAnnouncement {
   subject: 'competition' | 'event';
-  withdrawn: boolean;
-  facts: VenuePublicationFacts;
+  change: 'published' | 'changed' | 'withdrawn';
+  facts: VenuePublicationFacts; // As it now is, or as it was once withdrawn
   kind: string | null; // What a competition is, beside its title (competitionKind); nothing for an event
+  before?: PublicationTiming | null; // Changed: when it was, if its day or hours moved
 }
 
 const ANNOUNCEMENT_TITLES = {
-  competition: { published: 'Nouvelle compétition', withdrawn: 'Compétition annulée' },
-  event: { published: 'Nouvel événement', withdrawn: 'Événement annulé' },
+  competition: { published: 'Nouvelle compétition', changed: 'Compétition modifiée', withdrawn: 'Compétition annulée' },
+  event: { published: 'Nouvel événement', changed: 'Événement modifié', withdrawn: 'Événement annulé' },
 } as const;
 
 const ANNOUNCEMENT_ICONS = { competition: '🏆', event: '📅' } as const;
 
 /**
  * What the venue publishes, as a card of its own Discord, for its public:
- * its title, when, what it is, and the venue's word on it; withdrawn, when it
- * was, in red. The channel is the venue's: the card does not name it.
+ * its title, when, what it is, and the venue's word on it; changed, when it
+ * was before too; withdrawn, when it was, in red. The channel is the
+ * venue's: the card does not name it.
  */
-export function venueAnnouncementMessage({ subject, withdrawn, facts, kind }: VenueAnnouncement): DiscordMessage {
+export function venueAnnouncementMessage({ subject, change, facts, kind, before = null }: VenueAnnouncement): DiscordMessage {
   const when = withIcon('📅', `**${escapeMarkdown(dayAndHours(facts))}**`);
-  const word = !withdrawn && facts.description ? quoted(facts.description) : null;
+  const was = change === 'changed' && before ? escapeMarkdown(`Avant : ${dayAndHours(before)}.`) : null;
+  const word = change !== 'withdrawn' && facts.description ? quoted(facts.description) : null;
+  const icon = { published: ANNOUNCEMENT_ICONS[subject], changed: '✏️', withdrawn: '🗑️' }[change];
   return {
     username: POSTED_AS,
     embeds: [{
       author: { name: facts.title },
-      title: withIcon(withdrawn ? '🗑️' : ANNOUNCEMENT_ICONS[subject], ANNOUNCEMENT_TITLES[subject][withdrawn ? 'withdrawn' : 'published']),
-      description: [when, kind ? escapeMarkdown(kind) : null, word].filter(Boolean).join('\n\n'),
-      color: withdrawn ? CARD_COLORS.refused : CARD_COLORS[subject],
+      title: withIcon(icon, ANNOUNCEMENT_TITLES[subject][change]),
+      description: [when, was, kind ? escapeMarkdown(kind) : null, word].filter(Boolean).join('\n\n'),
+      color: change === 'withdrawn' ? CARD_COLORS.refused : CARD_COLORS[subject],
       footer: { text: VENUE_FOOTER },
       timestamp: new Date().toISOString(),
     }],

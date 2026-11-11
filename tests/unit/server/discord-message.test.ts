@@ -195,7 +195,7 @@ describe('venueAnnouncementMessage', () => {
   };
 
   it('lays an event the venue published out for its public: its title, when, and the venue\'s word', () => {
-    const message = venueAnnouncementMessage({ subject: 'event', withdrawn: false, facts: NIGHT, kind: null });
+    const message = venueAnnouncementMessage({ subject: 'event', change: 'published', facts: NIGHT, kind: null });
 
     expect(message.username).toBe('EVA');
     expect(message.embeds[0]).toMatchObject({
@@ -210,17 +210,32 @@ describe('venueAnnouncementMessage', () => {
   it('tells what a competition is, and a withdrawal in red, without the word on it', () => {
     const day = { ...NIGHT, title: 'Journée de la Division 2', date: '2026-11-28', startTime: '14:00', endTime: '19:00', description: 'Convocation 13:30' };
 
-    expect(venueAnnouncementMessage({ subject: 'competition', withdrawn: false, facts: day, kind: 'Division 2' }).embeds[0]).toMatchObject({
+    expect(venueAnnouncementMessage({ subject: 'competition', change: 'published', facts: day, kind: 'Division 2' }).embeds[0]).toMatchObject({
       title: `🏆${GAP}Nouvelle compétition`,
       description: `📅${GAP}**sam. 28/11 · 14:00 – 19:00**\n\nDivision 2\n\n> Convocation 13:30`,
       color: CARD_COLORS.competition,
     });
-    expect(venueAnnouncementMessage({ subject: 'competition', withdrawn: true, facts: day, kind: 'Division 2' }).embeds[0]).toMatchObject({
+    expect(venueAnnouncementMessage({ subject: 'competition', change: 'withdrawn', facts: day, kind: 'Division 2' }).embeds[0]).toMatchObject({
       title: `🗑️${GAP}Compétition annulée`,
       description: `📅${GAP}**sam. 28/11 · 14:00 – 19:00**\n\nDivision 2`,
       color: CARD_COLORS.refused,
     });
-    expect(venueAnnouncementMessage({ subject: 'event', withdrawn: true, facts: NIGHT, kind: null }).embeds[0]!.title).toBe(`🗑️${GAP}Événement annulé`);
+    expect(venueAnnouncementMessage({ subject: 'event', change: 'withdrawn', facts: NIGHT, kind: null }).embeds[0]!.title).toBe(`🗑️${GAP}Événement annulé`);
+  });
+
+  it('tells a change, with when it was before when its day or hours moved', () => {
+    const moved = venueAnnouncementMessage({
+      subject: 'event', change: 'changed', facts: { ...NIGHT, startTime: '22:00' }, kind: null,
+      before: { date: '2026-11-13', startTime: '21:00', endTime: '23:59' },
+    }).embeds[0]!;
+
+    expect(moved).toMatchObject({
+      title: `✏️${GAP}Événement modifié`,
+      description: `📅${GAP}**ven. 13/11 · 22:00 – 23:59**\n\nAvant : ven. 13/11 · 21:00 – 23:59.\n\n> Ouverte à tous,\n> 15 € la soirée`,
+      color: CARD_COLORS.event,
+    });
+    expect(venueAnnouncementMessage({ subject: 'event', change: 'changed', facts: NIGHT, kind: null, before: null }).embeds[0]!.description)
+      .not.toContain('Avant');
   });
 });
 

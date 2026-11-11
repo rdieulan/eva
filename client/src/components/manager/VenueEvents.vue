@@ -3,11 +3,11 @@
 // league teams or not and players alone: a night session, and what comes
 // next. Offered to no team: the teams of the venue see them in their
 // calendar and add them there if they wish.
-import { computed, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, ref } from 'vue';
 import type { VenueEventSummary } from '@shared/types';
 import { ERROR } from '@shared/constants';
 import { formatShortDay, toParisTime } from '@shared/utils';
-import { createVenueEvent, deleteVenueEvent, fetchVenueEvents } from '@/api';
+import { createVenueEvent, deleteVenueEvent, fetchVenueEvents, updateVenueEvent } from '@/api';
 import { describeTeamsAdding } from '@/utils/venue-publications';
 import { useErrors } from '@/composables/useErrors';
 import ConfirmModal from '@/components/common/ConfirmModal.vue';
@@ -23,6 +23,9 @@ const isLoading = ref(true);
 const isFormOpen = ref(false);
 const isPublishing = ref(false);
 const withdrawing = ref<VenueEventSummary | null>(null);
+// The event being changed, in the form, rather than a new one
+const editing = ref<VenueEventSummary | null>(null);
+const formRef = ref<HTMLFormElement | null>(null);
 
 const today = toParisTime(new Date()).day;
 
@@ -46,25 +49,60 @@ async function load() {
   }
 }
 
+// The form in sight, wherever the list was scrolled to
+async function showForm() {
+  isFormOpen.value = true;
+  await nextTick();
+  formRef.value?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+async function openForm() {
+  editing.value = null;
+  title.value = '';
+  date.value = today;
+  startTime.value = '21:00';
+  endTime.value = '23:59';
+  description.value = '';
+  await showForm();
+}
+
+// The form on an event published, to change it
+async function edit(event: VenueEventSummary) {
+  editing.value = event;
+  title.value = event.title;
+  date.value = event.date;
+  startTime.value = event.startTime;
+  endTime.value = event.endTime;
+  description.value = event.description ?? '';
+  await showForm();
+}
+
+function closeForm() {
+  isFormOpen.value = false;
+  editing.value = null;
+}
+
 async function publish() {
   if (!canPublish.value || isPublishing.value) return;
   isPublishing.value = true;
   clearErrors();
+  const changed = editing.value;
+  const event = {
+    title: title.value.trim(),
+    date: date.value,
+    startTime: startTime.value,
+    endTime: endTime.value,
+    description: description.value.trim() || null,
+  };
   try {
-    const published = await createVenueEvent(props.venueId, {
-      title: title.value.trim(),
-      date: date.value,
-      startTime: startTime.value,
-      endTime: endTime.value,
-      description: description.value.trim() || null,
-    });
-    events.value = [...events.value, published]
+    const saved = changed
+      ? await updateVenueEvent(props.venueId, changed.id, event)
+      : await createVenueEvent(props.venueId, event);
+    events.value = [...events.value.filter(candidate => candidate.id !== saved.id), saved]
       .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
-    isFormOpen.value = false;
-    title.value = '';
-    description.value = '';
+    closeForm();
   } catch (error) {
-    setErrorFromException(error, ERROR.venueEventSaveFailed);
+    setErrorFromException(error, changed ? ERROR.venueEventUpdateFailed : ERROR.venueEventSaveFailed);
   } finally {
     isPublishing.value = false;
   }
@@ -89,10 +127,12 @@ onMounted(load);
 <template>
   <div class="venue-events">
     <div class="events-toolbar">
-      <button v-if="!isFormOpen" type="button" class="btn-publish" @click="isFormOpen = true">Publier un événement</button>
+      <button v-if="!isFormOpen" type="button" class="btn-publish" @click="openForm">Publier un événement</button>
     </div>
 
-    <form v-if="isFormOpen" class="event-form" @submit.prevent="publish">
+    <form v-if="isFormOpen" ref="formRef" class="event-form" @submit.prevent="publish">
+      <p v-if="editing" class="form-hint">Les équipes qui l'ont ajouté sont prévenues du changement, et leur calendrier suit.</p>
+
       <VenuePublicationFields
         v-model:title="title"
         v-model:date="date"
@@ -105,9 +145,10 @@ onMounted(load);
       />
 
       <div class="form-actions">
-        <button type="button" class="btn-neutral" @click="isFormOpen = false">Annuler</button>
+        <button type="button" class="btn-neutral" @click="closeForm">Annuler</button>
         <button type="submit" class="btn-publish" :disabled="!canPublish || isPublishing">
-          {{ isPublishing ? 'Publication…' : 'Publier' }}
+          <template v-if="editing">{{ isPublishing ? 'Enregistrement…' : 'Enregistrer' }}</template>
+          <template v-else>{{ isPublishing ? 'Publication…' : 'Publier' }}</template>
         </button>
       </div>
     </form>
@@ -127,6 +168,7 @@ onMounted(load);
         :end-time="event.endTime"
         :outcome="describeTeamsAdding(event.teamsAdding)"
         :description="event.description"
+        @edit="edit(event)"
         @withdraw="withdrawing = event"
       />
     </ol>
@@ -183,6 +225,11 @@ onMounted(load);
   display: flex;
   justify-content: flex-end;
   gap: $spacing-sm;
+}
+
+.form-hint {
+  margin: 0;
+  color: $color-text-secondary;
 }
 
 .events-empty {

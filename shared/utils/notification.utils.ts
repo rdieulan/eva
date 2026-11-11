@@ -207,6 +207,20 @@ export function describeNotification(content: NotificationContent): Notification
         elsewhere: null,
       };
     }
+    case 'COMPETITION_CHANGED': {
+      const { data } = content;
+      return {
+        title: 'Compétition modifiée par la salle',
+        ...publicationPieces(data),
+        detail: data.before ? `Avant : ${dayAndHours(data.before)}.` : null,
+        // Accepted, its copy in the calendar follows; otherwise it still waits for an answer
+        target: data.eventId
+          ? { page: 'calendar', date: data.date, mode: 'team', open: { kind: 'event', id: data.eventId } }
+          : { page: 'home' },
+        action: data.eventId ? 'Voir la compétition' : 'Répondre',
+        elsewhere: null,
+      };
+    }
     case 'VENUE_EVENT_WITHDRAWN': {
       const { data } = content;
       return {
@@ -216,6 +230,17 @@ export function describeNotification(content: NotificationContent): Notification
         quote: null,
         target: { page: 'calendar', date: data.date, mode: 'team' },
         action: 'Ouvrir le calendrier',
+        elsewhere: null,
+      };
+    }
+    case 'VENUE_EVENT_CHANGED': {
+      const { data } = content;
+      return {
+        title: 'Événement modifié par la salle',
+        ...publicationPieces(data),
+        detail: data.before ? `Avant : ${dayAndHours(data.before)}.` : null,
+        target: { page: 'calendar', date: data.date, mode: 'team', open: { kind: 'event', id: data.eventId } },
+        action: 'Voir l\'événement',
         elsewhere: null,
       };
     }
@@ -246,11 +271,14 @@ export function notificationLook(content: NotificationContent): NotificationLook
     case 'LEAGUE_REGISTRATION_CLOSING':
     case 'COMPETITION_OFFERED':
     case 'COMPETITION_ADDED':
+    case 'COMPETITION_CHANGED':
       return { subject: 'competition', tone: 'subject' };
     case 'COMPETITION_WITHDRAWN':
       return { subject: 'competition', tone: content.data.accepted ? 'refused' : 'fell-through' };
     case 'VENUE_EVENT_WITHDRAWN':
       return { subject: 'event', tone: 'refused' };
+    case 'VENUE_EVENT_CHANGED':
+      return { subject: 'event', tone: 'subject' };
   }
 }
 

@@ -715,4 +715,6 @@ enum NotificationKind {
   COMPETITION_ADDED // A competition of the venue was accepted into the team's calendar
   COMPETITION_WITHDRAWN // The venue withdrew a competition the team had accepted, or not answered yet
   VENUE_EVENT_WITHDRAWN // The venue withdrew an event the team had added to its calendar
+  COMPETITION_CHANGED // The venue changed a competition the team accepted, or has not answered yet
+  VENUE_EVENT_CHANGED // The venue changed an event the team had added to its calendar
 }

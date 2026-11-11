@@ -149,9 +149,11 @@ export {
   readVenueDivisions,
   fetchVenueCompetitions,
   createVenueCompetition,
+  updateVenueCompetition,
   deleteVenueCompetition,
   fetchVenueEvents,
   createVenueEvent,
+  updateVenueEvent,
   deleteVenueEvent,
   fetchVenueCalendar,
 } from '@/api/manager.api';

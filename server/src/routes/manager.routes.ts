@@ -21,9 +21,10 @@ import {
   createVenueCompetition,
   deleteVenueCompetition,
   listVenueCompetitions,
+  updateVenueCompetition,
 } from '@services/venue-competitions.service';
 import { getVenueSettings, refreshVenueFromEva } from '@services/venue-settings.service';
-import { createVenueEvent, deleteVenueEvent, listVenueEvents } from '@services/venue-events.service';
+import { createVenueEvent, deleteVenueEvent, listVenueEvents, updateVenueEvent } from '@services/venue-events.service';
 import { venueCalendarMonth } from '@services/venue-calendar.service';
 import { isValidMonth } from '@services/helpers/validation.helper';
 import { DISCORD_LINK_REFUSALS, linkDiscordChannel, unlinkDiscordChannel } from '@services/discord-channel.service';
@@ -184,6 +185,20 @@ router.post('/venues/:venueId/competitions', requireManagedVenue, async (req: Ma
   }
 });
 
+// PUT /api/manager/venues/:venueId/competitions/:competitionId - Change a
+// competition: the teams it went to and the venue's Discord are told
+router.put('/venues/:venueId/competitions/:competitionId', requireManagedVenue, async (req: ManagerRequest, res: Response) => {
+  try {
+    const result = await updateVenueCompetition(req.params.venueId as string, req.params.competitionId as string, req.body ?? {});
+    if (!result) return res.status(404).json({ errors: [ERROR.competitionNotFound] });
+    if ('error' in result) return res.status(400).json({ errors: [result.error] });
+    res.json(result);
+  } catch (error) {
+    apiLogger.error('Error changing a venue competition:', error);
+    res.status(500).json({ errors: [ERROR.competitionUpdateFailed] });
+  }
+});
+
 // DELETE /api/manager/venues/:venueId/competitions/:competitionId - Withdraw a competition
 router.delete('/venues/:venueId/competitions/:competitionId', requireManagedVenue, async (req: ManagerRequest, res: Response) => {
   try {
@@ -215,6 +230,20 @@ router.post('/venues/:venueId/events', requireManagedVenue, async (req: ManagerR
   } catch (error) {
     apiLogger.error('Error publishing a venue event:', error);
     res.status(500).json({ errors: [ERROR.venueEventSaveFailed] });
+  }
+});
+
+// PUT /api/manager/venues/:venueId/events/:eventId - Change an event: the
+// teams that added it and the venue's Discord are told
+router.put('/venues/:venueId/events/:eventId', requireManagedVenue, async (req: ManagerRequest, res: Response) => {
+  try {
+    const result = await updateVenueEvent(req.params.venueId as string, req.params.eventId as string, req.body ?? {});
+    if (!result) return res.status(404).json({ errors: [ERROR.venueEventNotFound] });
+    if ('error' in result) return res.status(400).json({ errors: [result.error] });
+    res.json(result);
+  } catch (error) {
+    apiLogger.error('Error changing a venue event:', error);
+    res.status(500).json({ errors: [ERROR.venueEventUpdateFailed] });
   }
 });
 

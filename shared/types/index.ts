@@ -76,6 +76,7 @@ export type {
   HomePageTarget,
   LeagueRegistrationFacts,
   VenuePublicationFacts,
+  PublicationTiming,
   NotificationDescription,
 } from './notification.types';
 export { NOTIFICATION_KINDS } from './notification.types';

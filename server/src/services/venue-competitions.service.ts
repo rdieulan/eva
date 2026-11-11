@@ -13,10 +13,11 @@ import {
   announceOnVenueDiscord,
   notifyCompetitionAdded,
   notifyCompetitionOffered,
+  notifyCompetitionChanged,
   notifyCompetitionWithdrawn,
 } from '@services/venue-publication-notification.service';
 import { formatDateStr } from './helpers/date.helper';
-import { parseVenuePublication, type VenuePublicationInput } from './helpers/venue-publication.helper';
+import { parseVenuePublication, samePublication, timingBefore, type VenuePublicationInput } from './helpers/venue-publication.helper';
 
 /** A competition as its manager publishes it: a publication, and the division whose day it is */
 export interface VenueCompetitionInput extends VenuePublicationInput {
@@ -181,8 +182,71 @@ export async function createVenueCompetition(
   });
   const facts = { title, venueName: venue.name, date, startTime, endTime, description };
   await notifyCompetitionOffered(facts, teamIds);
-  announceOnVenueDiscord(venueId, { subject: 'competition', withdrawn: false, facts, kind: competitionKind({ division }) });
+  announceOnVenueDiscord(venueId, { subject: 'competition', change: 'published', facts, kind: competitionKind({ division }) });
   return toView(row);
+}
+
+/**
+ * Change a competition of a venue, checked as at publication: its day, its
+ * hours, its title, its description, or the division whose day it is. The
+ * copies of the teams that accepted it follow. The teams it went to are told,
+ * as on its withdrawal, and so is the venue's own Discord; the teams a new
+ * division adds get it offered, those it leaves lose it if they had not
+ * answered. Null when the venue has no such competition; nothing told when
+ * nothing changed.
+ */
+export async function updateVenueCompetition(
+  venueId: string,
+  competitionId: string,
+  input: Partial<VenueCompetitionInput>,
+  now: Date = new Date(),
+): Promise<{ error: string } | VenueCompetitionView | null> {
+  const publication = parseVenuePublication(input, now);
+  if ('error' in publication) return publication;
+
+  const current = await prisma.venueCompetition.findFirst({
+    where: { id: competitionId, venueId },
+    select: { ...FACTS_SELECT, division: true, venue: { select: { name: true, leagueDivisionCount: true } } },
+  });
+  if (!current) return null;
+  const division = input.division ?? null;
+  if (division !== null && (!Number.isInteger(division) || division < 1 || division > current.venue.leagueDivisionCount)) {
+    return { error: ERROR.competitionDivisionInvalid };
+  }
+
+  const before = toFacts(current);
+  const unchanged = samePublication(before, publication) && division === current.division;
+  const { title, date, startTime, endTime, description } = publication;
+  const row = unchanged
+    ? await prisma.venueCompetition.findUniqueOrThrow({ where: { id: competitionId }, select: COMPETITION_SELECT })
+    : await prisma.$transaction(async tx => {
+      // The teams' copies follow it
+      await tx.calendarEvent.updateMany({
+        where: { venueCompetitionId: competitionId },
+        data: { title, date: new Date(date), startTime, endTime, description },
+      });
+      return tx.venueCompetition.update({
+        where: { id: competitionId },
+        data: { division, title, date: new Date(date), startTime, endTime, description },
+        select: COMPETITION_SELECT,
+      });
+    });
+  if (unchanged) return toView(row);
+
+  // A team that keeps it hears of the change; one a new division adds is offered it (see syncCompetitionOffers)
+  const kept = new Set((await prisma.venueCompetitionOffer.findMany({ where: { competitionId }, select: { teamId: true } })).map(offer => offer.teamId));
+  if (division !== current.division) await syncCompetitionOffers([venueId], now);
+  const offers = await prisma.venueCompetitionOffer.findMany({
+    where: { competitionId, teamId: { in: [...kept] } },
+    select: { teamId: true, status: true, team: { select: { calendarEvents: { where: { venueCompetitionId: competitionId }, select: { id: true } } } } },
+  });
+  const facts = { ...before, title, date, startTime, endTime, description };
+  const timing = timingBefore(before, facts);
+  await notifyCompetitionChanged(facts, timing, offers.map(offer => ({
+    teamId: offer.teamId, status: offer.status, eventId: offer.team.calendarEvents[0]?.id ?? null,
+  })));
+  announceOnVenueDiscord(venueId, { subject: 'competition', change: 'changed', facts, kind: competitionKind({ division }), before: timing });
+  return toView(await prisma.venueCompetition.findUniqueOrThrow({ where: { id: competitionId }, select: COMPETITION_SELECT }));
 }
 
 /**
@@ -202,7 +266,7 @@ export async function deleteVenueCompetition(venueId: string, competitionId: str
   if (!count) return false; // Withdrawn meanwhile: told by that withdrawal
   const facts = toFacts(competition);
   await notifyCompetitionWithdrawn(facts, competition.offers);
-  announceOnVenueDiscord(venueId, { subject: 'competition', withdrawn: true, facts, kind: competitionKind(competition) });
+  announceOnVenueDiscord(venueId, { subject: 'competition', change: 'withdrawn', facts, kind: competitionKind(competition) });
   return true;
 }
 

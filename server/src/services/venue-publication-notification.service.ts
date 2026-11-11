@@ -1,11 +1,11 @@
 // What a venue's publications tell the teams: its competitions, offered to
-// them, added to a team's calendar, withdrawn; its events, withdrawn once a
-// team added them. Each function is handed the facts of what just happened,
+// them, added to a team's calendar, changed, withdrawn; its events, changed or
+// withdrawn once a team added them. Each function is handed the facts of what just happened,
 // once it is done, and gives them to notify(): who is told is decided here,
 // how they are told is not. And what they tell the venue's own public, on
 // the channel of its Discord.
 
-import type { VenuePublicationFacts } from '@shared/types';
+import type { PublicationTiming, VenuePublicationFacts } from '@shared/types';
 import { notify, type PermissionRef } from '@services/notification.service';
 import { postInBackground, postInDiscordChannel } from '@services/discord-channel.service';
 import { venueAnnouncementMessage, type VenueAnnouncement } from '@services/helpers/discord-message.helper';
@@ -51,15 +51,46 @@ export async function notifyCompetitionWithdrawn(
 }
 
 /**
- * A competition or an event the venue published or withdrew, on the channel
+ * A competition or an event the venue published, changed or withdrew, on the channel
  * of its own Discord when it linked one (Ma salle): its public, players alone
  * included, hears of it there, and the manager does not post it twice. Done
  * on its own: the publication never waits for Discord.
  */
 export function announceOnVenueDiscord(venueId: string, announcement: VenueAnnouncement): void {
-  const what = `the ${announcement.withdrawn ? 'withdrawal' : 'publication'} of a ${announcement.subject}`;
+  const what = `the ${{ published: 'publication', changed: 'change', withdrawn: 'withdrawal' }[announcement.change]} of a ${announcement.subject}`;
   postInBackground(`Discord post of venue ${venueId}`, () =>
     postInDiscordChannel('venue', venueId, what, async () => ({ message: venueAnnouncementMessage(announcement) })));
+}
+
+/**
+ * A competition its venue changed: a team that accepted it hears of it whole,
+ * its copy following; one that has not answered yet, those who answer for it.
+ * A team that refused it is told nothing.
+ */
+export async function notifyCompetitionChanged(
+  facts: VenuePublicationFacts,
+  before: PublicationTiming | null,
+  offers: { teamId: string; status: 'PENDING' | 'ACCEPTED' | 'REFUSED'; eventId: string | null }[],
+): Promise<void> {
+  for (const { teamId, status, eventId } of offers) {
+    if (status === 'REFUSED') continue;
+    const accepted = status === 'ACCEPTED';
+    await notify(
+      { kind: 'COMPETITION_CHANGED', data: { ...facts, before, eventId: accepted ? eventId : null } },
+      accepted ? { teamId } : { teamId, permission: CAN_ANSWER },
+    );
+  }
+}
+
+/** An event its venue changed: each team that added it hears of it whole, its copy following */
+export async function notifyVenueEventChanged(
+  facts: VenuePublicationFacts,
+  before: PublicationTiming | null,
+  copies: { teamId: string; eventId: string }[],
+): Promise<void> {
+  for (const { teamId, eventId } of copies) {
+    await notify({ kind: 'VENUE_EVENT_CHANGED', data: { ...facts, before, eventId } }, { teamId });
+  }
 }
 
 /** An event withdrawn by its venue: each team that had added it hears of it whole, the event gone from its calendar */

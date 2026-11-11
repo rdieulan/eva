@@ -255,6 +255,43 @@ describe('describeNotification, the competitions of the venue', () => {
   });
 });
 
+describe('describeNotification, a publication the venue changed', () => {
+  const facts = {
+    title: 'Journée de la Division 2', venueName: 'Nîmes', date: '2026-11-28', startTime: '15:00', endTime: '20:00', description: null,
+  };
+  const BEFORE = { date: '2026-11-28', startTime: '14:00', endTime: '19:00' };
+
+  it('tells a competition changed, when it was before it moved, and opens the team\'s copy once accepted', () => {
+    expect(describeNotification({ kind: 'COMPETITION_CHANGED', data: { ...facts, before: BEFORE, eventId: 'event-1' } })).toEqual({
+      title: 'Compétition modifiée par la salle',
+      body: 'Journée de la Division 2 · sam. 28/11 · 15:00 – 20:00 · Nîmes',
+      who: { name: 'Journée de la Division 2', teamId: null },
+      when: 'sam. 28/11 · 15:00 – 20:00',
+      where: 'Nîmes',
+      detail: 'Avant : sam. 28/11 · 14:00 – 19:00.',
+      quote: null,
+      target: { page: 'calendar', date: '2026-11-28', mode: 'team', open: { kind: 'event', id: 'event-1' } },
+      action: 'Voir la compétition',
+      elsewhere: null,
+    });
+  });
+
+  it('leads to the home a competition changed that still waits for an answer, and says nothing of a time that did not move', () => {
+    expect(describeNotification({ kind: 'COMPETITION_CHANGED', data: { ...facts, before: null, eventId: null } })).toMatchObject({
+      detail: null, target: { page: 'home' }, action: 'Répondre',
+    });
+  });
+
+  it('tells an event changed, its copy in the team\'s calendar following', () => {
+    expect(describeNotification({ kind: 'VENUE_EVENT_CHANGED', data: { ...facts, title: 'Nocturne', before: BEFORE, eventId: 'event-2' } })).toMatchObject({
+      title: 'Événement modifié par la salle',
+      detail: 'Avant : sam. 28/11 · 14:00 – 19:00.',
+      target: { page: 'calendar', date: '2026-11-28', mode: 'team', open: { kind: 'event', id: 'event-2' } },
+      action: 'Voir l\'événement',
+    });
+  });
+});
+
 describe('describeNotification, the events of the venue', () => {
   it('tells an event the team had added withdrawn, gone from the calendar, and leads to its day', () => {
     const night = { title: 'Nocturne', venueName: 'Nîmes', date: '2026-11-28', startTime: '21:00', endTime: '23:59', description: 'Ouverte à tous' };
@@ -321,5 +358,10 @@ describe('notificationLook', () => {
     // An event the team had added, taken out of its calendar
     expect(notificationLook({ kind: 'VENUE_EVENT_WITHDRAWN', data: { ...COMPETITION, title: 'Nocturne' } }))
       .toEqual({ subject: 'event', tone: 'refused' });
+    // Changed, they stay in the colour of their subject
+    expect(notificationLook({ kind: 'COMPETITION_CHANGED', data: { ...COMPETITION, before: null, eventId: null } }))
+      .toEqual({ subject: 'competition', tone: 'subject' });
+    expect(notificationLook({ kind: 'VENUE_EVENT_CHANGED', data: { ...COMPETITION, before: null, eventId: 'e' } }))
+      .toEqual({ subject: 'event', tone: 'subject' });
   });
 });

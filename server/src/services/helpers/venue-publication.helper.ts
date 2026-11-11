@@ -2,6 +2,7 @@
 // event: the same title, day, hours and description, checked the same way
 
 import { ERROR, VENUE_PUBLICATION_DESCRIPTION_MAX, VENUE_PUBLICATION_TITLE_MAX } from '@shared/constants';
+import type { PublicationTiming } from '@shared/types';
 import { toParisTime } from '@shared/utils/date.utils';
 import { isValidDate, isValidTime, isValidTimeRange } from './validation.helper';
 
@@ -34,4 +35,16 @@ export function parseVenuePublication(input: Partial<VenuePublicationInput>, now
     return { error: ERROR.publicationDescriptionTooLong };
   }
   return { title, date, startTime, endTime, description };
+}
+
+/** Whether a publication changes nothing of what it was */
+export function samePublication(before: VenuePublicationInput, after: VenuePublicationInput): boolean {
+  return before.title === after.title && before.date === after.date && before.startTime === after.startTime
+    && before.endTime === after.endTime && before.description === after.description;
+}
+
+/** When a publication was, if the change moved its day or its hours; nothing when they stay */
+export function timingBefore(before: PublicationTiming, after: PublicationTiming): PublicationTiming | null {
+  const moved = before.date !== after.date || before.startTime !== after.startTime || before.endTime !== after.endTime;
+  return moved ? { date: before.date, startTime: before.startTime, endTime: before.endTime } : null;
 }

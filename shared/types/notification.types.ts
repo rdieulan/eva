@@ -23,7 +23,9 @@ export const NOTIFICATION_KINDS = [
   'COMPETITION_OFFERED',
   'COMPETITION_ADDED',
   'COMPETITION_WITHDRAWN',
+  'COMPETITION_CHANGED',
   'VENUE_EVENT_WITHDRAWN',
+  'VENUE_EVENT_CHANGED',
 ] as const;
 
 export type NotificationKind = typeof NOTIFICATION_KINDS[number];
@@ -59,6 +61,13 @@ export interface VenuePublicationFacts {
   description: string | null; // The venue's own words
 }
 
+/** When a publication was before its venue moved it: its day and its hours */
+export interface PublicationTiming {
+  date: string;      // YYYY-MM-DD
+  startTime: string; // HH:mm
+  endTime: string;   // HH:mm
+}
+
 /** What a notification tells, kind by kind: the facts it needs, as they were when it happened */
 export type NotificationContent =
   | { kind: 'SCRIM_PROPOSAL_RECEIVED'; data: ScrimMatchFacts & OtherTeam<'team'> & { searchId: string; message: string | null } }
@@ -73,7 +82,11 @@ export type NotificationContent =
   | { kind: 'COMPETITION_OFFERED'; data: VenuePublicationFacts }
   | { kind: 'COMPETITION_ADDED'; data: VenuePublicationFacts & { eventId: string } }
   | { kind: 'COMPETITION_WITHDRAWN'; data: VenuePublicationFacts & { accepted: boolean } } // accepted: it was in the team's calendar
-  | { kind: 'VENUE_EVENT_WITHDRAWN'; data: VenuePublicationFacts }; // The team had added it to its calendar
+  // As it now is; before: when it was, if its day or hours moved; eventId: the team's copy once accepted, none while it waits for an answer
+  | { kind: 'COMPETITION_CHANGED'; data: VenuePublicationFacts & { before: PublicationTiming | null; eventId: string | null } }
+  | { kind: 'VENUE_EVENT_WITHDRAWN'; data: VenuePublicationFacts } // The team had added it to its calendar
+  // As it now is, the team's copy following; before: when it was, if its day or hours moved
+  | { kind: 'VENUE_EVENT_CHANGED'; data: VenuePublicationFacts & { before: PublicationTiming | null; eventId: string } };
 
 /**
  * The other team of a notification, its name and its id (for the media that

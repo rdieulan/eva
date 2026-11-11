@@ -92,6 +92,19 @@ export async function createVenueCompetition(venueId: string, competition: Omit<
   );
 }
 
+/** Change a competition of the venue: the teams it went to are told */
+export async function updateVenueCompetition(
+  venueId: string,
+  competitionId: string,
+  competition: Omit<VenueCompetitionView, 'id' | 'answers'>,
+): Promise<VenueCompetitionView> {
+  return authFetch<VenueCompetitionView>(
+    `${API_BASE}/venues/${encodeURIComponent(venueId)}/competitions/${encodeURIComponent(competitionId)}`,
+    { method: 'PUT', body: JSON.stringify(competition) },
+    ERROR.competitionUpdateFailed,
+  );
+}
+
 /** Withdraw a competition of the venue */
 export async function deleteVenueCompetition(venueId: string, competitionId: string): Promise<void> {
   const response = await authFetch(
@@ -112,6 +125,19 @@ export async function createVenueEvent(venueId: string, event: Omit<VenueEventSu
     `${API_BASE}/venues/${encodeURIComponent(venueId)}/events`,
     { method: 'POST', body: JSON.stringify(event) },
     ERROR.venueEventSaveFailed,
+  );
+}
+
+/** Change an event of the venue: the teams that added it are told */
+export async function updateVenueEvent(
+  venueId: string,
+  eventId: string,
+  event: Omit<VenueEventSummary, 'id' | 'venueName' | 'teamsAdding'>,
+): Promise<VenueEventSummary> {
+  return authFetch<VenueEventSummary>(
+    `${API_BASE}/venues/${encodeURIComponent(venueId)}/events/${encodeURIComponent(eventId)}`,
+    { method: 'PUT', body: JSON.stringify(event) },
+    ERROR.venueEventUpdateFailed,
   );
 }
 

@@ -322,6 +322,7 @@ export const ERROR = {
   // The events a venue publishes, open to all
   venueEventsFetchFailed: 'Impossible de charger les événements de la salle',
   venueEventSaveFailed: 'Impossible de publier l\'événement',
+  venueEventUpdateFailed: 'Impossible d\'enregistrer l\'événement',
   venueEventDeleteFailed: 'Impossible de retirer l\'événement',
   venueEventNotFound: 'Événement non trouvé',
   venueEventAlreadyAdded: 'Cet événement est déjà dans le calendrier de l\'équipe',
@@ -353,6 +354,7 @@ export const ERROR = {
   // Venue manager: what the venue publishes, its competitions and its events
   competitionsFetchFailed: 'Impossible de charger les compétitions de la salle',
   competitionSaveFailed: 'Impossible de publier la compétition',
+  competitionUpdateFailed: 'Impossible d\'enregistrer la compétition',
   competitionDeleteFailed: 'Impossible de retirer la compétition',
   competitionNotFound: 'Compétition non trouvée',
   publicationInvalid: `Il faut un titre de ${VENUE_PUBLICATION_TITLE_MAX} caractères au plus, un jour à venir, et une heure de fin après celle de début`,

@@ -9,9 +9,13 @@ import { isUniqueViolation } from '@db/prisma-errors';
 import { ERROR } from '@shared/constants';
 import type { VenueEventSummary, VenueEventView, VenuePublicationFacts } from '@shared/types';
 import { toParisTime } from '@shared/utils/date.utils';
-import { announceOnVenueDiscord, notifyVenueEventWithdrawn } from '@services/venue-publication-notification.service';
+import {
+  announceOnVenueDiscord,
+  notifyVenueEventChanged,
+  notifyVenueEventWithdrawn,
+} from '@services/venue-publication-notification.service';
 import { formatDateStr } from './helpers/date.helper';
-import { parseVenuePublication, type VenuePublicationInput } from './helpers/venue-publication.helper';
+import { parseVenuePublication, samePublication, timingBefore, type VenuePublicationInput } from './helpers/venue-publication.helper';
 
 const EVENT_SELECT = {
   id: true, title: true, date: true, startTime: true, endTime: true, description: true, venue: { select: { name: true } },
@@ -76,8 +80,53 @@ export async function createVenueEvent(
     select: EVENT_SELECT,
   });
   const view = toView(row);
-  announceOnVenueDiscord(venueId, { subject: 'event', withdrawn: false, facts: toFacts(view), kind: null });
+  announceOnVenueDiscord(venueId, { subject: 'event', change: 'published', facts: toFacts(view), kind: null });
   return { ...view, teamsAdding: 0 };
+}
+
+/**
+ * Change an event of a venue, checked as at publication. The copies of the
+ * teams that added it follow, and those teams are told, as is the venue's
+ * own Discord. Null when the venue has no such event; nothing told when
+ * nothing changed.
+ */
+export async function updateVenueEvent(
+  venueId: string,
+  eventId: string,
+  input: Partial<VenuePublicationInput>,
+  now: Date = new Date(),
+): Promise<{ error: string } | VenueEventSummary | null> {
+  const publication = parseVenuePublication(input, now);
+  if ('error' in publication) return publication;
+
+  const current = await prisma.venueEvent.findFirst({
+    where: { id: eventId, venueId },
+    select: { ...EVENT_SELECT, teamEvents: { select: { id: true, teamId: true } } },
+  });
+  if (!current) return null;
+  const copies = current.teamEvents.flatMap(copy => (copy.teamId ? [{ teamId: copy.teamId, eventId: copy.id }] : []));
+  const before = toFacts(toView(current));
+  if (samePublication(before, publication)) return { ...toView(current), teamsAdding: copies.length };
+
+  const { title, date, startTime, endTime, description } = publication;
+  const row = await prisma.$transaction(async tx => {
+    // The teams' copies follow it
+    await tx.calendarEvent.updateMany({
+      where: { venueEventId: eventId },
+      data: { title, date: new Date(date), startTime, endTime, description },
+    });
+    return tx.venueEvent.update({
+      where: { id: eventId },
+      data: { title, date: new Date(date), startTime, endTime, description },
+      select: EVENT_SELECT,
+    });
+  });
+  const view = toView(row);
+  const facts = toFacts(view);
+  const timing = timingBefore(before, facts);
+  await notifyVenueEventChanged(facts, timing, copies);
+  announceOnVenueDiscord(venueId, { subject: 'event', change: 'changed', facts, kind: null, before: timing });
+  return { ...view, teamsAdding: copies.length };
 }
 
 /**
@@ -97,7 +146,7 @@ export async function deleteVenueEvent(venueId: string, eventId: string): Promis
   const teamIds = [...new Set(event.teamEvents.map(copy => copy.teamId).filter((teamId): teamId is string => teamId !== null))];
   const facts = toFacts(toView(event));
   await notifyVenueEventWithdrawn(facts, teamIds);
-  announceOnVenueDiscord(venueId, { subject: 'event', withdrawn: true, facts, kind: null });
+  announceOnVenueDiscord(venueId, { subject: 'event', change: 'withdrawn', facts, kind: null });
   return true;
 }
 
