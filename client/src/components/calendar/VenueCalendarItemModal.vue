@@ -2,7 +2,8 @@
 import { ref, watch } from 'vue';
 import type { VenueCalendarItem } from '@shared/types';
 import { getEventTypeClass, getEventTypeTitle } from '@/utils/calendar';
-import { competitionKind, describeCompetitionAnswers, describeTeamsAdding } from '@/utils/venue-publications';
+import { competitionKind } from '@shared/utils';
+import { describeCompetitionAnswers, describeTeamsAdding } from '@/utils/venue-publications';
 import Modal from '@/components/common/Modal.vue';
 import EventSheet from '@/components/calendar/EventSheet.vue';
 

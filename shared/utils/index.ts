@@ -54,6 +54,7 @@ export {
   slugifyVenueName,
   freeVenueSlug,
   describeVenueBoard,
+  competitionKind,
 } from './venue.utils';
 
 export { detectImageType } from './image.utils';
@@ -74,6 +75,6 @@ export {
 
 export { normalizeAccountPermissions } from './permissions.utils';
 
-export { describeNotification, notificationLook, notificationTargetPath } from './notification.utils';
+export { dayAndHours, describeNotification, notificationLook, notificationTargetPath } from './notification.utils';
 
 export { calendarTargetQuery, calendarTargetPath } from './calendar.utils';

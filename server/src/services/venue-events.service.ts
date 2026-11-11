@@ -9,7 +9,7 @@ import { isUniqueViolation } from '@db/prisma-errors';
 import { ERROR } from '@shared/constants';
 import type { VenueEventSummary, VenueEventView, VenuePublicationFacts } from '@shared/types';
 import { toParisTime } from '@shared/utils/date.utils';
-import { notifyVenueEventWithdrawn } from '@services/venue-publication-notification.service';
+import { announceOnVenueDiscord, notifyVenueEventWithdrawn } from '@services/venue-publication-notification.service';
 import { formatDateStr } from './helpers/date.helper';
 import { parseVenuePublication, type VenuePublicationInput } from './helpers/venue-publication.helper';
 
@@ -59,8 +59,9 @@ export async function listVenueEvents(venueId: string, now: Date = new Date()): 
 
 /**
  * Publish an event: a title, a day from today in Paris on, hours that end
- * after they start, and a description of a few lines at most. Nobody is told:
- * it is offered to no team, the teams of the venue see it in their calendar.
+ * after they start, and a description of a few lines at most. No team is
+ * told: it is offered to none, the teams of the venue see it in their
+ * calendar. The venue's own Discord hears of it.
  */
 export async function createVenueEvent(
   venueId: string,
@@ -74,12 +75,15 @@ export async function createVenueEvent(
     data: { venueId, title, date: new Date(date), startTime, endTime, description },
     select: EVENT_SELECT,
   });
-  return { ...toView(row), teamsAdding: 0 };
+  const view = toView(row);
+  announceOnVenueDiscord(venueId, { subject: 'event', withdrawn: false, facts: toFacts(view), kind: null });
+  return { ...view, teamsAdding: 0 };
 }
 
 /**
  * Withdraw an event of a venue, and with it the copies of the teams that added
- * it, which are told. False when the venue has no such event.
+ * it, which are told, as is the venue's own Discord. False when the venue has
+ * no such event.
  */
 export async function deleteVenueEvent(venueId: string, eventId: string): Promise<boolean> {
   const event = await prisma.venueEvent.findFirst({
@@ -91,7 +95,9 @@ export async function deleteVenueEvent(venueId: string, eventId: string): Promis
   const { count } = await prisma.venueEvent.deleteMany({ where: { id: eventId, venueId } });
   if (!count) return false; // Withdrawn meanwhile: told by that withdrawal
   const teamIds = [...new Set(event.teamEvents.map(copy => copy.teamId).filter((teamId): teamId is string => teamId !== null))];
-  await notifyVenueEventWithdrawn(toFacts(toView(event)), teamIds);
+  const facts = toFacts(toView(event));
+  await notifyVenueEventWithdrawn(facts, teamIds);
+  announceOnVenueDiscord(venueId, { subject: 'event', withdrawn: true, facts, kind: null });
   return true;
 }
 

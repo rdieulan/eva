@@ -34,8 +34,8 @@ function registrationPieces(facts: LeagueRegistrationFacts): Omit<NotificationDe
   };
 }
 
-// A day and its hours: "mer. 25/11 · 19:20 – 20:40"
-function dayAndHours({ date, startTime, endTime }: { date: string; startTime: string; endTime: string }): string {
+/** A day and its hours, as a notification tells them: "mer. 25/11 · 19:20 – 20:40" */
+export function dayAndHours({ date, startTime, endTime }: { date: string; startTime: string; endTime: string }): string {
   return `${formatShortDay(date)} · ${startTime} – ${endTime}`;
 }
 

@@ -1,10 +1,11 @@
 // Notifications as Discord messages: the card a team's channel shows, laid out
 // from the words of the bell cut in pieces (describeNotification): the other
 // team and its logo, what happened, when and where, their word or the reason,
-// then what there is to do
+// then what there is to do. And what a venue publishes, as a card of its own
+// Discord.
 
-import type { NotificationContent, NotificationKind } from '@shared/types';
-import { describeNotification, notificationLook, notificationTargetPath } from '@shared/utils';
+import type { NotificationContent, NotificationKind, VenuePublicationFacts } from '@shared/types';
+import { dayAndHours, describeNotification, notificationLook, notificationTargetPath } from '@shared/utils';
 import { appUrl } from '@utils/app-url';
 import type { DiscordMessage } from '../../integrations/discord/discord-webhook';
 
@@ -144,6 +145,45 @@ export function notificationMessage(
       ...(logo && { thumbnail: { url: `attachment://${logo}` } }),
       color: cardColor(content),
       footer: { text: KIND_FOOTERS[content.kind] },
+      timestamp: new Date().toISOString(),
+    }],
+  };
+}
+
+/**
+ * What a venue tells the channel of its own Discord: a competition or an
+ * event its manager published, or withdrew
+ */
+export interface VenueAnnouncement {
+  subject: 'competition' | 'event';
+  withdrawn: boolean;
+  facts: VenuePublicationFacts;
+  kind: string | null; // What a competition is, beside its title (competitionKind); nothing for an event
+}
+
+const ANNOUNCEMENT_TITLES = {
+  competition: { published: 'Nouvelle compétition', withdrawn: 'Compétition annulée' },
+  event: { published: 'Nouvel événement', withdrawn: 'Événement annulé' },
+} as const;
+
+const ANNOUNCEMENT_ICONS = { competition: '🏆', event: '📅' } as const;
+
+/**
+ * What the venue publishes, as a card of its own Discord, for its public:
+ * its title, when, what it is, and the venue's word on it; withdrawn, when it
+ * was, in red. The channel is the venue's: the card does not name it.
+ */
+export function venueAnnouncementMessage({ subject, withdrawn, facts, kind }: VenueAnnouncement): DiscordMessage {
+  const when = withIcon('📅', `**${escapeMarkdown(dayAndHours(facts))}**`);
+  const word = !withdrawn && facts.description ? quoted(facts.description) : null;
+  return {
+    username: POSTED_AS,
+    embeds: [{
+      author: { name: facts.title },
+      title: withIcon(withdrawn ? '🗑️' : ANNOUNCEMENT_ICONS[subject], ANNOUNCEMENT_TITLES[subject][withdrawn ? 'withdrawn' : 'published']),
+      description: [when, kind ? escapeMarkdown(kind) : null, word].filter(Boolean).join('\n\n'),
+      color: withdrawn ? CARD_COLORS.refused : CARD_COLORS[subject],
+      footer: { text: VENUE_FOOTER },
       timestamp: new Date().toISOString(),
     }],
   };

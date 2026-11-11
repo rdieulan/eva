@@ -2,10 +2,13 @@
 // them, added to a team's calendar, withdrawn; its events, withdrawn once a
 // team added them. Each function is handed the facts of what just happened,
 // once it is done, and gives them to notify(): who is told is decided here,
-// how they are told is not.
+// how they are told is not. And what they tell the venue's own public, on
+// the channel of its Discord.
 
 import type { VenuePublicationFacts } from '@shared/types';
 import { notify, type PermissionRef } from '@services/notification.service';
+import { postInBackground, postInDiscordChannel } from '@services/discord-channel.service';
+import { venueAnnouncementMessage, type VenueAnnouncement } from '@services/helpers/discord-message.helper';
 
 // Those who answer a venue's competition for their team: those who create its events
 const CAN_ANSWER: PermissionRef = { category: 'calendar', name: 'canCreateEvents' };
@@ -45,6 +48,18 @@ export async function notifyCompetitionWithdrawn(
       accepted ? { teamId } : { teamId, permission: CAN_ANSWER },
     );
   }
+}
+
+/**
+ * A competition or an event the venue published or withdrew, on the channel
+ * of its own Discord when it linked one (Ma salle): its public, players alone
+ * included, hears of it there, and the manager does not post it twice. Done
+ * on its own: the publication never waits for Discord.
+ */
+export function announceOnVenueDiscord(venueId: string, announcement: VenueAnnouncement): void {
+  const what = `the ${announcement.withdrawn ? 'withdrawal' : 'publication'} of a ${announcement.subject}`;
+  postInBackground(`Discord post of venue ${venueId}`, () =>
+    postInDiscordChannel('venue', venueId, what, async () => ({ message: venueAnnouncementMessage(announcement) })));
 }
 
 /** An event withdrawn by its venue: each team that had added it hears of it whole, the event gone from its calendar */

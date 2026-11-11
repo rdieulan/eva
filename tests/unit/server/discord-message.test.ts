@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
-import { CARD_COLORS, linkedMessage, notificationMessage } from '../../../server/src/services/helpers/discord-message.helper';
+import { CARD_COLORS, linkedMessage, notificationMessage, venueAnnouncementMessage } from '../../../server/src/services/helpers/discord-message.helper';
 import { buildEvaBookingUrl } from '@shared/utils';
 import type { ScrimMatchFacts } from '@shared/types';
 
@@ -186,6 +186,41 @@ describe('notificationMessage', () => {
     expect(embed).not.toHaveProperty('author');
     expect(embed!.title).toBe(`⌛${GAP}Recherche close sans match`);
     expect(embed!.description!.startsWith(`📅${GAP}**mer. 25/11**\n\nSes créneaux ont été réservés`)).toBe(true);
+  });
+});
+
+describe('venueAnnouncementMessage', () => {
+  const NIGHT = {
+    title: 'Nocturne', venueName: 'Nîmes', date: '2026-11-13', startTime: '21:00', endTime: '23:59', description: 'Ouverte à tous,\n15 € la soirée',
+  };
+
+  it('lays an event the venue published out for its public: its title, when, and the venue\'s word', () => {
+    const message = venueAnnouncementMessage({ subject: 'event', withdrawn: false, facts: NIGHT, kind: null });
+
+    expect(message.username).toBe('EVA');
+    expect(message.embeds[0]).toMatchObject({
+      author: { name: 'Nocturne' },
+      title: `📅${GAP}Nouvel événement`,
+      description: `📅${GAP}**ven. 13/11 · 21:00 – 23:59**\n\n> Ouverte à tous,\n> 15 € la soirée`,
+      color: CARD_COLORS.event,
+      footer: { text: 'EVA · Salle' },
+    });
+  });
+
+  it('tells what a competition is, and a withdrawal in red, without the word on it', () => {
+    const day = { ...NIGHT, title: 'Journée de la Division 2', date: '2026-11-28', startTime: '14:00', endTime: '19:00', description: 'Convocation 13:30' };
+
+    expect(venueAnnouncementMessage({ subject: 'competition', withdrawn: false, facts: day, kind: 'Division 2' }).embeds[0]).toMatchObject({
+      title: `🏆${GAP}Nouvelle compétition`,
+      description: `📅${GAP}**sam. 28/11 · 14:00 – 19:00**\n\nDivision 2\n\n> Convocation 13:30`,
+      color: CARD_COLORS.competition,
+    });
+    expect(venueAnnouncementMessage({ subject: 'competition', withdrawn: true, facts: day, kind: 'Division 2' }).embeds[0]).toMatchObject({
+      title: `🗑️${GAP}Compétition annulée`,
+      description: `📅${GAP}**sam. 28/11 · 14:00 – 19:00**\n\nDivision 2`,
+      color: CARD_COLORS.refused,
+    });
+    expect(venueAnnouncementMessage({ subject: 'event', withdrawn: true, facts: NIGHT, kind: null }).embeds[0]!.title).toBe(`🗑️${GAP}Événement annulé`);
   });
 });
 

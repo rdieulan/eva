@@ -83,3 +83,12 @@ export function describeVenueBoard(venueName: string): { title: string; lead: st
 export function formatVenuePlace(venueLabel: string, arenaNumber: number | null | undefined): string {
   return arenaNumber ? `${venueLabel} — arène ${arenaNumber}` : venueLabel;
 }
+
+/**
+ * What a competition of a venue is, beside its title: a division's day, or a
+ * tournament of the venue. The same in the manager's lists, in the venue's
+ * calendar and on its Discord.
+ */
+export function competitionKind({ division }: { division: number | null }): string {
+  return division ? `Division ${division}` : 'Tournoi';
+}

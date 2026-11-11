@@ -6,10 +6,10 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import type { VenueCompetitionView } from '@shared/types';
 import { ERROR } from '@shared/constants';
-import { formatShortDay, toParisTime } from '@shared/utils';
+import { competitionKind, formatShortDay, toParisTime } from '@shared/utils';
 import { createVenueCompetition, deleteVenueCompetition, fetchVenueCompetitions, fetchVenueDivisions } from '@/api';
 import { useErrors } from '@/composables/useErrors';
-import { competitionKind, describeCompetitionAnswers } from '@/utils/venue-publications';
+import { describeCompetitionAnswers } from '@/utils/venue-publications';
 import ConfirmModal from '@/components/common/ConfirmModal.vue';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import VenuePublicationFields from '@/components/manager/VenuePublicationFields.vue';

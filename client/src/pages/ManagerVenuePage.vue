@@ -108,9 +108,9 @@ function discordChanged(status: DiscordChannelStatus) {
 
     <ManagerSection title="Discord de la salle">
       <template #intro>
-        Le salon de ton serveur Discord où partiront les événements que tu publies ici : tu n'as pas à les publier deux fois.
+        Le salon de ton serveur Discord où partent les compétitions et les événements que tu publies, et leur annulation
+        quand tu les retires : tu n'as pas à les publier deux fois.
       </template>
-      <!-- //TODO(salle : publier sur son Discord) le salon se relie, mais rien n'y part encore : l'envoi des publications de la salle reste à construire -->
       <DiscordChannel
         v-if="settings"
         :status="settings.discordChannel"

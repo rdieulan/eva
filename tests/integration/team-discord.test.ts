@@ -12,7 +12,7 @@ import { ERROR } from '@shared/constants/error.constants';
 import type { NotificationContent } from '@shared/types';
 import { executeWebhook } from '../../server/src/integrations/discord/discord-webhook';
 import { notify } from '../../server/src/services/notification.service';
-import { settleDiscordPosts } from '../../server/src/services/notification-discord.service';
+import { settleDiscordPosts } from '../../server/src/services/discord-channel.service';
 
 vi.mock('../../server/src/integrations/discord/discord-webhook', async importOriginal => ({
   ...await importOriginal<typeof import('../../server/src/integrations/discord/discord-webhook')>(),

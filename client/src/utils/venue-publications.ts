@@ -21,8 +21,3 @@ export function describeTeamsAdding(teamsAdding: number): string {
   if (!teamsAdding) return 'Aucune équipe ne l\'a ajouté à son calendrier pour l\'instant.';
   return `Ajouté au calendrier de ${teamsAdding} équipe${teamsAdding > 1 ? 's' : ''}.`;
 }
-
-/** What a competition is, beside its title: a division's day, or a tournament of the venue */
-export function competitionKind({ division }: Pick<VenueCompetitionView, 'division'>): string {
-  return division ? `Division ${division}` : 'Tournoi';
-}

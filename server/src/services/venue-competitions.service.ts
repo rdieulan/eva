@@ -7,7 +7,9 @@ import { prisma } from '@db/prisma';
 import { ERROR } from '@shared/constants';
 import type { VenuePublicationFacts, VenueCompetitionView } from '@shared/types';
 import { toParisTime } from '@shared/utils/date.utils';
+import { competitionKind } from '@shared/utils';
 import {
+  announceOnVenueDiscord,
   notifyCompetitionAdded,
   notifyCompetitionOffered,
   notifyCompetitionWithdrawn,
@@ -90,7 +92,7 @@ export async function listVenueCompetitions(venueId: string, now: Date = new Dat
  * end after they start, and for a division's day a division the venue's
  * league has. A description is optional, a few lines at most. It goes at once
  * to the teams it is for, to accept into their calendar or refuse, and those
- * who answer for them are told.
+ * who answer for them are told; the venue's own Discord hears of it.
  */
 export async function createVenueCompetition(
   venueId: string,
@@ -115,25 +117,30 @@ export async function createVenueCompetition(
     },
     select: COMPETITION_SELECT,
   });
-  await notifyCompetitionOffered({ title, venueName: venue.name, date, startTime, endTime, description }, teamIds);
+  const facts = { title, venueName: venue.name, date, startTime, endTime, description };
+  await notifyCompetitionOffered(facts, teamIds);
+  announceOnVenueDiscord(venueId, { subject: 'competition', withdrawn: false, facts, kind: competitionKind({ division }) });
   return toView(row);
 }
 
 /**
  * Withdraw a competition of a venue, and with it what the teams said and the
  * events of the teams that accepted it; the teams that accepted it or had not
- * answered yet are told. False when the venue has no such competition.
+ * answered yet are told, and so is the venue's own Discord. False when the
+ * venue has no such competition.
  */
 export async function deleteVenueCompetition(venueId: string, competitionId: string): Promise<boolean> {
   const competition = await prisma.venueCompetition.findFirst({
     where: { id: competitionId, venueId },
-    select: { ...FACTS_SELECT, offers: { select: { teamId: true, status: true } } },
+    select: { ...FACTS_SELECT, division: true, offers: { select: { teamId: true, status: true } } },
   });
   if (!competition) return false;
 
   const { count } = await prisma.venueCompetition.deleteMany({ where: { id: competitionId, venueId } });
   if (!count) return false; // Withdrawn meanwhile: told by that withdrawal
-  await notifyCompetitionWithdrawn(toFacts(competition), competition.offers);
+  const facts = toFacts(competition);
+  await notifyCompetitionWithdrawn(facts, competition.offers);
+  announceOnVenueDiscord(venueId, { subject: 'competition', withdrawn: true, facts, kind: competitionKind(competition) });
   return true;
 }
 
