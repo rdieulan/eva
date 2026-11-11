@@ -139,6 +139,10 @@ export type {
 // Venue manager API
 export {
   fetchManagedVenues,
+  fetchVenueSettings,
+  refreshVenueSettings,
+  linkVenueDiscord,
+  unlinkVenueDiscord,
   fetchVenueDivisions,
   saveVenueDivisions,
   readVenueDivisions,

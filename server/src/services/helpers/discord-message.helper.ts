@@ -14,6 +14,7 @@ const MATCHMAKING_FOOTER = 'EVA · Matchmaking';
 const TEAM_FOOTER = 'EVA · Équipe';
 const LEAGUE_FOOTER = 'EVA · Ligue';
 const COMPETITION_FOOTER = 'EVA · Compétition';
+const VENUE_FOOTER = 'EVA · Salle';
 
 // The part of the app each kind comes from, at the foot of its card
 const KIND_FOOTERS: Record<NotificationKind, string> = {
@@ -144,15 +145,22 @@ export function notificationMessage(
   };
 }
 
+// What a channel just linked will get, by who it posts for
+const LINKED_CHANNELS = {
+  team: { says: (name: string) => `Les notifications de l'équipe ${name} arriveront ici.`, footer: TEAM_FOOTER },
+  venue: { says: (name: string) => `Les publications de la salle ${name} arriveront ici.`, footer: VENUE_FOOTER },
+} as const;
+
 /** The first message of a channel just linked: Discord takes it, so the webhook works */
-export function linkedMessage(teamName: string): DiscordMessage {
+export function linkedMessage(owner: 'team' | 'venue', name: string): DiscordMessage {
+  const channel = LINKED_CHANNELS[owner];
   return {
     username: POSTED_AS,
     embeds: [{
       title: withIcon('🔗', 'Salon relié'),
-      description: `Les notifications de l'équipe ${escapeMarkdown(teamName)} arriveront ici.`,
+      description: channel.says(escapeMarkdown(name)),
       color: CARD_COLORS.good,
-      footer: { text: TEAM_FOOTER },
+      footer: { text: channel.footer },
     }],
   };
 }

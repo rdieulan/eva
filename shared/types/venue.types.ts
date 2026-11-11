@@ -1,5 +1,7 @@
 // Venue types
 
+import type { DiscordChannelStatus } from './team.types';
+
 /**
  * Where a venue can be reached online. The same list eva.gg publishes for its
  * locations, plus their website; venues created by hand fill them in the admin.
@@ -10,6 +12,21 @@ export type VenueLinkKey = typeof VENUE_LINK_KEYS[number];
 
 // One URL per network, null when the venue has none there
 export type VenueLinks = Record<VenueLinkKey, string | null>;
+
+/**
+ * A venue as its manager's settings show it: its public information, as
+ * eva.gg publishes it, and the channel of its own Discord its publications are to go to
+ */
+export interface VenueSettings extends VenueLinks {
+  id: string;
+  name: string;
+  city: string;
+  address: string;
+  phone: string | null;
+  arenaCount: number;
+  isFromEva: boolean;             // Listed by eva.gg, and read again there; otherwise the administration keeps it
+  discordChannel: DiscordChannelStatus; // The channel of its own Discord its publications are to go to; never the webhook itself
+}
 
 /**
  * Public venue data (visible by all authenticated users)

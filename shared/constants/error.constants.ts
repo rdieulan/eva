@@ -319,6 +319,13 @@ export const ERROR = {
   balanceRuleUpdateFailed: 'Erreur lors de la mise à jour de la règle',
   balanceRulesResetFailed: 'Erreur lors de la réinitialisation des règles',
 
+  // Venue manager: the venue's settings
+  venueSettingsFetchFailed: 'Impossible de charger les informations de la salle',
+  venueNotFromEva: 'Cette salle n\'est pas listée par eva.gg : l\'administration la tient à jour',
+  venueRefreshTooSoon: 'La salle a été relue sur eva.gg il y a moins de 5 minutes : réessaie dans un instant',
+  venueRefreshFailed: 'eva.gg n\'a pas pu donner la salle : réessaie plus tard',
+  venueGoneFromEva: 'eva.gg ne liste plus cette salle',
+
   // Venue manager: the divisions of the venue's local league
   managerOnly: 'Réservé aux gérants de salle',
   venueNotManaged: 'Cette salle n\'est pas une de celles que tu gères',

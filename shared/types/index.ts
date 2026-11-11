@@ -126,7 +126,7 @@ export {
 export type {
   Team,
   TeamWithMembers,
-  TeamDiscordStatus,
+  DiscordChannelStatus,
   TeamLocation,
 } from './team.types';
 export { TEAM_LOCATIONS } from './team.types';
@@ -161,7 +161,7 @@ export type {
 
 export type { LoginResponse } from './auth.types';
 
-export type { Venue, VenueSlot, SlotTokenType, VenueLinks, VenueLinkKey } from './venue.types';
+export type { Venue, VenueSlot, SlotTokenType, VenueLinks, VenueLinkKey, VenueSettings } from './venue.types';
 export { VENUE_LINK_KEYS } from './venue.types';
 
 export type { EvaAccountLink, LinkEvaAccountRequest } from './eva.types';

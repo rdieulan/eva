@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import { ERROR } from '@shared/constants';
-import type { TeamDiscordStatus } from '@shared/types';
+import type { DiscordChannelStatus } from '@shared/types';
 import { ApiError } from '@/api/error';
 
 vi.mock('@/api', () => ({ linkTeamDiscord: vi.fn(), unlinkTeamDiscord: vi.fn() }));
@@ -12,7 +12,7 @@ import TeamDiscord from '@/components/team/TeamDiscord.vue';
 
 const WEBHOOK = 'https://discord.com/api/webhooks/123456789/abc';
 
-function mountSection(status: TeamDiscordStatus, canManage = true) {
+function mountSection(status: DiscordChannelStatus, canManage = true) {
   return mount(TeamDiscord, { props: { status, canManage } });
 }
 

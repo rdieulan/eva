@@ -132,6 +132,9 @@ export function toVenues(locations: EvaLocation[]): MappingResult {
   return result;
 }
 
+/** The country our venues are read in on eva.gg, as an ISO code */
+export const EVA_VENUES_COUNTRY = 'FR';
+
 /**
  * Fetch the locations eva.gg runs in a country (ISO code, e.g. FR)
  */

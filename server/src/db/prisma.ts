@@ -92,10 +92,10 @@ const adapter = new PrismaPg(pool);
 export const prisma = new PrismaClient({
   adapter,
   // The logo bytes are only read by the route that serves them; every other
-  // team query would otherwise drag them along. The Discord webhook is a
-  // secret: only the code that posts there asks for it, so no team payload
-  // can carry it by mistake.
-  omit: { team: { logoData: true, discordWebhookUrl: true } },
+  // team query would otherwise drag them along. A Discord webhook, a team's or
+  // a venue's, is a secret: only the code that posts there asks for it, so no
+  // payload can carry it by mistake.
+  omit: { team: { logoData: true, discordWebhookUrl: true }, venue: { discordWebhookUrl: true } },
   log: [
     { level: 'error', emit: 'stdout' },
     { level: 'warn', emit: 'stdout' },

@@ -16,10 +16,10 @@ export interface Team {
 }
 
 /**
- * Whether a team posts its notifications in a Discord channel: none linked,
+ * Whether a team, or a venue, posts in a Discord channel: none linked,
  * linked, or linked but refused by Discord since (the webhook deleted)
  */
-export type TeamDiscordStatus = 'none' | 'linked' | 'broken';
+export type DiscordChannelStatus = 'none' | 'linked' | 'broken';
 
 /**
  * Team with leader and members info

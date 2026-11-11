@@ -7,10 +7,10 @@ import { LEADER_PERMISSIONS, DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
 import { normalizeAccountPermissions } from '@shared/utils';
 import { DEFAULT_ASSIGNMENTS, DEFAULT_GAME_PLAN_NOTES, ERROR } from '@shared/constants';
 import { getPlayerWithTeam } from '@services/player.service';
-import { teamDiscordStatus } from '@services/team-discord.service';
+import { discordChannelStatus } from '@services/discord-channel.service';
 import { getLeagueTeamSummary, proposeLeagueTeamVenue, readLeagueLogoForTeam } from '@services/league-directory.service';
 import type { LeagueTeamLogo } from '../integrations/competitive/competitive-teams';
-import type { TeamDiscordStatus } from '@shared/types';
+import type { DiscordChannelStatus } from '@shared/types';
 
 // ============================================
 // Types
@@ -76,7 +76,7 @@ export interface TeamView {
   leader: { id: string; name: string } | null;
   members: MemberWithRole[];
   isLeader: boolean;
-  discord: TeamDiscordStatus; // Whether its notifications go to a Discord channel; never the webhook itself
+  discord: DiscordChannelStatus; // Whether its notifications go to a Discord channel; never the webhook itself
   leagueTeam: LeagueTeamSummary | null; // The league team it is on competitive.eva.gg, when linked
   availabilityHorizonDays: number; // How many days ahead its players are asked for their availability
 }
@@ -115,7 +115,7 @@ export async function getTeamViewForPlayer(playerId: string): Promise<TeamView |
         isLeader: member.id === team.leaderId,
       })),
     isLeader: !!playerData!.ledTeam,
-    discord: await teamDiscordStatus(team.id),
+    discord: await discordChannelStatus('team', team.id),
     leagueTeam: team.leagueTeamId ? await getLeagueTeamSummary(team.leagueTeamId) : null,
     availabilityHorizonDays: team.availabilityHorizonDays,
   };

@@ -42,9 +42,11 @@ describe('AppNavTabs', () => {
 
     account.value = { accountType: 'manager', teamId: null, roles: ['player', 'manager'] };
     const manager = mountTabs('/gestion/competition');
-    expect(labels(manager)).toEqual(['Compétition']);
-    expect(manager.findAllComponents(RouterLinkStub).map(tab => tab.props('to'))).toEqual(['/gestion/competition']);
+    expect(labels(manager)).toEqual(['Ma salle', 'Compétition']);
+    expect(manager.findAllComponents(RouterLinkStub).map(tab => tab.props('to'))).toEqual(['/gestion', '/gestion/competition']);
+    // The space's own address is Ma salle's alone: the tabs under it are marked on their own
     expect(manager.findAll('[aria-current="page"]').map(tab => tab.text())).toEqual(['Compétition']);
+    expect(mountTabs('/gestion').findAll('[aria-current="page"]').map(tab => tab.text())).toEqual(['Ma salle']);
   });
 
   it('marks the page in sight, and only it', () => {

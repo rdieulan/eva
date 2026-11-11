@@ -16,7 +16,7 @@ import {
 } from '@shared/constants';
 import { apiLogger } from '@utils/logger';
 import * as teamsService from '@services/teams.service';
-import { linkTeamDiscord, unlinkTeamDiscord, type LinkTeamDiscordRefusal } from '@services/team-discord.service';
+import { DISCORD_LINK_REFUSALS, linkDiscordChannel, unlinkDiscordChannel } from '@services/discord-channel.service';
 
 const router = Router();
 
@@ -349,13 +349,6 @@ router.delete(
   },
 );
 
-// How each refused Discord channel is answered
-const DISCORD_LINK_REFUSALS: Record<LinkTeamDiscordRefusal, { status: number; error: string }> = {
-  webhookInvalid: { status: 400, error: ERROR.discordWebhookInvalid },
-  webhookRefused: { status: 422, error: ERROR.discordWebhookRefused },
-  discordUnreachable: { status: 502, error: ERROR.discordUnreachable },
-};
-
 // PUT /api/teams/current/discord - Post the team's notifications in a Discord channel, through its webhook
 router.put(
   '/current/discord',
@@ -368,7 +361,7 @@ router.put(
         return res.status(404).json({ errors: [ERROR.teamNotFound] });
       }
 
-      const result = await linkTeamDiscord(team.id, req.body?.webhookUrl);
+      const result = await linkDiscordChannel('team', team.id, req.body?.webhookUrl);
       if (result.refusal) {
         const { status, error } = DISCORD_LINK_REFUSALS[result.refusal];
         return res.status(status).json({ errors: [error] });
@@ -423,7 +416,7 @@ router.delete(
         return res.status(404).json({ errors: [ERROR.teamNotFound] });
       }
 
-      await unlinkTeamDiscord(team.id);
+      await unlinkDiscordChannel('team', team.id);
       res.status(204).end();
     } catch (error) {
       apiLogger.error('Error unlinking the team Discord channel:', error);

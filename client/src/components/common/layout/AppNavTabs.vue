@@ -19,7 +19,7 @@ const props = defineProps<{
 const route = useRoute();
 const { account } = useAuth();
 
-type TabIcon = 'home' | 'calendar' | 'notes' | 'users' | 'trophy';
+type TabIcon = 'home' | 'calendar' | 'notes' | 'users' | 'place' | 'trophy';
 
 interface Tab {
   to: string;
@@ -28,14 +28,16 @@ interface Tab {
   isCurrent: boolean;
 }
 
-// The tabs of the manager's space, in their order
+// The tabs of the manager's space, in their order; the first is the space's
+// own address, the others' lie under it
 const MANAGER_TABS: { to: string; label: string; icon: TabIcon }[] = [
+  { to: '/gestion', label: 'Ma salle', icon: 'place' },
   { to: '/gestion/competition', label: 'Compétition', icon: 'trophy' },
 ];
 
 const tabs = computed<Tab[]>(() => {
   if (account.value?.accountType === 'manager') {
-    return MANAGER_TABS.map(tab => ({ ...tab, isCurrent: route.path.startsWith(tab.to) }));
+    return MANAGER_TABS.map((tab, index) => ({ ...tab, isCurrent: index === 0 ? route.path === tab.to : route.path.startsWith(tab.to) }));
   }
   const isPlayer = account.value?.accountType === 'player';
   const inTeam = isPlayer && !!account.value?.teamId;

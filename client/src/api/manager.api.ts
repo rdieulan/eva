@@ -1,8 +1,8 @@
-// Venue manager API client: the venues an account manages, the divisions of
+// Venue manager API client: the venues an account manages, their settings, the divisions of
 // each one's local league as its manager arranges them, and the competitions
 // the manager publishes in the venue's calendar
 
-import type { ManagedVenue, VenueCompetitionView, VenueDivisions, VenueDivisionsRead } from '@shared/types';
+import type { ManagedVenue, VenueCompetitionView, VenueDivisions, VenueDivisionsRead, VenueSettings } from '@shared/types';
 import { ERROR } from '@shared/constants';
 import { authFetch } from '@/api/utils';
 import { ApiError } from '@/api/error';
@@ -12,6 +12,36 @@ const API_BASE = '/api/manager';
 /** The venues the account manages, by name */
 export async function fetchManagedVenues(): Promise<ManagedVenue[]> {
   return authFetch<ManagedVenue[]>(`${API_BASE}/venues`, undefined, ERROR.managedVenuesFetchFailed);
+}
+
+/** A venue's settings: its public information, as eva.gg publishes it, and its Discord channel */
+export async function fetchVenueSettings(venueId: string): Promise<VenueSettings> {
+  return authFetch<VenueSettings>(`${API_BASE}/venues/${encodeURIComponent(venueId)}`, undefined, ERROR.venueSettingsFetchFailed);
+}
+
+/** Read the venue again on eva.gg, once every five minutes at most; answers its settings as read */
+export async function refreshVenueSettings(venueId: string): Promise<VenueSettings> {
+  return authFetch<VenueSettings>(
+    `${API_BASE}/venues/${encodeURIComponent(venueId)}/refresh`,
+    { method: 'POST' },
+    ERROR.venueRefreshFailed,
+  );
+}
+
+/** Link a channel of the venue's own Discord, through its webhook: Discord takes a first message there before it is kept */
+export async function linkVenueDiscord(venueId: string, webhookUrl: string): Promise<void> {
+  await authFetch<{ discord: 'linked' }>(
+    `${API_BASE}/venues/${encodeURIComponent(venueId)}/discord`,
+    { method: 'PUT', body: JSON.stringify({ webhookUrl }) },
+    ERROR.discordLinkFailed,
+  );
+}
+
+/** Unlink the venue's Discord channel */
+export async function unlinkVenueDiscord(venueId: string): Promise<void> {
+  // Answers 204 with no body, so the JSON-parsing form of authFetch does not apply
+  const response = await authFetch(`${API_BASE}/venues/${encodeURIComponent(venueId)}/discord`, { method: 'DELETE' });
+  if (!response.ok) throw await ApiError.fromFailedResponse(response, ERROR.discordUnlinkFailed);
 }
 
 /** The divisions of a venue's league, as its manager last saved them */

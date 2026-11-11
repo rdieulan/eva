@@ -176,12 +176,16 @@ describe('notificationMessage', () => {
 });
 
 describe('linkedMessage', () => {
-  it('tells the channel just linked what will arrive there', () => {
-    expect(linkedMessage('Les_Rivaux').embeds[0]).toEqual({
+  it('tells the channel just linked what will arrive there: a team\'s notifications, or a venue\'s publications', () => {
+    expect(linkedMessage('team', 'Les_Rivaux').embeds[0]).toEqual({
       title: `🔗${GAP}Salon relié`,
       description: 'Les notifications de l\'équipe Les\\_Rivaux arriveront ici.',
       color: CARD_COLORS.good,
       footer: { text: 'EVA · Équipe' },
+    });
+    expect(linkedMessage('venue', 'Nîmes').embeds[0]).toMatchObject({
+      description: 'Les publications de la salle Nîmes arriveront ici.',
+      footer: { text: 'EVA · Salle' },
     });
   });
 });

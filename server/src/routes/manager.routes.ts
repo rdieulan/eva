@@ -1,6 +1,7 @@
-// Venue manager routes: the venues an account manages, the divisions of each
-// one's local league as its manager arranges them, and the competitions the
-// manager publishes in the venue's calendar
+// Venue manager routes: the venues an account manages, the settings of each
+// (its public information, its Discord channel), the divisions of its local
+// league as its manager arranges them, and the competitions the manager
+// publishes in the venue's calendar
 
 import { Router } from 'express';
 import type { NextFunction, Response } from 'express';
@@ -20,6 +21,8 @@ import {
   deleteVenueCompetition,
   listVenueCompetitions,
 } from '@services/venue-competitions.service';
+import { getVenueSettings, refreshVenueFromEva } from '@services/venue-settings.service';
+import { DISCORD_LINK_REFUSALS, linkDiscordChannel, unlinkDiscordChannel } from '@services/discord-channel.service';
 
 const router = Router();
 
@@ -53,6 +56,65 @@ router.get('/venues', async (req: ManagerRequest, res: Response) => {
   } catch (error) {
     apiLogger.error('Error listing managed venues:', error);
     res.status(500).json({ errors: [ERROR.managedVenuesFetchFailed] });
+  }
+});
+
+// Why a read of the venue on eva.gg was refused, as an HTTP status
+const REFRESH_REFUSAL_STATUS: Record<string, number> = {
+  [ERROR.venueNotFound]: 404,
+  [ERROR.venueNotFromEva]: 409,
+  [ERROR.venueRefreshTooSoon]: 429,
+  [ERROR.venueGoneFromEva]: 404,
+  [ERROR.venueRefreshFailed]: 502,
+};
+
+// GET /api/manager/venues/:venueId - The venue's settings: its public information, its Discord channel
+router.get('/venues/:venueId', requireManagedVenue, async (req: ManagerRequest, res: Response) => {
+  try {
+    const settings = await getVenueSettings(req.params.venueId as string);
+    if (!settings) return res.status(404).json({ errors: [ERROR.venueNotFound] });
+    res.json(settings);
+  } catch (error) {
+    apiLogger.error('Error reading venue settings:', error);
+    res.status(500).json({ errors: [ERROR.venueSettingsFetchFailed] });
+  }
+});
+
+// POST /api/manager/venues/:venueId/refresh - Read the venue again on eva.gg
+router.post('/venues/:venueId/refresh', requireManagedVenue, async (req: ManagerRequest, res: Response) => {
+  try {
+    const result = await refreshVenueFromEva(req.params.venueId as string);
+    if ('error' in result) return res.status(REFRESH_REFUSAL_STATUS[result.error] ?? 400).json({ errors: [result.error] });
+    res.json(result);
+  } catch (error) {
+    apiLogger.error('Error reading a venue again on eva.gg:', error);
+    res.status(500).json({ errors: [ERROR.venueRefreshFailed] });
+  }
+});
+
+// PUT /api/manager/venues/:venueId/discord - Link a channel of the venue's own Discord, through its webhook
+router.put('/venues/:venueId/discord', requireManagedVenue, async (req: ManagerRequest, res: Response) => {
+  try {
+    const result = await linkDiscordChannel('venue', req.params.venueId as string, req.body?.webhookUrl);
+    if (result.refusal) {
+      const { status, error } = DISCORD_LINK_REFUSALS[result.refusal];
+      return res.status(status).json({ errors: [error] });
+    }
+    res.json({ discord: 'linked' });
+  } catch (error) {
+    apiLogger.error('Error linking the venue Discord channel:', error);
+    res.status(500).json({ errors: [ERROR.discordLinkFailed] });
+  }
+});
+
+// DELETE /api/manager/venues/:venueId/discord - Unlink the venue's Discord channel
+router.delete('/venues/:venueId/discord', requireManagedVenue, async (req: ManagerRequest, res: Response) => {
+  try {
+    await unlinkDiscordChannel('venue', req.params.venueId as string);
+    res.status(204).end();
+  } catch (error) {
+    apiLogger.error('Error unlinking the venue Discord channel:', error);
+    res.status(500).json({ errors: [ERROR.discordUnlinkFailed] });
   }
 });
 

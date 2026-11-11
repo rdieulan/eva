@@ -9,7 +9,7 @@
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
-import { fetchEvaLocations, toVenues, type VenueInput } from '../server/src/integrations/eva/eva-locations';
+import { EVA_VENUES_COUNTRY, fetchEvaLocations, toVenues, type VenueInput } from '../server/src/integrations/eva/eva-locations';
 import { VENUE_LINK_KEYS } from '../shared/types/venue.types';
 import { freeVenueSlug } from '../shared/utils/venue.utils';
 
@@ -17,7 +17,6 @@ const databaseUrl = process.env.DATABASE_URL || 'postgresql://eva_user:eva_secre
 const pool = new pg.Pool({ connectionString: databaseUrl });
 const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 
-const DEFAULT_COUNTRY = 'FR';
 
 // Fields the sync owns: a difference on any of them is worth reporting
 const SYNCED_FIELDS = ['name', 'city', 'address', 'phone', 'arenaCount', ...VENUE_LINK_KEYS] as const;
@@ -29,7 +28,7 @@ function changedFields(current: SyncedVenue, next: VenueInput): string[] {
 }
 
 async function main() {
-  const country = (process.argv[2] || DEFAULT_COUNTRY).toUpperCase();
+  const country = (process.argv[2] || EVA_VENUES_COUNTRY).toUpperCase();
 
   console.log(`Salles eva.gg (${country})\n`);
 

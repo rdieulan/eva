@@ -168,36 +168,41 @@ model TeamFavoriteVenue {
 }
 
 model Venue {
-  id                   String                @id @default(cuid())
-  externalId           Int?                  @unique // Location id on eva.gg, for venues filled by scripts/sync-venues.ts
-  slug                 String                @unique // Its name in the address of its public board, set once: renamed, it keeps the links already shared
-  name                 String
-  city                 String
-  address              String
-  phone                String?
-  arenaCount           Int                   @default(1) // Arenas the venue runs for the competitive game
+  id                     String                @id @default(cuid())
+  externalId             Int?                  @unique // Location id on eva.gg, for venues filled by scripts/sync-venues.ts
+  slug                   String                @unique // Its name in the address of its public board, set once: renamed, it keeps the links already shared
+  name                   String
+  city                   String
+  address                String
+  phone                  String?
+  arenaCount             Int                   @default(1) // Arenas the venue runs for the competitive game
   // Where the venue can be reached online, as eva.gg publishes them; hand-made venues fill them in the admin
-  website              String?
-  discord              String?
-  facebook             String?
-  instagram            String?
-  x                    String?
-  tiktok               String?
-  youtube              String?
-  twitch               String?
+  website                String?
+  discord                String?
+  facebook               String?
+  instagram              String?
+  x                      String?
+  tiktok                 String?
+  youtube                String?
+  twitch                 String?
   // How many divisions its local league has, as its manager arranges them
-  leagueDivisionCount  Int                   @default(0)
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
-  teams                Team[]
-  managers             VenueManager[]
-  matches              CalendarEvent[]
-  favoredBy            TeamFavoriteVenue[]
-  scrimSlots           ScrimSearchSlot[]
-  scrimRuns            ScrimProposal[]
-  leagueTournaments    LeagueTournament[]
-  leagueDivisionPlaces LeagueDivisionPlace[]
-  competitions         VenueCompetition[]
+  leagueDivisionCount    Int                   @default(0)
+  // Where the venue's publications are to be posted on Discord: the webhook of a
+  // channel of its own server, linked by its manager. A secret, as a team's:
+  // never sent back to the app, and left out of every query that does not ask for it
+  discordWebhookUrl      String?
+  discordWebhookBrokenAt DateTime? // When Discord refused to post there (webhook deleted): nothing more goes until it is replaced
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+  teams                  Team[]
+  managers               VenueManager[]
+  matches                CalendarEvent[]
+  favoredBy              TeamFavoriteVenue[]
+  scrimSlots             ScrimSearchSlot[]
+  scrimRuns              ScrimProposal[]
+  leagueTournaments      LeagueTournament[]
+  leagueDivisionPlaces   LeagueDivisionPlace[]
+  competitions           VenueCompetition[]
 }
 
 model VenueManager {

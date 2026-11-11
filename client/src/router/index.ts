@@ -42,6 +42,7 @@ const HomePage = () => import('@/pages/HomePage.vue');
 const PlannerPage = () => import('@/pages/PlannerPage.vue');
 const CalendarPage = () => import('@/pages/CalendarPage.vue');
 const ProfilePage = () => import('@/pages/ProfilePage.vue');
+const ManagerVenuePage = () => import('@/pages/ManagerVenuePage.vue');
 const ManagerCompetitionPage = () => import('@/pages/ManagerCompetitionPage.vue');
 const TeamPage = () => import('@/pages/TeamPage.vue');
 const CreateTeamPage = () => import('@/pages/CreateTeamPage.vue');
@@ -98,10 +99,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Profil', requiresAuth: true }
   },
   {
-    // The space of a venue manager, for the venues they manage: its first tab
+    // The space of a venue manager, for the venues they manage: its first tab, the
+    // venue's settings
     path: '/gestion',
     name: 'manager',
-    redirect: '/gestion/competition',
+    component: ManagerVenuePage,
+    meta: { title: 'Ma salle', requiresAuth: true, requiresManager: true }
   },
   {
     // The league's divisions and the competitions the venue offers its teams
