@@ -45,7 +45,7 @@ export async function fetchVenueCompetitions(venueId: string): Promise<VenueComp
   return authFetch<VenueCompetitionView[]>(`${API_BASE}/venues/${encodeURIComponent(venueId)}/competitions`, undefined, ERROR.competitionsFetchFailed);
 }
 
-/** Publish a competition: a division's day, or an event of the venue's own */
+/** Publish a competition: a division's day, or a tournament of the venue */
 export async function createVenueCompetition(venueId: string, competition: Omit<VenueCompetitionView, 'id' | 'answers'>): Promise<VenueCompetitionView> {
   return authFetch<VenueCompetitionView>(
     `${API_BASE}/venues/${encodeURIComponent(venueId)}/competitions`,

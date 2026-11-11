@@ -165,7 +165,7 @@ describe('describeDashboardItem', () => {
         { kind: 'answerCompetition', label: 'Refuser', answer: 'refuse' },
       ],
     });
-    expect(describeDashboardItem(offer(null), NOW).detail).toBe('Un événement publié par la salle.');
+    expect(describeDashboardItem(offer(null), NOW).detail).toBe('Un tournoi de la salle.');
     expect(describeDashboardItem(offer(2, 'Convocation 13:30'), NOW).detail).toBe('Convocation 13:30');
   });
 

@@ -1,7 +1,7 @@
-// The competitions a venue's manager publishes in the venue's calendar: the
-// days of a division of its local league, and the events of the venue's own
-// (a night session, a tournament). The manager gives the dates: those of a
-// month past say nothing of the next ones.
+// The competitions a venue's manager publishes in the venue's calendar and
+// offers its teams: the days of a division of its local league, and the
+// venue's tournaments. The manager gives the dates: those of a month past
+// say nothing of the next ones.
 
 import { prisma } from '@db/prisma';
 import { ERROR, VENUE_COMPETITION_DESCRIPTION_MAX, VENUE_COMPETITION_TITLE_MAX } from '@shared/constants';
@@ -62,8 +62,8 @@ function toFacts(row: FactsRow): CompetitionFacts {
 }
 
 // The teams of ours a competition goes to: for a division's day, those whose
-// league team the manager placed in that division; for an event of the
-// venue's own, every team of the venue, of its league or affiliated to it
+// league team the manager placed in that division; for a tournament of the
+// venue, every team of the venue, of its league or affiliated to it
 //TODO(compétitions de salle) read once, at publication: a team placed or moved in the divisions afterwards does not follow the competitions already published
 async function teamsFor(venueId: string, division: number | null): Promise<string[]> {
   const teams = await prisma.team.findMany({

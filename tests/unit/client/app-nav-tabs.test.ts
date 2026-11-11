@@ -36,14 +36,15 @@ describe('AppNavTabs', () => {
     expect(tabs.map(tab => tab.props('to'))).toEqual(['/', '/calendar', ...(PLANNER_ENABLED ? ['/planner'] : []), '/team']);
   });
 
-  it('keeps each role to its own pages: a player\'s team, a manager\'s venue', () => {
+  it('keeps each role to its own pages: a player\'s team, the tabs of a manager\'s space', () => {
     account.value = { accountType: 'player', teamId: 'team-1', roles: ['player', 'manager'] };
     expect(labels(mountTabs('/'))).toEqual(['Accueil', 'Calendrier', ...(PLANNER_ENABLED ? ['Planificateur'] : []), 'Équipe']);
 
     account.value = { accountType: 'manager', teamId: null, roles: ['player', 'manager'] };
-    const manager = mountTabs('/gestion');
-    expect(labels(manager)).toEqual(['Ma salle']);
-    expect(manager.findAll('[aria-current="page"]').map(tab => tab.text())).toEqual(['Ma salle']);
+    const manager = mountTabs('/gestion/competition');
+    expect(labels(manager)).toEqual(['Compétition']);
+    expect(manager.findAllComponents(RouterLinkStub).map(tab => tab.props('to'))).toEqual(['/gestion/competition']);
+    expect(manager.findAll('[aria-current="page"]').map(tab => tab.text())).toEqual(['Compétition']);
   });
 
   it('marks the page in sight, and only it', () => {

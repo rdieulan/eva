@@ -38,10 +38,10 @@ export interface VenueDivisions {
   places: DivisionPlace[];
 }
 
-/** A competition a venue's manager publishes: a day of a division of its league, or an event of the venue's own */
+/** A competition a venue's manager publishes: a day of a division of its league, or a tournament of the venue */
 export interface VenueCompetitionView {
   id: string;
-  division: number | null; // The division whose day it is; null for an event of the venue's own
+  division: number | null; // The division whose day it is; null for a tournament of the venue
   title: string;
   date: string;      // YYYY-MM-DD
   startTime: string; // HH:mm

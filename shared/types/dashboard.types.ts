@@ -51,7 +51,7 @@ export interface DashboardScrimProposal {
 export interface DashboardCompetitionOffer {
   competitionId: string;
   venueName: string;
-  division: number | null; // The division whose day it is; null for an event of the venue's own
+  division: number | null; // The division whose day it is; null for a tournament of the venue
   title: string;
   date: string;      // YYYY-MM-DD
   startTime: string; // HH:mm

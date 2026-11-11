@@ -45,7 +45,7 @@ export interface LeagueRegistrationFacts {
   closesAt: string;       // ISO date-time: the registration closes then
 }
 
-/** A competition the team's venue published for it: a day of the team's division, or an event of the venue's own */
+/** A competition the team's venue published for it: a day of the team's division, or a tournament of the venue */
 export interface CompetitionFacts {
   title: string;              // "Journée de la Division 2"
   venueName: string;

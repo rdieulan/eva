@@ -10,6 +10,7 @@ const ALLOWED_WITHOUT_TEAM = [
   'home',
   'profile',
   'manager',
+  'manager-competition',
   'team',
   'create-team',
   'join-team',
@@ -41,7 +42,7 @@ const HomePage = () => import('@/pages/HomePage.vue');
 const PlannerPage = () => import('@/pages/PlannerPage.vue');
 const CalendarPage = () => import('@/pages/CalendarPage.vue');
 const ProfilePage = () => import('@/pages/ProfilePage.vue');
-const ManagerPage = () => import('@/pages/ManagerPage.vue');
+const ManagerCompetitionPage = () => import('@/pages/ManagerCompetitionPage.vue');
 const TeamPage = () => import('@/pages/TeamPage.vue');
 const CreateTeamPage = () => import('@/pages/CreateTeamPage.vue');
 const JoinTeamPage = () => import('@/pages/JoinTeamPage.vue');
@@ -97,11 +98,17 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Profil', requiresAuth: true }
   },
   {
-    // The space of a venue manager, for the venues they manage
+    // The space of a venue manager, for the venues they manage: its first tab
     path: '/gestion',
     name: 'manager',
-    component: ManagerPage,
-    meta: { title: 'Espace gérant', requiresAuth: true, requiresManager: true }
+    redirect: '/gestion/competition',
+  },
+  {
+    // The league's divisions and the competitions the venue offers its teams
+    path: '/gestion/competition',
+    name: 'manager-competition',
+    component: ManagerCompetitionPage,
+    meta: { title: 'Compétition', requiresAuth: true, requiresManager: true }
   },
   {
     path: '/join/:code',

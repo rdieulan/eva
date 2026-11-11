@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // The way between the pages of the role the session acts as, always at hand:
 // for a player, the home dashboard, and in a team its calendar and its page;
-// for a venue manager, the space of their venue. Each role keeps to its own
+// for a venue manager, the tabs of their space. Each role keeps to its own
 // pages: the top bar switches roles (see RoleSwitch). In the top bar on a
 // wide screen; at the foot of a phone's screen, within reach of the thumb.
 // The page in sight is marked.
@@ -19,14 +19,24 @@ const props = defineProps<{
 const route = useRoute();
 const { account } = useAuth();
 
+type TabIcon = 'home' | 'calendar' | 'notes' | 'users' | 'trophy';
+
 interface Tab {
   to: string;
   label: string;
-  icon: 'home' | 'calendar' | 'notes' | 'users' | 'place';
+  icon: TabIcon;
   isCurrent: boolean;
 }
 
+// The tabs of the manager's space, in their order
+const MANAGER_TABS: { to: string; label: string; icon: TabIcon }[] = [
+  { to: '/gestion/competition', label: 'Compétition', icon: 'trophy' },
+];
+
 const tabs = computed<Tab[]>(() => {
+  if (account.value?.accountType === 'manager') {
+    return MANAGER_TABS.map(tab => ({ ...tab, isCurrent: route.path.startsWith(tab.to) }));
+  }
   const isPlayer = account.value?.accountType === 'player';
   const inTeam = isPlayer && !!account.value?.teamId;
   return [
@@ -36,9 +46,6 @@ const tabs = computed<Tab[]>(() => {
       ? [{ to: '/planner', label: 'Planificateur', icon: 'notes' as const, isCurrent: route.path.startsWith('/planner') }]
       : []),
     ...(inTeam ? [{ to: '/team', label: 'Équipe', icon: 'users' as const, isCurrent: route.path.startsWith('/team') }] : []),
-    ...(account.value?.accountType === 'manager'
-      ? [{ to: '/gestion', label: 'Ma salle', icon: 'place' as const, isCurrent: route.path.startsWith('/gestion') }]
-      : []),
   ];
 });
 </script>

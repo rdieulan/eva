@@ -265,7 +265,7 @@ describe('notificationTargetPath', () => {
 
 describe('notificationLook', () => {
   const LEAGUE = { tournamentId: '2570489683180220415', tournamentName: 'NEMAUSUS LEAGUE - NOVEMBRE', closesAt: '2026-11-29T23:00:00.000Z' };
-  const COMPETITION = { title: 'Nocturne', venueName: 'Nîmes', date: '2026-11-28', startTime: '21:00', endTime: '23:59', description: null };
+  const COMPETITION = { title: 'Tournoi 2v2', venueName: 'Nîmes', date: '2026-11-28', startTime: '14:00', endTime: '19:00', description: null };
 
   it('shows each notification with the symbol and colour of its subject', () => {
     expect(notificationLook({ kind: 'SCRIM_PROPOSAL_RECEIVED', data: { ...FACTS, searchId: 's', teamName: 'Les Rivaux', message: null } }))

@@ -106,7 +106,7 @@ router.get('/venues/:venueId/competitions', requireManagedVenue, async (req: Man
   }
 });
 
-// POST /api/manager/venues/:venueId/competitions - Publish a competition: a division's day, or an event of the venue's own
+// POST /api/manager/venues/:venueId/competitions - Publish a competition: a division's day, or a tournament of the venue
 router.post('/venues/:venueId/competitions', requireManagedVenue, async (req: ManagerRequest, res: Response) => {
   try {
     const result = await createVenueCompetition(req.params.venueId as string, req.body ?? {});

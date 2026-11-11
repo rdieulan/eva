@@ -167,7 +167,7 @@ export function describeDashboardItem(item: DashboardItem, now: Date = new Date(
         body: dayHoursPlace(data.date, data.startTime, data.endTime, data.venueName),
         detail: data.description ?? (data.division
           ? `La salle publie la journée de ta division, la Division ${data.division}.`
-          : 'Un événement publié par la salle.'),
+          : 'Un tournoi de la salle.'),
         headcountStatus: null,
         ...due,
         actions: [

@@ -1,8 +1,8 @@
 <script setup lang="ts">
-// The competitions a venue's manager publishes in the venue's calendar: the
-// days of a division of its local league, and the events of the venue's own
-// (a night session, a tournament). The manager gives the dates: those of a
-// month past say nothing of the next ones.
+// The competitions a venue's manager publishes in the venue's calendar and
+// offers its teams: the days of a division of its local league, and the
+// venue's tournaments. The manager gives the dates: those of a month past
+// say nothing of the next ones.
 import { computed, onMounted, ref, watch } from 'vue';
 import type { VenueCompetitionView } from '@shared/types';
 import { ERROR, VENUE_COMPETITION_DESCRIPTION_MAX, VENUE_COMPETITION_TITLE_MAX } from '@shared/constants';
@@ -25,8 +25,8 @@ const withdrawing = ref<VenueCompetitionView | null>(null);
 
 const today = toParisTime(new Date()).day;
 
-// The form: a division's day, or an event of the venue's own
-const kind = ref<'division' | 'event'>('division');
+// The form: a division's day, or a tournament of the venue
+const kind = ref<'division' | 'tournament'>('division');
 const division = ref(1);
 const title = ref('');
 const date = ref(today);
@@ -41,7 +41,7 @@ watch(suggestedTitle, (suggestion, previous) => {
 });
 
 const canPublish = computed(() => !!title.value.trim() && !!date.value && startTime.value < endTime.value
-  && (kind.value === 'event' || divisionCount.value > 0));
+  && (kind.value === 'tournament' || divisionCount.value > 0));
 
 async function load() {
   clearErrors();
@@ -130,8 +130,8 @@ onMounted(load);
         <button type="button" class="form-kind" :class="{ active: kind === 'division' }" :aria-checked="kind === 'division'" role="radio" @click="kind = 'division'">
           Journée de division
         </button>
-        <button type="button" class="form-kind" :class="{ active: kind === 'event' }" :aria-checked="kind === 'event'" role="radio" @click="kind = 'event'">
-          Événement de la salle
+        <button type="button" class="form-kind" :class="{ active: kind === 'tournament' }" :aria-checked="kind === 'tournament'" role="radio" @click="kind = 'tournament'">
+          Tournoi
         </button>
       </div>
 
@@ -149,7 +149,7 @@ onMounted(load);
           v-model="title"
           type="text"
           :maxlength="VENUE_COMPETITION_TITLE_MAX"
-          :placeholder="kind === 'event' ? 'Nocturne, tournoi…' : ''"
+          :placeholder="kind === 'tournament' ? 'Le nom du tournoi' : ''"
         />
       </label>
 
@@ -196,7 +196,7 @@ onMounted(load);
         <div class="competition-text">
           <div class="competition-head">
             <strong>{{ competition.title }}</strong>
-            <span class="competition-kind">{{ competition.division ? `Division ${competition.division}` : 'Événement de la salle' }}</span>
+            <span class="competition-kind">{{ competition.division ? `Division ${competition.division}` : 'Tournoi' }}</span>
           </div>
           <span class="competition-when">{{ formatShortDay(competition.date) }} · {{ competition.startTime }} – {{ competition.endTime }}</span>
           <span class="competition-answers">{{ answersOf(competition) }}</span>

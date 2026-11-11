@@ -1,6 +1,6 @@
 // Integration tests - The competitions a venue's manager publishes in the
-// venue's calendar: the days of a division of its league, and the events of
-// the venue's own
+// venue's calendar and offers its teams: the days of a division of its league,
+// and the venue's tournaments
 
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';
@@ -37,21 +37,21 @@ function publish(token: string, venueId: string, body: Record<string, unknown>) 
 }
 
 describe('the competitions of a venue', () => {
-  it('publishes the days of a division and the events of the venue, the soonest first', async () => {
+  it('publishes the days of a division and the tournaments of the venue, the soonest first', async () => {
     const nimes = await venue();
     const token = await managerOf(nimes.id);
 
-    const night = await publish(token, nimes.id, { division: null, title: 'Nocturne', date: shiftDay(today, 9), startTime: '21:00', endTime: '23:59', description: 'Ouverte à tous' });
+    const tournament = await publish(token, nimes.id, { division: null, title: 'Tournoi 2v2', date: shiftDay(today, 9), startTime: '14:00', endTime: '19:00', description: 'Par équipes de deux' });
     const day = await publish(token, nimes.id, { division: 2, title: ' Journée de la Division 2 ', date: shiftDay(today, 3), startTime: '14:00', endTime: '19:00' });
 
-    expect(night.status).toBe(201);
+    expect(tournament.status).toBe(201);
     expect(day.status).toBe(201);
     expect(day.body).toEqual({
       id: expect.any(String), division: 2, title: 'Journée de la Division 2', date: shiftDay(today, 3), startTime: '14:00', endTime: '19:00', description: null,
       answers: { pending: 0, accepted: 0, refused: 0 },
     });
     const listed = await request(app).get(`/api/manager/venues/${nimes.id}/competitions`).set(authHeader(token));
-    expect(listed.body.map((competition: { title: string }) => competition.title)).toEqual(['Journée de la Division 2', 'Nocturne']);
+    expect(listed.body.map((competition: { title: string }) => competition.title)).toEqual(['Journée de la Division 2', 'Tournoi 2v2']);
   });
 
   it('refuses a competition without a title, in the past, with hours the wrong way, of a division the league has not, or told at length', async () => {
@@ -105,7 +105,7 @@ function dashboardOf(token: string) {
 }
 
 describe('the competitions offered to the teams', () => {
-  it("offers a division's day to the teams of that division, an event of the venue to all its teams", async () => {
+  it("offers a division's day to the teams of that division, a tournament of the venue to all its teams", async () => {
     const nimes = await venue();
     const token = await managerOf(nimes.id);
     const second = await teamInDivision(nimes.id, 2);
@@ -114,16 +114,16 @@ describe('the competitions offered to the teams', () => {
     await prisma.team.update({ where: { id: affiliated.team.id }, data: { venueId: nimes.id } });
 
     const day = await publish(token, nimes.id, { division: 2, title: 'Journée de la Division 2', date: shiftDay(today, 3), startTime: '14:00', endTime: '19:00' });
-    const night = await publish(token, nimes.id, { division: null, title: 'Nocturne', date: shiftDay(today, 5), startTime: '21:00', endTime: '23:59' });
+    const tournament = await publish(token, nimes.id, { division: null, title: 'Tournoi 2v2', date: shiftDay(today, 5), startTime: '14:00', endTime: '19:00' });
 
     expect(day.body.answers).toEqual({ pending: 1, accepted: 0, refused: 0 });
-    expect(night.body.answers).toEqual({ pending: 3, accepted: 0, refused: 0 });
+    expect(tournament.body.answers).toEqual({ pending: 3, accepted: 0, refused: 0 });
     const offersOf = async (reader: { token: string }) => (await dashboardOf(reader.token)).body.items
       .filter((item: { kind: string }) => item.kind === 'COMPETITION_OFFER')
       .map((item: { data: { title: string } }) => item.data.title);
-    expect(await offersOf(second)).toEqual(['Journée de la Division 2', 'Nocturne']);
-    expect(await offersOf(first)).toEqual(['Nocturne']);
-    expect(await offersOf(affiliated)).toEqual(['Nocturne']);
+    expect(await offersOf(second)).toEqual(['Journée de la Division 2', 'Tournoi 2v2']);
+    expect(await offersOf(first)).toEqual(['Tournoi 2v2']);
+    expect(await offersOf(affiliated)).toEqual(['Tournoi 2v2']);
     const offer = (await dashboardOf(second.token)).body.items.find((item: { kind: string }) => item.kind === 'COMPETITION_OFFER');
     expect(offer).toMatchObject({ due: `${shiftDay(today, 3)}T14:00`, data: { venueName: nimes.name, division: 2, startTime: '14:00', endTime: '19:00' } });
   });
