@@ -22,6 +22,7 @@ import {
   type LeagueTournament,
 } from '../integrations/competitive/competitive-teams';
 import { logger } from '../utils/logger';
+import { syncCompetitionOffers } from './venue-competitions.service';
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
@@ -115,7 +116,7 @@ export async function syncLeagueDirectory(options: { now?: Date; pauseMs?: numbe
   const readAt = options.now ?? new Date();
   const { teams, pages, skipped } = await readList(options.pauseMs ?? LEAGUE_DIRECTORY_PAGE_PAUSE_MS);
 
-  return prisma.$transaction(async tx => {
+  const { report, leftVenueIds } = await prisma.$transaction(async tx => {
     const known = await tx.leagueTeam.findMany({ select: { id: true, name: true, memberCount: true, logoId: true } });
     const knownById = new Map(known.map(team => [team.id, team]));
     const added: LeagueTeamEntry[] = [];
@@ -140,12 +141,21 @@ export async function syncLeagueDirectory(options: { now?: Date; pauseMs?: numbe
     await tx.leagueTeam.updateMany({ where: { id: { in: [...teams.keys()] } }, data: { seenAt: readAt } });
     const gone = { seenAt: { lt: new Date(readAt.getTime() - MISSING_TEAM_KEPT_MS) } };
     // A team linked to a league team that goes is left unlinked, and what was
-    // read of that league team's registrations goes with the link
+    // read of that league team's registrations goes with the link; so does
+    // its place in the divisions of its venue
+    const leftPlaces = await tx.leagueDivisionPlace.findMany({ where: { leagueTeam: gone }, select: { venueId: true } });
     await tx.leagueEntry.deleteMany({ where: { team: { leagueTeam: { is: gone } } } });
     const removed = await tx.leagueTeam.deleteMany({ where: gone });
 
-    return { pages, teams: teams.size, skipped, added: added.length, changed: changed.length, removed: removed.count };
+    return {
+      report: { pages, teams: teams.size, skipped, added: added.length, changed: changed.length, removed: removed.count },
+      leftVenueIds: leftPlaces.map(place => place.venueId),
+    };
   }, { timeout: 60_000 });
+
+  // The competitions of the venues those league teams played at follow the teams left
+  await syncCompetitionOffers(leftVenueIds, readAt);
+  return report;
 }
 
 // The hour it is in Paris, 0 to 23

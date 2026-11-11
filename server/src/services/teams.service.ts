@@ -2,6 +2,7 @@
 
 import { prisma } from '@db/prisma';
 import { isUniqueViolation } from '@db/prisma-errors';
+import { leagueVenueOf, syncCompetitionOffers } from '@services/venue-competitions.service';
 import type { AccountPermissions, LeagueTeamSummary } from '@shared/types';
 import { LEADER_PERMISSIONS, DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
 import { normalizeAccountPermissions } from '@shared/utils';
@@ -303,6 +304,8 @@ export async function createTeam(data: TeamCreateData): Promise<{ error: string 
       });
       return created;
     });
+    // The competitions already published by its venue, or by its league's, go to it too
+    await syncCompetitionOffers([team.venueId, await leagueVenueOf(data.leagueTeamId)]);
 
     return {
       team: {
@@ -346,10 +349,13 @@ export interface TeamLeagueLink {
  */
 export async function setTeamLeagueTeam(teamId: string, leagueTeamId: string | null): Promise<{ error: string } | TeamLeagueLink> {
   if (leagueTeamId === null) {
+    const former = await prisma.team.findUnique({ where: { id: teamId }, select: { leagueTeamId: true } });
     const [, updated] = await prisma.$transaction([
       prisma.leagueEntry.deleteMany({ where: { teamId } }),
       prisma.team.update({ where: { id: teamId }, data: { leagueTeamId: null }, select: TEAM_LINKED_REF }),
     ]);
+    // Out of its league: the division days it had not answered go
+    await syncCompetitionOffers([await leagueVenueOf(former?.leagueTeamId)]);
     return { leagueTeam: null, logoUrl: logoUrlOf(updated), venueId: updated.venueId };
   }
 
@@ -384,6 +390,13 @@ export async function setTeamLeagueTeam(teamId: string, leagueTeamId: string | n
     if (isUniqueViolation(error)) return { error: ERROR.leagueTeamTaken };
     throw error;
   }
+  // The competitions of the league it left, of the one it joined, and of its venue follow it
+  await syncCompetitionOffers([
+    await leagueVenueOf(team.leagueTeamId),
+    await leagueVenueOf(leagueTeamId),
+    team.venueId,
+    updated.venueId,
+  ]);
   return { leagueTeam: await getLeagueTeamSummary(leagueTeamId), logoUrl: logoUrlOf(updated), venueId: updated.venueId };
 }
 
@@ -402,6 +415,9 @@ export async function updateTeam(teamId: string, data: TeamUpdateData): Promise<
   }
 
   const favoriteVenueIds = data.favoriteVenueIds;
+  const former = data.venueId !== undefined
+    ? await prisma.team.findUnique({ where: { id: teamId }, select: { venueId: true } })
+    : null;
   const team = await prisma.team.update({
     where: { id: teamId },
     data: {
@@ -423,6 +439,9 @@ export async function updateTeam(teamId: string, data: TeamUpdateData): Promise<
       favoriteVenues: { select: { venueId: true }, orderBy: { position: 'asc' } },
     },
   });
+
+  // Affiliated elsewhere: the tournaments of the venue it left and of the one it joined follow it
+  if (former && former.venueId !== team.venueId) await syncCompetitionOffers([former.venueId, team.venueId]);
 
   const { favoriteVenues, ...rest } = team;
   return { team: { ...rest, favoriteVenueIds: favoriteVenues.map(favorite => favorite.venueId) } };

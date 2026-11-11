@@ -4,6 +4,7 @@
 // say nothing of the next ones.
 
 import { prisma } from '@db/prisma';
+import { isForeignKeyViolation, isUniqueViolation } from '@db/prisma-errors';
 import { ERROR } from '@shared/constants';
 import type { VenuePublicationFacts, VenueCompetitionView } from '@shared/types';
 import { toParisTime } from '@shared/utils/date.utils';
@@ -60,8 +61,8 @@ function toFacts(row: FactsRow): VenuePublicationFacts {
 
 // The teams of ours a competition goes to: for a division's day, those whose
 // league team the manager placed in that division; for a tournament of the
-// venue, every team of the venue, of its league or affiliated to it
-//TODO(compétitions de salle) read once, at publication: a team placed or moved in the divisions afterwards does not follow the competitions already published
+// venue, every team of the venue, of its league or affiliated to it. Read at
+// publication, and again whenever that changes (see syncCompetitionOffers).
 async function teamsFor(venueId: string, division: number | null): Promise<string[]> {
   const teams = await prisma.team.findMany({
     where: division === null
@@ -70,6 +71,67 @@ async function teamsFor(venueId: string, division: number | null): Promise<strin
     select: { id: true },
   });
   return teams.map(team => team.id);
+}
+
+/** The venue of the local league a league team plays in, when its manager placed it there */
+export async function leagueVenueOf(leagueTeamId: string | null | undefined): Promise<string | null> {
+  if (!leagueTeamId) return null;
+  const place = await prisma.leagueDivisionPlace.findUnique({ where: { leagueTeamId }, select: { venueId: true } });
+  return place?.venueId ?? null;
+}
+
+// One competition offered again to the teams it is for now: those newly
+// concerned get it, those no longer concerned lose it if they had not answered
+async function syncOffers(
+  competition: FactsRow & { id: string; offers: { teamId: string; status: 'PENDING' | 'ACCEPTED' | 'REFUSED' }[] },
+  wanted: Set<string>,
+): Promise<void> {
+  const dropped = competition.offers.filter(offer => offer.status === 'PENDING' && !wanted.has(offer.teamId));
+  if (dropped.length) {
+    await prisma.venueCompetitionOffer.deleteMany({
+      where: { competitionId: competition.id, teamId: { in: dropped.map(offer => offer.teamId) }, status: 'PENDING' },
+    });
+  }
+
+  const offered = new Set(competition.offers.map(offer => offer.teamId));
+  const added: string[] = [];
+  for (const teamId of wanted) {
+    if (offered.has(teamId)) continue;
+    try {
+      await prisma.venueCompetitionOffer.create({ data: { competitionId: competition.id, teamId }, select: { teamId: true } });
+      added.push(teamId);
+    } catch (error) {
+      // Offered at the same moment by another change, told by that one; or the competition withdrawn meanwhile
+      if (isForeignKeyViolation(error)) break;
+      if (!isUniqueViolation(error)) throw error;
+    }
+  }
+  if (added.length) await notifyCompetitionOffered(toFacts(competition), added);
+}
+
+/**
+ * Offer the competitions still to come of these venues to the teams they are
+ * for now, whatever changed it since they were published: a team placed in a
+ * division or moved to another, a team arrived on the app, linked to its
+ * league team or affiliated to the venue. A team newly concerned gets the
+ * offer, and those who answer for it are told; a team no longer concerned
+ * loses the offer it had not answered. What a team answered stays as it is: a
+ * competition it accepted stays in its calendar.
+ */
+export async function syncCompetitionOffers(venueIds: (string | null | undefined)[], now: Date = new Date()): Promise<void> {
+  const today = new Date(toParisTime(now).day);
+  for (const venueId of new Set(venueIds.filter((id): id is string => !!id))) {
+    const competitions = await prisma.venueCompetition.findMany({
+      where: { venueId, date: { gte: today } },
+      select: { ...FACTS_SELECT, id: true, division: true, offers: { select: { teamId: true, status: true } } },
+    });
+    // The teams of a division, or of the whole venue, read once for all its competitions
+    const teams = new Map<number | null, Set<string>>();
+    for (const competition of competitions) {
+      if (!teams.has(competition.division)) teams.set(competition.division, new Set(await teamsFor(venueId, competition.division)));
+      await syncOffers(competition, teams.get(competition.division)!);
+    }
+  }
 }
 
 /** The competitions of a venue from a day on, up to another when given, the soonest first */

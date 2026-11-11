@@ -9,6 +9,7 @@ import { ERROR, LEAGUE_DIVISIONS_MAX } from '@shared/constants';
 import type { DivisionPlace, ManagedVenue, VenueDivisions, VenueDivisionsRead } from '@shared/types';
 import { fetchLeagueMonthDivisions } from '../integrations/competitive/competitive-teams';
 import { LEAGUE_TEAM_SUMMARY_SELECT, toLeagueTeamSummary } from './league-directory.service';
+import { syncCompetitionOffers } from './venue-competitions.service';
 import { logger } from '../utils/logger';
 
 /** The venues a manager manages, by name */
@@ -98,6 +99,8 @@ export async function saveVenueDivisions(venueId: string, input: VenueDivisionsI
     prisma.leagueDivisionPlace.createMany({ data: rows }),
     prisma.venue.update({ where: { id: venueId }, data: { leagueDivisionCount: input.divisionCount } }),
   ]);
+  // The competitions already published go to the teams as they now stand
+  await syncCompetitionOffers([venueId]);
   return (await getVenueDivisions(venueId))!;
 }
 
