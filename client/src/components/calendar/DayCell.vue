@@ -7,6 +7,7 @@ import type {
   CalendarEvent,
   SubscriptionRenewal,
   ScrimSearch,
+  VenueEventView,
 } from '@shared/types';
 import {
   describeAvailability,
@@ -45,6 +46,7 @@ interface Props {
   playerAvailabilities: PlayerAvailability[];
   events: CalendarEvent[];
   renewals?: SubscriptionRenewal[]; // Players whose subscription renews that day
+  venueEvents?: VenueEventView[]; // The events of the team's venue, open to all, the team has not added
   showDayNumber?: boolean;
   editMode?: boolean; // Availability edit mode
   matchmaking?: boolean; // Days can be picked for a search, and carry other teams' searches
@@ -57,6 +59,7 @@ const props = withDefaults(defineProps<Props>(), {
   currentPlayerHours: null,
   currentPlayerId: undefined,
   renewals: () => [],
+  venueEvents: () => [],
   showDayNumber: true,
   editMode: false,
   matchmaking: false,
@@ -71,6 +74,7 @@ const emit = defineEmits<{
   'open-create-event': [date: string];
   'toggle-select': [date: string];
   'open-search': [search: ScrimSearch];
+  'open-venue-event': [event: VenueEventView];
   'open-day': [date: string]; // The day's rows ran over: list the whole day
 }>();
 
@@ -88,6 +92,7 @@ const otherSearches = computed(() => props.scrimSearches.filter(search => !searc
 const rowSearches = computed(() => (props.matchmaking ? otherSearches.value : []));
 const rowEvents = computed(() => (props.matchmaking ? [] : props.events));
 const rowRenewals = computed(() => (props.matchmaking ? [] : props.renewals));
+const rowVenueEvents = computed(() => (props.matchmaking ? [] : props.venueEvents));
 
 // A day to pick for a search: matchmaking, a reader who may search, a day to
 // come, and no search of ours already that day, one being the most a day holds
@@ -319,8 +324,10 @@ onBeforeUnmount(endPress);
           :searches="rowSearches"
           :events="rowEvents"
           :renewals="rowRenewals"
+          :venue-events="rowVenueEvents"
           :limit="rowLimit"
           @open-search="search => emit('open-search', search)"
+          @open-venue-event="venueEvent => emit('open-venue-event', venueEvent)"
           @open-event-viewer="(dayEvents, index) => emit('open-event-viewer', dayEvents, index)"
           @open-day="emit('open-day', date)"
         />

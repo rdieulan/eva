@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import CalendarPage from '@/pages/CalendarPage.vue';
-import type { MonthData, CalendarEvent, ScrimSearch, Venue } from '@shared/types';
+import type { MonthData, CalendarEvent, ScrimSearch, Venue, VenueEventView } from '@shared/types';
 
 import { ref } from 'vue';
 
@@ -53,6 +53,7 @@ vi.mock('@/api', () => ({
   fetchCurrentTeam: vi.fn(() => Promise.resolve(null)),
   fetchScrimSearches: vi.fn(() => Promise.resolve([])),
   updateTeam: vi.fn(),
+  addVenueEventToCalendar: vi.fn(),
 }));
 
 import * as calendarApi from '@/api/calendar.api';
@@ -138,7 +139,7 @@ describe('Calendar Integration Tests', () => {
     expect(agenda.props('day')).toBeNull();
 
     await body.vm.$emit('open-day', '2026-01-20');
-    expect(agenda.props('day')).toEqual({ date: '2026-01-20', searches: [], events: dayEvents, renewals: [] });
+    expect(agenda.props('day')).toEqual({ date: '2026-01-20', searches: [], events: dayEvents, renewals: [], venueEvents: [] });
 
     await agenda.vm.$emit('open-event-viewer', dayEvents, 0);
     expect(agenda.props('day')).toBeNull();
@@ -162,6 +163,34 @@ describe('Calendar Integration Tests', () => {
 
     expect(agenda.props('day')).toBeNull();
     expect(wrapper.findComponent({ name: 'ScrimSearchViewerModal' }).props('search')).toEqual(search);
+  });
+
+  it('opens an event of the venue not added yet, from the day or its list, and reloads the month once it is added', async () => {
+    const night: VenueEventView = {
+      id: 'venue-event-1', venueName: 'Nîmes', title: 'Nocturne', date: '2026-01-20', startTime: '21:00', endTime: '23:59',
+      description: null,
+    };
+    const wrapper = mount(CalendarPage);
+    await wrapper.vm.$nextTick();
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    const modal = wrapper.findComponent({ name: 'VenueEventModal' });
+    expect(modal.props('event')).toBeNull();
+    await wrapper.findComponent({ name: 'CalendarBody' }).vm.$emit('open-venue-event', night);
+    expect(modal.props('event')).toEqual(night);
+    expect(modal.props('canAdd')).toBe(true);
+
+    await modal.vm.$emit('close');
+    const agenda = wrapper.findComponent({ name: 'DayAgendaModal' });
+    await wrapper.findComponent({ name: 'CalendarBody' }).vm.$emit('open-day', '2026-01-20');
+    await agenda.vm.$emit('open-venue-event', night);
+    expect(agenda.props('day')).toBeNull();
+    expect(modal.props('event')).toEqual(night);
+
+    const loads = vi.mocked(calendarApi.fetchMonthData).mock.calls.length;
+    await modal.vm.$emit('added');
+    expect(modal.props('event')).toBeNull();
+    expect(calendarApi.fetchMonthData).toHaveBeenCalledTimes(loads + 1);
   });
 
   it('changes our own search from its sheet: the search modal opens on it, in place of the sheet', async () => {
@@ -299,7 +328,7 @@ describe('Calendar Integration Tests', () => {
 
       await wrapper.findComponent({ name: 'CalendarBody' }).vm.$emit('open-day', '2026-01-20');
 
-      expect(wrapper.findComponent({ name: 'DayAgendaModal' }).props('day')).toEqual({ date: '2026-01-20', searches: [], events: [], renewals: [] });
+      expect(wrapper.findComponent({ name: 'DayAgendaModal' }).props('day')).toEqual({ date: '2026-01-20', searches: [], events: [], renewals: [], venueEvents: [] });
     });
 
     it('makes a venue a favorite of the team from its star, at once', async () => {

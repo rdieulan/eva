@@ -82,6 +82,18 @@ export async function updateEvent(
 }
 
 /**
+ * Add an event of a venue, open to all, to the team's calendar: the team's
+ * copy, tied to the venue's. Answers the copy's id.
+ */
+export async function addVenueEventToCalendar(venueEventId: string): Promise<{ eventId: string }> {
+  return authFetch<{ eventId: string }>(
+    `/api/calendar/venue-events/${encodeURIComponent(venueEventId)}/add`,
+    { method: 'POST' },
+    ERROR.venueEventAddFailed
+  );
+}
+
+/**
  * Delete an event (Admin only)
  */
 export async function deleteEvent(id: string): Promise<void> {

@@ -2,7 +2,14 @@
 // each one's local league as its manager arranges them, and the competitions
 // the manager publishes in the venue's calendar
 
-import type { ManagedVenue, VenueCompetitionView, VenueDivisions, VenueDivisionsRead, VenueSettings } from '@shared/types';
+import type {
+  ManagedVenue,
+  VenueCompetitionView,
+  VenueDivisions,
+  VenueDivisionsRead,
+  VenueEventSummary,
+  VenueSettings,
+} from '@shared/types';
 import { ERROR } from '@shared/constants';
 import { authFetch } from '@/api/utils';
 import { ApiError } from '@/api/error';
@@ -91,4 +98,27 @@ export async function deleteVenueCompetition(venueId: string, competitionId: str
     { method: 'DELETE' },
   );
   if (!response.ok) throw await ApiError.fromFailedResponse(response, ERROR.competitionDeleteFailed);
+}
+
+/** The venue's events to come, the soonest first, and how many teams added each */
+export async function fetchVenueEvents(venueId: string): Promise<VenueEventSummary[]> {
+  return authFetch<VenueEventSummary[]>(`${API_BASE}/venues/${encodeURIComponent(venueId)}/events`, undefined, ERROR.venueEventsFetchFailed);
+}
+
+/** Publish an event, open to all */
+export async function createVenueEvent(venueId: string, event: Omit<VenueEventSummary, 'id' | 'venueName' | 'teamsAdding'>): Promise<VenueEventSummary> {
+  return authFetch<VenueEventSummary>(
+    `${API_BASE}/venues/${encodeURIComponent(venueId)}/events`,
+    { method: 'POST', body: JSON.stringify(event) },
+    ERROR.venueEventSaveFailed,
+  );
+}
+
+/** Withdraw an event of the venue */
+export async function deleteVenueEvent(venueId: string, eventId: string): Promise<void> {
+  const response = await authFetch(
+    `${API_BASE}/venues/${encodeURIComponent(venueId)}/events/${encodeURIComponent(eventId)}`,
+    { method: 'DELETE' },
+  );
+  if (!response.ok) throw await ApiError.fromFailedResponse(response, ERROR.venueEventDeleteFailed);
 }

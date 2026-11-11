@@ -2,7 +2,7 @@
 // app's bell shows it whole, a Discord card in pieces.
 
 import type {
-  CompetitionFacts,
+  VenuePublicationFacts,
   LeagueRegistrationFacts,
   NotificationContent,
   NotificationDescription,
@@ -46,9 +46,9 @@ function matchPieces(teamName: string, teamId: string | undefined, facts: ScrimM
   return { body: `${teamName} · ${when} · ${where}`, who: { name: teamName, teamId: teamId ?? null }, when, where };
 }
 
-// A competition of the venue: its title, its day and hours, and the venue, in
-// pieces and in one line; the venue's word on it quoted
-function competitionPieces(facts: CompetitionFacts): Pieces & Pick<NotificationDescription, 'quote'> {
+// What the venue published, a competition or an event: its title, its day and
+// hours, and the venue, in pieces and in one line; the venue's word on it quoted
+function publicationPieces(facts: VenuePublicationFacts): Pieces & Pick<NotificationDescription, 'quote'> {
   const when = dayAndHours(facts);
   return {
     body: `${facts.title} · ${when} · ${facts.venueName}`,
@@ -177,7 +177,7 @@ export function describeNotification(content: NotificationContent): Notification
       const { data } = content;
       return {
         title: 'Compétition proposée par la salle',
-        ...competitionPieces(data),
+        ...publicationPieces(data),
         detail: data.description ? `« ${data.description} »` : 'À ajouter au calendrier de l\'équipe, ou à refuser.',
         target: { page: 'home' },
         action: 'Répondre',
@@ -188,7 +188,7 @@ export function describeNotification(content: NotificationContent): Notification
       const { data } = content;
       return {
         title: 'Compétition ajoutée au calendrier',
-        ...competitionPieces(data),
+        ...publicationPieces(data),
         detail: data.description ? `« ${data.description} »` : null,
         target: { page: 'calendar', date: data.date, mode: 'team', open: { kind: 'event', id: data.eventId } },
         action: 'Voir la compétition',
@@ -199,8 +199,20 @@ export function describeNotification(content: NotificationContent): Notification
       const { data } = content;
       return {
         title: 'Compétition retirée par la salle',
-        ...competitionPieces(data),
+        ...publicationPieces(data),
         detail: data.accepted ? 'Elle quitte le calendrier de l\'équipe.' : 'Elle n\'attend plus votre réponse.',
+        quote: null,
+        target: { page: 'calendar', date: data.date, mode: 'team' },
+        action: 'Ouvrir le calendrier',
+        elsewhere: null,
+      };
+    }
+    case 'VENUE_EVENT_WITHDRAWN': {
+      const { data } = content;
+      return {
+        title: 'Événement retiré par la salle',
+        ...publicationPieces(data),
+        detail: 'Il quitte le calendrier de l\'équipe.',
         quote: null,
         target: { page: 'calendar', date: data.date, mode: 'team' },
         action: 'Ouvrir le calendrier',
@@ -237,6 +249,8 @@ export function notificationLook(content: NotificationContent): NotificationLook
       return { subject: 'competition', tone: 'subject' };
     case 'COMPETITION_WITHDRAWN':
       return { subject: 'competition', tone: content.data.accepted ? 'refused' : 'fell-through' };
+    case 'VENUE_EVENT_WITHDRAWN':
+      return { subject: 'event', tone: 'refused' };
   }
 }
 

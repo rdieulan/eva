@@ -9,6 +9,7 @@ import { ERROR } from '@shared/constants';
 import { isValidAvailabilityHours } from '@shared/utils';
 import { apiLogger } from '@utils/logger';
 import * as calendarService from '@services/calendar.service';
+import { addVenueEventToTeam } from '@services/venue-events.service';
 import { formatDateStr } from '@services/helpers/date.helper';
 
 const router = Router();
@@ -346,6 +347,33 @@ router.put('/events/:id/gameplan', authMiddleware, requirePermission('calendar',
     res.status(500).json({ errors: [ERROR.serverError] });
   }
 });
+
+// POST /api/calendar/venue-events/:venueEventId/add - Add an event of a venue,
+// open to all, to the team's calendar: the team's copy, tied to the venue's
+router.post(
+  '/venue-events/:venueEventId/add',
+  authMiddleware,
+  requirePermission('calendar', 'canCreateEvents'),
+  async (req: AuthRequest, res: Response) => {
+    const { teamId, playerId } = req.account!;
+    if (!teamId || !playerId) {
+      res.status(403).json({ errors: [ERROR.teamRequiredForCalendar] });
+      return;
+    }
+    try {
+      const result = await addVenueEventToTeam(teamId, playerId, req.params.venueEventId as string);
+      if ('error' in result) {
+        const status = result.error === ERROR.venueEventNotFound ? 404 : 409;
+        res.status(status).json({ errors: [result.error] });
+        return;
+      }
+      res.status(201).json(result);
+    } catch (error) {
+      apiLogger.error('Error adding a venue event to the calendar:', error);
+      res.status(500).json({ errors: [ERROR.venueEventAddFailed] });
+    }
+  },
+);
 
 export default router;
 

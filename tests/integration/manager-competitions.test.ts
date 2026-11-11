@@ -8,7 +8,7 @@ import { app } from '../../server/src/app';
 import { authHeader, createAuthenticatedUser, createTeamMember, createUserWithTeam } from './helpers/auth';
 import { prisma } from './helpers/db';
 import { ERROR } from '@shared/constants/error.constants';
-import { VENUE_COMPETITION_DESCRIPTION_MAX } from '@shared/constants';
+import { VENUE_PUBLICATION_DESCRIPTION_MAX } from '@shared/constants';
 import type { InboxNotification } from '@shared/types';
 import { shiftDay, toParisTime } from '@shared/utils/date.utils';
 
@@ -62,15 +62,15 @@ describe('the competitions of a venue', () => {
     for (const body of [{ ...valid, title: '  ' }, { ...valid, date: shiftDay(today, -1) }, { ...valid, endTime: '13:00' }, { ...valid, date: '2026-02-31' }]) {
       const res = await publish(token, nimes.id, body);
       expect(res.status).toBe(400);
-      expect(res.body.errors).toContain(ERROR.competitionInvalid);
+      expect(res.body.errors).toContain(ERROR.publicationInvalid);
     }
     const division = await publish(token, nimes.id, { ...valid, division: 3 });
     expect(division.status).toBe(400);
     expect(division.body.errors).toContain(ERROR.competitionDivisionInvalid);
-    const long = await publish(token, nimes.id, { ...valid, description: 'é'.repeat(VENUE_COMPETITION_DESCRIPTION_MAX + 1) });
+    const long = await publish(token, nimes.id, { ...valid, description: 'é'.repeat(VENUE_PUBLICATION_DESCRIPTION_MAX + 1) });
     expect(long.status).toBe(400);
-    expect(long.body.errors).toContain(ERROR.competitionDescriptionTooLong);
-    expect((await publish(token, nimes.id, { ...valid, description: 'é'.repeat(VENUE_COMPETITION_DESCRIPTION_MAX) })).status).toBe(201);
+    expect(long.body.errors).toContain(ERROR.publicationDescriptionTooLong);
+    expect((await publish(token, nimes.id, { ...valid, description: 'é'.repeat(VENUE_PUBLICATION_DESCRIPTION_MAX) })).status).toBe(201);
   });
 
   it('withdraws a competition, only from its own venue', async () => {

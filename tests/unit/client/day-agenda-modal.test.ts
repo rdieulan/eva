@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
 import DayAgendaModal, { type DayAgenda } from '@/components/calendar/DayAgendaModal.vue';
-import type { CalendarEvent, ScrimSearch } from '@shared/types';
+import type { CalendarEvent, ScrimSearch, VenueEventView } from '@shared/types';
 
 const SEARCH_MINE: ScrimSearch = {
   id: 'search-mine', team: { id: 'us', name: 'Nous', logoUrl: null }, date: '2030-06-10',
@@ -31,6 +31,12 @@ const DAY: DayAgenda = {
   searches: [SEARCH_MINE, SEARCH_THEIRS],
   events: [event(0, '21:00'), event(1, '09:00'), event(2, '18:30'), event(3, '14:00'), event(4, '22:15'), event(5, '11:00')],
   renewals: [{ playerId: 'p1', playerName: 'Lune', tier: null }],
+  venueEvents: [],
+};
+
+const NIGHT: VenueEventView = {
+  id: 'venue-event-1', venueName: 'Nîmes', title: 'Nocturne', date: '2030-06-10', startTime: '21:00', endTime: '23:59',
+  description: null,
 };
 
 function mountAgenda(day: DayAgenda | null) {
@@ -65,7 +71,7 @@ describe('DayAgendaModal', () => {
 
   it('lists every team looking that day by name, never counted', () => {
     const others = Array.from({ length: 11 }, (_, index) => ({ ...SEARCH_THEIRS, id: `search-${index}`, team: { ...SEARCH_THEIRS.team, name: `Équipe ${index}` } }));
-    const wrapper = mountAgenda({ ...DAY, searches: [SEARCH_MINE, ...others], events: [], renewals: [] });
+    const wrapper = mountAgenda({ ...DAY, searches: [SEARCH_MINE, ...others], events: [], renewals: [], venueEvents: [] });
 
     expect(wrapper.findAll('.search-row')).toHaveLength(11);
     expect(wrapper.find('.overflow-row').exists()).toBe(false);
@@ -99,10 +105,22 @@ describe('DayAgendaModal', () => {
     expect(index).toBe(2);
   });
 
+  it('lists the events of the venue not added yet after the team\'s, and opens one from its row', async () => {
+    const wrapper = mountAgenda({ ...DAY, venueEvents: [NIGHT] });
+
+    const rows = wrapper.findAll('.agenda .item');
+    expect(rows).toHaveLength(2 + DAY.events.length + 1 + 1);
+    expect(rows.at(-2)!.classes()).toContain('venue-event-row');
+    expect(rows.at(-2)!.text()).toBe('21:00Nocturne');
+
+    await rows.at(-2)!.find('button.row-button').trigger('click');
+    expect(wrapper.emitted('open-venue-event')).toEqual([[NIGHT]]);
+  });
+
   it('shows the day it is opened on, each time', async () => {
     const wrapper = mountAgenda(DAY);
     await wrapper.setProps({ day: null });
-    await wrapper.setProps({ day: { date: '2030-06-11', searches: [], events: [event(9, '20:00')], renewals: [] } });
+    await wrapper.setProps({ day: { date: '2030-06-11', searches: [], events: [event(9, '20:00')], renewals: [], venueEvents: [] } });
 
     expect(wrapper.find('.modal-title').text()).toBe('Mardi 11 juin 2030');
     expect(wrapper.findAll('.agenda .item')).toHaveLength(1);

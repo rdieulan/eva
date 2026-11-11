@@ -17,6 +17,7 @@ const SYMBOLS = {
   dispos: 'edit',        // The Dispos button of the calendar
   matchmaking: 'search', // Looking for an opponent
   competition: 'trophy', // The competitions of the calendar
+  event: 'flag',         // The events of the calendar
   team: 'users',         // The team's tab
 } as const satisfies Record<Subject, string>;
 </script>

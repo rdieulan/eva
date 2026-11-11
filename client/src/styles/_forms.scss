@@ -31,3 +31,31 @@
     font-size: 16px; // Prevents zoom on iOS
   }
 }
+
+// A label wrapping its field, the label's words above it, as on the forms of
+// the manager's space; the field takes the focus colour given, a subject's on
+// a form about it
+@mixin labelled-field($focus: $color-accent) {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+
+  input,
+  select,
+  textarea {
+    padding: $spacing-sm $spacing-md;
+    background: $color-bg-secondary;
+    border: $border-thin solid $color-border-light;
+    border-radius: $radius-md;
+    color: $color-text-primary;
+    font: inherit;
+    font-size: $font-size-base;
+
+    &:focus {
+      outline: none;
+      border-color: $focus;
+    }
+  }
+}

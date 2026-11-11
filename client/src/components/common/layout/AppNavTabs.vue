@@ -19,7 +19,7 @@ const props = defineProps<{
 const route = useRoute();
 const { account } = useAuth();
 
-type TabIcon = 'home' | 'calendar' | 'notes' | 'users' | 'place' | 'trophy';
+type TabIcon = 'home' | 'calendar' | 'notes' | 'users' | 'place' | 'trophy' | 'flag';
 
 interface Tab {
   to: string;
@@ -33,6 +33,7 @@ interface Tab {
 const MANAGER_TABS: { to: string; label: string; icon: TabIcon }[] = [
   { to: '/gestion', label: 'Ma salle', icon: 'place' },
   { to: '/gestion/competition', label: 'Compétition', icon: 'trophy' },
+  { to: '/gestion/evenements', label: 'Événements', icon: 'flag' },
 ];
 
 const tabs = computed<Tab[]>(() => {

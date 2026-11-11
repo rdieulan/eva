@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { CalendarEvent, ScrimSearch, SubscriptionRenewal } from '@shared/types';
+import type { CalendarEvent, ScrimSearch, SubscriptionRenewal, VenueEventView } from '@shared/types';
 import { getEventTypeClass, getEventTypeIcon, sortEventsByTime } from '@/utils/calendar';
 import { SUBSCRIPTION_TIER_LABELS } from '@/utils/subscription';
 import { ownSearchLabel, pendingProposalCount } from '@/utils/scrims';
@@ -9,8 +9,9 @@ import SvgIcon from '@/components/common/SvgIcon.vue';
 import PendingCount from '@/components/calendar/PendingCount.vue';
 
 // The rows of a day: the other teams looking for an opponent, by the time they
-// start, then the events in the order they happen and the players whose
-// subscription renews. Whoever shows the day decides what it gives: the other
+// start, then the events in the order they happen, the events of the team's
+// venue it has not added yet, and the players whose subscription renews.
+// Whoever shows the day decides what it gives: the other
 // teams in matchmaking, what is planned in the team's reading (see DayCell).
 // Our own search is the mark of a day (see OwnSearchMark); the list of the day
 // gives it its first row (see DayAgendaModal). The day shows as many rows as it
@@ -24,25 +25,29 @@ const props = withDefaults(defineProps<{
   searches: ScrimSearch[]; // The other teams'
   events: CalendarEvent[];
   renewals: SubscriptionRenewal[];
+  venueEvents?: VenueEventView[]; // The venue's, open to all, the team has not added
   limit?: number; // Rows at most, the one counting the rest included; every row without
 }>(), {
   ownSearch: null,
+  venueEvents: () => [],
   limit: undefined,
 });
 
 const emit = defineEmits<{
   'open-search': [search: ScrimSearch];
   'open-event-viewer': [events: CalendarEvent[], initialIndex: number];
+  'open-venue-event': [event: VenueEventView];
   'open-day': []; // From the row counting the rest: the whole day is wanted
 }>();
 
 const sortedSearches = computed(() => [...props.searches].sort((a, b) => a.startTime.localeCompare(b.startTime)));
 const sortedEvents = computed(() => sortEventsByTime(props.events));
+const sortedVenueEvents = computed(() => [...props.venueEvents].sort((a, b) => a.startTime.localeCompare(b.startTime)));
 
 // The renewals of the day share one row. Past the limit, the last row counts
 // the rest, from the bottom of the list up; our own search stays.
 const ownRows = computed(() => (props.ownSearch ? 1 : 0));
-const rowCount = computed(() => props.searches.length + props.events.length + (props.renewals.length ? 1 : 0));
+const rowCount = computed(() => props.searches.length + props.events.length + props.venueEvents.length + (props.renewals.length ? 1 : 0));
 const hiddenCount = computed(() => {
   if (props.limit === undefined || ownRows.value + rowCount.value <= props.limit) return 0;
   return rowCount.value - (Math.max(1, props.limit - ownRows.value) - 1);
@@ -50,7 +55,9 @@ const hiddenCount = computed(() => {
 const shownRows = computed(() => rowCount.value - hiddenCount.value);
 const shownSearches = computed(() => sortedSearches.value.slice(0, shownRows.value));
 const shownEvents = computed(() => sortedEvents.value.slice(0, shownRows.value - shownSearches.value.length));
-const showsRenewal = computed(() => props.renewals.length > 0 && shownSearches.value.length + shownEvents.value.length < shownRows.value);
+const shownVenueEvents = computed(() => sortedVenueEvents.value.slice(0, shownRows.value - shownSearches.value.length - shownEvents.value.length));
+const showsRenewal = computed(() => props.renewals.length > 0
+  && shownSearches.value.length + shownEvents.value.length + shownVenueEvents.value.length < shownRows.value);
 
 // What the count stands for: teams, when only teams are left out
 const hiddenLabel = computed(() => {
@@ -77,6 +84,11 @@ function openSearch(e: MouseEvent, search: ScrimSearch) {
 function openEvent(e: MouseEvent, index: number) {
   e.stopPropagation();
   emit('open-event-viewer', sortedEvents.value, index);
+}
+
+function openVenueEvent(e: MouseEvent, venueEvent: VenueEventView) {
+  e.stopPropagation();
+  emit('open-venue-event', venueEvent);
 }
 
 function openDay(e: MouseEvent) {
@@ -134,6 +146,24 @@ function openDay(e: MouseEvent) {
       <SvgIcon :name="getEventTypeIcon(event.type)" class="item-icon" />
       <span class="item-time event-time">{{ event.startTime }}</span>
       <span class="item-title event-title">{{ event.title }}</span>
+    </div>
+
+    <!-- The events of the team's venue, open to all, the team has not added:
+         the event's colour, dashed and quiet, as a thing not taken yet. A
+         click shows it, to add it to the team's calendar. -->
+    <div
+      v-for="venueEvent in shownVenueEvents"
+      :key="`venue-${venueEvent.id}`"
+      class="item venue-event-row"
+      data-corner-clear
+      :title="`Événement de la salle, pas encore dans notre calendrier · ${venueEvent.startTime} – ${venueEvent.endTime} · ${venueEvent.title}`"
+      @click="openVenueEvent($event, venueEvent)"
+    >
+      <button type="button" class="row-button">
+        <SvgIcon name="flag" class="item-icon" />
+        <span class="item-time">{{ venueEvent.startTime }}</span>
+        <span class="item-title">{{ venueEvent.title }}</span>
+      </button>
     </div>
 
     <!-- Subscription renewals -->
@@ -283,6 +313,14 @@ function openDay(e: MouseEvent) {
   .item:has(.pending-count) .item-title {
     display: none;
   }
+}
+
+// An event of the venue the team has not added: dashed and quiet, not taken yet
+.venue-event-row {
+  --row-color: #{$color-event};
+  outline: 1px dashed with-alpha($color-event, 0.55);
+  outline-offset: -1px;
+  color: $color-text-secondary;
 }
 
 .renewal-strip {

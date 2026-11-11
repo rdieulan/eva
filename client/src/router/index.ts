@@ -11,6 +11,7 @@ const ALLOWED_WITHOUT_TEAM = [
   'profile',
   'manager',
   'manager-competition',
+  'manager-events',
   'team',
   'create-team',
   'join-team',
@@ -44,6 +45,7 @@ const CalendarPage = () => import('@/pages/CalendarPage.vue');
 const ProfilePage = () => import('@/pages/ProfilePage.vue');
 const ManagerVenuePage = () => import('@/pages/ManagerVenuePage.vue');
 const ManagerCompetitionPage = () => import('@/pages/ManagerCompetitionPage.vue');
+const ManagerEventsPage = () => import('@/pages/ManagerEventsPage.vue');
 const TeamPage = () => import('@/pages/TeamPage.vue');
 const CreateTeamPage = () => import('@/pages/CreateTeamPage.vue');
 const JoinTeamPage = () => import('@/pages/JoinTeamPage.vue');
@@ -112,6 +114,13 @@ const routes: RouteRecordRaw[] = [
     name: 'manager-competition',
     component: ManagerCompetitionPage,
     meta: { title: 'Compétition', requiresAuth: true, requiresManager: true }
+  },
+  {
+    // What the venue publishes that is not a competition, open to all
+    path: '/gestion/evenements',
+    name: 'manager-events',
+    component: ManagerEventsPage,
+    meta: { title: 'Événements', requiresAuth: true, requiresManager: true }
   },
   {
     path: '/join/:code',

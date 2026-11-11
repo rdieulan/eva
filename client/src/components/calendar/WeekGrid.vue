@@ -2,7 +2,7 @@
 import { computed, ref, onMounted, watch, nextTick } from 'vue';
 import DayCell from './DayCell.vue';
 import { formatDateStr, isPastDateStr } from '@/utils/calendar';
-import type { DayData, CalendarEvent, ScrimSearch } from '@shared/types';
+import type { DayData, CalendarEvent, ScrimSearch, VenueEventView } from '@shared/types';
 import type { WheelOpening } from './AvailabilityWheel.vue';
 
 const props = defineProps<{
@@ -26,6 +26,7 @@ const emit = defineEmits<{
   'open-create-event': [date: string];
   'toggle-select': [date: string];
   'open-search': [search: ScrimSearch];
+  'open-venue-event': [event: VenueEventView];
   'open-day': [date: string];
 }>();
 
@@ -128,6 +129,7 @@ watch(() => props.weekStart, () => {
           :player-availabilities="cell.data?.playerAvailabilities ?? []"
           :events="cell.data?.events ?? []"
           :renewals="cell.data?.renewals ?? []"
+          :venue-events="cell.data?.venueEvents ?? []"
           class="week-day-cell"
           :show-day-number="false"
           :edit-mode="props.editMode"
@@ -141,6 +143,7 @@ watch(() => props.weekStart, () => {
           @open-create-event="(date) => emit('open-create-event', date)"
           @toggle-select="(date) => emit('toggle-select', date)"
           @open-search="(search) => emit('open-search', search)"
+          @open-venue-event="(venueEvent) => emit('open-venue-event', venueEvent)"
           @open-day="(date) => emit('open-day', date)"
         />
       </div>

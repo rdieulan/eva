@@ -5,12 +5,12 @@ import ConfirmModal from '@/components/common/ConfirmModal.vue';
 import GamePlanViewer from '@/components/common/GamePlanViewer.vue';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import SvgIcon from '@/components/common/SvgIcon.vue';
+import EventSheet from '@/components/calendar/EventSheet.vue';
 import { useErrors } from '@/composables/useErrors';
 import { useVenueSlots } from '@/composables/useVenueSlots';
 import { cancelScrimMatch } from '@/api';
 import type { CalendarEvent } from '@shared/types';
 import {
-  formatLongDate,
   getEventTypeClass,
   getEventTypeTitle,
   getVoiceMediumLabel,
@@ -214,72 +214,63 @@ function handleCreateEvent() {
 
     <template #default>
       <div v-if="currentEvent" class="event-viewer">
-        <!-- Event title -->
-        <h2 class="event-title">{{ currentEvent.title }}</h2>
-
-        <!-- Event details -->
-        <div class="event-details">
-          <div class="detail-row">
-            <span class="detail-label">📅 Date</span>
-            <span class="detail-value">{{ formatLongDate(currentEvent.date) }}</span>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">🕐 Horaire</span>
-            <span class="detail-value">
-              {{ currentEvent.startTime }} - {{ currentEvent.endTime }}
-              <span v-if="currentEvent.evaSlotIds.length" class="detail-tag">
-                {{ currentEvent.evaSlotIds.length > 1 ? `${currentEvent.evaSlotIds.length} créneaux` : '1 créneau' }}
-              </span>
-            </span>
-          </div>
-          <div v-if="bookedLines" class="detail-row">
-            <span class="detail-label">👥 Sur eva.gg</span>
-            <span class="detail-value">
-              <span
-                v-for="line in bookedLines"
-                :key="line.prefix"
-                class="booked-line"
-                :class="`headcount-${line.status}`"
-              >
-                {{ line.prefix }}{{ line.label }}<template v-if="line.note"> · {{ line.note }}</template>
-              </span>
-            </span>
-          </div>
-          <div v-if="venueLabel" class="detail-row">
-            <span class="detail-label">📍 Salle</span>
-            <span class="detail-value">
-              {{ venueLabel }}
-              <a
-                v-if="currentEvent.venue?.discord"
-                class="detail-link"
-                :href="currentEvent.venue.discord"
-                target="_blank"
-                rel="noopener noreferrer"
-              >Discord</a>
-            </span>
-          </div>
-          <div v-if="mediumLabel" class="detail-row">
-            <span class="detail-label">🎙️ Plateforme</span>
-            <span class="detail-value">{{ mediumLabel }}</span>
-          </div>
-        </div>
-
-        <!-- Booking on eva.gg: a seat is taken there, not here; in the match's colour, as on the home -->
-        <a
-          v-if="bookingUrl"
-          class="btn-booking"
-          :href="bookingUrl"
-          target="_blank"
-          rel="noopener noreferrer"
+        <EventSheet
+          :title="currentEvent.title"
+          :date="currentEvent.date"
+          :start-time="currentEvent.startTime"
+          :end-time="currentEvent.endTime"
+          :description="currentEvent.description"
         >
-          Réserver ma place sur eva.gg ↗
-        </a>
+          <template #hours>
+            <span v-if="currentEvent.evaSlotIds.length" class="detail-tag">
+              {{ currentEvent.evaSlotIds.length > 1 ? `${currentEvent.evaSlotIds.length} créneaux` : '1 créneau' }}
+            </span>
+          </template>
 
-        <!-- Description -->
-        <div v-if="currentEvent.description" class="event-description">
-          <span class="detail-label">📝 Description</span>
-          <p>{{ currentEvent.description }}</p>
-        </div>
+          <template #details>
+            <div v-if="bookedLines" class="detail-row">
+              <span class="detail-label">👥 Sur eva.gg</span>
+              <span class="detail-value">
+                <span
+                  v-for="line in bookedLines"
+                  :key="line.prefix"
+                  class="booked-line"
+                  :class="`headcount-${line.status}`"
+                >
+                  {{ line.prefix }}{{ line.label }}<template v-if="line.note"> · {{ line.note }}</template>
+                </span>
+              </span>
+            </div>
+            <div v-if="venueLabel" class="detail-row">
+              <span class="detail-label">📍 Salle</span>
+              <span class="detail-value">
+                {{ venueLabel }}
+                <a
+                  v-if="currentEvent.venue?.discord"
+                  class="detail-link"
+                  :href="currentEvent.venue.discord"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >Discord</a>
+              </span>
+            </div>
+            <div v-if="mediumLabel" class="detail-row">
+              <span class="detail-label">🎙️ Plateforme</span>
+              <span class="detail-value">{{ mediumLabel }}</span>
+            </div>
+          </template>
+
+          <!-- Booking on eva.gg: a seat is taken there, not here; in the match's colour, as on the home -->
+          <a
+            v-if="bookingUrl"
+            class="btn-booking"
+            :href="bookingUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Réserver ma place sur eva.gg ↗
+          </a>
+        </EventSheet>
 
         <!-- Game Plan (for MATCH events) -->
         <ErrorDisplay :errors="errors" />
@@ -399,48 +390,6 @@ function handleCreateEvent() {
   gap: $spacing-md;
 }
 
-.event-title {
-  margin: 0;
-  font-size: 1.5rem;
-  color: $color-white;
-  text-align: center;
-
-  @include mobile-lg {
-    font-size: 1.25rem;
-  }
-}
-
-.event-details {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  padding: $spacing-md;
-  background: with-alpha($color-bg-tertiary, 0.5);
-  border-radius: $radius-md;
-}
-
-.detail-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-
-  @include mobile {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: $spacing-xs;
-  }
-}
-
-.detail-label {
-  color: $color-text-secondary;
-  font-size: 0.9rem;
-}
-
-.detail-value {
-  color: $color-white;
-  font-weight: 500;
-}
-
 .booked-line {
   display: block;
   white-space: nowrap;
@@ -506,23 +455,6 @@ function handleCreateEvent() {
   color: $color-accent;
   font-size: 0.75rem;
   font-weight: 600;
-}
-
-.event-description {
-  padding: $spacing-md;
-  background: with-alpha($color-bg-tertiary, 0.5);
-  border-radius: $radius-md;
-
-  .detail-label {
-    display: block;
-    margin-bottom: $spacing-sm;
-  }
-
-  p {
-    margin: 0;
-    color: $color-text-muted;
-    white-space: pre-wrap;
-  }
 }
 
 .game-plan-section {

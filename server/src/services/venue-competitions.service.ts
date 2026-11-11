@@ -4,25 +4,20 @@
 // say nothing of the next ones.
 
 import { prisma } from '@db/prisma';
-import { ERROR, VENUE_COMPETITION_DESCRIPTION_MAX, VENUE_COMPETITION_TITLE_MAX } from '@shared/constants';
-import type { CompetitionFacts, VenueCompetitionView } from '@shared/types';
+import { ERROR } from '@shared/constants';
+import type { VenuePublicationFacts, VenueCompetitionView } from '@shared/types';
 import { toParisTime } from '@shared/utils/date.utils';
 import {
   notifyCompetitionAdded,
   notifyCompetitionOffered,
   notifyCompetitionWithdrawn,
-} from '@services/competition-notification.service';
+} from '@services/venue-publication-notification.service';
 import { formatDateStr } from './helpers/date.helper';
-import { isValidDate, isValidTime, isValidTimeRange } from './helpers/validation.helper';
+import { parseVenuePublication, type VenuePublicationInput } from './helpers/venue-publication.helper';
 
-/** A competition as its manager publishes it */
-export interface VenueCompetitionInput {
+/** A competition as its manager publishes it: a publication, and the division whose day it is */
+export interface VenueCompetitionInput extends VenuePublicationInput {
   division: number | null;
-  title: string;
-  date: string;      // YYYY-MM-DD
-  startTime: string; // HH:mm
-  endTime: string;   // HH:mm
-  description: string | null;
 }
 
 type CompetitionRow = {
@@ -50,7 +45,7 @@ type FactsRow = {
 };
 
 // Field by field: a notification keeps its facts as they are, nothing more
-function toFacts(row: FactsRow): CompetitionFacts {
+function toFacts(row: FactsRow): VenuePublicationFacts {
   return {
     title: row.title,
     venueName: row.venue.name,
@@ -97,19 +92,9 @@ export async function createVenueCompetition(
   input: Partial<VenueCompetitionInput>,
   now: Date = new Date(),
 ): Promise<{ error: string } | VenueCompetitionView> {
-  const title = typeof input.title === 'string' ? input.title.trim() : '';
-  const description = typeof input.description === 'string' && input.description.trim() ? input.description.trim() : null;
-  const { date, startTime, endTime } = input;
-  if (
-    !title || [...title].length > VENUE_COMPETITION_TITLE_MAX
-    || !isValidDate(date) || date < toParisTime(now).day
-    || !isValidTime(startTime) || !isValidTime(endTime) || !isValidTimeRange(startTime, endTime)
-  ) {
-    return { error: ERROR.competitionInvalid };
-  }
-  if (description && [...description].length > VENUE_COMPETITION_DESCRIPTION_MAX) {
-    return { error: ERROR.competitionDescriptionTooLong };
-  }
+  const publication = parseVenuePublication(input, now);
+  if ('error' in publication) return publication;
+  const { title, date, startTime, endTime, description } = publication;
 
   const venue = await prisma.venue.findUniqueOrThrow({ where: { id: venueId }, select: { name: true, leagueDivisionCount: true } });
   const division = input.division ?? null;
@@ -160,7 +145,7 @@ export async function answerCompetitionOffer(
   competitionId: string,
   answer: 'ACCEPTED' | 'REFUSED',
 ): Promise<{ error: string } | { eventId: string | null }> {
-  type Outcome = { error: string } | { added: { eventId: string; facts: CompetitionFacts } | null };
+  type Outcome = { error: string } | { added: { eventId: string; facts: VenuePublicationFacts } | null };
   const outcome = await prisma.$transaction(async (tx): Promise<Outcome> => {
     // Only while it is pending: of two answers at once, the first counts
     const { count } = await tx.venueCompetitionOffer.updateMany({

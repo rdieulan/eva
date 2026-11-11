@@ -28,6 +28,22 @@ export interface VenueSettings extends VenueLinks {
   discordChannel: DiscordChannelStatus; // The channel of its own Discord its publications are to go to; never the webhook itself
 }
 
+/** An event a venue published, open to all, as a calendar shows it */
+export interface VenueEventView {
+  id: string;
+  venueName: string;
+  title: string;
+  date: string;      // YYYY-MM-DD
+  startTime: string; // HH:mm
+  endTime: string;   // HH:mm
+  description: string | null;
+}
+
+/** An event of the venue as its manager's list shows it: how many teams added it to their calendar */
+export interface VenueEventSummary extends VenueEventView {
+  teamsAdding: number;
+}
+
 /**
  * Public venue data (visible by all authenticated users)
  */

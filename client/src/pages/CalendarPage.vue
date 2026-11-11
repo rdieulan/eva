@@ -10,6 +10,7 @@ import ScrimSelectionBar from '@/components/calendar/ScrimSelectionBar.vue';
 import ScrimSearchModal from '@/components/calendar/ScrimSearchModal.vue';
 import ScrimSearchViewerModal from '@/components/calendar/ScrimSearchViewerModal.vue';
 import DayAgendaModal, { type DayAgenda } from '@/components/calendar/DayAgendaModal.vue';
+import VenueEventModal from '@/components/calendar/VenueEventModal.vue';
 import AvailabilityWheel, { type WheelOpening } from '@/components/calendar/AvailabilityWheel.vue';
 import AvailabilityHoursModal from '@/components/calendar/AvailabilityHoursModal.vue';
 import NoTeamMessage from '@/components/common/NoTeamMessage.vue';
@@ -24,7 +25,16 @@ import { fetchAllMaps, fetchPlayers, fetchVenues, fetchCurrentTeam, updateTeam }
 import { groupMatchmakingVenues } from '@/utils/venues';
 import { searchVenueIds } from '@/utils/scrims';
 import { ERROR, SCRIM_SEARCH_VENUES_MAX, TEAM_FAVORITE_VENUES_MAX } from '@shared/constants';
-import type { AvailabilityHours, AvailabilityStatus, CalendarEvent, MapConfig, Player, Venue, ScrimSearch } from '@shared/types';
+import type {
+  AvailabilityHours,
+  AvailabilityStatus,
+  CalendarEvent,
+  MapConfig,
+  Player,
+  Venue,
+  ScrimSearch,
+  VenueEventView,
+} from '@shared/types';
 
 const { permissions, account } = useAuth();
 const route = useRoute();
@@ -260,6 +270,14 @@ function closeScrimSearchModal() {
   editedScrimSearch.value = null;
 }
 
+// An event of the team's venue, not added yet, being looked at: added, it is
+// one of the team's events, and the day shows it as such
+const viewedVenueEvent = ref<VenueEventView | null>(null);
+
+function handleVenueEventAdded() {
+  viewedVenueEvent.value = null;
+  loadCalendarData();
+}
 
 // A day listed whole, from the row of a cell that counts what the cell leaves
 // out. It reads the day as the calendar does: the searches alone in
@@ -270,8 +288,9 @@ const agendaDay = computed<DayAgenda | null>(() => {
   const date = agendaDate.value;
   if (!date) return null;
   const searches = scrimSearchesByDate.value[date] ?? [];
-  if (isMatchmaking.value) return { date, searches, events: [], renewals: [] };
-  return { date, searches, events: days.value[date]?.events ?? [], renewals: days.value[date]?.renewals ?? [] };
+  if (isMatchmaking.value) return { date, searches, events: [], renewals: [], venueEvents: [] };
+  const day = days.value[date];
+  return { date, searches, events: day?.events ?? [], renewals: day?.renewals ?? [], venueEvents: day?.venueEvents ?? [] };
 });
 
 // What the team planned on the day of the search being looked at: an answer
@@ -289,6 +308,11 @@ function openSearchFromAgenda(search: ScrimSearch) {
 function openEventsFromAgenda(events: CalendarEvent[], initialIndex: number) {
   agendaDate.value = null;
   openEventViewer(events, initialIndex);
+}
+
+function openVenueEventFromAgenda(venueEvent: VenueEventView) {
+  agendaDate.value = null;
+  viewedVenueEvent.value = venueEvent;
 }
 
 // A notification or a venue's public board leads here with the day to show,
@@ -445,6 +469,7 @@ onMounted(async () => {
           @open-create-event="openCreateEvent"
           @toggle-select="toggleSelectedDate"
           @open-search="viewedScrimSearch = $event"
+          @open-venue-event="viewedVenueEvent = $event"
           @open-day="agendaDate = $event"
         />
       </div>
@@ -495,6 +520,15 @@ onMounted(async () => {
       @close="agendaDate = null"
       @open-search="openSearchFromAgenda"
       @open-event-viewer="openEventsFromAgenda"
+      @open-venue-event="openVenueEventFromAgenda"
+    />
+
+    <!-- An event of the team's venue not added yet, to add -->
+    <VenueEventModal
+      :event="viewedVenueEvent"
+      :can-add="canCreateEvents"
+      @close="viewedVenueEvent = null"
+      @added="handleVenueEventAdded"
     />
 
     <!-- A search picked in a cell, or answered from the search modal -->

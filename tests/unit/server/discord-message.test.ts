@@ -166,6 +166,20 @@ describe('notificationMessage', () => {
     expect(withdrawn(false).color).toBe(CARD_COLORS.fellThrough);
   });
 
+  it('lays an event of the venue withdrawn out: gone from the calendar, in red, from the venue', () => {
+    const night = { title: 'Nocturne', venueName: 'Nîmes', date: '2026-11-28', startTime: '21:00', endTime: '23:59', description: 'Ouverte à tous' };
+    const [embed] = notificationMessage({ kind: 'VENUE_EVENT_WITHDRAWN', data: night }, { base: BASE }).embeds;
+
+    expect(embed).toMatchObject({
+      author: { name: 'Nocturne' },
+      title: `🗑️${GAP}Événement retiré par la salle`,
+      description: `📅${GAP}**sam. 28/11 · 21:00 – 23:59**\n\n📍${GAP}Nîmes\n\nIl quitte le calendrier de l'équipe.\n\n`
+        + `📆${GAP}[Ouvrir le calendrier](${BASE}/calendar?date=2026-11-28&mode=team)`,
+      color: CARD_COLORS.refused,
+      footer: { text: 'EVA · Salle' },
+    });
+  });
+
   it('lays a search closed with no match out with its day alone', () => {
     const [embed] = notificationMessage({ kind: 'SCRIM_SEARCH_EXPIRED', data: { searchId: 'search-1', date: '2026-11-25' } }, { base: BASE }).embeds;
 
@@ -206,6 +220,7 @@ describe('CARD_COLORS', () => {
       match: themeColor('color-match'),
       matchmaking: themeColor('color-success'),
       competition: themeColor('color-competition'),
+      event: themeColor('color-event'),
       team: themeColor('color-team'),
       good: themeColor('color-success'),
       refused: themeColor('color-danger'),

@@ -2,6 +2,7 @@
 
 import type { MatchGamePlan } from './map.types';
 import type { SubscriptionRenewal } from './subscription.types';
+import type { VenueEventView } from './venue.types';
 
 /**
  * Availability statuses, from most to least available to play: the order the
@@ -103,6 +104,7 @@ export interface DayData {
   playerAvailabilities: PlayerAvailability[];
   events: CalendarEvent[];
   renewals: SubscriptionRenewal[]; // Team players whose subscription renews that day
+  venueEvents: VenueEventView[];   // The events of the team's venue, open to all, the team has not added
 }
 
 // Monthly calendar data response

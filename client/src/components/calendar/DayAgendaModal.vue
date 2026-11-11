@@ -1,5 +1,5 @@
 <script lang="ts">
-import type { CalendarEvent, ScrimSearch, SubscriptionRenewal } from '@shared/types';
+import type { CalendarEvent, ScrimSearch, SubscriptionRenewal, VenueEventView } from '@shared/types';
 
 // What a day holds, all of it, as the calendar reads it: in matchmaking, the
 // searches alone, ours and the other teams'
@@ -8,6 +8,7 @@ export interface DayAgenda {
   searches: ScrimSearch[];
   events: CalendarEvent[];
   renewals: SubscriptionRenewal[];
+  venueEvents: VenueEventView[]; // The venue's the team has not added
 }
 </script>
 
@@ -29,6 +30,7 @@ const emit = defineEmits<{
   close: [];
   'open-search': [search: ScrimSearch];
   'open-event-viewer': [events: CalendarEvent[], initialIndex: number];
+  'open-venue-event': [event: VenueEventView];
 }>();
 
 // The day stays on screen while the window fades out
@@ -55,7 +57,9 @@ const title = computed(() => {
         :searches="otherSearches"
         :events="shown.events"
         :renewals="shown.renewals"
+        :venue-events="shown.venueEvents"
         @open-search="search => emit('open-search', search)"
+        @open-venue-event="venueEvent => emit('open-venue-event', venueEvent)"
         @open-event-viewer="(events, index) => emit('open-event-viewer', events, index)"
       />
     </div>

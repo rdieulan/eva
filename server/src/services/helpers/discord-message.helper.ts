@@ -30,6 +30,7 @@ const KIND_FOOTERS: Record<NotificationKind, string> = {
   COMPETITION_OFFERED: COMPETITION_FOOTER,
   COMPETITION_ADDED: COMPETITION_FOOTER,
   COMPETITION_WITHDRAWN: COMPETITION_FOOTER,
+  VENUE_EVENT_WITHDRAWN: VENUE_FOOTER,
 };
 
 // The bar of a card, coloured as the bell colours the same notification
@@ -39,6 +40,7 @@ export const CARD_COLORS = {
   match: 0xfb923c,       // --color-match
   matchmaking: 0x4ade80, // --color-success: a match offered is to accept
   competition: 0x2dd4bf, // --color-competition
+  event: 0x60a5fa,       // --color-event
   team: 0xf472b6,        // --color-team
   good: 0x4ade80,        // --color-success
   refused: 0x981b1b,     // --color-danger
@@ -76,6 +78,7 @@ const ACTION_ICONS: Record<NotificationKind, string> = {
   COMPETITION_OFFERED: '💬',
   COMPETITION_ADDED: '🏆',
   COMPETITION_WITHDRAWN: '📆',
+  VENUE_EVENT_WITHDRAWN: '📆',
 };
 const ELSEWHERE_ICON = '🎟️';
 
@@ -93,6 +96,7 @@ const KIND_ICONS: Record<NotificationKind, string> = {
   COMPETITION_OFFERED: '🏆',
   COMPETITION_ADDED: '✅',
   COMPETITION_WITHDRAWN: '🗑️',
+  VENUE_EVENT_WITHDRAWN: '🗑️',
 };
 
 // What Discord would read as formatting or a link in a team's name or message

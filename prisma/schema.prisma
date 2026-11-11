@@ -203,6 +203,7 @@ model Venue {
   leagueTournaments      LeagueTournament[]
   leagueDivisionPlaces   LeagueDivisionPlace[]
   competitions           VenueCompetition[]
+  events                 VenueEvent[]
 }
 
 model VenueManager {
@@ -294,6 +295,27 @@ enum VenueCompetitionOfferStatus {
   PENDING
   ACCEPTED
   REFUSED
+}
+
+// An event a venue's manager publishes in the venue's calendar, open to all,
+// league teams or not and players alone: a night session, and what comes next.
+// Offered to no team: the teams whose venue it is see it in their calendar as
+// not taken yet, and those who make a team's events add it there, a copy tied
+// to it that goes when the venue withdraws it.
+model VenueEvent {
+  id          String          @id @default(cuid())
+  venueId     String
+  title       String
+  date        DateTime        @db.Date
+  startTime   String // HH:mm
+  endTime     String // HH:mm
+  description String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  venue       Venue           @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  teamEvents  CalendarEvent[]
+
+  @@index([venueId, date])
 }
 
 // A tournament of a local league of competitive.eva.gg: each month of a league
@@ -411,6 +433,8 @@ model CalendarEvent {
   scrimSearchId      String? // The search this match came out of, when the matchmaking created it
   // The venue competition this one is the team's copy of, once the team accepted it: withdrawn by the venue, it goes
   venueCompetitionId String?
+  // The venue event this one is the team's copy of, once the team added it: withdrawn by the venue, it goes
+  venueEventId       String?
   createdById        String
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
@@ -420,12 +444,16 @@ model CalendarEvent {
   createdBy          Player            @relation(fields: [createdById], references: [id])
   scrimSearch        ScrimSearch?      @relation(fields: [scrimSearchId], references: [id], onDelete: SetNull)
   venueCompetition   VenueCompetition? @relation(fields: [venueCompetitionId], references: [id], onDelete: Cascade)
+  venueEvent         VenueEvent?       @relation(fields: [venueEventId], references: [id], onDelete: Cascade)
 
+  // A team adds a venue's event once
+  @@unique([teamId, venueEventId])
   @@index([date])
   @@index([teamId])
   @@index([venueId])
   @@index([scrimSearchId])
   @@index([venueCompetitionId])
+  @@index([venueEventId])
 }
 
 // A team's offer for a day: slots of one venue or more, and how many matches
@@ -686,4 +714,5 @@ enum NotificationKind {
   COMPETITION_OFFERED // The team's venue published a competition for it, to add to its calendar or refuse
   COMPETITION_ADDED // A competition of the venue was accepted into the team's calendar
   COMPETITION_WITHDRAWN // The venue withdrew a competition the team had accepted, or not answered yet
+  VENUE_EVENT_WITHDRAWN // The venue withdrew an event the team had added to its calendar
 }

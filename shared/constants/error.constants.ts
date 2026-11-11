@@ -26,8 +26,8 @@ import {
 } from '@shared/constants/eva.constants';
 import {
   LEAGUE_DIVISIONS_MAX,
-  VENUE_COMPETITION_DESCRIPTION_MAX,
-  VENUE_COMPETITION_TITLE_MAX,
+  VENUE_PUBLICATION_DESCRIPTION_MAX,
+  VENUE_PUBLICATION_TITLE_MAX,
 } from '@shared/constants/league.constants';
 import { EVENT_TYPES, VOICE_MEDIUMS } from '@shared/types/calendar.types';
 import { SUBSCRIPTION_TIERS } from '@shared/types/subscription.types';
@@ -319,6 +319,15 @@ export const ERROR = {
   balanceRuleUpdateFailed: 'Erreur lors de la mise à jour de la règle',
   balanceRulesResetFailed: 'Erreur lors de la réinitialisation des règles',
 
+  // The events a venue publishes, open to all
+  venueEventsFetchFailed: 'Impossible de charger les événements de la salle',
+  venueEventSaveFailed: 'Impossible de publier l\'événement',
+  venueEventDeleteFailed: 'Impossible de retirer l\'événement',
+  venueEventNotFound: 'Événement non trouvé',
+  venueEventAlreadyAdded: 'Cet événement est déjà dans le calendrier de l\'équipe',
+  venueEventPast: 'Cet événement est passé',
+  venueEventAddFailed: 'Impossible d\'ajouter l\'événement au calendrier',
+
   // Venue manager: the venue's settings
   venueSettingsFetchFailed: 'Impossible de charger les informations de la salle',
   venueNotFromEva: 'Cette salle n\'est pas listée par eva.gg : l\'administration la tient à jour',
@@ -340,14 +349,14 @@ export const ERROR = {
   divisionsReadTooSoon: 'Les divisions ont été relues il y a moins de 5 minutes : réessaie dans un instant',
   divisionsReadFailed: 'competitive.eva.gg n\'a pas pu donner les divisions : réessaie plus tard',
 
-  // Venue manager: the competitions of the venue
+  // Venue manager: what the venue publishes, its competitions and its events
   competitionsFetchFailed: 'Impossible de charger les compétitions de la salle',
   competitionSaveFailed: 'Impossible de publier la compétition',
   competitionDeleteFailed: 'Impossible de retirer la compétition',
   competitionNotFound: 'Compétition non trouvée',
-  competitionInvalid: `Il faut un titre de ${VENUE_COMPETITION_TITLE_MAX} caractères au plus, un jour à venir, et une heure de fin après celle de début`,
+  publicationInvalid: `Il faut un titre de ${VENUE_PUBLICATION_TITLE_MAX} caractères au plus, un jour à venir, et une heure de fin après celle de début`,
   competitionDivisionInvalid: 'Cette division n\'existe pas dans la ligue de la salle',
-  competitionDescriptionTooLong: `La description ne peut pas dépasser ${VENUE_COMPETITION_DESCRIPTION_MAX} caractères`,
+  publicationDescriptionTooLong: `La description ne peut pas dépasser ${VENUE_PUBLICATION_DESCRIPTION_MAX} caractères`,
   competitionOfferNotFound: 'Cette compétition n\'attend plus de réponse de l\'équipe',
   competitionOfferFailed: 'Impossible de répondre à la compétition',
 } as const;

@@ -255,6 +255,25 @@ describe('describeNotification, the competitions of the venue', () => {
   });
 });
 
+describe('describeNotification, the events of the venue', () => {
+  it('tells an event the team had added withdrawn, gone from the calendar, and leads to its day', () => {
+    const night = { title: 'Nocturne', venueName: 'Nîmes', date: '2026-11-28', startTime: '21:00', endTime: '23:59', description: 'Ouverte à tous' };
+
+    expect(describeNotification({ kind: 'VENUE_EVENT_WITHDRAWN', data: night })).toEqual({
+      title: 'Événement retiré par la salle',
+      body: 'Nocturne · sam. 28/11 · 21:00 – 23:59 · Nîmes',
+      who: { name: 'Nocturne', teamId: null },
+      when: 'sam. 28/11 · 21:00 – 23:59',
+      where: 'Nîmes',
+      detail: 'Il quitte le calendrier de l\'équipe.',
+      quote: null,
+      target: { page: 'calendar', date: '2026-11-28', mode: 'team' },
+      action: 'Ouvrir le calendrier',
+      elsewhere: null,
+    });
+  });
+});
+
 describe('notificationTargetPath', () => {
   it('leads to a day of the calendar, to the team page, or to the home', () => {
     expect(notificationTargetPath({ page: 'calendar', date: '2026-11-25', mode: 'team' })).toBe('/calendar?date=2026-11-25&mode=team');
@@ -299,5 +318,8 @@ describe('notificationLook', () => {
       .toEqual({ subject: 'competition', tone: 'refused' });
     expect(notificationLook({ kind: 'COMPETITION_WITHDRAWN', data: { ...COMPETITION, accepted: false } }))
       .toEqual({ subject: 'competition', tone: 'fell-through' });
+    // An event the team had added, taken out of its calendar
+    expect(notificationLook({ kind: 'VENUE_EVENT_WITHDRAWN', data: { ...COMPETITION, title: 'Nocturne' } }))
+      .toEqual({ subject: 'event', tone: 'refused' });
   });
 });

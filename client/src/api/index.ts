@@ -33,6 +33,7 @@ export {
   updateEvent,
   deleteEvent,
   updateEventGamePlan,
+  addVenueEventToCalendar,
 } from '@/api/calendar.api';
 
 // Scrim searches API
@@ -149,4 +150,7 @@ export {
   fetchVenueCompetitions,
   createVenueCompetition,
   deleteVenueCompetition,
+  fetchVenueEvents,
+  createVenueEvent,
+  deleteVenueEvent,
 } from '@/api/manager.api';

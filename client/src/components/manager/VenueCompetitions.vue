@@ -5,13 +5,14 @@
 // say nothing of the next ones.
 import { computed, onMounted, ref, watch } from 'vue';
 import type { VenueCompetitionView } from '@shared/types';
-import { ERROR, VENUE_COMPETITION_DESCRIPTION_MAX, VENUE_COMPETITION_TITLE_MAX } from '@shared/constants';
+import { ERROR } from '@shared/constants';
 import { formatShortDay, toParisTime } from '@shared/utils';
 import { createVenueCompetition, deleteVenueCompetition, fetchVenueCompetitions, fetchVenueDivisions } from '@/api';
 import { useErrors } from '@/composables/useErrors';
-import SubjectIcon from '@/components/common/SubjectIcon.vue';
 import ConfirmModal from '@/components/common/ConfirmModal.vue';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
+import VenuePublicationFields from '@/components/manager/VenuePublicationFields.vue';
+import VenuePublicationItem from '@/components/manager/VenuePublicationItem.vue';
 
 const props = defineProps<{ venueId: string }>();
 
@@ -143,40 +144,16 @@ onMounted(load);
         <span v-else class="form-hint">Place d'abord les équipes dans leurs divisions, ci-dessus.</span>
       </label>
 
-      <label class="form-field">
-        <span>Titre</span>
-        <input
-          v-model="title"
-          type="text"
-          :maxlength="VENUE_COMPETITION_TITLE_MAX"
-          :placeholder="kind === 'tournament' ? 'Le nom du tournoi' : ''"
-        />
-      </label>
-
-      <div class="form-row">
-        <label class="form-field">
-          <span>Jour</span>
-          <input v-model="date" type="date" :min="today" />
-        </label>
-        <label class="form-field">
-          <span>Début</span>
-          <input v-model="startTime" type="time" />
-        </label>
-        <label class="form-field">
-          <span>Fin</span>
-          <input v-model="endTime" type="time" />
-        </label>
-      </div>
-
-      <label class="form-field">
-        <span>Description (facultatif)</span>
-        <textarea
-          v-model="description"
-          rows="2"
-          :maxlength="VENUE_COMPETITION_DESCRIPTION_MAX"
-          placeholder="Format, horaires de convocation…"
-        ></textarea>
-      </label>
+      <VenuePublicationFields
+        v-model:title="title"
+        v-model:date="date"
+        v-model:start-time="startTime"
+        v-model:end-time="endTime"
+        v-model:description="description"
+        :min-date="today"
+        :title-placeholder="kind === 'tournament' ? 'Le nom du tournoi' : ''"
+        description-placeholder="Format, horaires de convocation…"
+      />
 
       <div class="form-actions">
         <button type="button" class="btn-neutral" @click="isFormOpen = false">Annuler</button>
@@ -191,20 +168,19 @@ onMounted(load);
     <p v-if="isLoading" class="competitions-empty">Chargement…</p>
     <p v-else-if="!competitions.length" class="competitions-empty">Aucune compétition à venir.</p>
     <ol v-else class="competitions-list">
-      <li v-for="competition in competitions" :key="competition.id" class="competition">
-        <SubjectIcon subject="competition" size="24px" />
-        <div class="competition-text">
-          <div class="competition-head">
-            <strong>{{ competition.title }}</strong>
-            <span class="competition-kind">{{ competition.division ? `Division ${competition.division}` : 'Tournoi' }}</span>
-          </div>
-          <span class="competition-when">{{ formatShortDay(competition.date) }} · {{ competition.startTime }} – {{ competition.endTime }}</span>
-          <span class="competition-answers">{{ answersOf(competition) }}</span>
-          <span v-if="competition.description" class="competition-description">{{ competition.description }}</span>
-        </div>
-        <!-- //TODO(compétitions de salle) modifier une compétition publiée : on la retire et on la republie pour l'instant -->
-        <button type="button" class="btn-withdraw" @click="withdrawing = competition">Retirer</button>
-      </li>
+      <VenuePublicationItem
+        v-for="competition in competitions"
+        :key="competition.id"
+        subject="competition"
+        :title="competition.title"
+        :kind="competition.division ? `Division ${competition.division}` : 'Tournoi'"
+        :date="competition.date"
+        :start-time="competition.startTime"
+        :end-time="competition.endTime"
+        :outcome="answersOf(competition)"
+        :description="competition.description"
+        @withdraw="withdrawing = competition"
+      />
     </ol>
 
     <ConfirmModal
@@ -222,6 +198,9 @@ onMounted(load);
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
 @use '@/styles/buttons' as *;
+@use '@/styles/forms' as *;
+
+@include subject-color-classes;
 
 .venue-competitions {
   display: flex;
@@ -234,7 +213,6 @@ onMounted(load);
   gap: $spacing-sm;
 }
 
-// Publishing acts on the competitions: their colour
 .btn-publish {
   @include btn-base($color-competition);
 }
@@ -243,13 +221,8 @@ onMounted(load);
   @include btn-base($color-text-secondary);
 }
 
-.btn-withdraw {
-  @include btn-base($color-danger);
-  padding: $spacing-xs $spacing-md;
-  flex-shrink: 0;
-}
-
 .competition-form {
+  --subject-color: #{$color-competition};
   display: flex;
   flex-direction: column;
   gap: $spacing-md;
@@ -283,35 +256,8 @@ onMounted(load);
   }
 }
 
-.form-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: $spacing-md;
-}
-
 .form-field {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-xs;
-  color: $color-text-secondary;
-  font-size: $font-size-sm;
-
-  input,
-  select,
-  textarea {
-    padding: $spacing-sm $spacing-md;
-    background: $color-bg-secondary;
-    border: $border-thin solid $color-border-light;
-    border-radius: $radius-md;
-    color: $color-text-primary;
-    font: inherit;
-    font-size: $font-size-base;
-
-    &:focus {
-      outline: none;
-      border-color: $color-competition;
-    }
-  }
+  @include labelled-field($color-competition);
 }
 
 .form-hint {
@@ -336,56 +282,5 @@ onMounted(load);
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-.competition {
-  display: flex;
-  align-items: center;
-  gap: $spacing-md;
-  padding: $spacing-sm $spacing-md;
-  background: $color-bg-tertiary;
-  border: $border-thin solid $color-border-light;
-  border-left: 4px solid $color-competition;
-  border-radius: $radius-lg;
-}
-
-.competition-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
-  min-width: 0;
-}
-
-.competition-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: $spacing-xs $spacing-sm;
-
-  strong {
-    color: $color-text-primary;
-    overflow-wrap: anywhere;
-  }
-}
-
-.competition-kind {
-  color: $color-competition;
-  font-size: $font-size-sm;
-  font-weight: 600;
-}
-
-.competition-when {
-  color: $color-text-primary;
-}
-
-.competition-answers {
-  color: $color-text-secondary;
-  font-size: $font-size-sm;
-}
-
-.competition-description {
-  color: $color-text-secondary;
-  font-size: $font-size-sm;
 }
 </style>

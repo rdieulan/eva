@@ -23,6 +23,7 @@ export const NOTIFICATION_KINDS = [
   'COMPETITION_OFFERED',
   'COMPETITION_ADDED',
   'COMPETITION_WITHDRAWN',
+  'VENUE_EVENT_WITHDRAWN',
 ] as const;
 
 export type NotificationKind = typeof NOTIFICATION_KINDS[number];
@@ -45,8 +46,11 @@ export interface LeagueRegistrationFacts {
   closesAt: string;       // ISO date-time: the registration closes then
 }
 
-/** A competition the team's venue published for it: a day of the team's division, or a tournament of the venue */
-export interface CompetitionFacts {
+/**
+ * What the team's venue published: a competition for the team, a day of its
+ * division or a tournament of the venue, or an event open to all
+ */
+export interface VenuePublicationFacts {
   title: string;              // "Journée de la Division 2"
   venueName: string;
   date: string;               // YYYY-MM-DD
@@ -66,9 +70,10 @@ export type NotificationContent =
   | { kind: 'TEAM_JOIN_REQUESTED'; data: { requestId: string; playerName: string; evaUsername: string | null } }
   | { kind: 'LEAGUE_REGISTRATION_OPEN'; data: LeagueRegistrationFacts }
   | { kind: 'LEAGUE_REGISTRATION_CLOSING'; data: LeagueRegistrationFacts }
-  | { kind: 'COMPETITION_OFFERED'; data: CompetitionFacts }
-  | { kind: 'COMPETITION_ADDED'; data: CompetitionFacts & { eventId: string } }
-  | { kind: 'COMPETITION_WITHDRAWN'; data: CompetitionFacts & { accepted: boolean } }; // accepted: it was in the team's calendar
+  | { kind: 'COMPETITION_OFFERED'; data: VenuePublicationFacts }
+  | { kind: 'COMPETITION_ADDED'; data: VenuePublicationFacts & { eventId: string } }
+  | { kind: 'COMPETITION_WITHDRAWN'; data: VenuePublicationFacts & { accepted: boolean } } // accepted: it was in the team's calendar
+  | { kind: 'VENUE_EVENT_WITHDRAWN'; data: VenuePublicationFacts }; // The team had added it to its calendar
 
 /**
  * The other team of a notification, its name and its id (for the media that

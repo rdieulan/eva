@@ -87,6 +87,21 @@ describe('EventViewerModal - booking on eva.gg', () => {
     expect(link.attributes('target')).toBe('_blank');
   });
 
+  it('lays the match out on the sheet of an event: its day, its hours with its slots, its venue, then the booking', async () => {
+    const wrapper = mountViewer(match({ description: 'Convocation 19:50' }));
+    await flushPromises();
+
+    expect(wrapper.find('.event-title').text()).toBe('Scrim vs TeamX');
+    const rows = wrapper.findAll('.detail-row').map(row => row.find('.detail-label').text());
+    expect(rows).toEqual(['📅 Date', '🕐 Horaire', '👥 Sur eva.gg', '📍 Salle']);
+    expect(wrapper.findAll('.detail-row')[1]!.find('.detail-value').text()).toBe('20:00 - 21:20 2 créneaux');
+    const sheet = wrapper.find('.event-sheet').element;
+    const booking = wrapper.find('a.btn-booking').element;
+    const description = wrapper.find('.event-description').element;
+    expect(sheet.contains(booking)).toBe(true);
+    expect(booking.compareDocumentPosition(description) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('shows no Discord link when the venue has none', async () => {
     const wrapper = mountViewer();
     await flushPromises();

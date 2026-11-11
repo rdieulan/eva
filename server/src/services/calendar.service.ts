@@ -13,6 +13,7 @@ import { ERROR, EVA_SLOT_ID_MAX_LENGTH, EVA_SLOTS_PER_MATCH_MAX } from '@shared/
 import { isSubscriptionRenewalDay } from '@shared/utils';
 import { formatDateStr, parseMonthRange } from './helpers/date.helper';
 import { EVENT_VENUE_INCLUDE, formatEventForFrontend } from './helpers/calendar.helper';
+import { venueEventsForTeam } from '@services/venue-events.service';
 
 // Re-export validation helpers for routes
 export {
@@ -108,6 +109,7 @@ export async function getMonthAvailability(
       renewals: renewalAnchors
         .filter(({ anchorDate }) => isSubscriptionRenewalDay(anchorDate, dateStr))
         .map(({ renewal }) => renewal),
+      venueEvents: [],
     };
   }
 
@@ -142,6 +144,11 @@ export async function getMonthAvailability(
     }
   }
 
+  // The events of the team's venue it has not added, shown as not taken yet
+  for (const venueEvent of await venueEventsForTeam(teamId, startDate, endDate)) {
+    days[venueEvent.date]?.venueEvents.push(venueEvent);
+  }
+
   return { month, days };
 }
 
@@ -161,6 +168,7 @@ export function buildEmptyCalendar(month: string): { month: string; days: Record
       playerAvailabilities: [],
       events: [],
       renewals: [],
+      venueEvents: [],
     };
   }
 

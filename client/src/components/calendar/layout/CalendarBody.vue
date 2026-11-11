@@ -6,7 +6,7 @@
  */
 import CalendarGrid from '@/components/calendar/CalendarGrid.vue';
 import WeekGrid from '@/components/calendar/WeekGrid.vue';
-import type { DayData, CalendarEvent, ScrimSearch } from '@shared/types';
+import type { DayData, CalendarEvent, ScrimSearch, VenueEventView } from '@shared/types';
 import type { WheelOpening } from '@/components/calendar/AvailabilityWheel.vue';
 
 defineProps<{
@@ -33,6 +33,7 @@ defineEmits<{
   'open-create-event': [date: string];
   'toggle-select': [date: string];
   'open-search': [search: ScrimSearch];
+  'open-venue-event': [event: VenueEventView];
   'open-day': [date: string];
 }>();
 </script>
@@ -58,6 +59,7 @@ defineEmits<{
       @open-create-event="(date) => $emit('open-create-event', date)"
       @toggle-select="(date) => $emit('toggle-select', date)"
       @open-search="(search) => $emit('open-search', search)"
+      @open-venue-event="(venueEvent) => $emit('open-venue-event', venueEvent)"
       @open-day="(date) => $emit('open-day', date)"
     />
 
@@ -81,6 +83,7 @@ defineEmits<{
       @open-create-event="(date) => $emit('open-create-event', date)"
       @toggle-select="(date) => $emit('toggle-select', date)"
       @open-search="(search) => $emit('open-search', search)"
+      @open-venue-event="(venueEvent) => $emit('open-venue-event', venueEvent)"
       @open-day="(date) => $emit('open-day', date)"
     />
   </div>

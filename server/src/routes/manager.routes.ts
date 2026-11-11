@@ -1,7 +1,7 @@
 // Venue manager routes: the venues an account manages, the settings of each
 // (its public information, its Discord channel), the divisions of its local
-// league as its manager arranges them, and the competitions the manager
-// publishes in the venue's calendar
+// league as its manager arranges them, and what the manager publishes in the
+// venue's calendar: competitions offered to its teams, events open to all
 
 import { Router } from 'express';
 import type { NextFunction, Response } from 'express';
@@ -22,6 +22,7 @@ import {
   listVenueCompetitions,
 } from '@services/venue-competitions.service';
 import { getVenueSettings, refreshVenueFromEva } from '@services/venue-settings.service';
+import { createVenueEvent, deleteVenueEvent, listVenueEvents } from '@services/venue-events.service';
 import { DISCORD_LINK_REFUSALS, linkDiscordChannel, unlinkDiscordChannel } from '@services/discord-channel.service';
 
 const router = Router();
@@ -189,6 +190,40 @@ router.delete('/venues/:venueId/competitions/:competitionId', requireManagedVenu
   } catch (error) {
     apiLogger.error('Error withdrawing a venue competition:', error);
     res.status(500).json({ errors: [ERROR.competitionDeleteFailed] });
+  }
+});
+
+// GET /api/manager/venues/:venueId/events - The venue's events to come, the soonest first
+router.get('/venues/:venueId/events', requireManagedVenue, async (req: ManagerRequest, res: Response) => {
+  try {
+    res.json(await listVenueEvents(req.params.venueId as string));
+  } catch (error) {
+    apiLogger.error('Error listing venue events:', error);
+    res.status(500).json({ errors: [ERROR.venueEventsFetchFailed] });
+  }
+});
+
+// POST /api/manager/venues/:venueId/events - Publish an event, open to all
+router.post('/venues/:venueId/events', requireManagedVenue, async (req: ManagerRequest, res: Response) => {
+  try {
+    const result = await createVenueEvent(req.params.venueId as string, req.body ?? {});
+    if ('error' in result) return res.status(400).json({ errors: [result.error] });
+    res.status(201).json(result);
+  } catch (error) {
+    apiLogger.error('Error publishing a venue event:', error);
+    res.status(500).json({ errors: [ERROR.venueEventSaveFailed] });
+  }
+});
+
+// DELETE /api/manager/venues/:venueId/events/:eventId - Withdraw an event
+router.delete('/venues/:venueId/events/:eventId', requireManagedVenue, async (req: ManagerRequest, res: Response) => {
+  try {
+    const deleted = await deleteVenueEvent(req.params.venueId as string, req.params.eventId as string);
+    if (!deleted) return res.status(404).json({ errors: [ERROR.venueEventNotFound] });
+    res.status(204).end();
+  } catch (error) {
+    apiLogger.error('Error withdrawing a venue event:', error);
+    res.status(500).json({ errors: [ERROR.venueEventDeleteFailed] });
   }
 });
 
