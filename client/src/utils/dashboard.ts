@@ -3,7 +3,7 @@
 // use, and what to do about it, inside the app or on another site
 
 import type { RouteLocationRaw } from 'vue-router';
-import type { DashboardItem, DashboardNextMatch, Subject } from '@shared/types';
+import type { DashboardItem, DashboardNext, Subject } from '@shared/types';
 import {
   assessSlotHeadcount,
   buildEvaBookingUrl,
@@ -70,6 +70,7 @@ function dueIn(due: string, today: string): { when: string; isUrgent: boolean } 
 export function dashboardItemKey(item: DashboardItem): string {
   switch (item.kind) {
     case 'MATCH': return `match-${item.data.eventId}`;
+    case 'COMPETITION': return `competition-event-${item.data.eventId}`;
     case 'AVAILABILITY': return 'availability';
     case 'LEAGUE_REGISTRATION': return `league-${item.data.tournamentId}`;
     case 'SCRIM_PROPOSAL': return `proposal-${item.data.proposalId}`;
@@ -107,6 +108,22 @@ export function describeDashboardItem(item: DashboardItem, now: Date = new Date(
             to: calendarRoute({ page: 'calendar', date: data.date, mode: 'team', open: { kind: 'event', id: data.eventId } }),
           },
         ],
+      };
+    }
+    case 'COMPETITION': {
+      const { data } = item;
+      return {
+        subject: 'competition',
+        title: data.title,
+        body: dayHoursPlace(data.date, data.startTime, data.endTime, data.venueName),
+        detail: data.isUnavailable ? 'Tu t\'es dit indispo ce jour-là.' : null,
+        headcountStatus: null,
+        ...due,
+        actions: [{
+          kind: 'route',
+          label: 'Voir la compétition',
+          to: calendarRoute({ page: 'calendar', date: data.date, mode: 'team', open: { kind: 'event', id: data.eventId } }),
+        }],
       };
     }
     case 'AVAILABILITY': {
@@ -191,12 +208,20 @@ export function describeDashboardItem(item: DashboardItem, now: Date = new Date(
   }
 }
 
-/** The team's next match, for a dashboard with nothing to do: how far it is, what and when, and where to see it */
-export function describeNextMatch(next: DashboardNextMatch, now: Date = new Date()): { lead: string; label: string; to: RouteLocationRaw } {
+/**
+ * The team's next match or competition, for a dashboard with nothing to do:
+ * how far it is, what and when, in the colour of its subject, and where to see it
+ */
+export function describeNext(
+  next: DashboardNext,
+  now: Date = new Date(),
+): { lead: string; label: string; subject: Subject; to: RouteLocationRaw } {
   const days = daysBetween(toParisTime(now).day, next.date);
+  const isMatch = next.type === 'MATCH';
   return {
-    lead: `Prochain match dans ${plural(days, 'jour')} :`,
+    lead: `${isMatch ? 'Prochain match' : 'Prochaine compétition'} dans ${plural(days, 'jour')} :`,
     label: `${next.title}, ${formatShortDay(next.date)} à ${next.startTime}`,
+    subject: isMatch ? 'match' : 'competition',
     to: calendarRoute({ page: 'calendar', date: next.date, mode: 'team', open: { kind: 'event', id: next.eventId } }),
   };
 }

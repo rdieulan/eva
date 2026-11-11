@@ -92,7 +92,8 @@ export type {
   DashboardAvailability,
   DashboardCompetitionOffer,
   DashboardLeagueRegistration,
-  DashboardNextMatch,
+  DashboardNext,
+  DashboardCompetition,
   DashboardScrimProposal,
 } from './dashboard.types';
 

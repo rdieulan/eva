@@ -32,8 +32,8 @@ const MATCH: DashboardItem = {
 };
 const JOIN: DashboardItem = { kind: 'JOIN_REQUESTS', due: null, data: { count: 2 } };
 
-function answers(items: DashboardItem[], nextMatch: Dashboard['nextMatch'] = null): Dashboard {
-  return { items, nextMatch };
+function answers(items: DashboardItem[], next: Dashboard['next'] = null): Dashboard {
+  return { items, next };
 }
 
 async function mountDashboard() {
@@ -92,7 +92,7 @@ describe('HomeDashboard', () => {
   });
 
   it('says there is nothing to do, with the team\'s next match when it has one', async () => {
-    vi.mocked(fetchDashboard).mockResolvedValue(answers([], { eventId: 'event-9', date: '2030-06-18', startTime: '20:00', title: 'Match vs Les Rivaux' }));
+    vi.mocked(fetchDashboard).mockResolvedValue(answers([], { eventId: 'event-9', type: 'MATCH', date: '2030-06-18', startTime: '20:00', title: 'Match vs Les Rivaux' }));
     const wrapper = await mountDashboard();
 
     expect(wrapper.get('.dashboard-quiet-title').text()).toBe('Rien à faire pour le moment.');

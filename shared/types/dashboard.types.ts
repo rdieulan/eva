@@ -18,6 +18,17 @@ export interface DashboardMatch {
   isUnavailable: boolean; // The reader said they cannot play that day
 }
 
+/** A competition in the team's calendar for the coming week */
+export interface DashboardCompetition {
+  eventId: string;
+  date: string;      // YYYY-MM-DD
+  startTime: string; // HH:mm
+  endTime: string;   // HH:mm
+  title: string;
+  venueName: string | null; // The venue that published it, when it came from one
+  isUnavailable: boolean;   // The reader said they cannot play that day
+}
+
 /** The days ahead the reader has given no availability for */
 export interface DashboardAvailability {
   missingDays: number;
@@ -62,15 +73,17 @@ export interface DashboardCompetitionOffer {
 /** What the dashboard lists, kind by kind. `due` is the moment it stops being of use, in Paris time (YYYY-MM-DDTHH:mm). */
 export type DashboardItem =
   | { kind: 'MATCH'; due: string; data: DashboardMatch }
+  | { kind: 'COMPETITION'; due: string; data: DashboardCompetition }
   | { kind: 'AVAILABILITY'; due: string; data: DashboardAvailability }
   | { kind: 'LEAGUE_REGISTRATION'; due: string; data: DashboardLeagueRegistration }
   | { kind: 'SCRIM_PROPOSAL'; due: string; data: DashboardScrimProposal }
   | { kind: 'COMPETITION_OFFER'; due: string; data: DashboardCompetitionOffer }
   | { kind: 'JOIN_REQUESTS'; due: null; data: { count: number } };
 
-/** The team's next match beyond the coming week */
-export interface DashboardNextMatch {
+/** The team's next match or competition beyond the coming week */
+export interface DashboardNext {
   eventId: string;
+  type: 'MATCH' | 'COMPETITION';
   date: string;      // YYYY-MM-DD
   startTime: string; // HH:mm
   title: string;
@@ -79,7 +92,8 @@ export interface DashboardNextMatch {
 /** The home dashboard of a player of a team, the most pressing first */
 export interface Dashboard {
   items: DashboardItem[];
-  // With nothing to do: the team's next match all the same, when it has one
-  // (beyond the coming week, whose matches are items). Null otherwise.
-  nextMatch: DashboardNextMatch | null;
+  // With nothing to do: the team's next match or competition all the same,
+  // when it has one (beyond the coming week, whose matches and competitions
+  // are items). Null otherwise.
+  next: DashboardNext | null;
 }

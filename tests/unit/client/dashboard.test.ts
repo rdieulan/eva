@@ -3,7 +3,7 @@
 // it, inside the app or on another site
 import { describe, it, expect } from 'vitest';
 import type { DashboardItem, DashboardMatch } from '@shared/types';
-import { dashboardItemKey, describeDashboardItem, describeNextMatch } from '@/utils/dashboard';
+import { dashboardItemKey, describeDashboardItem, describeNext } from '@/utils/dashboard';
 
 // 10:00 in Paris on Monday 10 June 2030
 const NOW = new Date('2030-06-10T08:00:00Z');
@@ -169,6 +169,36 @@ describe('describeDashboardItem', () => {
     expect(describeDashboardItem(offer(2, 'Convocation 13:30'), NOW).detail).toBe('Convocation 13:30');
   });
 
+  it('puts a competition of the week in words, the venue that published it, and leads to it in the calendar', () => {
+    const item: DashboardItem = {
+      kind: 'COMPETITION',
+      due: '2030-06-12T14:00',
+      data: {
+        eventId: 'event-5', date: '2030-06-12', startTime: '14:00', endTime: '19:00', title: 'Journée de la Division 2',
+        venueName: 'Nîmes', isUnavailable: false,
+      },
+    };
+
+    expect(describeDashboardItem(item, NOW)).toEqual({
+      subject: 'competition',
+      title: 'Journée de la Division 2',
+      body: line('mer. 12/06', '14:00 – 19:00', 'Nîmes'),
+      detail: null,
+      headcountStatus: null,
+      when: 'Dans 2 jours',
+      isUrgent: false,
+      actions: [{
+        kind: 'route',
+        label: 'Voir la compétition',
+        to: { path: '/calendar', query: { date: '2030-06-12', mode: 'team', event: 'event-5' } },
+      }],
+    });
+    expect(describeDashboardItem({ ...item, data: { ...item.data, venueName: null, isUnavailable: true } }, NOW)).toMatchObject({
+      body: line('mer. 12/06', '14:00 – 19:00'),
+      detail: 'Tu t\'es dit indispo ce jour-là.',
+    });
+  });
+
   it('counts the players waiting to join, with no due', () => {
     const one = describeDashboardItem({ kind: 'JOIN_REQUESTS', due: null, data: { count: 1 } }, NOW);
     const two = describeDashboardItem({ kind: 'JOIN_REQUESTS', due: null, data: { count: 2 } }, NOW);
@@ -192,12 +222,18 @@ describe('dashboardItemKey', () => {
   });
 });
 
-describe('describeNextMatch', () => {
+describe('describeNext', () => {
   it('says how far the team\'s next match is, what and when, and leads to it', () => {
-    expect(describeNextMatch({ eventId: 'event-9', date: '2030-06-18', startTime: '20:00', title: 'Match vs Les Rivaux' }, NOW)).toEqual({
+    expect(describeNext({ eventId: 'event-9', type: 'MATCH', date: '2030-06-18', startTime: '20:00', title: 'Match vs Les Rivaux' }, NOW)).toEqual({
       lead: 'Prochain match dans 8 jours :',
       label: 'Match vs Les Rivaux, mar. 18/06 à 20:00',
+      subject: 'match',
       to: { path: '/calendar', query: { date: '2030-06-18', mode: 'team', event: 'event-9' } },
     });
+  });
+
+  it('says a competition when the next is one, in its colour', () => {
+    expect(describeNext({ eventId: 'event-7', type: 'COMPETITION', date: '2030-06-11', startTime: '14:00', title: 'Tournoi 2v2' }, NOW))
+      .toMatchObject({ lead: 'Prochaine compétition dans 1 jour :', label: 'Tournoi 2v2, mar. 11/06 à 14:00', subject: 'competition' });
   });
 });

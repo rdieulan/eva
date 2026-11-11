@@ -10,7 +10,7 @@ import type { Dashboard } from '@shared/types';
 import { ERROR } from '@shared/constants';
 import { answerCompetitionOffer, checkLeagueRegistration, fetchDashboard } from '@/api';
 import { useErrors } from '@/composables/useErrors';
-import { dashboardItemKey, describeDashboardItem, describeNextMatch } from '@/utils/dashboard';
+import { dashboardItemKey, describeDashboardItem, describeNext } from '@/utils/dashboard';
 import SubjectIcon from '@/components/common/SubjectIcon.vue';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 
@@ -26,7 +26,7 @@ const cards = computed(() => (dashboard.value?.items ?? []).map(item => ({
   key: dashboardItemKey(item),
   view: describeDashboardItem(item),
 })));
-const nextMatch = computed(() => dashboard.value?.nextMatch ? describeNextMatch(dashboard.value.nextMatch) : null);
+const next = computed(() => dashboard.value?.next ? describeNext(dashboard.value.next) : null);
 
 async function load() {
   try {
@@ -94,8 +94,8 @@ onMounted(load);
 
     <div v-else-if="!cards.length" class="dashboard-quiet">
       <p class="dashboard-quiet-title">Rien à faire pour le moment.</p>
-      <p v-if="nextMatch" class="dashboard-quiet-next">
-        {{ nextMatch.lead }} <RouterLink :to="nextMatch.to" class="subject--match">{{ nextMatch.label }}</RouterLink>
+      <p v-if="next" class="dashboard-quiet-next">
+        {{ next.lead }} <RouterLink :to="next.to" :class="`subject--${next.subject}`">{{ next.label }}</RouterLink>
       </p>
     </div>
 

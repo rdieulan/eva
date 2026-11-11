@@ -26,7 +26,7 @@ const RECHECK_REFUSAL_STATUS: Record<string, number> = {
 router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   const account = req.account!;
   if (account.accountType !== 'player' || !account.playerId || !account.teamId) {
-    const nothing: Dashboard = { items: [], nextMatch: null };
+    const nothing: Dashboard = { items: [], next: null };
     return res.json(nothing);
   }
 

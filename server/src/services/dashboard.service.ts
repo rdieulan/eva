@@ -1,17 +1,18 @@
 // The home dashboard: what a player of a team has to do, or to know, soon, the
 // most pressing first. Each item stops being of use at a moment, its due, in
 // Paris time; those with none come last. A player sees what is theirs to do:
-// the matches and their own availability; and what their permissions let them
-// answer: the league registration, the proposals of matches, the requests to join.
+// the matches, the competitions and their own availability; and what their
+// permissions let them answer: the league registration, the proposals of
+// matches, the competitions of their venues, the requests to join.
 
 import { prisma } from '@db/prisma';
-import type { AccountPermissions, Dashboard, DashboardItem, DashboardMatch, DashboardNextMatch } from '@shared/types';
+import type { AccountPermissions, Dashboard, DashboardItem, DashboardMatch, DashboardNext } from '@shared/types';
 import { shiftDay, toParisTime } from '@shared/utils/date.utils';
 import { getVenueSlots } from '@services/venue-slots.service';
 import { formatDateStr } from './helpers/date.helper';
 import { logger } from '../utils/logger';
 
-// The matches of the coming week, today included
+// The matches and competitions of the coming week, today included
 const MATCH_DAYS = 7;
 
 /** Who reads the dashboard: a player of a team, and what they may do there */
@@ -44,6 +45,16 @@ async function headcountOf(venueId: string | null, date: string, evaSlotIds: str
   }
 }
 
+// The days among these the reader said they cannot play
+async function unavailableDaysOf(playerId: string, dates: Date[]): Promise<Set<string>> {
+  if (!dates.length) return new Set();
+  const unavailable = await prisma.availability.findMany({
+    where: { playerId, status: 'UNAVAILABLE', date: { in: dates } },
+    select: { date: true },
+  });
+  return new Set(unavailable.map(availability => formatDateStr(availability.date)));
+}
+
 // The team's matches of the coming week not over yet, with their bookings
 async function matchItems(reader: DashboardReader, today: string, nowTime: string): Promise<DashboardItem[]> {
   const events = await prisma.calendarEvent.findMany({
@@ -56,12 +67,7 @@ async function matchItems(reader: DashboardReader, today: string, nowTime: strin
   });
   const upcoming = events.filter(event => formatDateStr(event.date) > today || event.endTime > nowTime);
   if (!upcoming.length) return [];
-
-  const unavailable = await prisma.availability.findMany({
-    where: { playerId: reader.playerId, status: 'UNAVAILABLE', date: { in: upcoming.map(event => event.date) } },
-    select: { date: true },
-  });
-  const unavailableDays = new Set(unavailable.map(availability => formatDateStr(availability.date)));
+  const unavailableDays = await unavailableDaysOf(reader.playerId, upcoming.map(event => event.date));
 
   return Promise.all(upcoming.map(async (event): Promise<DashboardItem> => {
     const date = formatDateStr(event.date);
@@ -82,6 +88,37 @@ async function matchItems(reader: DashboardReader, today: string, nowTime: strin
       },
     };
   }));
+}
+
+// The team's competitions of the coming week not over yet: a day of its
+// division, a tournament, a month of its league
+async function competitionItems(reader: DashboardReader, today: string, nowTime: string): Promise<DashboardItem[]> {
+  const events = await prisma.calendarEvent.findMany({
+    where: { teamId: reader.teamId, type: 'COMPETITION', date: { gte: new Date(today), lte: new Date(shiftDay(today, MATCH_DAYS - 1)) } },
+    select: {
+      id: true, date: true, startTime: true, endTime: true, title: true,
+      venueCompetition: { select: { venue: { select: { name: true } } } },
+    },
+    orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
+  });
+  const upcoming = events.filter(event => formatDateStr(event.date) > today || event.endTime > nowTime);
+  const unavailableDays = await unavailableDaysOf(reader.playerId, upcoming.map(event => event.date));
+  return upcoming.map(event => {
+    const date = formatDateStr(event.date);
+    return {
+      kind: 'COMPETITION',
+      due: `${date}T${event.startTime}`,
+      data: {
+        eventId: event.id,
+        date,
+        startTime: event.startTime,
+        endTime: event.endTime,
+        title: event.title,
+        venueName: event.venueCompetition?.venue.name ?? null,
+        isUnavailable: unavailableDays.has(date),
+      },
+    };
+  });
 }
 
 // The days ahead, as far as the team asks, the reader has given no availability for
@@ -203,27 +240,30 @@ async function joinRequestItems(reader: DashboardReader): Promise<DashboardItem[
   return count ? [{ kind: 'JOIN_REQUESTS', due: null, data: { count } }] : [];
 }
 
-// The team's next match beyond the coming week, whose matches are items
-async function nextMatchBeyondWeek(reader: DashboardReader, today: string): Promise<DashboardNextMatch | null> {
+// The team's next match or competition beyond the coming week, whose matches and competitions are items
+async function nextBeyondWeek(reader: DashboardReader, today: string): Promise<DashboardNext | null> {
   const event = await prisma.calendarEvent.findFirst({
-    where: { teamId: reader.teamId, type: 'MATCH', date: { gt: new Date(shiftDay(today, MATCH_DAYS - 1)) } },
-    select: { id: true, date: true, startTime: true, title: true },
+    where: { teamId: reader.teamId, type: { in: ['MATCH', 'COMPETITION'] }, date: { gt: new Date(shiftDay(today, MATCH_DAYS - 1)) } },
+    select: { id: true, type: true, date: true, startTime: true, title: true },
     orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
   });
-  return event && { eventId: event.id, date: formatDateStr(event.date), startTime: event.startTime, title: event.title };
+  if (!event || (event.type !== 'MATCH' && event.type !== 'COMPETITION')) return null;
+  return { eventId: event.id, type: event.type, date: formatDateStr(event.date), startTime: event.startTime, title: event.title };
 }
 
 /**
- * The dashboard of a player of a team: their team's matches of the coming week,
- * their own availability left to give, and, as their permissions let them, the
- * league registration, the proposals of matches, the competitions of their
- * venues and the requests to join to answer. The soonest due first; what has none, last. With nothing to do, the
- * team's next match all the same, when it has one.
+ * The dashboard of a player of a team: their team's matches and competitions
+ * of the coming week, their own availability left to give, and, as their
+ * permissions let them, the league registration, the proposals of matches,
+ * the competitions of their venues and the requests to join to answer. The
+ * soonest due first; what has none, last. With nothing to do, the team's next
+ * match or competition all the same, when it has one.
  */
 export async function getDashboard(reader: DashboardReader, now: Date = new Date()): Promise<Dashboard> {
   const { day: today, time: nowTime } = toParisTime(now);
   const groups = await Promise.all([
     matchItems(reader, today, nowTime),
+    competitionItems(reader, today, nowTime),
     availabilityItem(reader, today),
     reader.permissions.team.canManageTeam ? leagueItems(reader, now) : [],
     reader.permissions.matchmaking.canRespond ? proposalItems(reader, today, nowTime) : [],
@@ -231,5 +271,5 @@ export async function getDashboard(reader: DashboardReader, now: Date = new Date
     reader.permissions.team.canInviteMembers ? joinRequestItems(reader) : [],
   ]);
   const items = groups.flat().sort((a, b) => Number(a.due === null) - Number(b.due === null) || (a.due ?? '').localeCompare(b.due ?? ''));
-  return { items, nextMatch: items.length ? null : await nextMatchBeyondWeek(reader, today) };
+  return { items, next: items.length ? null : await nextBeyondWeek(reader, today) };
 }

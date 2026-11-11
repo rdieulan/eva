@@ -63,6 +63,10 @@ function createMatch(token: string, body: Record<string, unknown>) {
   return request(app).post('/api/calendar/events').set(authHeader(token)).send({ type: 'MATCH', title: 'Match vs Les Rivaux', ...body });
 }
 
+function createCompetition(token: string, body: Record<string, unknown>) {
+  return request(app).post('/api/calendar/events').set(authHeader(token)).send({ type: 'COMPETITION', title: 'Journée de la Division 2', ...body });
+}
+
 function giveAvailability(token: string, date: string, status = 'AVAILABLE') {
   return request(app).post('/api/calendar/availability').set(authHeader(token)).send({ date, status });
 }
@@ -117,11 +121,11 @@ describe('GET /api/dashboard', () => {
   it('is empty for a player without a team, and for signed-in players only', async () => {
     const { token } = await createAuthenticatedUser();
 
-    expect((await dashboard(token)).body).toEqual({ items: [], nextMatch: null });
+    expect((await dashboard(token)).body).toEqual({ items: [], next: null });
     expect((await request(app).get('/api/dashboard')).status).toBe(401);
   });
 
-  it('with nothing to do, gives the team\'s next match beyond the coming week all the same', async () => {
+  it('with nothing to do, gives the team\'s next match or competition beyond the coming week all the same', async () => {
     const { token } = await createUserWithTeam();
     await request(app).put('/api/teams/current').set(authHeader(token)).send({ availabilityHorizonDays: 7 }).expect(200);
     for (let offset = 0; offset < 7; offset += 1) await giveAvailability(token, day(offset)).expect(200);
@@ -132,12 +136,42 @@ describe('GET /api/dashboard', () => {
 
     const quiet = await dashboard(token);
     expect(quiet.body.items).toEqual([]);
-    expect(quiet.body.nextMatch).toEqual({ eventId: expect.any(String), date: day(8), startTime: '20:00', title: 'Match vs Les Rivaux' });
+    expect(quiet.body.next).toEqual({ eventId: expect.any(String), type: 'MATCH', date: day(8), startTime: '20:00', title: 'Match vs Les Rivaux' });
+
+    // A competition sooner comes first
+    await createCompetition(token, { date: day(7), startTime: '14:00', endTime: '19:00' }).expect(201);
+    expect((await dashboard(token)).body.next).toMatchObject({ type: 'COMPETITION', date: day(7), title: 'Journée de la Division 2' });
 
     await createMatch(token, { date: day(3), startTime: '20:00', endTime: '21:00', venueId: nimes.id }).expect(201);
     const busy = await dashboard(token);
     expect(busy.body.items.map((item: DashboardItem) => item.kind)).toEqual(['MATCH']);
-    expect(busy.body.nextMatch).toBeNull();
+    expect(busy.body.next).toBeNull();
+  });
+
+  it('lists the team\'s competitions of the coming week not over yet, for every player, with the venue that published one', async () => {
+    const leader = await createUserWithTeam();
+    const member = await createTeamMember(leader.token, leader.team.id);
+    const nimes = await venue();
+    // Over already this morning, then today, then beyond the week
+    await createCompetition(leader.token, { date: TODAY, startTime: '08:00', endTime: '09:30' }).expect(201);
+    await createCompetition(leader.token, { date: TODAY, startTime: '14:00', endTime: '19:00' }).expect(201);
+    await createCompetition(leader.token, { date: day(9), startTime: '14:00', endTime: '19:00' }).expect(201);
+    const published = await prisma.venueCompetition.create({
+      data: { venueId: nimes.id, division: 2, title: 'Journée de la Division 2', date: new Date(day(2)), startTime: '14:00', endTime: '19:00' },
+    });
+    await prisma.calendarEvent.create({
+      data: {
+        type: 'COMPETITION', teamId: leader.team.id, createdById: leader.user.playerId, venueCompetitionId: published.id,
+        title: 'Journée de la Division 2', date: new Date(day(2)), startTime: '14:00', endTime: '19:00',
+      },
+    });
+    await giveAvailability(member.token, day(2), 'UNAVAILABLE').expect(200);
+
+    const competitions = (await items(member.token)).filter(item => item.kind === 'COMPETITION');
+
+    expect(competitions.map(item => item.due)).toEqual([`${TODAY}T14:00`, `${day(2)}T14:00`]);
+    expect(competitions[0]!.data).toMatchObject({ title: 'Journée de la Division 2', venueName: null, isUnavailable: false });
+    expect(competitions[1]!.data).toMatchObject({ venueName: 'Nîmes', isUnavailable: true });
   });
 
   it('lists the team\'s matches of the coming week not over yet, with the players eva.gg counts', async () => {
