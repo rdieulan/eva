@@ -10,7 +10,6 @@ import discordIcon from '@/assets/icons/discord.svg?raw';
 import closeIcon from '@/assets/icons/close.svg?raw';
 import chevronRightIcon from '@/assets/icons/chevron-right.svg?raw';
 import resetIcon from '@/assets/icons/reset.svg?raw';
-import calculatorIcon from '@/assets/icons/calculator.svg?raw';
 import flagIcon from '@/assets/icons/flag.svg?raw';
 import swordIcon from '@/assets/icons/sword.svg?raw';
 import shieldIcon from '@/assets/icons/shield.svg?raw';
@@ -38,7 +37,6 @@ const icons: Record<string, string> = {
   close: closeIcon,
   'chevron-right': chevronRightIcon,
   reset: resetIcon,
-  calculator: calculatorIcon,
   flag: flagIcon,
   sword: swordIcon,
   shield: shieldIcon,

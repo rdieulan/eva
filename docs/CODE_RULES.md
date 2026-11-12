@@ -162,6 +162,10 @@ Composants génériques sans logique métier spécifique :
 - **Acceptable** : 300-500 lignes
 - **À refactoriser** : > 500 lignes (extraire sous-composants)
 
+### Icônes
+- Une icône dessinée est un SVG de `client/src/assets/icons/`, affiché par `SvgIcon`.
+- Une icône reprise d'un jeu d'icônes se déclare dans `THIRD_PARTY_NOTICES.md`, dans le même commit : le jeu, le nom qu'elle y porte, la licence et la notice que celle-ci demande.
+
 ---
 
 ## 🎨 CSS/SCSS
