@@ -39,12 +39,15 @@ defineEmits<{
   border-radius: 999px;
   box-shadow: 0 8px 24px $color-shadow;
 
+  // On a phone the count takes its own line, the buttons theirs below it: the
+  // three side by side are wider than the screen
   @include mobile-lg {
     left: $spacing-sm;
     right: $spacing-sm;
     transform: none;
-    justify-content: space-between;
-    gap: $spacing-sm;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: $spacing-xs $spacing-sm;
     padding: $spacing-sm $spacing-md;
     border-radius: $radius-lg;
   }
@@ -56,6 +59,8 @@ defineEmits<{
   white-space: nowrap;
 
   @include mobile-lg {
+    flex-basis: 100%;
+    text-align: center;
     font-size: 0.85rem;
   }
 }
