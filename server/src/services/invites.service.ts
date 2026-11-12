@@ -171,6 +171,9 @@ export async function verifyInviteCode(code: string) {
 /**
  * Join a team using an invite code
  */
+// The player was given a team by another way while joining with the link
+class JoinedMeanwhile extends Error {}
+
 export async function joinTeamWithCode(
   playerId: string,
   code: string
@@ -206,23 +209,32 @@ export async function joinTeamWithCode(
     return { success: false, error: inviteError };
   }
 
-  const joined = await prisma.$transaction(async tx => {
-    // The player joins, unless another way gave them a team meanwhile
-    const { count } = await tx.player.updateMany({
-      where: { id: playerId, teamId: null },
-      data: { teamId: invite.teamId },
+  let reserved: boolean;
+  try {
+    reserved = await prisma.$transaction(async tx => {
+      // A use is taken first, while one is left: of two players opening the
+      // link at once, only one gets its last use
+      const { count: taken } = await tx.teamInvite.updateMany({
+        where: { id: invite.id, uses: { lt: prisma.teamInvite.fields.maxUses }, expiresAt: { gt: new Date() } },
+        data: { uses: { increment: 1 } },
+      });
+      if (taken === 0) return false;
+      // The player joins, unless another way gave them a team meanwhile: then the use is given back
+      const { count: joined } = await tx.player.updateMany({
+        where: { id: playerId, teamId: null },
+        data: { teamId: invite.teamId },
+      });
+      if (joined === 0) throw new JoinedMeanwhile();
+      // A request to join a team, waiting, is answered by joining one
+      await tx.teamJoinRequest.deleteMany({ where: { playerId, status: 'PENDING' } });
+      return true;
     });
-    if (count === 0) return false;
-    await tx.teamInvite.update({
-      where: { id: invite.id },
-      data: { uses: { increment: 1 } },
-    });
-    // A request to join a team, waiting, is answered by joining one
-    await tx.teamJoinRequest.deleteMany({ where: { playerId, status: 'PENDING' } });
-    return true;
-  });
-  if (!joined) {
-    return { success: false, error: ERROR.userAlreadyInTeam };
+  } catch (error) {
+    if (error instanceof JoinedMeanwhile) return { success: false, error: ERROR.userAlreadyInTeam };
+    throw error;
+  }
+  if (!reserved) {
+    return { success: false, error: ERROR.inviteMaxUsesReached };
   }
 
   return {

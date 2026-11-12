@@ -414,6 +414,20 @@ describe('Teams API', () => {
       expect(res.body.errors).toContain(ERROR.inviteExpired);
     });
 
+    it('lets one player in only on a link of one use opened by two at once', async () => {
+      const { token: leaderToken, team } = await createUserWithTeam();
+      const invite = await request(app).post(`/api/teams/${team.id}/invites`).set(authHeader(leaderToken)).send({ expiresInHours: 24, maxUses: 1 });
+      const [first, second] = await Promise.all([createAuthenticatedUser(), createAuthenticatedUser()]);
+
+      const answers = await Promise.all([first, second].map(({ token }) =>
+        request(app).post(`/api/invites/${invite.body.code}/join`).set(authHeader(token))));
+
+      expect(answers.map(res => res.status).sort()).toEqual([200, 400]);
+      expect(answers.find(res => res.status === 400)!.body.errors).toContain(ERROR.inviteMaxUsesReached);
+      expect(await prisma.player.count({ where: { teamId: team.id } })).toBe(2);
+      expect((await prisma.teamInvite.findUniqueOrThrow({ where: { code: invite.body.code } })).uses).toBe(1);
+    });
+
     it('should reject invalid invite code', async () => {
       const { token } = await createAuthenticatedUser();
 
