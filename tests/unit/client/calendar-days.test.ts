@@ -31,12 +31,12 @@ describe('monthDays', () => {
 });
 
 describe('weekDays', () => {
-  it('gives the seven days from a Monday, those of another month told apart', () => {
-    const days = weekDays(new Date(2026, 10, 30), 11);
+  it('gives the seven days from a Monday, all in sight whatever their month', () => {
+    const days = weekDays(new Date(2026, 10, 30));
 
     expect(days.map(day => day.date)).toEqual([
       '2026-11-30', '2026-12-01', '2026-12-02', '2026-12-03', '2026-12-04', '2026-12-05', '2026-12-06',
     ]);
-    expect(days.map(day => day.isCurrentMonth)).toEqual([true, false, false, false, false, false, false]);
+    expect(days.every(day => day.isCurrentMonth)).toBe(true);
   });
 });

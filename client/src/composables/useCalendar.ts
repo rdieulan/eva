@@ -41,7 +41,7 @@ export function useCalendar(options: UseCalendarOptions): UseCalendarReturn {
   const { playerId, onError } = options;
 
   const navigation = useCalendarNavigation();
-  const { currentYear, currentMonth, monthString } = navigation;
+  const { monthsInSight } = navigation;
 
   const calendarMode = ref<CalendarMode>('team');
 
@@ -67,8 +67,9 @@ export function useCalendar(options: UseCalendarOptions): UseCalendarReturn {
   const { errors, clearErrors, setErrorFromException } = useErrors();
   const noTeam = ref(false);
 
-  // Load calendar data. An answer that arrives after another month was asked
-  // for is dropped: it would show the wrong month.
+  // Load calendar data: the days of every month in sight, a week across two
+  // months showing all of its. An answer that arrives after other months were
+  // asked for is dropped: it would show the wrong days.
   let loadRequestId = 0;
 
   async function loadCalendarData() {
@@ -77,10 +78,10 @@ export function useCalendar(options: UseCalendarOptions): UseCalendarReturn {
     clearErrors();
 
     try {
-      const data = await fetchMonthData(monthString.value);
+      const months = await Promise.all(monthsInSight.value.map(month => fetchMonthData(month)));
       if (requestId !== loadRequestId) return;
-      days.value = data.days;
-      noTeam.value = data.noTeam === true;
+      days.value = Object.assign({}, ...months.map(data => data.days));
+      noTeam.value = months.some(data => data.noTeam === true);
     } catch (err) {
       if (requestId !== loadRequestId) return;
       console.error('Error loading calendar:', err);
@@ -90,8 +91,8 @@ export function useCalendar(options: UseCalendarOptions): UseCalendarReturn {
     }
   }
 
-  // Watch month changes to reload data
-  watch([currentYear, currentMonth], () => {
+  // Other months in sight: their days are read
+  watch(() => monthsInSight.value.join(','), () => {
     loadCalendarData();
   });
 

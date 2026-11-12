@@ -10,6 +10,11 @@ import { MONTH_NAMES } from '@/constants/calendar';
 
 export type ViewMode = 'month' | 'week';
 
+// The month of a day, YYYY-MM
+function monthOf(date: Date): string {
+  return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+}
+
 export interface UseCalendarNavigationReturn {
   viewMode: Ref<ViewMode>;
 
@@ -25,6 +30,9 @@ export interface UseCalendarNavigationReturn {
 
   // The title of what is in sight, month or week
   navigationTitle: ComputedRef<string>;
+  // The months the days in sight belong to (YYYY-MM), in order: the month
+  // shown, or the one or two a week spans, all of whose days are in sight
+  monthsInSight: ComputedRef<string[]>;
 
   goToPrev: () => void;
   goToNext: () => void;
@@ -79,6 +87,13 @@ export function useCalendarNavigation(): UseCalendarNavigationReturn {
   // Navigation title based on view mode
   const navigationTitle = computed(() => {
     return viewMode.value === 'month' ? monthDisplay.value : weekDisplay.value;
+  });
+
+  const monthsInSight = computed(() => {
+    if (viewMode.value === 'month') return [monthString.value];
+    const end = new Date(currentWeekStart.value);
+    end.setDate(end.getDate() + 6);
+    return [...new Set([monthOf(currentWeekStart.value), monthOf(end)])];
   });
 
   // Watch view mode changes
@@ -181,6 +196,7 @@ export function useCalendarNavigation(): UseCalendarNavigationReturn {
     currentWeekStart,
     weekDisplay,
     navigationTitle,
+    monthsInSight,
     goToPrev,
     goToNext,
     goToPrevMonth,

@@ -112,7 +112,7 @@ export function sortEventsByTime<T extends { startTime: string }>(events: T[]): 
 export interface CalendarDay {
   date: string; // YYYY-MM-DD
   dayNumber: number;
-  isCurrentMonth: boolean; // Of the month in sight; the days around it only fill its weeks
+  isCurrentMonth: boolean; // In sight: of the month shown, or of the week shown; the days around a month only fill its weeks
   isToday: boolean;
   isPast: boolean;
 }
@@ -141,16 +141,15 @@ export function monthDays(year: number, month: number): CalendarDay[] {
 }
 
 /**
- * The seven days of a week
+ * The seven days of a week, all in sight, whatever their month
  * @param weekStart - Its Monday
- * @param month - The month in sight, 1-12: its own days are told apart
  */
-export function weekDays(weekStart: Date, month: number): CalendarDay[] {
+export function weekDays(weekStart: Date): CalendarDay[] {
   const today = formatDateStr(new Date());
   return Array.from({ length: 7 }, (_, index) => {
     const date = new Date(weekStart);
     date.setDate(date.getDate() + index);
-    return calendarDay(date, month, today);
+    return calendarDay(date, date.getMonth() + 1, today);
   });
 }
 

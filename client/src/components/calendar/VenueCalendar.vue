@@ -24,15 +24,16 @@ const props = defineProps<{
   venueId: string;
 }>();
 
-const { viewMode, currentYear, currentMonth, currentWeekStart, monthString, navigationTitle, goToPrev, goToNext } =
+const { viewMode, currentYear, currentMonth, currentWeekStart, monthsInSight, navigationTitle, goToPrev, goToNext } =
   useCalendarNavigation();
 const { errors, setErrorFromException, clearErrors } = useErrors();
 
 const items = ref<VenueCalendarItem[]>([]);
 const isLoading = ref(true);
 
-// An answer that arrives after another month was asked for is dropped: it
-// would show the wrong month
+// The days of every month in sight, a week across two months showing all of
+// its. An answer that arrives after other months were asked for is dropped:
+// it would show the wrong days.
 let loadRequestId = 0;
 
 async function load() {
@@ -40,9 +41,9 @@ async function load() {
   isLoading.value = true;
   clearErrors();
   try {
-    const loaded = await fetchVenueCalendar(props.venueId, monthString.value);
+    const loaded = await Promise.all(monthsInSight.value.map(month => fetchVenueCalendar(props.venueId, month)));
     if (requestId !== loadRequestId) return;
-    items.value = loaded;
+    items.value = loaded.flat();
   } catch (error) {
     if (requestId !== loadRequestId) return;
     setErrorFromException(error, ERROR.venueCalendarFetchFailed);
@@ -51,10 +52,10 @@ async function load() {
   }
 }
 
-watch(monthString, load, { immediate: true });
+watch(() => monthsInSight.value.join(','), load, { immediate: true });
 
-// What the venue holds each day of the month in sight; the days of the months
-// around it hold nothing, as in the team's calendar
+// What the venue holds each day in sight; the days around a month hold
+// nothing, as in the team's calendar
 const itemsByDate = computed(() => {
   const byDate: Record<string, VenueCalendarItem[]> = {};
   for (const item of items.value) (byDate[item.date] ??= []).push(item);

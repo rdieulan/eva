@@ -31,7 +31,7 @@ beforeEach(() => {
 describe('useScrimSearches', () => {
   it('loads the searches of the month in the venues, grouped by day', async () => {
     api.mockResolvedValue([search('a', '2030-06-10', true), search('b', '2030-06-10', false), search('c', '2030-06-12', false)]);
-    const { status, byDate } = useScrimSearches({ month: ref('2030-06'), venueIds: ref(['v', 'w']), enabled: ref(true) });
+    const { status, byDate } = useScrimSearches({ months: ref(['2030-06']), venueIds: ref(['v', 'w']), enabled: ref(true) });
 
     await settle();
     expect(api).toHaveBeenCalledWith('2030-06', ['v', 'w']);
@@ -42,21 +42,30 @@ describe('useScrimSearches', () => {
 
   it('asks for the team\'s own searches when no venue is given, and reloads when the month moves', async () => {
     api.mockResolvedValue([]);
-    const month = ref('2030-06');
-    useScrimSearches({ month, venueIds: ref(null), enabled: ref(true) });
+    const months = ref(['2030-06']);
+    useScrimSearches({ months, venueIds: ref(null), enabled: ref(true) });
 
     await settle();
     expect(api).toHaveBeenLastCalledWith('2030-06', null);
 
-    month.value = '2030-07';
+    months.value = ['2030-07'];
     await settle();
     expect(api).toHaveBeenLastCalledWith('2030-07', null);
+  });
+
+  it('loads the searches of both months a week spans, together', async () => {
+    api.mockImplementation(async month => (month === '2030-06' ? [search('a', '2030-06-30', false)] : [search('b', '2030-07-01', false)]));
+    const { byDate } = useScrimSearches({ months: ref(['2030-06', '2030-07']), venueIds: ref(['v']), enabled: ref(true) });
+
+    await settle();
+    expect(api.mock.calls.map(([month]) => month)).toEqual(['2030-06', '2030-07']);
+    expect(Object.keys(byDate.value)).toEqual(['2030-06-30', '2030-07-01']);
   });
 
   it('reloads when the venues change', async () => {
     api.mockResolvedValue([]);
     const venueIds = ref<string[] | null>(['v']);
-    useScrimSearches({ month: ref('2030-06'), venueIds, enabled: ref(true) });
+    useScrimSearches({ months: ref(['2030-06']), venueIds, enabled: ref(true) });
     await settle();
 
     venueIds.value = ['v', 'w'];
@@ -65,7 +74,7 @@ describe('useScrimSearches', () => {
   });
 
   it('stays idle and empty while disabled', async () => {
-    const { status, searches } = useScrimSearches({ month: ref('2030-06'), venueIds: ref(['v']), enabled: ref(false) });
+    const { status, searches } = useScrimSearches({ months: ref(['2030-06']), venueIds: ref(['v']), enabled: ref(false) });
     await settle();
     expect(api).not.toHaveBeenCalled();
     expect(status.value).toBe('idle');
@@ -74,7 +83,7 @@ describe('useScrimSearches', () => {
 
   it('shows nothing rather than stale data when the searches cannot be read', async () => {
     api.mockRejectedValue(new Error('down'));
-    const { status, searches } = useScrimSearches({ month: ref('2030-06'), venueIds: ref(['v']), enabled: ref(true) });
+    const { status, searches } = useScrimSearches({ months: ref(['2030-06']), venueIds: ref(['v']), enabled: ref(true) });
     await settle();
     expect(status.value).toBe('unavailable');
     expect(searches.value).toEqual([]);

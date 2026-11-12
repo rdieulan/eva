@@ -9,14 +9,18 @@ import { weekDays, type CalendarDay } from '@/utils/calendar';
 // the `day` slot: the team's (see WeekGrid), or a venue's (see VenueCalendar).
 const props = defineProps<{
   weekStart: Date; // Its Monday
-  month: number; // 1-12, the month in sight: the days of the others are told apart
+  month: number; // 1-12, the month the week is shown in: the number of a day of another is told apart
 }>();
 
 defineSlots<{
   day(props: { day: CalendarDay }): unknown;
 }>();
 
-const days = computed(() => weekDays(props.weekStart, props.month));
+const days = computed(() => weekDays(props.weekStart));
+
+function isOtherMonth(day: CalendarDay): boolean {
+  return Number(day.date.slice(5, 7)) !== props.month;
+}
 
 const weekDaysRef = ref<HTMLElement | null>(null);
 
@@ -57,7 +61,7 @@ watch(() => props.weekStart, () => {
       >
         <div class="week-day-header">
           <span class="day-name">{{ WEEKDAY_NAMES[index] }}</span>
-          <span class="day-number" :class="{ 'other-month': !day.isCurrentMonth }">
+          <span class="day-number" :class="{ 'other-month': isOtherMonth(day) }">
             {{ day.dayNumber }}
           </span>
         </div>

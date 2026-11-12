@@ -62,6 +62,7 @@ const {
   currentYear,
   currentMonth,
   monthString,
+  monthsInSight,
   currentWeekStart,
   navigationTitle,
   days,
@@ -198,7 +199,7 @@ const {
   status: scrimSearchesStatus,
   load: loadScrimSearches,
 } = useScrimSearches({
-  month: monthString,
+  months: monthsInSight,
   venueIds: computed(() => (isMatchmaking.value ? matchmakingVenueIds.value : null)),
   enabled: computed(() => !noTeam.value && (!isMatchmaking.value || matchmakingVenueIds.value.length > 0)),
 });

@@ -228,6 +228,29 @@ describe('useCalendar', () => {
       expect(currentMonth.value).toBe(2);
     });
 
+    it('reads the days of both months a week spans, and puts them together', async () => {
+      const { fetchMonthData } = await import('@/api/calendar.api');
+      vi.mocked(fetchMonthData).mockImplementation(async (month: string) => ({
+        month, days: { [`${month}-15`]: { date: `${month}-15` } }, noTeam: false,
+      }) as never);
+      const playerId = ref<string | undefined>('player-1');
+      const { viewMode, currentWeekStart, monthString, monthsInSight, days, loadCalendarData } = useCalendar({ playerId });
+
+      viewMode.value = 'week';
+      currentWeekStart.value = new Date(2026, 0, 26); // Monday 26 January: the week ends on 1 February
+      expect(monthsInSight.value).toEqual(['2026-01', '2026-02']);
+      await loadCalendarData();
+
+      expect(vi.mocked(fetchMonthData).mock.calls.map(([month]) => month)).toEqual(expect.arrayContaining(['2026-01', '2026-02']));
+      expect(Object.keys(days.value).sort()).toEqual(['2026-01-15', '2026-02-15']);
+
+      // A week within one month, then the month view: one month in sight
+      currentWeekStart.value = new Date(2026, 0, 19);
+      expect(monthsInSight.value).toEqual(['2026-01']);
+      viewMode.value = 'month';
+      expect(monthsInSight.value).toEqual([monthString.value]);
+    });
+
     it('should call goToPrevWeek when in week view', () => {
       const playerId = ref<string | undefined>('player-1');
       const { viewMode, currentWeekStart, goToPrev } = useCalendar({ playerId });
