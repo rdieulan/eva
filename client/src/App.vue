@@ -18,13 +18,6 @@ onMounted(async () => {
   await initAuth();
 });
 
-// Load balance rules when authenticated
-watch(isAuthenticated, async (authenticated) => {
-  if (authenticated) {
-    await fetchRules();
-  }
-}, { immediate: true });
-
 // The team logo in the top bar follows the team of the signed-in player
 watch(() => account.value?.teamId ?? null, async (teamId) => {
   if (teamId) {
@@ -39,6 +32,12 @@ const userName = computed(() => account.value?.name);
 
 // A player in a team has the bell, which tells the team what happened, and the tabs between its pages
 const isTeamPlayer = computed(() => account.value?.accountType === 'player' && !!account.value.teamId);
+
+// The balance rules are the team's: read for a player in a team, again when
+// the team changes; a session with no team, a manager's or an admin's, has none
+watch(() => (isTeamPlayer.value ? account.value!.teamId : null), async (teamId) => {
+  if (teamId) await fetchRules();
+}, { immediate: true });
 
 // The tabs: for a player in a team, and for a session acting as a venue manager
 const showNav = computed(() => isTeamPlayer.value || account.value?.accountType === 'manager');
