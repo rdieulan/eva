@@ -699,6 +699,7 @@ enum ScrimDeclineReason {
 enum JoinRequestStatus {
   PENDING // Waiting for the team's answer
   REFUSED // The team said no: the player cannot ask it again
+  CANCELLED // The player took it back: kept so that they ask that team again only a while after they asked it
 }
 
 enum NotificationKind {

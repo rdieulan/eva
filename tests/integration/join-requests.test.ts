@@ -1,10 +1,12 @@
 // Integration tests - Requests to join a team: a player without a team asks,
 // those who may invite are told and answer; one request at a time, a refusal
-// for good, a request dropped once the player has a team another way
+// for good, the same team asked again only a day on, a request dropped once
+// the player has a team another way
 
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import { app } from '../../server/src/app';
+import { JOIN_REQUEST_AGAIN_PAUSE_MS } from '../../server/src/services/join-requests.service';
 import { authHeader, createAuthenticatedUser, createTeamMember, createUserWithTeam } from './helpers/auth';
 import { prisma } from './helpers/db';
 import { ERROR } from '@shared/constants/error.constants';
@@ -74,6 +76,27 @@ describe('Asking to join a team', () => {
     expect((await mine(asking.token)).body.request).toBeNull();
     await ask(asking.token, second.team.id).expect(201);
     expect((await waiting(first.token)).body.requests).toEqual([]);
+  });
+
+  it('asks a team it took its request back from again only a day after asking it', async () => {
+    const leader = await createUserWithTeam();
+    const asking = await createAuthenticatedUser();
+    const sent = (await ask(asking.token, leader.team.id)).body.request;
+    await request(app).delete('/api/join-requests/mine').set(authHeader(asking.token)).expect(204);
+
+    const tooSoon = await ask(asking.token, leader.team.id);
+    expect(tooSoon.status).toBe(429);
+    expect(tooSoon.body.errors).toContain(ERROR.joinRequestTooSoon);
+    expect((await waiting(leader.token)).body.requests).toEqual([]);
+    expect(await toldOf('TEAM_JOIN_REQUESTED')).toEqual([leader.user.playerId]);
+
+    // A day after the request taken back, the team may hear from them again
+    await prisma.teamJoinRequest.update({ where: { id: sent.id }, data: { createdAt: new Date(Date.now() - JOIN_REQUEST_AGAIN_PAUSE_MS) } });
+    const again = await ask(asking.token, leader.team.id);
+    expect(again.status).toBe(201);
+    expect((await mine(asking.token)).body.request).toMatchObject({ id: again.body.request.id, status: 'PENDING' });
+    expect((await waiting(leader.token)).body.requests).toMatchObject([{ id: again.body.request.id }]);
+    expect(await toldOf('TEAM_JOIN_REQUESTED')).toEqual([leader.user.playerId, leader.user.playerId]);
   });
 
   it('never asks again a team that refused, and sees the refusal once', async () => {

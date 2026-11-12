@@ -20,6 +20,7 @@ const REQUEST_REFUSAL_STATUS: Record<string, number> = {
   [ERROR.joinRequestRefusedBefore]: 403,
   [ERROR.joinRequestAlreadyPending]: 409,
   [ERROR.joinRequestPlayerTaken]: 409,
+  [ERROR.joinRequestTooSoon]: 429,
 };
 
 function refuse(res: Response, error: string) {

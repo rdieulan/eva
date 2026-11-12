@@ -135,6 +135,7 @@ export const ERROR = {
   // Requests to join a team
   joinRequestAlreadyPending: 'Tu as déjà une demande en attente : annule-la pour en envoyer une autre',
   joinRequestRefusedBefore: 'Cette équipe a refusé ta demande : seul un lien d\'invitation de sa part peut t\'y faire entrer',
+  joinRequestTooSoon: 'Tu as déjà fait une demande à cette équipe il y a moins de 24 heures : réessaie plus tard',
   joinRequestNotFound: 'Cette demande n\'est plus en attente',
   joinRequestPlayerTaken: 'Ce joueur a rejoint une autre équipe entre-temps',
   joinRequestFailed: 'Erreur lors de l\'envoi de la demande',
