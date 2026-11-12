@@ -25,10 +25,10 @@ services:
     container_name: eva_app
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "3001:3001"
     environment:
       DATABASE_URL: postgresql://eva_user:eva_secret_password@postgres:5432/eva_db
-      APP_URL: http://localhost:3000
+      APP_URL: http://localhost:3001
       NODE_ENV: production
     depends_on:
       postgres:

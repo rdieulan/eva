@@ -17,9 +17,10 @@ const __dirname = path.dirname(__filename);
 export const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
 
-// Trust the first proxy in front of us (Railway, etc.) so that
-// req.protocol / req.get('host') reflect the public origin.
-app.set('trust proxy', true);
+// Trust the one proxy in front of us, Railway's, and no other: what it
+// forwards is the client's; a forwarded header from further away could be made
+// up, and would fool any limit by address.
+app.set('trust proxy', 1);
 
 // Middleware. No CORS: the pages and the API share one address, and no other
 // site is to call the API from a browser.

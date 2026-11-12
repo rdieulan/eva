@@ -414,6 +414,22 @@ describe('Teams API', () => {
       expect(res.body.errors).toContain(ERROR.inviteExpired);
     });
 
+    it('builds the link on the app\'s public address, whatever the headers of the request say', async () => {
+      const { token: leaderToken, team } = await createUserWithTeam();
+      process.env.APP_URL = 'https://scrim.example/';
+      try {
+        const created = await request(app).post(`/api/teams/${team.id}/invites`).set(authHeader(leaderToken))
+          .set('X-Forwarded-Host', 'evil.example').set('X-Forwarded-Proto', 'http')
+          .send({ expiresInHours: 24, maxUses: 1 });
+        const listed = await request(app).get(`/api/teams/${team.id}/invites`).set(authHeader(leaderToken)).set('Host', 'evil.example');
+
+        expect(created.body.url).toBe(`https://scrim.example/join/${created.body.code}`);
+        expect(listed.body.map((invite: { url: string }) => invite.url)).toEqual([created.body.url]);
+      } finally {
+        process.env.APP_URL = '';
+      }
+    });
+
     it('lets one player in only on a link of one use opened by two at once', async () => {
       const { token: leaderToken, team } = await createUserWithTeam();
       const invite = await request(app).post(`/api/teams/${team.id}/invites`).set(authHeader(leaderToken)).send({ expiresInHours: 24, maxUses: 1 });

@@ -6,16 +6,18 @@ import { authMiddleware, requirePermission } from '@middleware/auth.middleware';
 import type { AuthRequest } from '@middleware/auth.middleware';
 import { ERROR } from '@shared/constants';
 import { apiLogger } from '@utils/logger';
+import { appUrl } from '@utils/app-url';
 import * as invitesService from '@services/invites.service';
 
 const router = Router();
 
 /**
- * Resolve the public origin of the current request (e.g. https://eva.up.railway.app).
- * Requires `app.set('trust proxy', true)` so the forwarded protocol is honored.
+ * The address an invitation link leads to: the app's public one (APP_URL),
+ * as for the links of the Discord cards, never one the request's headers
+ * tell. A server that has none, the tests', gives the address it was reached at.
  */
-function getOrigin(req: Request): string {
-  return `${req.protocol}://${req.get('host')}`;
+function linksBase(req: Request): string {
+  return appUrl() ?? `${req.protocol}://${req.get('host')}`;
 }
 
 // POST /api/teams/:teamId/invites - Create an invitation link
@@ -46,7 +48,7 @@ router.post(
       const invite = await invitesService.createInvite({
         teamId,
         createdByPlayerId: req.account!.playerId!,
-        baseUrl: getOrigin(req),
+        baseUrl: linksBase(req),
         expiresInHours,
         maxUses,
       });
@@ -74,7 +76,7 @@ router.get(
         return res.status(403).json({ errors: [ERROR.forbidden] });
       }
 
-      const invites = await invitesService.getActiveInvites(teamId, getOrigin(req));
+      const invites = await invitesService.getActiveInvites(teamId, linksBase(req));
       res.json(invites);
     } catch (error) {
       apiLogger.error('Error listing invites:', error);
