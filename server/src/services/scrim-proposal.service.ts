@@ -359,11 +359,15 @@ async function checkRunStillFree(proposalId: string, teamId: string): Promise<Re
   });
   if (isFree) return null;
 
-  await prisma.scrimProposal.updateMany({
+  const { count } = await prisma.scrimProposal.updateMany({
     where: { id: proposalId, status: 'PENDING' },
     data: { status: 'DECLINED', declineReason: 'RUN_TAKEN', respondedAt: new Date() },
   });
-  return 'runTaken';
+  if (count) return 'runTaken';
+  // Withdrawn or answered while eva.gg was read: what happened then stands,
+  // told by whoever did it, and nothing is declined here
+  const current = await prisma.scrimProposal.findUnique({ where: { id: proposalId }, select: { id: true } });
+  return current ? 'notPending' : 'notFound';
 }
 
 export type DeclineScrimProposalResult = { proposal: ScrimProposal } | { refusal: RespondScrimProposalRefusal };

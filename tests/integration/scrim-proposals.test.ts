@@ -477,6 +477,24 @@ describe('PUT /api/scrims/proposals/:id/accept', () => {
     expect((await prisma.scrimSearch.findUniqueOrThrow({ where: { id: searchId } })).status).toBe('OPEN');
   });
 
+  it('tells nobody of a run taken when the proposal was withdrawn while eva.gg was read, and leaves it withdrawn', async () => {
+    const { searcher, proposer, searchId } = await setup();
+    const proposal = await propose(proposer.token, searchId).expect(201);
+    sessions.mockImplementation(async () => {
+      // The proposing team takes it back meanwhile
+      await prisma.scrimProposal.update({ where: { id: proposal.body.id }, data: { status: 'WITHDRAWN', respondedAt: new Date() } });
+      return NIMES_SLOTS.map(item => (item.slotId === 'a1-2000' ? { ...item, takenSeats: 4 } : item));
+    });
+    clearVenueSlotsCache();
+
+    const res = await accept(searcher.token, proposal.body.id);
+
+    expect(res.status).toBe(409);
+    expect(res.body.errors).toContain(ERROR.scrimProposalNotPending);
+    expect(await outcomeOf(proposal.body.id)).toEqual({ status: 'WITHDRAWN', declineReason: null });
+    expect(await prisma.notification.count({ where: { kind: 'SCRIM_PROPOSAL_DECLINED' } })).toBe(0);
+  });
+
   it('should only let the searching team answer', async () => {
     const { proposer, searchId } = await setup();
     const third = await createUserWithTeam();
