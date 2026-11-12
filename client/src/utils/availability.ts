@@ -3,7 +3,13 @@
 import type { AvailabilityHours, AvailabilityStatus, PlayerAvailability } from '@shared/types';
 import { AVAILABILITY_STATUSES } from '@shared/types';
 import { TEAM_PLAYER_COUNT } from '@shared/constants';
-import { describeAvailabilityHours, type TeamAvailability, type TeamAvailabilityStatus } from '@shared/utils';
+import {
+  assessTeamAvailability,
+  describeAvailabilityHours,
+  windowCovers,
+  type TeamAvailability,
+  type TeamAvailabilityStatus,
+} from '@shared/utils';
 
 // Shown behind a day in edit mode: a text glyph, or an icon of SvgIcon
 export type AvailabilitySymbol = { text: string } | { icon: string };
@@ -93,6 +99,32 @@ export function describeTeamAvailability(team: TeamAvailability): string {
     return `${TEAM_PLAYER_COUNT} joueurs ensemble ${describeAvailabilityHours(team.window)} seulement`;
   }
   return TEAM_AVAILABILITY_DISPLAY[team.status].title;
+}
+
+/** What a full lineup of the team allows on a day, said where the slots of a match are picked */
+export interface TeamLineup {
+  text: string; // What the team can do that day (see describeTeamAvailability)
+  hours: AvailabilityHours | null; // The hours a full lineup meets; null: it meets at no hour
+}
+
+/**
+ * The lineup of a day, from the answers of the team's players: null when a
+ * full lineup covers the whole day, and there is nothing to say
+ */
+export function teamLineupOf(availabilities: PlayerAvailability[]): TeamLineup | null {
+  const team = assessTeamAvailability(availabilities);
+  if (team.status === 'ready') return null;
+  return { text: describeTeamAvailability(team), hours: team.status === 'shaky' ? team.window : null };
+}
+
+/** Whether no full lineup covers the slot: the team meets at no hour that day, or not at the slot's */
+export function isOutsideLineup(hours: AvailabilityHours | null, slot: { startTime: string; endTime: string }): boolean {
+  return hours === null || !windowCovers(hours, slot);
+}
+
+/** How many of the slots picked no full lineup covers; none on a day it covers whole */
+export function countOutsideLineup(lineup: TeamLineup | null, slots: { startTime: string; endTime: string }[]): number {
+  return lineup ? slots.filter(slot => isOutsideLineup(lineup.hours, slot)).length : 0;
 }
 
 /**

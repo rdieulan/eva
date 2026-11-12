@@ -3,8 +3,9 @@ import { computed, onBeforeUnmount, ref, toRef, watch } from 'vue';
 import type { AvailabilityHours, SlotTokenType, VenueSlot } from '@shared/types';
 import { COMPETITIVE_GAME_ID } from '@shared/constants';
 import { useVenueSlots, type VenueSlotsStatus } from '@/composables/useVenueSlots';
-import { assessSlotHeadcount, orderRunSlots, slotStreaks, windowCovers } from '@shared/utils';
+import { assessSlotHeadcount, orderRunSlots, slotStreaks } from '@shared/utils';
 import { keepWholeMatches } from '@/utils/scrims';
+import { isOutsideLineup } from '@/utils/availability';
 import SvgIcon from '@/components/common/SvgIcon.vue';
 
 // Every slot of the day is shown, so the evening reads as a whole; the ones a
@@ -137,9 +138,8 @@ function isRaised(slot: VenueSlot): boolean {
 }
 
 // A slot no full lineup of the team covers (see teamHours)
-function isOutsideLineup(slot: VenueSlot): boolean {
-  if (props.teamHours === undefined) return false;
-  return props.teamHours === null || !windowCovers(props.teamHours, slot);
+function isOutsideTeamLineup(slot: VenueSlot): boolean {
+  return props.teamHours !== undefined && isOutsideLineup(props.teamHours, slot);
 }
 
 // What a slot with players in says when a match needs it free
@@ -429,12 +429,12 @@ const emptyHint = computed(() => {
             :class="[
               `slot-row--${stateOf(slot)}`,
               isRaised(slot) ? 'slot-row--open' : 'slot-row--closed',
-              { selected: isSelected(slot), 'outside-lineup': isRaised(slot) && isOutsideLineup(slot) },
+              { selected: isSelected(slot), 'outside-lineup': isRaised(slot) && isOutsideTeamLineup(slot) },
               headcountClass(slot),
             ]"
             :aria-pressed="isSelected(slot)"
             :disabled="disabled || readonly || !isToggleable(slot)"
-            :title="isOutsideLineup(slot) ? `${slot.startTime} – ${slot.endTime}, hors des dispos de l'équipe` : `${slot.startTime} – ${slot.endTime}`"
+            :title="isOutsideTeamLineup(slot) ? `${slot.startTime} – ${slot.endTime}, hors des dispos de l'équipe` : `${slot.startTime} – ${slot.endTime}`"
             @click="toggle(slot)"
           >
             <!-- The start, like the rows of a day in the calendar: a slot always lasts as long;

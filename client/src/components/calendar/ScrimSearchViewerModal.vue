@@ -5,6 +5,7 @@ import ConfirmModal from '@/components/common/ConfirmModal.vue';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import VenueSlotPicker from '@/components/calendar/VenueSlotPicker.vue';
 import PlannedEventsNote from '@/components/calendar/PlannedEventsNote.vue';
+import TeamLineupNote from '@/components/calendar/TeamLineupNote.vue';
 import {
   deleteScrimSearch,
   createScrimProposal,
@@ -13,12 +14,13 @@ import {
   withdrawScrimProposal,
 } from '@/api';
 import { useErrors } from '@/composables/useErrors';
-import type { CalendarEvent, ScrimProposal, ScrimProposalStatus, ScrimSearch, Venue, VenueSlot } from '@shared/types';
+import type { CalendarEvent, PlayerAvailability, ScrimProposal, ScrimProposalStatus, ScrimSearch, Venue, VenueSlot } from '@shared/types';
 import { ERROR, SCRIM_PROPOSAL_MESSAGE_MAX_LENGTH } from '@shared/constants';
 import { describeProposalDecline, proposalState } from '@shared/utils';
 import { formatLongDate, isPastDateStr } from '@/utils/calendar';
 import { describeMatchesWanted, searchVenueIds } from '@/utils/scrims';
 import { formatVenueLabel } from '@/utils/venues';
+import { countOutsideLineup, teamLineupOf } from '@/utils/availability';
 
 // A search as the calendar shows it: its day, who offers which slots, when, in
 // which venues, for how many matches of which length. Another team answers it
@@ -33,8 +35,12 @@ const props = withDefaults(defineProps<{
   canPropose: boolean; // The reader may propose a match on another team's search, and take it back
   canRespond: boolean; // The reader may accept or decline the proposals on the team's searches
   plannedEvents?: CalendarEvent[]; // What the reader's team planned that day, to pick the hours of an answer around it
+  // The answers of the reader's team's players that day: an answer says where
+  // no full lineup plays, as the search window does. Left out: nothing to say.
+  playerAvailabilities?: PlayerAvailability[];
 }>(), {
   plannedEvents: () => [],
+  playerAvailabilities: undefined,
 });
 
 const emit = defineEmits<{
@@ -112,6 +118,12 @@ const ownProposal = computed<ScrimProposal | null>(() => {
 const pendingProposals = computed(() =>
   props.search && isMine.value ? props.search.proposals.filter(proposal => proposal.status === 'PENDING') : [],
 );
+
+// What a full lineup of the reader's team allows that day, against the run
+// picked: the slots it does not cover are tinted before they are picked, and
+// a run that takes some says so, without holding the proposal back
+const lineup = computed(() => (props.playerAvailabilities && !isMine.value ? teamLineupOf(props.playerAvailabilities) : null));
+const uncovered = computed(() => countOutsideLineup(lineup.value, run.value?.slots ?? []));
 
 const mayPropose = computed(() => props.canPropose && !isMine.value && !sent.value && (!ownProposal.value || ownProposal.value.status !== 'PENDING'));
 
@@ -266,6 +278,7 @@ function decline(proposal: ScrimProposal) {
             <p v-if="ownOutcome.detail" class="outcome-detail">{{ ownOutcome.detail }}</p>
           </div>
           <PlannedEventsNote :events="plannedEvents" />
+          <TeamLineupNote v-if="lineup" :lineup="lineup" :uncovered="uncovered" />
           <div v-for="venueId in offeredVenueIds" :key="venueId" class="venue-run">
             <VenueSlotPicker
               :venue-id="venueId"
@@ -279,6 +292,7 @@ function decline(proposal: ScrimProposal) {
               selection="run"
               :run-length="search.slotCount"
               playable-only
+              :team-hours="lineup ? lineup.hours : undefined"
               :disabled="isBusy"
               @select="slots => pickRun(venueId, slots)"
             />

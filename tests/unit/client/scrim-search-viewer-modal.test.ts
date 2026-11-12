@@ -10,7 +10,8 @@ import {
   declineScrimProposal,
   withdrawScrimProposal,
 } from '@/api';
-import type { ScrimOfferedSlot, ScrimProposal, ScrimSearch, Venue, VenueSlot } from '@shared/types';
+import type { PlayerAvailability, ScrimOfferedSlot, ScrimProposal, ScrimSearch, Venue, VenueSlot } from '@shared/types';
+import { TEAM_PLAYER_COUNT } from '@shared/constants';
 
 vi.mock('@/api', () => ({
   fetchVenueSlots: vi.fn(),
@@ -284,6 +285,58 @@ describe('ScrimSearchViewerModal: what the team planned that day', () => {
     await flushPromises();
 
     expect(wrapper.find('.planned').exists()).toBe(false);
+  });
+});
+
+describe('ScrimSearchViewerModal: what the team can line up that day', () => {
+  function answer(index: number, status: PlayerAvailability['status'], hours: PlayerAvailability['hours'] = null): PlayerAvailability {
+    return { playerId: `p${index}`, playerName: `J${index}`, status, hours };
+  }
+
+  // A full lineup from 20:40 only, when the last player comes
+  const FROM_2040 = [
+    ...Array.from({ length: TEAM_PLAYER_COUNT - 1 }, (_, index) => answer(index, 'AVAILABLE')),
+    answer(TEAM_PLAYER_COUNT, 'PARTIAL', { startTime: '20:40', endTime: '22:00' }),
+  ];
+  const LINEUP = `${TEAM_PLAYER_COUNT} joueurs ensemble de 20:40 à 22:00 seulement`;
+
+  it('tints the slots no full lineup covers, and warns when the run picked takes some, without holding the proposal back', async () => {
+    const wrapper = mountViewer({ playerAvailabilities: FROM_2040 });
+    await flushPromises();
+
+    expect(wrapper.find('.propose .lineup-note').text()).toBe(LINEUP);
+    expect(slotRow(wrapper, '20:00').classes()).toContain('outside-lineup');
+    expect(slotRow(wrapper, '20:40').classes()).not.toContain('outside-lineup');
+
+    await slotRow(wrapper, '20:00').trigger('click');
+    expect(wrapper.find('.lineup-conflict').text()).toBe(`1 créneau choisi tombe hors des dispos de l'équipe. ${LINEUP}.`);
+    expect(wrapper.find('.lineup-note').exists()).toBe(false);
+    expect(button(wrapper, 'Proposer un match')!.attributes('disabled')).toBeUndefined();
+
+    // The run that ends the evening sits inside the lineup's hours
+    await slotRow(wrapper, '21:20').trigger('click');
+    expect(selectedTimes(wrapper)).toEqual(['20:40', '21:20']);
+    expect(wrapper.find('.lineup-conflict').exists()).toBe(false);
+    expect(wrapper.find('.lineup-note').text()).toBe(LINEUP);
+  });
+
+  it('says nothing on a day a full lineup covers whole, nor when the team\'s answers are not known', async () => {
+    const allDay = Array.from({ length: TEAM_PLAYER_COUNT }, (_, index) => answer(index, 'AVAILABLE'));
+    for (const props of [{ playerAvailabilities: allDay }, {}]) {
+      const wrapper = mountViewer(props);
+      await flushPromises();
+
+      expect(wrapper.find('.lineup-note').exists()).toBe(false);
+      expect(wrapper.find('.outside-lineup').exists()).toBe(false);
+    }
+  });
+
+  it('keeps it out of our own search, whose slots were picked in the search window', async () => {
+    const wrapper = mountViewer({ search: search({ isMine: true }), playerAvailabilities: FROM_2040 });
+    await flushPromises();
+
+    expect(wrapper.find('.lineup-note').exists()).toBe(false);
+    expect(wrapper.find('.outside-lineup').exists()).toBe(false);
   });
 });
 

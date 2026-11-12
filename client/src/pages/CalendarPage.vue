@@ -300,6 +300,12 @@ const viewedSearchPlans = computed(() =>
   viewedScrimSearch.value ? days.value[viewedScrimSearch.value.date]?.events ?? [] : [],
 );
 
+// The answers of the team's players that day, when the calendar holds it: an
+// answer says where no full lineup plays
+const viewedSearchAvailabilities = computed(() =>
+  viewedScrimSearch.value ? days.value[viewedScrimSearch.value.date]?.playerAvailabilities : undefined,
+);
+
 // A row of the list opens what it shows, in place of the list
 function openSearchFromAgenda(search: ScrimSearch) {
   agendaDate.value = null;
@@ -537,6 +543,7 @@ onMounted(async () => {
       :search="viewedScrimSearch"
       :venues="venues"
       :planned-events="viewedSearchPlans"
+      :player-availabilities="viewedSearchAvailabilities"
       :can-search="permissions.matchmaking.canSearch"
       :can-propose="permissions.matchmaking.canPropose"
       :can-respond="permissions.matchmaking.canRespond"
