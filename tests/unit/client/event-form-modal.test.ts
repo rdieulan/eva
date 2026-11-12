@@ -72,7 +72,6 @@ describe('EventFormModal Component', () => {
     const wrapper = mount(EventFormModal, {
       props: {
         open: false,
-        canCreate: true,
         selectedDate: '2026-11-03',
         maps: mockMaps,
         players: mockPlayers,
@@ -101,7 +100,7 @@ describe('EventFormModal Component', () => {
 
   it('should create a competition in its own colour, with no venue to pick', async () => {
     const wrapper = mount(EventFormModal, {
-      props: { open: false, canCreate: true, selectedDate: '2026-11-03', maps: mockMaps, players: mockPlayers },
+      props: { open: false, selectedDate: '2026-11-03', maps: mockMaps, players: mockPlayers },
       global: { stubs: { Teleport: true } },
     });
     await wrapper.setProps({ open: true });
@@ -159,35 +158,6 @@ describe('EventFormModal Component', () => {
 
     expect(wrapper.props('editEvent')?.title).toBe('Important Match');
     expect(wrapper.props('editEvent')?.type).toBe('MATCH');
-  });
-
-  it('should render form in read-only mode when readOnly prop is true', () => {
-    const mockEvent: CalendarEvent = {
-      id: 'event-1',
-      date: '2026-01-20',
-      startTime: '19:00',
-      endTime: '21:00',
-      type: 'EVENT',
-      title: 'Team Meeting',
-      evaSlotIds: [],
-      createdById: 'admin-1',
-      createdAt: '2026-01-01T00:00:00Z',
-    };
-
-    const wrapper = mount(EventFormModal, {
-      props: {
-        open: true,
-        editEvent: mockEvent,
-        canCreate: false,
-        canEdit: false,
-        canDelete: false,
-        maps: mockMaps,
-        players: mockPlayers,
-      },
-    });
-
-    expect(wrapper.props('canEdit')).toBe(false);
-    expect(wrapper.props('editEvent')).toEqual(mockEvent);
   });
 
   it('should emit submit event with correct event data', async () => {
@@ -281,7 +251,6 @@ describe('EventFormModal Component - Match venue', () => {
     return mount(EventFormModal, {
       props: {
         open: false,
-        canCreate: true,
         selectedDate: '2026-11-03',
         venues,
         teamVenueId: 'venue-1',
@@ -340,7 +309,6 @@ describe('EventFormModal Component - Match venue', () => {
         venue: { id: 'venue-1', name: 'VR Arena', evaLocationId: null, discord: null }, arenaNumber: 1, evaSlotIds: [],
         scrimSearchId: 'search-1', createdById: 'player-1', createdAt: '2026-10-01T00:00:00Z',
       },
-      canEdit: true,
       canDelete: true,
     });
     await wrapper.setProps({ open: true });
@@ -371,35 +339,10 @@ describe('EventFormModal Component - Match venue', () => {
         createdById: 'player-1',
         createdAt: '2026-10-01T00:00:00Z',
       },
-      canEdit: true,
     });
     await wrapper.setProps({ open: true });
 
     expect((wrapper.find('#event-venue').element as HTMLSelectElement).value).toBe('venue-2');
-  });
-
-  it('should show the venue to someone who can only read the match', async () => {
-    const wrapper = mountForm({
-      canCreate: false,
-      canEdit: false,
-      editEvent: {
-        id: 'event-1',
-        date: '2026-11-03',
-        startTime: '20:00',
-        endTime: '22:00',
-        type: 'MATCH' as const,
-        title: 'Away game',
-        venue: { id: 'venue-2', name: 'Laser Dome', evaLocationId: null, discord: null },
-        evaSlotIds: [],
-        createdById: 'player-1',
-        createdAt: '2026-10-01T00:00:00Z',
-      },
-    });
-    await wrapper.setProps({ open: true });
-
-    const rows = wrapper.findAll('.event-view-row').map(r => r.text().replace(/\s+/g, ' '));
-    expect(rows.some(row => row.includes('Salle') && row.includes('Laser Dome'))).toBe(true);
-    expect(wrapper.find('#event-venue').exists()).toBe(false);
   });
 
   it('should fall back to the team venue when an event becomes a match', async () => {
@@ -416,7 +359,6 @@ describe('EventFormModal Component - Match venue', () => {
         createdById: 'player-1',
         createdAt: '2026-10-01T00:00:00Z',
       },
-      canEdit: true,
     });
     await wrapper.setProps({ open: true });
     expect(wrapper.find('#event-venue').exists()).toBe(false);
@@ -451,8 +393,6 @@ describe('EventFormModal Component - Editing an existing event', () => {
     return mount(EventFormModal, {
       props: {
         open: false,
-        canCreate: true,
-        canEdit: true,
         editEvent,
         venues,
         teamVenueId: 'venue-1',
@@ -543,8 +483,6 @@ describe('EventFormModal Component - Venue slots', () => {
     return mount(EventFormModal, {
       props: {
         open: false,
-        canCreate: true,
-        canEdit: true,
         selectedDate: '2026-11-03',
         venues,
         teamVenueId: 'venue-1',
@@ -691,8 +629,6 @@ describe('EventFormModal Component - Voice meeting platform', () => {
     return mount(EventFormModal, {
       props: {
         open: false,
-        canCreate: true,
-        canEdit: true,
         selectedDate: '2026-11-03',
         maps: [],
         players: [],
@@ -769,29 +705,5 @@ describe('EventFormModal Component - Voice meeting platform', () => {
 
     await wrapper.findAll('button').find(b => b.text() === 'Enregistrer')!.trigger('click');
     expect(wrapper.emitted('submit')?.[0]?.[0]).toMatchObject({ voiceMedium: 'GOOGLE_MEET' });
-  });
-
-  it('should show the platform to someone who can only read the meeting', async () => {
-    const wrapper = mountForm({
-      canCreate: false,
-      canEdit: false,
-      editEvent: {
-        id: 'event-1',
-        date: '2026-11-03',
-        startTime: '20:00',
-        endTime: '22:00',
-        type: 'VOICE_MEETING' as const,
-        title: 'Strat Polaris',
-        voiceMedium: 'WHATSAPP' as const,
-        evaSlotIds: [],
-        createdById: 'player-1',
-        createdAt: '2026-10-01T00:00:00Z',
-      },
-    });
-    await wrapper.setProps({ open: true });
-
-    const rows = wrapper.findAll('.event-view-row').map(r => r.text().replace(/\s+/g, ' '));
-    expect(rows.some(row => row.includes('Plateforme') && row.includes('WhatsApp'))).toBe(true);
-    expect(rows.some(row => row.includes('Salle'))).toBe(false);
   });
 });

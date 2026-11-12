@@ -43,7 +43,6 @@ Ce que fait l'application et pourquoi (calendrier, dispos, matchmaking, notifica
 
 | Tâche | Statut | Notes |
 |-------|--------|-------|
-| Découper `EventFormModal.vue` | ⬜ | Plus de 900 lignes : extraire la vue lecture seule et les champs de lieu (salle, arène, créneau) en sous-composants. |
 | Symboles du coin d'un jour trop bas sur petit écran | ⬜ | La coche et la croix sont des caractères de police dont le dessin est décalé vers le bas : à 768 px et moins, ils tombent environ 2 px sous le centre du triangle (mesuré), le micro, une icône dessinée, tombe juste. Les remplacer, avec le tilde et le point d'interrogation, par des icônes dessinées changerait un peu leur dessin. |
 | Découper `DayCell.vue` | ⬜ | Près de 1000 lignes : extraire le coin du lecteur (triangle, symbole, horaires) en sous-composant, et l'appui qui ouvre la roue des réponses en composable. |
 | Le gérant s'appelle « manager » dans l'administration | ⬜ | L'onglet « Managers » et le bouton « Inviter un manager » de l'administration, quand le reste de l'application dit « Gérant » (la bascule de rôle, « Ma salle ») : un seul mot partout, à choisir. |

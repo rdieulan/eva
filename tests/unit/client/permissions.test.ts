@@ -205,44 +205,11 @@ describe('Permissions Tests', () => {
       createdAt: '2026-01-01T00:00:00Z',
     };
 
-    it('should be in view-only mode when canEdit is false for existing event', () => {
-      const wrapper = mount(EventFormModal, {
-        props: {
-          open: true,
-          editEvent: mockEvent,
-          canCreate: false,
-          canEdit: false,
-          canDelete: false,
-        },
-      });
-
-      // Should render view-only mode
-      expect(wrapper.find('.event-view').exists()).toBe(true);
-    });
-
-    it('should show edit form when canEdit is true', () => {
-      const wrapper = mount(EventFormModal, {
-        props: {
-          open: true,
-          editEvent: mockEvent,
-          canCreate: true,
-          canEdit: true,
-          canDelete: true,
-        },
-      });
-
-      // Should render edit form, not view-only
-      expect(wrapper.find('.event-form').exists()).toBe(true);
-      expect(wrapper.find('.event-view').exists()).toBe(false);
-    });
-
     it('should hide delete button when canDelete is false', () => {
       const wrapper = mount(EventFormModal, {
         props: {
           open: true,
           editEvent: mockEvent,
-          canCreate: true,
-          canEdit: true,
           canDelete: false,
         },
       });
@@ -255,8 +222,6 @@ describe('Permissions Tests', () => {
         props: {
           open: true,
           editEvent: mockEvent,
-          canCreate: true,
-          canEdit: true,
           canDelete: true,
         },
       });
@@ -268,8 +233,6 @@ describe('Permissions Tests', () => {
       const wrapper = mount(EventFormModal, {
         props: {
           open: true,
-          canCreate: true,
-          canEdit: true,
           canDelete: true,
           canAttachGamePlan: false,
           maps: [{ id: 'map-1', name: 'Map 1', images: [], assignments: [], players: [] }],

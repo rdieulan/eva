@@ -3,15 +3,16 @@ import { ref, watch, computed } from 'vue';
 import Modal from '@/components/common/Modal.vue';
 import ConfirmModal from '@/components/common/ConfirmModal.vue';
 import RotationCalculatorModal from '@/components/common/rotation/RotationCalculatorModal.vue';
-import GamePlanViewer from '@/components/common/GamePlanViewer.vue';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import VenueSlotPicker from '@/components/calendar/VenueSlotPicker.vue';
-import type { VenueSlotsStatus } from '@/composables/useVenueSlots';
+import EventTypeSelector from '@/components/calendar/EventTypeSelector.vue';
+import EventGamePlanField from '@/components/calendar/EventGamePlanField.vue';
 import { useErrors } from '@/composables/useErrors';
+import { useEventPlace } from '@/composables/useEventPlace';
 import { ERROR, PLANNER_ENABLED } from '@shared/constants';
-import { EVENT_TYPES, VOICE_MEDIUMS } from '@shared/types';
+import { VOICE_MEDIUMS } from '@shared/types';
 import { formatVenuePlace } from '@shared/utils';
-import { getEventTypeClass, getEventTypeDisplay, getEventTypeTitle, getVoiceMediumLabel } from '@/utils/calendar';
+import { getVoiceMediumLabel } from '@/utils/calendar';
 import { formatVenueLabel } from '@/utils/venues';
 import type {
   EventType,
@@ -21,16 +22,15 @@ import type {
   MapConfig,
   Player,
   Venue,
-  VenueSlot,
   VoiceMedium,
 } from '@shared/types';
 
+// Creates an event of the team or changes one: the calendar opens it only for
+// a reader who may, an event being read on its sheet (EventViewerModal)
 const props = defineProps<{
   open: boolean;
   selectedDate?: string; // Pre-fill date
   editEvent?: CalendarEvent; // Event to edit (if editing)
-  canCreate?: boolean; // Can create events
-  canEdit?: boolean; // Can edit events
   canDelete?: boolean; // Can delete events
   canAttachGamePlan?: boolean; // Can attach game plan to match
   maps?: MapConfig[]; // Maps for RotationCalculator
@@ -57,11 +57,18 @@ const endTime = ref('22:00');
 const type = ref<EventType>('MATCH');
 const title = ref('');
 const description = ref('');
-const venueId = ref<string | null>(null);
-const arenaNumber = ref<number | null>(null);
-const evaSlotIds = ref<string[]>([]);
 const voiceMedium = ref<VoiceMedium>(DEFAULT_VOICE_MEDIUM);
 const gamePlan = ref<MatchGamePlan | null>(null);
+
+// Only a match is played somewhere
+const showVenue = computed(() => type.value === 'MATCH');
+
+// Only a voice meeting is held on a platform
+const showMedium = computed(() => type.value === 'VOICE_MEETING');
+
+// Where the match is played: venue, arena and slots, the slots setting its hours
+const { venueId, arenaNumber, evaSlotIds, arenaNumbers, showSlotPicker, slotStatus, usesSlots, applySlots, dropArena, resetPlace } =
+  useEventPlace({ venues: () => props.venues, isMatch: showVenue, date, startTime, endTime });
 
 // UI state
 const showRotationCalculator = ref(false);
@@ -69,15 +76,6 @@ const showDeleteConfirm = ref(false);
 
 // Error handling
 const { errors, setError, addError, clearErrors, hasErrors } = useErrors();
-
-// Computed permissions
-const isViewOnly = computed(() => {
-  // View-only if editing an event but no edit permission
-  if (props.editEvent && !props.canEdit) return true;
-  // View-only if creating but no create permission
-  if (!props.editEvent && !props.canCreate) return true;
-  return false;
-});
 
 // A match the matchmaking made keeps the time and place both teams agreed on,
 // and is called off from its sheet, not deleted on one side
@@ -89,54 +87,37 @@ const canShowDeleteButton = computed(() => props.canDelete && props.editEvent &&
 watch(
   () => props.open,
   (isOpen) => {
-    if (isOpen) {
-      clearErrors();
-      showRotationCalculator.value = false;
-      if (props.editEvent) {
-        // Edit/View mode: fill with existing event data
-        date.value = props.editEvent.date;
-        startTime.value = props.editEvent.startTime;
-        endTime.value = props.editEvent.endTime;
-        type.value = props.editEvent.type;
-        title.value = props.editEvent.title;
-        description.value = props.editEvent.description || '';
-        venueId.value = props.editEvent.venue?.id ?? null;
-        arenaNumber.value = props.editEvent.arenaNumber ?? null;
-        evaSlotIds.value = props.editEvent.evaSlotIds;
-        voiceMedium.value = props.editEvent.voiceMedium ?? DEFAULT_VOICE_MEDIUM;
-        gamePlan.value = props.editEvent.gamePlan || null;
-      } else {
-        // Create mode: reset with defaults
-        date.value = props.selectedDate || '';
-        startTime.value = '20:00';
-        endTime.value = '22:00';
-        type.value = 'MATCH';
-        title.value = '';
-        description.value = '';
-        venueId.value = props.teamVenueId ?? null;
-        arenaNumber.value = null;
-        evaSlotIds.value = [];
-        voiceMedium.value = DEFAULT_VOICE_MEDIUM;
-        gamePlan.value = null;
-      }
-      anchorSlots();
+    if (!isOpen) return;
+    clearErrors();
+    showRotationCalculator.value = false;
+    const event = props.editEvent;
+    if (event) {
+      // Edit mode: fill with existing event data
+      date.value = event.date;
+      startTime.value = event.startTime;
+      endTime.value = event.endTime;
+      type.value = event.type;
+      title.value = event.title;
+      description.value = event.description || '';
+      voiceMedium.value = event.voiceMedium ?? DEFAULT_VOICE_MEDIUM;
+      gamePlan.value = event.gamePlan || null;
+      resetPlace({ venueId: event.venue?.id ?? null, arenaNumber: event.arenaNumber ?? null, evaSlotIds: event.evaSlotIds });
+    } else {
+      // Create mode: reset with defaults
+      date.value = props.selectedDate || '';
+      startTime.value = '20:00';
+      endTime.value = '22:00';
+      type.value = 'MATCH';
+      title.value = '';
+      description.value = '';
+      voiceMedium.value = DEFAULT_VOICE_MEDIUM;
+      gamePlan.value = null;
+      resetPlace({ venueId: props.teamVenueId ?? null, arenaNumber: null, evaSlotIds: [] });
     }
   }
 );
 
-// Modal title
-const modalTitle = computed(() => {
-  if (isViewOnly.value && props.editEvent) {
-    return getEventTypeTitle(props.editEvent.type);
-  }
-  return props.editEvent ? 'Modifier l\'événement' : 'Créer un événement';
-});
-
-// Only a match is played somewhere
-const showVenue = computed(() => type.value === 'MATCH');
-
-// Only a voice meeting is held on a platform
-const showMedium = computed(() => type.value === 'VOICE_MEETING');
+const modalTitle = computed(() => (props.editEvent ? 'Modifier l\'événement' : 'Créer un événement'));
 
 // An event turned into a match starts from the team's venue, like a new match does
 watch(type, (newType) => {
@@ -145,67 +126,7 @@ watch(type, (newType) => {
   }
 });
 
-// Arenas of the chosen venue, numbered 1 upwards. Only worth asking about when
-// the venue runs several of them.
-const arenaNumbers = computed(() => {
-  const venue = props.venues?.find(v => v.id === venueId.value);
-  const count = venue?.arenaCount ?? 1;
-  return count > 1 ? Array.from({ length: count }, (_, index) => index + 1) : [];
-});
-
-// An arena number only means something in the venue it was picked in. Bound to
-// the field rather than to venueId, which also changes when the form opens on
-// an event and would then wipe the arena that event is played on.
-function handleVenueChange() {
-  arenaNumber.value = null;
-}
-
-// A venue filled from eva.gg has its slots listed per day: a match there runs
-// on consecutive slots of one arena, and its times and arena come from them.
-// The times are only typed by hand when there is no grid to pick from.
-const selectedVenue = computed(() => props.venues?.find(v => v.id === venueId.value) ?? null);
-const showSlotPicker = computed(() => showVenue.value && !!selectedVenue.value?.hasEvaSlots && !!date.value);
-const slotStatus = ref<VenueSlotsStatus>('idle');
-const usesSlots = computed(() => showSlotPicker.value && slotStatus.value !== 'unavailable');
-
-// What the chosen slots were picked for. Moving the day, the venue or the start
-// time leaves them behind, since eva.gg's slots are tied to the three.
-const slotAnchor = ref<{ date: string; venueId: string | null; startTime: string } | null>(null);
-
-function anchorSlots() {
-  slotAnchor.value = evaSlotIds.value.length
-    ? { date: date.value, venueId: venueId.value, startTime: startTime.value }
-    : null;
-}
-
-watch([date, venueId, startTime], ([newDate, newVenueId, newStartTime]) => {
-  const anchor = slotAnchor.value;
-  if (!anchor) return;
-  if (newDate !== anchor.date || newVenueId !== anchor.venueId || newStartTime !== anchor.startTime) {
-    evaSlotIds.value = [];
-    slotAnchor.value = null;
-  }
-});
-
-// Playing on slots sets the times the venue runs them on, and the arena when the venue has several
-function applySlots(slots: VenueSlot[]) {
-  evaSlotIds.value = slots.map(slot => slot.slotId);
-  const first = slots[0];
-  const last = slots[slots.length - 1];
-  if (first && last) {
-    startTime.value = first.startTime;
-    endTime.value = last.endTime;
-    if (arenaNumbers.value.length) arenaNumber.value = first.arenaNumber;
-  }
-  anchorSlots();
-}
-
-// "1 créneau" / "2 créneaux", for the read-only view
-const slotCountLabel = computed(() =>
-  evaSlotIds.value.length > 1 ? `${evaSlotIds.value.length} créneaux` : '1 créneau',
-);
-
-// Venue of the event being viewed, for the read-only display
+// Venue of the event being changed, for the fixed place of a match of the matchmaking
 const eventVenueLabel = computed(() => {
   const venue = props.editEvent?.venue;
   if (!venue) return null;
@@ -315,51 +236,7 @@ const modalSize = computed(() => {
   />
 
   <Modal :open="open && !showRotationCalculator" :title="modalTitle" :size="modalSize" @close="emit('close')">
-    <!-- Read-only view for non-admin users -->
-    <div v-if="isViewOnly && editEvent" class="event-view">
-      <div class="event-view-header" :class="getEventTypeClass(editEvent.type)">
-        <span class="event-view-type">{{ getEventTypeTitle(editEvent.type) }}</span>
-      </div>
-
-      <h3 class="event-view-title">{{ title }}</h3>
-
-      <div class="event-view-details">
-        <div class="event-view-row">
-          <span class="event-view-label">📅 Date</span>
-          <span class="event-view-value">{{ formattedDate }}</span>
-        </div>
-        <div class="event-view-row">
-          <span class="event-view-label">🕐 Horaire</span>
-          <span class="event-view-value">
-            {{ startTime }} - {{ endTime }}
-            <span v-if="evaSlotIds.length" class="event-view-tag">{{ slotCountLabel }}</span>
-          </span>
-        </div>
-        <div v-if="showVenue" class="event-view-row">
-          <span class="event-view-label">📍 Salle</span>
-          <span class="event-view-value">{{ eventVenueLabel ?? 'Non définie' }}</span>
-        </div>
-        <div v-if="showMedium" class="event-view-row">
-          <span class="event-view-label">🎙️ Plateforme</span>
-          <span class="event-view-value">{{ getVoiceMediumLabel(voiceMedium) }}</span>
-        </div>
-      </div>
-
-      <div v-if="description" class="event-view-description">
-        <span class="event-view-label">📝 Description</span>
-        <p>{{ description }}</p>
-      </div>
-
-      <!-- Game Plan Display (readonly) - with export -->
-      <GamePlanViewer
-        v-if="hasGamePlan && gamePlan"
-        :gamePlan="gamePlan"
-        @error="setError"
-      />
-    </div>
-
-    <!-- Edit form for admin users -->
-    <form v-else class="event-form" @submit.prevent="handleSubmit">
+    <form class="event-form" @submit.prevent="handleSubmit">
       <!-- Error message -->
       <ErrorDisplay :errors="errors" />
 
@@ -373,19 +250,7 @@ const modalSize = computed(() => {
       <!-- Event type -->
       <div v-if="!isMatchmakingMatch" class="form-group">
         <label class="form-label">Type</label>
-        <div class="type-selector">
-          <button
-            v-for="eventType in EVENT_TYPES"
-            :key="eventType"
-            type="button"
-            class="type-btn"
-            :class="[getEventTypeClass(eventType), { active: type === eventType }]"
-            @click="type = eventType"
-          >
-            <span class="type-btn-icon">{{ getEventTypeDisplay(eventType).emoji }}</span>
-            <span class="type-btn-label">{{ getEventTypeDisplay(eventType).label }}</span>
-          </button>
-        </div>
+        <EventTypeSelector v-model="type" />
       </div>
 
       <!-- Title -->
@@ -404,7 +269,7 @@ const modalSize = computed(() => {
       <!-- Venue (only for MATCH type) -->
       <div v-if="showVenue && !isMatchmakingMatch" class="form-group">
         <label class="form-label" for="event-venue">📍 Salle</label>
-        <select id="event-venue" v-model="venueId" class="form-input form-select" @change="handleVenueChange">
+        <select id="event-venue" v-model="venueId" class="form-input form-select" @change="dropArena">
           <option :value="null">Non définie</option>
           <option v-for="venue in venues" :key="venue.id" :value="venue.id">
             {{ formatVenueLabel(venue) }}
@@ -496,53 +361,26 @@ const modalSize = computed(() => {
       <!-- Game Plan (only for MATCH type) -->
       <div v-if="canSetGamePlan" class="form-group">
         <label class="form-label">🎯 Plan de jeu</label>
-
-        <!-- Game plan visualization if set (with modify button) -->
-        <div v-if="hasGamePlan && gamePlan" class="game-plan-edit">
-          <button type="button" class="btn-change-plan" @click="openRotationCalculator">
-            ✏️ Modifier le plan
-          </button>
-          <GamePlanViewer :gamePlan="gamePlan" @error="setError" />
-        </div>
-
-        <!-- Button to open rotation calculator if no plan yet -->
-        <button
-          v-else
-          type="button"
-          class="btn-set-gameplan"
-          @click="openRotationCalculator"
-        >
-          📋 Définir le plan de jeu
-        </button>
+        <EventGamePlanField :game-plan="hasGamePlan ? gamePlan : null" @edit="openRotationCalculator" @error="setError" />
       </div>
     </form>
 
     <template #footer>
-      <!-- Read-only mode: only close button -->
-      <template v-if="isViewOnly">
-        <button type="button" class="btn btn-secondary" @click="emit('close')">
-          Fermer
-        </button>
-      </template>
-
-      <!-- Edit mode: full controls -->
-      <template v-else>
-        <button
-          v-if="canShowDeleteButton"
-          type="button"
-          class="btn btn-danger"
-          @click="handleDelete"
-        >
-          Supprimer
-        </button>
-        <div class="spacer"></div>
-        <button type="button" class="btn btn-secondary" @click="emit('close')">
-          Annuler
-        </button>
-        <button type="button" class="btn btn-primary" @click="handleSubmit">
-          {{ editEvent ? 'Enregistrer' : 'Créer' }}
-        </button>
-      </template>
+      <button
+        v-if="canShowDeleteButton"
+        type="button"
+        class="btn btn-danger"
+        @click="handleDelete"
+      >
+        Supprimer
+      </button>
+      <div class="spacer"></div>
+      <button type="button" class="btn btn-secondary" @click="emit('close')">
+        Annuler
+      </button>
+      <button type="button" class="btn btn-primary" @click="handleSubmit">
+        {{ editEvent ? 'Enregistrer' : 'Créer' }}
+      </button>
     </template>
   </Modal>
 
@@ -623,55 +461,6 @@ const modalSize = computed(() => {
   }
 }
 
-// Four types, two by two: each name whole, on the narrowest form
-.type-selector {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: $spacing-sm;
-}
-
-.type-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: $spacing-xs;
-  padding: 0.75rem;
-  background: $color-bg-tertiary;
-  border: $border-thick solid $color-border-light;
-  border-radius: $radius-md;
-  color: $color-text-secondary;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover {
-    background: $color-border-light;
-  }
-
-  @each $type, $color in $event-type-colors {
-    &.active.event-type--#{$type} {
-      background: with-alpha($color, 0.2);
-      border-color: $color;
-      color: $color;
-    }
-  }
-
-  @include mobile-lg {
-    padding: $spacing-sm;
-    font-size: 0.85rem;
-  }
-
-  @include mobile {
-    padding: 0.4rem;
-    font-size: 0.8rem;
-  }
-}
-
-.type-btn-icon {
-  font-size: 1.1rem;
-  line-height: 1;
-}
-
 .btn {
   padding: 0.75rem 1.25rem;
   border-radius: 6px;
@@ -722,196 +511,6 @@ const modalSize = computed(() => {
 
 .spacer {
   flex: 1;
-}
-
-.event-view {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-md;
-}
-
-.event-view-header {
-  padding: $spacing-sm $spacing-md;
-  border-radius: 6px;
-  font-weight: 600;
-  text-align: center;
-
-  @each $type, $color in $event-type-colors {
-    &.event-type--#{$type} {
-      background: with-alpha($color, 0.2);
-      color: $color;
-    }
-  }
-}
-
-.event-view-title {
-  margin: 0;
-  font-size: 1.25rem;
-  color: $color-white;
-  text-align: center;
-
-  @include mobile-lg {
-    font-size: 1.1rem;
-  }
-}
-
-.event-view-details {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  padding: $spacing-md;
-  background: with-alpha($color-bg-tertiary, 0.5);
-  border-radius: $radius-md;
-
-  @include mobile {
-    padding: 0.75rem;
-  }
-}
-
-.event-view-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-
-  @include mobile {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: $spacing-xs;
-  }
-}
-
-.event-view-label {
-  color: $color-text-secondary;
-  font-size: 0.9rem;
-}
-
-.event-view-value {
-  color: $color-white;
-  font-weight: 500;
-}
-
-.event-view-tag {
-  margin-left: $spacing-sm;
-  padding: 2px 8px;
-  border-radius: $radius-sm;
-  background: with-alpha($color-accent, 0.2);
-  color: $color-accent;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.event-view-description {
-  padding: $spacing-md;
-  background: with-alpha($color-bg-tertiary, 0.5);
-  border-radius: $radius-md;
-
-  .event-view-label {
-    display: block;
-    margin-bottom: $spacing-sm;
-  }
-
-  p {
-    margin: 0;
-    color: $color-text-muted;
-    white-space: pre-wrap;
-  }
-}
-
-.game-plan-view {
-  padding: $spacing-md;
-  background: with-alpha($color-bg-tertiary, 0.5);
-  border-radius: $radius-md;
-
-  @include mobile-lg {
-    padding: 0.75rem;
-  }
-}
-
-.game-plan-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: $spacing-md;
-
-  @include mobile-lg {
-    flex-direction: column;
-    gap: $spacing-sm;
-    align-items: flex-start;
-  }
-}
-
-.phase-selector-centered {
-  display: flex;
-  justify-content: center;
-  margin-bottom: $spacing-md;
-}
-
-.absent-badge {
-  background: with-alpha($color-danger, 0.2);
-  color: $color-danger;
-  padding: $spacing-xs 0.75rem;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 500;
-
-  @include mobile {
-    font-size: 0.75rem;
-    padding: 0.2rem 0.6rem;
-  }
-}
-
-.game-plan-edit {
-  border: $border-thin solid $color-border-light;
-
-  .game-plan-header {
-    border-bottom: $border-thin solid $color-border-light;
-    padding-bottom: 0.75rem;
-    margin-bottom: 0.75rem;
-  }
-}
-
-.btn-change-plan {
-  padding: 0.4rem 0.75rem;
-  background: $color-border-light;
-  border: $border-thin solid $color-bg-tertiary;
-  border-radius: $radius-sm;
-  color: $color-text-muted;
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover {
-    background: $color-bg-tertiary;
-    color: $color-white;
-  }
-
-  @include mobile {
-    font-size: 0.75rem;
-    padding: 0.35rem 0.6rem;
-  }
-}
-
-.btn-set-gameplan {
-  width: 100%;
-  padding: 0.75rem;
-  background: with-alpha($color-accent, 0.2);
-  border: 2px dashed $color-accent;
-  border-radius: $radius-md;
-  color: $color-accent;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover {
-    background: with-alpha($color-accent, 0.3);
-    border-style: solid;
-  }
-
-  @include mobile-lg {
-    padding: 0.625rem;
-    font-size: 0.85rem;
-  }
 }
 
 // A match of the matchmaking: its time and place, read only

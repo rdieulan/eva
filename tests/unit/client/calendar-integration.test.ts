@@ -505,19 +505,13 @@ describe('Calendar Integration Tests', () => {
     }
   });
 
-  it('should display event details in read-only mode for non-admin users', async () => {
-    // Note: This test verifies the component accepts the permission props correctly.
-    // The actual permission logic is tested by checking the props are passed through.
+  it('lets the event form delete an event for a reader who may', async () => {
     const wrapper = mount(CalendarPage);
     await wrapper.vm.$nextTick();
 
-    // Verify the EventFormModal component exists and receives permission props
+    // With every permission (from the global mock): the form is only opened
+    // for a reader who may create or change events, and deleting is its own
     const modal = wrapper.findComponent({ name: 'EventFormModal' });
-    if (modal.exists()) {
-      // With admin permissions (from global mock), canEdit should be true
-      expect(modal.props('canEdit')).toBe(true);
-      expect(modal.props('canCreate')).toBe(true);
-      expect(modal.props('canDelete')).toBe(true);
-    }
+    expect(modal.props('canDelete')).toBe(true);
   });
 });
