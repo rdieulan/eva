@@ -279,7 +279,8 @@ const LOGO_CACHE_SECONDS = 365 * 24 * 60 * 60;
 // The image arrives as the raw request body, in one of the accepted formats
 const logoBody = raw({ type: [...TEAM_LOGO_MIME_TYPES], limit: TEAM_LOGO_MAX_BYTES });
 
-// GET /api/teams/:id/logo - The team's logo image. Loaded by <img>, which carries no token.
+// GET /api/teams/:id/logo - The team's logo image. Open to all: the public
+// board of a venue shows the logos of its teams to visitors who are not signed in.
 router.get('/:id/logo', async (req: Request, res: Response) => {
   try {
     const logo = await teamsService.getTeamLogo(req.params.id);
