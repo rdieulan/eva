@@ -22,20 +22,6 @@ export interface Team {
 export type DiscordChannelStatus = 'none' | 'linked' | 'broken';
 
 /**
- * Team with leader and members info
- */
-export interface TeamWithMembers extends Team {
-  leader: {
-    id: string;
-    name: string;
-  };
-  members: Array<{
-    id: string;
-    name: string;
-  }>;
-}
-
-/**
  * Available team locations (predefined list)
  */
 export const TEAM_LOCATIONS = [

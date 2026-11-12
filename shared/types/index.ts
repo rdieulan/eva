@@ -128,7 +128,6 @@ export {
 
 export type {
   Team,
-  TeamWithMembers,
   DiscordChannelStatus,
   TeamLocation,
 } from './team.types';
