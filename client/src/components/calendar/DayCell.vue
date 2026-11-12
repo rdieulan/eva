@@ -1,5 +1,5 @@
 <script setup lang="ts" generic="T extends DayRowItem">
-import { computed, onBeforeUnmount, ref } from 'vue';
+import { computed, ref } from 'vue';
 import type {
   AvailabilityHours,
   AvailabilityStatus,
@@ -9,22 +9,16 @@ import type {
   ScrimSearch,
   VenueEventView,
 } from '@shared/types';
-import {
-  describeAvailability,
-  describeTeamAvailability,
-  getAvailabilityClass,
-  getAvailabilityDisplay,
-  getHoursMark,
-  getTeamAvailabilityClass,
-  sortPlayersByAvailability,
-} from '@/utils/availability';
+import { describeTeamAvailability, getTeamAvailabilityClass } from '@/utils/availability';
 import { sortEventsByTime } from '@/utils/calendar';
 import { assessTeamAvailability, formatAvailabilityHours } from '@shared/utils';
-import SvgIcon from '@/components/common/SvgIcon.vue';
 import DayItems from '@/components/calendar/DayItems.vue';
-import OwnSearchMark from '@/components/calendar/OwnSearchMark.vue';
+import DayCellCorner from '@/components/calendar/DayCellCorner.vue';
+import DayCellMark from '@/components/calendar/DayCellMark.vue';
+import DayCellRoster from '@/components/calendar/DayCellRoster.vue';
 import type { WheelOpening } from '@/components/calendar/AvailabilityWheel.vue';
 import { useCornerClearance } from '@/composables/useCornerClearance';
+import { useWheelPress } from '@/composables/useWheelPress';
 
 // A day of the calendar, in two readings.
 // Normal: one colour answers "what can we do that day?", the team's lineup.
@@ -117,7 +111,7 @@ const lineupTitle = computed(() => describeTeamAvailability(teamAvailability.val
 
 // A lineup on part of the day only: the hours it meets, bottom left, unless
 // something of ours already holds that place. The end of the hours goes first
-// on a narrow day, then the hours, leaving the clock (see below).
+// on a narrow day, then the hours, leaving the clock (see DayCellMark).
 const windowMark = computed(() => {
   const { status, window } = teamAvailability.value;
   if (props.editMode || props.isPast || !props.isCurrentMonth || props.selected || ownSearch.value) return null;
@@ -139,24 +133,6 @@ const cellStatusClass = computed(() => {
   if (!props.isCurrentMonth || props.venue) return '';
   return teamAvailability.value.status === 'unknown' ? 'availability--unset' : getTeamAvailabilityClass(teamAvailability.value.status);
 });
-
-// The corner: the reader's own status, colour and symbol. A partial one also
-// carries when it starts, shown in place of its clock where the corner has room.
-const ownStatusClass = computed(() => getAvailabilityClass(props.currentPlayerStatus));
-const ownSymbol = computed(() => getAvailabilityDisplay(props.currentPlayerStatus).symbol);
-const ownHoursMark = computed(() =>
-  props.currentPlayerStatus === 'PARTIAL' && props.currentPlayerHours ? getHoursMark(props.currentPlayerHours) : null,
-);
-const ownSymbolKey = computed(() => `${ownStatusClass.value}-${ownHoursMark.value?.join('') ?? ''}`);
-// Hours with minutes, "21h30": a smaller size, so the lines stay inside the triangle
-const isLongHoursMark = computed(() => ownHoursMark.value?.some(line => line.replace('–', '').length > 3) ?? false);
-const ownTitle = computed(() => `Ma disponibilité : ${describeAvailability(props.currentPlayerStatus, props.currentPlayerHours)}`);
-
-// Edit mode: the teammates, from the most to the least available, then by name.
-// The reader is not listed: the corner of the cell already says where they stand.
-const roster = computed(() =>
-  sortPlayersByAvailability(props.playerAvailabilities.filter(player => player.playerId !== props.currentPlayerId)),
-);
 
 // Click on cell. In edit mode the press opens the wheel instead (below).
 function handleCellClick() {
@@ -181,57 +157,11 @@ function handleCellClick() {
 const cellRef = ref<HTMLElement | null>(null);
 useCornerClearance(cellRef);
 
-// Edit mode: a day to come opens the wheel of the reader's answer. A tap opens
-// it where it lands, for a second tap. A press held still, or dragged with a
-// mouse, opens it under the pointer, and the release picks the answer it ends
-// on. A finger that moves before the hold is scrolling the page: nothing opens.
-const HOLD_MS = 300;
-const MOVE_TOLERANCE_PX = 10;
-const HOLD_BUZZ_MS = 10; // A short vibration where the device has one, when the hold opens the wheel
-
-let press: { x: number; y: number; pointerType: string; timer: ReturnType<typeof setTimeout> } | null = null;
-
-function endPress() {
-  if (press) clearTimeout(press.timer);
-  press = null;
-  window.removeEventListener('pointermove', onPressMove);
-  window.removeEventListener('pointerup', onPressUp);
-  window.removeEventListener('pointercancel', endPress);
-}
-
-function openWheel(x: number, y: number, dragging: boolean) {
-  endPress();
-  emit('open-availability', { date: props.date, x, y, dragging });
-}
-
-function onPressStart(event: PointerEvent) {
-  if (!props.editMode || props.isPast || !props.isCurrentMonth || event.button !== 0) return;
-  endPress();
-  const { clientX: x, clientY: y, pointerType } = event;
-  press = {
-    x, y, pointerType,
-    timer: setTimeout(() => {
-      navigator.vibrate?.(HOLD_BUZZ_MS);
-      openWheel(x, y, true);
-    }, HOLD_MS),
-  };
-  window.addEventListener('pointermove', onPressMove);
-  window.addEventListener('pointerup', onPressUp);
-  window.addEventListener('pointercancel', endPress);
-}
-
-function onPressMove(event: PointerEvent) {
-  if (!press || Math.hypot(event.clientX - press.x, event.clientY - press.y) <= MOVE_TOLERANCE_PX) return;
-  if (press.pointerType === 'mouse') openWheel(press.x, press.y, true);
-  else endPress();
-}
-
-function onPressUp(event: PointerEvent) {
-  if (!press) return;
-  openWheel(event.clientX, event.clientY, false);
-}
-
-onBeforeUnmount(endPress);
+// Edit mode: a press on a day to come opens the wheel of the reader's answer
+const { onPressStart } = useWheelPress({
+  enabled: () => props.editMode && !props.isPast && props.isCurrentMonth,
+  open: (x, y, dragging) => emit('open-availability', { date: props.date, x, y, dragging }),
+});
 </script>
 
 <template>
@@ -262,67 +192,27 @@ onBeforeUnmount(endPress);
     <!-- The reader's own status: a coloured corner with its symbol. Not on a
          day outside the month: its availabilities are not loaded, so there is
          nothing to say, and a "?" would read as an unanswered day -->
-    <div
-      v-if="!isPast && isCurrentMonth && !venue"
-      class="corner"
-      :class="ownStatusClass"
-      :title="ownTitle"
-    >
-      <span class="corner-relief" aria-hidden="true">
-        <span class="corner-notch">
-          <span class="corner-wall corner-wall--bottom"></span>
-          <span class="corner-wall corner-wall--right"></span>
-          <span class="corner-wall corner-wall--diagonal"></span>
-          <span class="corner-face"></span>
-        </span>
-      </span>
-      <!-- Another answer: the new symbol springs in over the old -->
-      <Transition name="symbol">
-        <span :key="ownSymbolKey" class="corner-symbol" :class="{ 'has-hours': ownHoursMark }">
-          <SvgIcon v-if="'icon' in ownSymbol" :name="ownSymbol.icon" />
-          <template v-else>{{ ownSymbol.text }}</template>
-        </span>
-      </Transition>
-      <!-- A partial answer's hours, a line per bound, where the triangle has room for them -->
-      <Transition name="symbol">
-        <span v-if="ownHoursMark" :key="ownSymbolKey" class="corner-hours" :class="{ 'is-long': isLongHoursMark }">
-          <span v-for="line in ownHoursMark" :key="line">{{ line }}</span>
-        </span>
-      </Transition>
-    </div>
+    <DayCellCorner v-if="!isPast && isCurrentMonth && !venue" :status="currentPlayerStatus" :hours="currentPlayerHours" />
 
-    <!-- Ours, bottom left: the day picked for a search, or our own search -->
-    <span v-if="selected" class="selected-mark" aria-label="Jour sélectionné">✓</span>
-    <OwnSearchMark
-      v-else-if="ownSearch && !editMode"
-      class="own-search-mark"
-      data-corner-clear
-      :search="ownSearch"
-      show-hours
-      @open="search => emit('open-search', search)"
+    <!-- Ours, bottom left: the day picked for a search, our own search, or when a partial lineup meets -->
+    <DayCellMark
+      :selected="selected"
+      :search="editMode ? null : ownSearch"
+      :lineup-hours="windowMark"
+      :lineup-title="lineupTitle"
+      @open-search="search => emit('open-search', search)"
     />
-    <span v-else-if="windowMark" class="window-mark" data-corner-clear :title="lineupTitle">
-      <SvgIcon name="clock" class="window-icon" />
-      <span class="window-hours"><span>{{ windowMark.main }}</span><span v-if="windowMark.end" class="window-end">{{ windowMark.end }}</span></span>
-    </span>
 
     <!-- Edit mode: who said what, the most available first; the reader is the
          corner. Normal reading: what is planned. The two cross-fade. -->
     <Transition name="reading">
-      <ul v-if="editMode && !isPast" key="roster" class="roster" :aria-label="`Disponibilités du ${date}`">
-        <li
-          v-for="player in roster"
-          :key="player.playerId"
-          class="roster-player"
-          data-corner-clear
-          :class="getAvailabilityClass(player.status)"
-          :title="`${player.playerName} : ${describeAvailability(player.status, player.hours)}`"
-        >
-          <span class="roster-dot" aria-hidden="true"></span>
-          <span class="roster-name">{{ player.playerName }}</span>
-          <span v-if="player.status === 'PARTIAL' && player.hours" class="roster-hours">{{ formatAvailabilityHours(player.hours) }}</span>
-        </li>
-      </ul>
+      <DayCellRoster
+        v-if="editMode && !isPast"
+        key="roster"
+        :date="date"
+        :availabilities="playerAvailabilities"
+        :reader-id="currentPlayerId"
+      />
 
       <div v-else key="items" class="items">
         <DayItems
@@ -344,18 +234,10 @@ onBeforeUnmount(endPress);
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
 
-// The legs of the reader's triangle as drawn (see .corner). Registered as a
-// length so a transition can carry it from one size to the other.
-@property --leg {
-  syntax: '<length>';
-  inherits: true;
-  initial-value: 0px;
-}
-
 .day-cell {
   position: relative;
   min-width: 0; // Prevent overflow in grid
-  // Its width sizes the corner while the reader edits (see .edit-mode .corner)
+  // Its width sizes the corner while the reader edits (see DayCellCorner)
   container: day-cell / inline-size;
   // Padding and corner, stated once: the content reads them to keep clear of
   // the corner. The triangle has legs of `notch` and sits `rim` away from the
@@ -562,382 +444,6 @@ onBeforeUnmount(endPress);
   }
 }
 
-// The reader's own status: a chamfered triangle in the bottom-right corner
-// of the cell, cut as a recess in the day, or standing on it as a chip where
-// the theme says so. The box itself is not clipped, so a chip inside can cast
-// a shadow on the cell; the rim around the walls is the bare surface of the
-// day.
-.corner {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  // The triangle at rest and its rim around it: the box the lines of the day
-  // keep clear of. It takes its new size at once when the reader starts or
-  // stops editing, so the lines are measured a single time, against where the
-  // triangle is going (see useCornerClearance); the triangle drawn inside
-  // catches up through `--leg`.
-  width: calc(var(--notch) + var(--rim) * 3.414);
-  height: calc(var(--notch) + var(--rim) * 3.414);
-  z-index: 2;
-  pointer-events: none;
-
-  // The legs as drawn, then the same in whole pixels for the shapes, at every
-  // frame (see .day-cell for why whole pixels). Walls, face, shade and symbol
-  // all read them, so they move as one. Back to rest: quick and straight.
-  --leg: var(--notch);
-  --drawn: round(var(--leg), 1px);
-  transition: --leg 0.24s cubic-bezier(0.3, 0, 0.2, 1);
-
-  --corner-color: #{$color-border-light}; // The reader's status, read by the face
-  --bevel: #{$corner-bevel-width}; // Local copy: a theme token under its own name would be a self-reference
-  // Curves of the right-angle vertex, both centred on the same point so the
-  // band of the walls keeps its width through the turn: `round` for the
-  // outer edge of the walls, `round-in` for the face, a wall narrower. The
-  // face takes half the curve of the cell, so the triangle echoes the day;
-  // where the triangle sits so close to the edges that the curve of the cell,
-  // the rim away, is wider, that one wins and the rim keeps its width along
-  // it. In a flat theme without rim nor walls, the face takes the curve of
-  // the cell itself.
-  --round: max(calc(var(--cell-radius) / 2 + var(--bevel)), calc(var(--cell-radius) - var(--cell-border) - var(--rim)));
-  --round-in: calc(var(--round) - var(--bevel));
-  // Geometry of the chamfer in the notch's box: a wall is `bevel` wide, and
-  // along the bottom or the right edge it meets the diagonal wall
-  // bevel × (1 + √2) in from the far end. `turn` is the centre of the curves
-  // of the vertex, on its bisector.
-  --step: calc(var(--bevel) * 2.41421);
-  --far: calc(100% - var(--bevel));
-  --turn: calc(100% - var(--bevel) - var(--round-in));
-
-  @each $status, $color in $availability-colors {
-    &.availability--#{$status} {
-      --corner-color: #{$color};
-    }
-  }
-
-  @include mobile-lg {
-    --bevel: min(#{$corner-bevel-width}, 1px);
-  }
-}
-
-// The relief wrapper is not clipped: its drop shadow follows the clipped
-// shapes inside, which a box-shadow on a clipped box cannot do
-.corner-relief {
-  position: absolute;
-  inset: 0;
-  filter: var(--corner-cast);
-}
-
-// Editing their availability, a click changes the reader's own corner: it
-// grows to twice its legs, its symbol with it, a touch past its size before
-// settling; never past most of the width of the day, so a narrow day keeps
-// room for its roster
-.edit-mode .corner {
-  --notch: min(round(calc(#{$corner-size} * 2), 1px), round(60cqi, 1px));
-  transition: --leg 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
-
-  @include mobile-lg {
-    --notch: min(round(calc(#{$corner-size} * 4 / 3), 1px), round(60cqi, 1px));
-  }
-}
-
-// The notch: the triangle inside the rim, whose edges are the outer edges of
-// the walls. Its own clip rounds the bottom-right vertex of everything
-// inside, walls included, to follow the curve of the cell.
-.corner-notch {
-  position: absolute;
-  bottom: var(--rim);
-  right: var(--rim);
-  width: var(--drawn);
-  height: var(--drawn);
-  clip-path: inset(0 round 0 0 var(--round) 0);
-
-  > span {
-    position: absolute;
-  }
-}
-
-// The walls: three trapezoids of the bare surface of the day, along the
-// bottom edge, the right edge and the hypotenuse, each under its own
-// gradient, lit or shaded by the light. The bottom and right ones meet on the
-// bisector of the vertex and run on under the face to the centre of its
-// curve, so together they fill the turn around its rounded corner.
-.corner-wall {
-  inset: 0;
-}
-
-.corner-wall--bottom {
-  clip-path: polygon(0 100%, 100% 100%, var(--turn) var(--turn), var(--step) var(--far));
-  background-image: var(--corner-wall-bottom);
-}
-
-.corner-wall--right {
-  clip-path: polygon(100% 100%, 100% 0, var(--far) var(--step), var(--turn) var(--turn));
-  background-image: var(--corner-wall-right);
-}
-
-.corner-wall--diagonal {
-  clip-path: polygon(0 100%, 100% 0, var(--far) var(--step), var(--step) var(--far));
-  background-image: var(--corner-wall-diagonal);
-}
-
-// The face: the reader's colour, under the shadow of the walls when it is
-// the floor of a recess, and faded on a day the team cannot use where the
-// theme says so. Drawn over the walls, in a box that stops at their inner
-// edges so its rounded corner sits inside their turn; its shade keeps the
-// geometry of the notch.
-.corner-face {
-  inset: 0 var(--bevel) var(--bevel) 0;
-  border-bottom-right-radius: var(--round-in);
-  clip-path: polygon(100% var(--step), 100% 100%, var(--step) 100%);
-  background-color: var(--corner-color);
-  background-image: var(--corner-face-shade);
-  background-size: var(--drawn) var(--drawn);
-  filter: var(--corner-face-filter);
-  transition: background-color 0.2s ease-out; // A click changes the status: the colour follows
-}
-
-.corner-symbol {
-  position: absolute;
-  // A box centred on the centroid of the face, a third of its leg in from its
-  // bottom and right edges: the point that reads as the middle of a triangle.
-  // The face is the triangle left inside the notch by the walls. Box and
-  // glyph follow the legs of the triangle, so they grow with it.
-  --face: calc(var(--drawn) - var(--bevel) * 3.414);
-  --inset: calc(var(--rim) + var(--bevel) + var(--face) / 3);
-  --symbol: calc(var(--drawn) * 0.32);
-  bottom: var(--inset);
-  right: var(--inset);
-  width: var(--symbol);
-  height: var(--symbol);
-  transform: translate(50%, 50%);
-  // The point the box is moved to, so a scale keeps the glyph on the centroid
-  transform-origin: 100% 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1;
-  font-size: calc(var(--drawn) * 0.34);
-  font-weight: 900;
-  line-height: 1;
-  color: $corner-symbol-color;
-
-  .svg-icon {
-    width: 100%;
-    height: 100%;
-    display: block;
-  }
-
-}
-
-// The hours of a partial answer, right-aligned in the right angle of the face,
-// a tenth of the face in from its walls: the face is wider the lower it goes,
-// so the start sits above the end, both clear of the hypotenuse. Hidden where
-// the triangle is too small to read them: the clock says it then.
-.corner-hours {
-  --face: calc(var(--drawn) - var(--bevel) * 3.414);
-  position: absolute;
-  right: calc(var(--rim) + var(--bevel) + var(--face) * 0.1);
-  bottom: calc(var(--rim) + var(--bevel) + var(--face) * 0.1);
-  z-index: 1;
-  display: none;
-  flex-direction: column;
-  align-items: flex-end;
-  font-size: calc(var(--face) * 0.2);
-  font-weight: 900;
-  line-height: 1.02;
-  letter-spacing: -0.02em;
-  white-space: nowrap;
-  color: $corner-symbol-color;
-  font-variant-numeric: tabular-nums;
-  transform-origin: 100% 100%; // The spring of a new answer starts from the right angle
-
-  &.is-long {
-    font-size: calc(var(--face) * 0.15);
-  }
-}
-
-// The large corner of edit mode, on a day wide enough: the hours in place of the clock
-@container day-cell (min-width: 5.6rem) {
-  .day-cell.edit-mode .corner {
-    .corner-symbol.has-hours {
-      display: none;
-    }
-
-    .corner-hours {
-      display: flex;
-    }
-  }
-}
-
-// Bottom left, on the left edge of the rows: the corner holds the bottom
-// right. Ours: the mark of a picked day, or our own search (below).
-.selected-mark {
-  position: absolute;
-  bottom: var(--pad);
-  left: var(--pad);
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--mark);
-  height: var(--mark);
-  border-radius: 50%;
-  background: $color-white;
-  color: $color-bg-primary;
-  font-size: 0.7rem;
-  font-weight: 700;
-
-  @include mobile-lg {
-    font-size: 0.6rem;
-  }
-}
-
-// Our own search: the loupe emoji, drawn exactly in the square of the mark of
-// a picked day. The emoji draws it from 2.2 to 29.94 units of its 32, so its
-// square is that much larger, and set back by its margins; its centre stays
-// that of the square, so the hours beside it sit on the row. The hours stop
-// before the corner (see useCornerClearance), at the size of the rows' text.
-.own-search-mark {
-  --loupe: calc(var(--mark) * 32 / 27.74);
-  position: absolute;
-  left: calc(var(--pad) - var(--loupe) * 2.2 / 32);
-  bottom: calc(var(--pad) - var(--loupe) * 2.06 / 32);
-  z-index: 2;
-  max-width: calc(100% - var(--pad) + var(--loupe) * 2.2 / 32 - var(--clear, 0px));
-  font-size: var(--row-font);
-}
-
-// Edit mode: the roster in a column, one player a line, the most available
-// first, a dot in the status colour
-.roster {
-  --roster-font: 0.72rem; // Size of the names
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  position: relative;
-  z-index: 1;
-  overflow: hidden;
-
-  @include mobile-lg {
-    --roster-font: 0.6rem;
-  }
-}
-
-.roster-player {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  // A name beside the corner stops before it (see useCornerClearance)
-  padding-right: var(--clear, 0px);
-  font-size: var(--roster-font);
-  line-height: 1.35;
-  color: $color-text-primary;
-  overflow: hidden;
-
-  @include mobile-lg {
-    gap: 0.25rem;
-  }
-}
-
-// A hollow dot for a player who has not answered, a full one otherwise
-.roster-dot {
-  flex-shrink: 0;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: transparent;
-  border: $border-thin solid $color-text-secondary;
-  box-sizing: border-box;
-
-  // Scoped to the player's own row: the cell carries an availability class too
-  // (the reader's status in edit mode) and must not colour the teammates' dots
-  @each $status, $color in $availability-colors {
-    .roster-player.availability--#{$status} > & {
-      background: $color;
-      border-color: $color;
-    }
-  }
-
-  @include mobile {
-    width: 5px;
-    height: 5px;
-  }
-}
-
-.roster-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-// The hours of a teammate available on part of the day, after the name, in
-// its ink: the yellow of the dot says the answer, and a yellow day would drown
-// yellow hours. Short of room, they give way before the name does.
-.roster-hours {
-  flex-shrink: 1000;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  opacity: 0.8;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-// Bottom left, like our own search: the hours a full lineup meets, on a day
-// it only meets on part of
-.window-mark {
-  position: absolute;
-  left: var(--pad);
-  bottom: var(--pad);
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: 0.3em;
-  max-width: calc(100% - var(--pad) * 2 - var(--clear, 0px));
-  height: var(--mark);
-  font-size: var(--row-font);
-  color: $color-white;
-  white-space: nowrap;
-  overflow: hidden;
-}
-
-// In the ink of the hours: the day it marks is yellow already
-.window-icon {
-  flex-shrink: 0;
-  width: 1.1em !important;
-  height: 1.1em !important;
-}
-
-.window-hours {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-variant-numeric: tabular-nums;
-}
-
-// A narrow day keeps when the lineup meets from, a phone the clock alone, as
-// our own search does (see OwnSearchMark); the teammates' hours leave the
-// roster to their names
-@container day-cell (max-width: 8.6rem) {
-  .window-end {
-    display: none;
-  }
-}
-
-@container day-cell (max-width: 7.5rem) {
-  .roster-hours {
-    display: none;
-  }
-}
-
-@container day-cell (max-width: 5.6rem) {
-  .window-hours {
-    display: none;
-  }
-}
-
 // What is planned, a row per item (see DayItems), sized by the metrics of the
 // day
 .items {
@@ -956,26 +462,6 @@ onBeforeUnmount(endPress);
   // light of a hover.
   --cut: max(0px, calc(var(--corner-leg) - var(--pad) * 2 + 3px));
   clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%);
-}
-
-// A new status: its symbol springs in from small, the old one swells and
-// fades. `scale` composes with the transform that centres the box.
-.symbol-enter-active {
-  transition: scale 0.34s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.14s ease-out;
-}
-
-.symbol-leave-active {
-  transition: scale 0.16s ease-in, opacity 0.16s ease-in;
-}
-
-.symbol-enter-from {
-  opacity: 0;
-  scale: 0.4;
-}
-
-.symbol-leave-to {
-  opacity: 0;
-  scale: 1.3;
 }
 
 // Starting or stopping the edit, the roster and the rows cross-fade while the
@@ -998,11 +484,6 @@ onBeforeUnmount(endPress);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .corner,
-  .edit-mode .corner,
-  .corner-face,
-  .symbol-enter-active,
-  .symbol-leave-active,
   .reading-enter-active,
   .reading-leave-active {
     transition: none;

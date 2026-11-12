@@ -5,7 +5,7 @@ import magnifierUrl from '@/assets/icons/magnifier.svg';
 import { ownSearchLabel, pendingProposalCount } from '@/utils/scrims';
 
 // Our own search on a day: the loupe of the search button, the 🔎 emoji, drawn
-// in the square of the tick of a picked day (see DayCell), the count of the
+// in the square of the tick of a picked day (see DayCellMark), the count of the
 // teams waiting for our answer in the centre of its glass once some did. On
 // the row the day keeps for it, the hours the search offers follow it, where
 // they fit. Its words are in its tooltip. A click opens the search, and goes
