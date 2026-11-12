@@ -232,9 +232,12 @@ Les tests d'intégration testent les routes API de bout en bout avec une vraie b
 
 | Helper | Description |
 |--------|-------------|
-| `createTestUser(options)` | Crée un user via `POST /api/auth/register` |
-| `createAuthenticatedUser(options)` | Crée un user + login, retourne `{ user, token }` |
-| `createUserWithTeam(options)` | Crée un user + équipe, retourne `{ user, token, team }` |
+| `createTestUser(options)` | Crée une personne comme sa première connexion Discord : un compte et son joueur |
+| `createAuthenticatedUser(options)` | Crée une personne connectée, une session qui agit en joueur ; retourne `{ user, token }` |
+| `authHeader(token)` | L'en-tête qui porte la session, comme le cookie qu'un navigateur envoie |
+| `createUserWithTeam(options)` | Crée une personne connectée et son équipe par l'API ; retourne `{ user, token, team }` |
+| `createTeamMember(leaderToken, teamId, matchmaking)` | Fait entrer un joueur dans l'équipe par un lien d'invitation, avec ces droits de matchmaking |
+| `createAuthenticatedAdmin(options)` | Crée une personne qui a le rôle d'administrateur, sa session agissant en administrateur |
 | `expectNoRecordCreated(countFn, action)` | Vérifie qu'aucun enregistrement n'a été créé |
 | `prisma` | Client Prisma pour les vérifications (lecture seule) |
 
@@ -251,7 +254,7 @@ Les tests d'intégration testent les routes API de bout en bout avec une vraie b
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import { app } from '../../server/src/app';
-import { createUserWithTeam } from './helpers/auth';
+import { authHeader, createUserWithTeam } from './helpers/auth';
 import { prisma, expectNoRecordCreated } from './helpers/db';
 import { ERROR } from '@shared/constants/error.constants';
 
@@ -262,7 +265,7 @@ describe('Feature API', () => {
 
       const res = await request(app)
         .post('/api/feature')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authHeader(token))
         .send({ data: 'value' });
 
       expect(res.status).toBe(201);
@@ -279,7 +282,7 @@ describe('Feature API', () => {
         .send({ data: 'value' });
 
       expect(res.status).toBe(401);
-      expect(res.body.errors).toContain(ERROR.tokenMissing);
+      expect(res.body.errors).toContain(ERROR.unauthorized);
     });
 
     it('should reject and not create record', async () => {
@@ -289,7 +292,7 @@ describe('Feature API', () => {
         () => prisma.feature.count({ where: { teamId: team.id } }),
         () => request(app)
           .post('/api/feature')
-          .set('Authorization', `Bearer ${token}`)
+          .set(authHeader(token))
           .send({ invalidData: true })
       );
 
@@ -304,10 +307,10 @@ describe('Feature API', () => {
 # Lancer les tests d'intégration
 npm run test:integration
 
-# Lancer les tests unitaires
-npm run test:unit
+# Lancer les tests unitaires (et de qualité), une fois
+npm run test:run
 
-# Lancer tous les tests
+# Les mêmes, relancés à chaque changement
 npm run test
 ```
 
