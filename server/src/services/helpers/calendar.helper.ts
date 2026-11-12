@@ -79,7 +79,7 @@ export function formatEventForFrontend(event: {
   evaSlotIds: string[];
   voiceMedium?: VoiceMedium | null;
   scrimSearchId?: string | null;
-  createdById: string;
+  createdById: string | null;
   createdAt: Date;
 }): CalendarEvent {
   return {

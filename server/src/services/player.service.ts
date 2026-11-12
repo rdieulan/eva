@@ -195,11 +195,12 @@ export async function listAllPlayers(): Promise<PlayerAdminSummary[]> {
 export type DeletePlayerError = 'notFound' | 'isTeamLeader' | 'isAdmin' | 'isManager' | 'noUserLinked';
 
 /**
- * Delete a player, that is the person and their account, cleaning up
- * dependents that have a RESTRICT FK (CalendarEvent.createdById,
- * TeamInvite.createdById). Refuses to delete a team's leader (delete the team
- * first or transfer leadership), and someone holding a role: a manager's or an
- * admin's goes first from its own list, under its own permission and guards.
+ * Delete a player, that is the person and their account. What they made for
+ * their team, its events, searches and proposals, stays with the team, without
+ * its author; their invitation links go with them. Refuses to delete a team's
+ * leader (delete the team first or transfer leadership), and someone holding a
+ * role: a manager's or an admin's goes first from its own list, under its own
+ * permission and guards.
  */
 export async function deletePlayer(playerId: string): Promise<true | DeletePlayerError> {
   const player = await prisma.player.findUnique({
@@ -216,10 +217,11 @@ export async function deletePlayer(playerId: string): Promise<true | DeletePlaye
   if (player.user.adminId) return 'isAdmin';
   if (player.user.managerId) return 'isManager';
 
-  // Order matters: clear RESTRICT-FK dependents before deleting Player; Player
-  // delete cascades the account (and its sessions), availabilities and gamePlanPlayers.
+  // The invitation links first, which the database keeps from going without
+  // their author. Deleting the player cascades their account (and its
+  // sessions), availabilities and gamePlanPlayers, and clears the author of
+  // what they made for the team.
   await prisma.$transaction([
-    prisma.calendarEvent.deleteMany({ where: { createdById: playerId } }),
     prisma.teamInvite.deleteMany({ where: { createdById: playerId } }),
     prisma.player.delete({ where: { id: playerId } }),
   ]);

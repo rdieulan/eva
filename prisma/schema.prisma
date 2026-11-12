@@ -435,13 +435,13 @@ model CalendarEvent {
   venueCompetitionId String?
   // The venue event this one is the team's copy of, once the team added it: withdrawn by the venue, it goes
   venueEventId       String?
-  createdById        String
+  createdById        String? // Who made it: the event is the team's, and stays when they are deleted
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
   gamePlan           Json?
   team               Team?             @relation(fields: [teamId], references: [id], onDelete: Cascade)
   venue              Venue?            @relation(fields: [venueId], references: [id], onDelete: SetNull)
-  createdBy          Player            @relation(fields: [createdById], references: [id])
+  createdBy          Player?           @relation(fields: [createdById], references: [id], onDelete: SetNull)
   scrimSearch        ScrimSearch?      @relation(fields: [scrimSearchId], references: [id], onDelete: SetNull)
   venueCompetition   VenueCompetition? @relation(fields: [venueCompetitionId], references: [id], onDelete: Cascade)
   venueEvent         VenueEvent?       @relation(fields: [venueEventId], references: [id], onDelete: Cascade)
@@ -471,11 +471,11 @@ model ScrimSearch {
   endTime         String // HH:mm, end of the latest offered slot
   convocationTime String // HH:mm, when eva.gg expects the players for the earliest slot
   status          ScrimSearchStatus @default(OPEN)
-  createdById     String
+  createdById     String? // Who opened it: the search is the team's, and stays when they are deleted
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   team            Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  createdBy       Player            @relation(fields: [createdById], references: [id])
+  createdBy       Player?           @relation(fields: [createdById], references: [id], onDelete: SetNull)
   slots           ScrimSearchSlot[]
   proposals       ScrimProposal[]
   matches         CalendarEvent[] // The match events its accepted proposals created, two per match
@@ -511,7 +511,7 @@ model ScrimProposal {
   id              String              @id @default(cuid())
   searchId        String
   teamId          String // The team proposing, never the one that opened the search
-  createdById     String
+  createdById     String? // Who sent it: the proposal is the team's, and stays when they are deleted
   message         String? // A word for the other team, optional
   venueId         String // Where the run is played
   evaSlotIds      String[] // The run to play: consecutive slots on one arena, among those the search offers
@@ -527,7 +527,7 @@ model ScrimProposal {
   search          ScrimSearch         @relation(fields: [searchId], references: [id], onDelete: Cascade)
   team            Team                @relation(fields: [teamId], references: [id], onDelete: Cascade)
   venue           Venue               @relation(fields: [venueId], references: [id], onDelete: Cascade)
-  createdBy       Player              @relation(fields: [createdById], references: [id])
+  createdBy       Player?             @relation(fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([searchId])
   @@index([teamId])

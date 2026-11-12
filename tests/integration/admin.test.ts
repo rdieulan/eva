@@ -4,7 +4,7 @@ import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import { app } from '../../server/src/app';
 import { prisma } from './helpers/db';
-import { createAuthenticatedUser, createAuthenticatedAdmin, createUserWithTeam, authHeader } from './helpers/auth';
+import { createAuthenticatedUser, createAuthenticatedAdmin, createTeamMember, createUserWithTeam, authHeader } from './helpers/auth';
 import { ERROR } from '@shared/constants/error.constants';
 import { DEFAULT_PLAYER_PERMISSIONS } from '@shared/types';
 import { acceptInvitation } from '../../server/src/services/invitation.service';
@@ -889,6 +889,44 @@ describe('Admin API', () => {
       expect(await prisma.player.findUnique({ where: { id: user.playerId } })).toBeNull();
       expect(await prisma.user.findUnique({ where: { id: user.id } })).toBeNull();
       expect((await request(app).get('/api/auth/me').set(authHeader(token))).status).toBe(401);
+    });
+
+    it('leaves what the player made for their team with the team, only their name as its author goes', async () => {
+      const { token: adminToken } = await createAuthenticatedAdmin();
+      const ours = await createUserWithTeam();
+      const theirs = await createUserWithTeam();
+      const member = await createTeamMember(ours.token, ours.team.id);
+      const venue = await createTestVenue();
+      const date = new Date('2030-06-10');
+      const run = { venueId: venue.id, arenaNumber: 1, startTime: '20:00', endTime: '21:20', convocationTime: '19:50' };
+
+      // An event, a search of their team, a proposal on another team's search, and the match it made
+      const event = await prisma.calendarEvent.create({
+        data: { teamId: ours.team.id, date, startTime: '18:00', endTime: '19:00', type: 'EVENT', title: 'Revue VOD', createdById: member.playerId },
+      });
+      const search = await prisma.scrimSearch.create({
+        data: { teamId: ours.team.id, date, startTime: '20:00', endTime: '22:00', convocationTime: '19:50', createdById: member.playerId },
+      });
+      const theirSearch = await prisma.scrimSearch.create({
+        data: { teamId: theirs.team.id, date, startTime: '20:00', endTime: '22:00', convocationTime: '19:50', status: 'MATCHED', createdById: theirs.user.playerId },
+      });
+      const proposal = await prisma.scrimProposal.create({
+        data: { ...run, searchId: theirSearch.id, teamId: ours.team.id, evaSlotIds: ['s-2000', 's-2040'], status: 'ACCEPTED', createdById: member.playerId },
+      });
+      const match = { date, startTime: '20:00', endTime: '21:20', type: 'MATCH' as const, venueId: venue.id, arenaNumber: 1, scrimSearchId: theirSearch.id };
+      const ourMatch = await prisma.calendarEvent.create({ data: { ...match, teamId: ours.team.id, title: 'Scrim', createdById: member.playerId } });
+      const theirMatch = await prisma.calendarEvent.create({ data: { ...match, teamId: theirs.team.id, title: 'Scrim', createdById: theirs.user.playerId } });
+
+      const res = await request(app).delete(`/api/admin/players/${member.playerId}`).set(authHeader(adminToken));
+
+      expect(res.status).toBe(200);
+      expect(await prisma.player.findUnique({ where: { id: member.playerId } })).toBeNull();
+      expect(await prisma.calendarEvent.findUnique({ where: { id: event.id } })).toMatchObject({ teamId: ours.team.id, createdById: null });
+      expect(await prisma.scrimSearch.findUnique({ where: { id: search.id } })).toMatchObject({ teamId: ours.team.id, createdById: null });
+      expect(await prisma.scrimProposal.findUnique({ where: { id: proposal.id } })).toMatchObject({ teamId: ours.team.id, createdById: null });
+      // The match stays in both calendars
+      expect(await prisma.calendarEvent.findUnique({ where: { id: ourMatch.id } })).toMatchObject({ createdById: null });
+      expect(await prisma.calendarEvent.findUnique({ where: { id: theirMatch.id } })).toMatchObject({ createdById: theirs.user.playerId });
     });
 
     it('refuses to delete a manager: that role goes from the managers\' list, under its own permission', async () => {
