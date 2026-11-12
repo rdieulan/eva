@@ -3,12 +3,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import VenueSlotPicker from '@/components/calendar/VenueSlotPicker.vue';
 import { fetchVenueSlots } from '@/api/teams.api';
+import type { VenueSlot } from '@shared/types';
 
 vi.mock('@/api/teams.api', () => ({
   fetchVenueSlots: vi.fn(),
 }));
 
-function slot(startTime: string, endTime: string, overrides: Record<string, unknown> = {}) {
+function slot(startTime: string, endTime: string, overrides: Partial<VenueSlot> = {}): VenueSlot {
   return {
     slotId: `slot-${startTime}`,
     startTime,
@@ -19,6 +20,8 @@ function slot(startTime: string, endTime: string, overrides: Record<string, unkn
     totalSeats: 10,
     gameId: 1,
     isCompetitiveAvailable: true,
+    tokenType: null,
+    passQuotaLeft: null,
     ...overrides,
   };
 }

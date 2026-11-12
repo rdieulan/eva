@@ -29,11 +29,11 @@ describe('useRotationCalculator', () => {
         { id: 4, name: 'Role D', x: 75, y: 75 },
       ],
       players: [
-        { userId: 'player-1', assignmentIds: [1, 2], mainAssignmentId: 1 },
-        { userId: 'player-2', assignmentIds: [2, 3], mainAssignmentId: 2 },
-        { userId: 'player-3', assignmentIds: [3, 4], mainAssignmentId: 3 },
-        { userId: 'player-4', assignmentIds: [1, 4], mainAssignmentId: 4 },
-        { userId: 'player-5', assignmentIds: [1, 2, 3, 4] },
+        { playerId: 'player-1', assignmentIds: [1, 2], mainAssignmentId: 1 },
+        { playerId: 'player-2', assignmentIds: [2, 3], mainAssignmentId: 2 },
+        { playerId: 'player-3', assignmentIds: [3, 4], mainAssignmentId: 3 },
+        { playerId: 'player-4', assignmentIds: [1, 4], mainAssignmentId: 4 },
+        { playerId: 'player-5', assignmentIds: [1, 2, 3, 4] },
       ],
       gamePlans: [
         {
@@ -46,11 +46,11 @@ describe('useRotationCalculator', () => {
             { id: 4, name: 'Role D', x: 75, y: 75 },
           ],
           players: [
-            { userId: 'player-1', assignmentIds: [1, 2], mainAssignmentId: 1 },
-            { userId: 'player-2', assignmentIds: [2, 3], mainAssignmentId: 2 },
-            { userId: 'player-3', assignmentIds: [3, 4], mainAssignmentId: 3 },
-            { userId: 'player-4', assignmentIds: [1, 4], mainAssignmentId: 4 },
-            { userId: 'player-5', assignmentIds: [1, 2, 3, 4] },
+            { playerId: 'player-1', assignmentIds: [1, 2], mainAssignmentId: 1 },
+            { playerId: 'player-2', assignmentIds: [2, 3], mainAssignmentId: 2 },
+            { playerId: 'player-3', assignmentIds: [3, 4], mainAssignmentId: 3 },
+            { playerId: 'player-4', assignmentIds: [1, 4], mainAssignmentId: 4 },
+            { playerId: 'player-5', assignmentIds: [1, 2, 3, 4] },
           ],
         },
       ],
@@ -193,11 +193,11 @@ describe('useRotationCalculator', () => {
       const mapResult = results.value?.[0];
       expect(mapResult).toBeDefined();
 
-      if (mapResult && mapResult.configurations.length > 0) {
-        const firstConfig = mapResult.configurations[0];
-        // Should have 4 assignments
-        expect(Object.keys(firstConfig.assignments)).toHaveLength(4);
-      }
+      // Found at all: a check under a condition would pass on no configuration
+      expect(mapResult!.configurations.length).toBeGreaterThan(0);
+      const firstConfig = mapResult!.configurations[0]!;
+      // Should have 4 assignments
+      expect(Object.keys(firstConfig.assignments)).toHaveLength(4);
     });
   });
 

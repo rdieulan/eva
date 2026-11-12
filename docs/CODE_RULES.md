@@ -312,6 +312,10 @@ npm run test:run
 
 # Les mêmes, relancés à chaque changement
 npm run test
+
+# Les types du client, du serveur et des tests : Vitest ne les vérifie pas,
+# et des données de test qui dérivent des types passent sans rien dire
+npm run typecheck
 ```
 
 #### Exemples de tests inutiles (à NE PAS écrire) :

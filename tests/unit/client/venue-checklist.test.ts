@@ -7,7 +7,7 @@ import type { Venue } from '@shared/types';
 
 function venue(id: string, name: string): Venue {
   return {
-    id, name, city: name, address: '', phone: null, arenaCount: 1, hasEvaSlots: true,
+    id, slug: id, name, city: name, address: '', phone: null, arenaCount: 1, hasEvaSlots: true,
     website: null, discord: null, facebook: null, instagram: null, x: null, tiktok: null, youtube: null, twitch: null,
   };
 }

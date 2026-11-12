@@ -284,8 +284,11 @@ describe('useCalendar', () => {
         '2026-01-20': {
           date: '2026-01-20',
           currentPlayerStatus: null,
-          playerAvailabilities: [{ playerId: 'player-1', playerName: 'Test', status: null }],
+          currentPlayerHours: null,
+          playerAvailabilities: [{ playerId: 'player-1', playerName: 'Test', status: null, hours: null }],
           events: [],
+          renewals: [],
+          venueEvents: [],
         },
       };
 
@@ -311,8 +314,11 @@ describe('useCalendar', () => {
         '2026-01-20': {
           date: '2026-01-20',
           currentPlayerStatus: 'AVAILABLE',
-          playerAvailabilities: [{ playerId: 'player-1', playerName: 'Test', status: 'AVAILABLE' }],
+          currentPlayerHours: null,
+          playerAvailabilities: [{ playerId: 'player-1', playerName: 'Test', status: 'AVAILABLE', hours: null }],
           events: [],
+          renewals: [],
+          venueEvents: [],
         },
       };
 
@@ -330,11 +336,14 @@ describe('useCalendar', () => {
         '2026-01-20': {
           date: '2026-01-20',
           currentPlayerStatus: null,
+          currentPlayerHours: null,
           playerAvailabilities: [
-            { playerId: 'player-1', playerName: 'Test', status: null },
-            { playerId: 'player-2', playerName: 'Other', status: 'AVAILABLE' },
+            { playerId: 'player-1', playerName: 'Test', status: null, hours: null },
+            { playerId: 'player-2', playerName: 'Other', status: 'AVAILABLE', hours: null },
           ],
           events: [],
+          renewals: [],
+          venueEvents: [],
         },
       };
 

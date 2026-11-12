@@ -8,7 +8,7 @@ import type { MatchmakingVenues } from '@/utils/venues';
 
 function venue(id: string, name: string, city = name): Venue {
   return {
-    id, name, city, address: '', phone: null, arenaCount: 1, hasEvaSlots: true,
+    id, slug: id, name, city, address: '', phone: null, arenaCount: 1, hasEvaSlots: true,
     website: null, discord: null, facebook: null, instagram: null, x: null, tiktok: null, youtube: null, twitch: null,
   };
 }

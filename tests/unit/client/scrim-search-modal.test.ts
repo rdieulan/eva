@@ -18,14 +18,14 @@ const createApi = vi.mocked(createScrimSearch);
 const updateApi = vi.mocked(updateScrimSearch);
 
 const VENUE: Venue = {
-  id: 'venue-nimes', name: 'Nîmes', city: 'Nimes', address: '', phone: null, arenaCount: 1, hasEvaSlots: true,
+  id: 'venue-nimes', slug: 'nimes', name: 'Nîmes', city: 'Nimes', address: '', phone: null, arenaCount: 1, hasEvaSlots: true,
   website: null, discord: null, facebook: null, instagram: null, x: null, tiktok: null, youtube: null, twitch: null,
 };
 
-const MONTPELLIER: Venue = { ...VENUE, id: 'venue-montpellier', name: 'Montpellier', city: 'Montpellier' };
+const MONTPELLIER: Venue = { ...VENUE, id: 'venue-montpellier', slug: 'montpellier', name: 'Montpellier', city: 'Montpellier' };
 
 function slot(slotId: string, startTime: string, endTime: string, extra: Partial<VenueSlot> = {}): VenueSlot {
-  return { slotId, startTime, endTime, convocationTime: startTime, arenaNumber: 1, gameId: 1, takenSeats: 0, totalSeats: 10, isCompetitiveAvailable: true, ...extra };
+  return { slotId, startTime, endTime, convocationTime: startTime, arenaNumber: 1, gameId: 1, takenSeats: 0, totalSeats: 10, isCompetitiveAvailable: true, tokenType: null, passQuotaLeft: null, ...extra };
 }
 
 const DAY_SLOTS = [
@@ -48,9 +48,11 @@ function day(date: string, statuses: Array<DayData['playerAvailabilities'][numbe
   return {
     date,
     currentPlayerStatus: null,
+    currentPlayerHours: null,
     playerAvailabilities: statuses.map((status, index) => ({ playerId: `p${index}`, playerName: `J${index}`, status, hours: null })),
     events: [],
     renewals: [],
+    venueEvents: [],
   };
 }
 
@@ -412,7 +414,7 @@ describe('ScrimSearchModal', () => {
 
   it('counts what a team still wants, and points to the proposal already sent them', async () => {
     const sent: ScrimProposal = {
-      id: 'p1', searchId: 'search-rivals', team: { id: 'us', name: 'Nous', logoUrl: null }, message: null, status: 'PENDING',
+      id: 'p1', searchId: 'search-rivals', team: { id: 'us', name: 'Nous', logoUrl: null }, message: null, status: 'PENDING', declineReason: null,
       venueId: VENUE.id, evaSlotIds: ['r-1920'], arenaNumber: 1, startTime: '19:20', endTime: '20:00', convocationTime: '19:10',
       isMine: true, createdAt: '',
     };

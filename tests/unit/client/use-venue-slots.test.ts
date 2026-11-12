@@ -3,20 +3,24 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ref, nextTick } from 'vue';
 import { useVenueSlots } from '@/composables/useVenueSlots';
 import { fetchVenueSlots } from '@/api/teams.api';
+import type { VenueSlot } from '@shared/types';
 
 vi.mock('@/api/teams.api', () => ({
   fetchVenueSlots: vi.fn(),
 }));
 
-const SLOT = {
+const SLOT: VenueSlot = {
   slotId: 'slot-20:00',
   startTime: '20:00',
   endTime: '20:40',
   convocationTime: '19:50',
   arenaNumber: 1,
-  availableSeats: 3,
+  takenSeats: 7,
   totalSeats: 10,
-    gameId: 1,
+  gameId: 1,
+  isCompetitiveAvailable: true,
+  tokenType: null,
+  passQuotaLeft: null,
 };
 
 async function settle() {
@@ -64,7 +68,7 @@ describe('useVenueSlots', () => {
   });
 
   it('ignores an answer that arrives after the day moved on', async () => {
-    let resolveFirst: (slots: typeof SLOT[]) => void = () => {};
+    let resolveFirst: (slots: VenueSlot[]) => void = () => {};
     vi.mocked(fetchVenueSlots)
       .mockImplementationOnce(() => new Promise(resolve => { resolveFirst = resolve; }))
       .mockResolvedValueOnce([]);

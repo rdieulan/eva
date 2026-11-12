@@ -13,7 +13,9 @@
       "@shared/*": ["shared/*"],
       "@services/*": ["server/src/services/*"],
       "@db/*": ["server/src/db/*"],
-      "@middleware/*": ["server/src/middleware/*"]
+      "@middleware/*": ["server/src/middleware/*"],
+      "@routes/*": ["server/src/routes/*"],
+      "@utils/*": ["server/src/utils/*"]
     }
   },
   "include": [

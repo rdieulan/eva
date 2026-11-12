@@ -14,7 +14,7 @@ import {
 } from '@/utils/scrims';
 
 function slot(slotId: string, startTime: string, endTime: string, arenaNumber = 1): VenueSlot {
-  return { slotId, startTime, endTime, convocationTime: startTime, arenaNumber, gameId: 1, takenSeats: 0, totalSeats: 10, isCompetitiveAvailable: true };
+  return { slotId, startTime, endTime, convocationTime: startTime, arenaNumber, gameId: 1, takenSeats: 0, totalSeats: 10, isCompetitiveAvailable: true, tokenType: null, passQuotaLeft: null };
 }
 
 describe('scrim formatting', () => {

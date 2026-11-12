@@ -28,7 +28,7 @@ describe('TeamInfo', () => {
   it('leads from the venue of the team to its board, next to its Discord', () => {
     const wrapper = mount(TeamInfo, {
       props: {
-        team: { id: 'team-1', name: 'zero', logoUrl: null, venueId: NIMES.id, favoriteVenueIds: [], leader: null },
+        team: { id: 'team-1', name: 'zero', logoUrl: null, venueId: NIMES.id, favoriteVenueIds: [], availabilityHorizonDays: 15, leader: null },
         venues: [NIMES, LYON],
         canManageTeam: false,
         isLeader: false,
@@ -45,7 +45,7 @@ describe('TeamInfo', () => {
   it('has no board to lead to without a venue', () => {
     const wrapper = mount(TeamInfo, {
       props: {
-        team: { id: 'team-1', name: 'zero', logoUrl: null, favoriteVenueIds: [], leader: null },
+        team: { id: 'team-1', name: 'zero', logoUrl: null, favoriteVenueIds: [], availabilityHorizonDays: 15, leader: null },
         venues: [NIMES],
         canManageTeam: false,
         isLeader: false,

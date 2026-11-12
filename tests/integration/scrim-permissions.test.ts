@@ -23,7 +23,7 @@ const NIMES = { id: 'venue-nimes', slug: 'nimes', name: 'Nîmes', city: 'Nimes',
 const DATE = '2030-06-10';
 
 function slot(slotId: string, startTime: string, endTime: string) {
-  return { slotId, startTime, endTime, convocationTime: startTime, arenaNumber: 1, gameId: 1, takenSeats: 0, totalSeats: 10, isCompetitiveAvailable: true };
+  return { slotId, startTime, endTime, convocationTime: startTime, arenaNumber: 1, gameId: 1, takenSeats: 0, totalSeats: 10, isCompetitiveAvailable: true, tokenType: null, passQuotaLeft: null };
 }
 
 const NIMES_SLOTS = [slot('a1-2000', '20:00', '20:40'), slot('a1-2040', '20:40', '21:20'), slot('a1-2120', '21:20', '22:00'), slot('a1-2200', '22:00', '22:40')];

@@ -66,21 +66,28 @@ describe('Calendar Integration Tests', () => {
       '2026-01-01': {
         date: '2026-01-01',
         currentPlayerStatus: null,
+        currentPlayerHours: null,
         playerAvailabilities: [],
         events: [],
+        renewals: [],
+        venueEvents: [],
       },
       '2026-01-15': {
         date: '2026-01-15',
         currentPlayerStatus: 'AVAILABLE',
+        currentPlayerHours: null,
         playerAvailabilities: [
-          { playerId: 'player-1', playerName: 'Alice', status: 'AVAILABLE' },
-          { playerId: 'player-2', playerName: 'Bob', status: 'UNAVAILABLE' },
+          { playerId: 'player-1', playerName: 'Alice', status: 'AVAILABLE', hours: null },
+          { playerId: 'player-2', playerName: 'Bob', status: 'UNAVAILABLE', hours: null },
         ],
         events: [],
+        renewals: [],
+        venueEvents: [],
       },
       '2026-01-20': {
         date: '2026-01-20',
         currentPlayerStatus: null,
+        currentPlayerHours: null,
         playerAvailabilities: [],
         events: [
           {
@@ -95,6 +102,8 @@ describe('Calendar Integration Tests', () => {
             createdAt: '2026-01-01T00:00:00Z',
           },
         ],
+        renewals: [],
+        venueEvents: [],
       },
     },
   };
@@ -239,7 +248,7 @@ describe('Calendar Integration Tests', () => {
 
   describe('where a notification leads', () => {
     const venueNimes: Venue = {
-      id: 'nimes', name: 'Nîmes', city: 'Nîmes', address: '', phone: null, arenaCount: 1, hasEvaSlots: true,
+      id: 'nimes', slug: 'nimes', name: 'Nîmes', city: 'Nîmes', address: '', phone: null, arenaCount: 1, hasEvaSlots: true,
       website: null, discord: null, facebook: null, instagram: null, x: null, tiktok: null, youtube: null, twitch: null,
     };
 
@@ -294,7 +303,7 @@ describe('Calendar Integration Tests', () => {
   describe('matchmaking venues', () => {
     function venue(id: string, name: string): Venue {
       return {
-        id, name, city: name, address: '', phone: null, arenaCount: 1, hasEvaSlots: true,
+        id, slug: id, name, city: name, address: '', phone: null, arenaCount: 1, hasEvaSlots: true,
         website: null, discord: null, facebook: null, instagram: null, x: null, tiktok: null, youtube: null, twitch: null,
       };
     }

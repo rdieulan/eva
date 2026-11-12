@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import EventViewerModal from '@/components/calendar/EventViewerModal.vue';
 import { fetchVenueSlots } from '@/api/teams.api';
-import type { CalendarEvent } from '@shared/types';
+import type { CalendarEvent, VenueSlot } from '@shared/types';
 
 vi.mock('@/api/teams.api', () => ({
   fetchVenueSlots: vi.fn(),
@@ -12,7 +12,7 @@ vi.mock('@/api/teams.api', () => ({
 // Far enough ahead that the match never reads as past
 const FUTURE_DATE = '2030-11-03';
 
-const SLOT_20H = {
+const SLOT_20H: VenueSlot = {
   slotId: 'slot-20:00',
   startTime: '20:00',
   endTime: '20:40',
@@ -20,9 +20,12 @@ const SLOT_20H = {
   arenaNumber: 1,
   takenSeats: 7,
   totalSeats: 10,
-    gameId: 1,
+  gameId: 1,
+  isCompetitiveAvailable: true,
+  tokenType: null,
+  passQuotaLeft: null,
 };
-const SLOT_20H40 = { ...SLOT_20H, slotId: 'slot-20:40', startTime: '20:40', endTime: '21:20' };
+const SLOT_20H40: VenueSlot = { ...SLOT_20H, slotId: 'slot-20:40', startTime: '20:40', endTime: '21:20' };
 
 function match(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
   return {

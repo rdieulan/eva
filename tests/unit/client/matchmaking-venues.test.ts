@@ -6,6 +6,7 @@ import type { Venue } from '@shared/types';
 function venue(id: string, name: string, hasEvaSlots = true, city = name): Venue {
   return {
     id,
+    slug: id,
     name,
     city,
     address: '',

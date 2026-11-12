@@ -24,7 +24,7 @@ const DATE = '2030-06-10';
 const LATER = '2030-06-12';
 
 function slot(slotId: string, startTime: string, endTime: string, arenaNumber = 1) {
-  return { slotId, startTime, endTime, convocationTime: startTime, arenaNumber, gameId: 1, takenSeats: 0, totalSeats: 10, isCompetitiveAvailable: true };
+  return { slotId, startTime, endTime, convocationTime: startTime, arenaNumber, gameId: 1, takenSeats: 0, totalSeats: 10, isCompetitiveAvailable: true, tokenType: null, passQuotaLeft: null };
 }
 
 // The evening on arena 1 of Nîmes, arena 2 from 20:00; two slots in Montpellier

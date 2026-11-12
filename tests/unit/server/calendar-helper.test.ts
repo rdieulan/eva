@@ -19,6 +19,7 @@ describe('formatEventForFrontend', () => {
       title: 'Match de championnat',
       description: 'Match important',
       gamePlan: { absentPlayerId: 'p1', absentPlayerName: 'Player1', maps: [] },
+      evaSlotIds: [],
       createdById: 'user-1',
       createdAt: new Date('2026-01-10T10:00:00Z'),
     };
@@ -47,6 +48,7 @@ describe('formatEventForFrontend', () => {
       title: 'Entrainement',
       description: null,
       gamePlan: null,
+      evaSlotIds: [],
       createdById: 'user-1',
       createdAt: new Date('2026-01-10T10:00:00Z'),
     };
@@ -67,6 +69,7 @@ describe('formatEventForFrontend', () => {
       title: 'Strat Polaris',
       description: null,
       gamePlan: null,
+      evaSlotIds: [],
       voiceMedium: 'TEAMSPEAK' as const,
       createdById: 'user-1',
       createdAt: new Date('2026-01-10T10:00:00Z'),

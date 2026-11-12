@@ -12,17 +12,21 @@ describe('CalendarGrid Component', () => {
       '2026-01-01': {
         date: '2026-01-01',
         currentPlayerStatus: 'AVAILABLE',
+        currentPlayerHours: null,
         playerAvailabilities: [
-          { playerId: 'player-1', playerName: 'Alice', status: 'AVAILABLE' },
-          { playerId: 'player-2', playerName: 'Bob', status: 'UNAVAILABLE' },
+          { playerId: 'player-1', playerName: 'Alice', status: 'AVAILABLE', hours: null },
+          { playerId: 'player-2', playerName: 'Bob', status: 'UNAVAILABLE', hours: null },
         ],
         events: [],
+        renewals: [],
+        venueEvents: [],
       },
       '2026-01-15': {
         date: '2026-01-15',
         currentPlayerStatus: 'UNAVAILABLE',
+        currentPlayerHours: null,
         playerAvailabilities: [
-          { playerId: 'player-1', playerName: 'Alice', status: 'UNAVAILABLE' },
+          { playerId: 'player-1', playerName: 'Alice', status: 'UNAVAILABLE', hours: null },
         ],
         events: [
           {
@@ -37,12 +41,17 @@ describe('CalendarGrid Component', () => {
             createdAt: '2026-01-01T00:00:00Z',
           },
         ],
+        renewals: [],
+        venueEvents: [],
       },
       '2026-01-20': {
         date: '2026-01-20',
         currentPlayerStatus: null,
+        currentPlayerHours: null,
         playerAvailabilities: [],
         events: [],
+        renewals: [],
+        venueEvents: [],
       },
     };
   });
@@ -157,8 +166,11 @@ describe('CalendarGrid Component', () => {
       '2025-12-01': {
         date: '2025-12-01',
         currentPlayerStatus: null,
+        currentPlayerHours: null,
         playerAvailabilities: [],
         events: [],
+        renewals: [],
+        venueEvents: [],
       },
     };
 

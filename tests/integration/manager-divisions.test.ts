@@ -47,7 +47,7 @@ function divisionsOf(token: string, venueId: string) {
   return request(app).get(`/api/manager/venues/${venueId}/divisions`).set(authHeader(token));
 }
 
-function save(token: string, venueId: string, body: unknown) {
+function save(token: string, venueId: string, body: Record<string, unknown>) {
   return request(app).put(`/api/manager/venues/${venueId}/divisions`).set(authHeader(token)).send(body);
 }
 

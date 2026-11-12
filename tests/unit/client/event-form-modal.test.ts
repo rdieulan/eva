@@ -3,12 +3,21 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import EventFormModal from '@/components/calendar/EventFormModal.vue';
 import { fetchVenueSlots } from '@/api/teams.api';
-import type { CalendarEvent, MapConfig, Player } from '@shared/types';
+import type { CalendarEvent, MapConfig, Player, Venue, VenueLinkKey, VenueSlot } from '@shared/types';
 
 vi.mock('@/api/teams.api', async (importOriginal) => ({
   ...await importOriginal<typeof import('@/api/teams.api')>(),
   fetchVenueSlots: vi.fn(),
 }));
+
+// A venue the form can list, without the links it never shows
+function venue(fields: Omit<Venue, 'slug' | VenueLinkKey>): Venue {
+  return {
+    ...fields,
+    slug: fields.id,
+    website: null, discord: null, facebook: null, instagram: null, x: null, tiktok: null, youtube: null, twitch: null,
+  };
+}
 
 describe('EventFormModal Component', () => {
   const mockMaps: MapConfig[] = [
@@ -264,8 +273,8 @@ describe('EventFormModal Component', () => {
 
 describe('EventFormModal Component - Match venue', () => {
   const venues = [
-    { id: 'venue-1', name: 'VR Arena', city: 'Lyon', address: '12 rue des Lasers', phone: null },
-    { id: 'venue-2', name: 'Laser Dome', city: 'Paris', address: '3 avenue du Tir', phone: null },
+    venue({ id: 'venue-1', name: 'VR Arena', city: 'Lyon', address: '12 rue des Lasers', phone: null, arenaCount: 1, hasEvaSlots: false }),
+    venue({ id: 'venue-2', name: 'Laser Dome', city: 'Paris', address: '3 avenue du Tir', phone: null, arenaCount: 1, hasEvaSlots: false }),
   ];
 
   function mountForm(props: Record<string, unknown> = {}) {
@@ -420,10 +429,10 @@ describe('EventFormModal Component - Match venue', () => {
 
 describe('EventFormModal Component - Editing an existing event', () => {
   const venues = [
-    { id: 'venue-1', name: 'VR Arena', city: 'Lyon', address: '12 rue des Lasers', phone: null, arenaCount: 2 },
+    venue({ id: 'venue-1', name: 'VR Arena', city: 'Lyon', address: '12 rue des Lasers', phone: null, arenaCount: 2, hasEvaSlots: false }),
   ];
 
-  const match = {
+  const match: CalendarEvent = {
     id: 'event-1',
     date: '2026-11-03',
     startTime: '20:00',
@@ -438,7 +447,7 @@ describe('EventFormModal Component - Editing an existing event', () => {
     createdAt: '2026-10-01T00:00:00Z',
   };
 
-  function mountForm(editEvent: Record<string, unknown> = match) {
+  function mountForm(editEvent: CalendarEvent = match) {
     return mount(EventFormModal, {
       props: {
         open: false,
@@ -511,11 +520,11 @@ describe('EventFormModal Component - Editing an existing event', () => {
 
 describe('EventFormModal Component - Venue slots', () => {
   const venues = [
-    { id: 'venue-1', name: 'Nîmes', city: 'Nimes', address: '1 rue', phone: null, arenaCount: 2, hasEvaSlots: true },
-    { id: 'venue-2', name: 'Garage', city: 'Paris', address: '2 rue', phone: null, arenaCount: 1, hasEvaSlots: false },
+    venue({ id: 'venue-1', name: 'Nîmes', city: 'Nimes', address: '1 rue', phone: null, arenaCount: 2, hasEvaSlots: true }),
+    venue({ id: 'venue-2', name: 'Garage', city: 'Paris', address: '2 rue', phone: null, arenaCount: 1, hasEvaSlots: false }),
   ];
 
-  const SLOT_20H = {
+  const SLOT_20H: VenueSlot = {
     slotId: 'slot-20:00',
     startTime: '20:00',
     endTime: '20:40',
@@ -524,8 +533,11 @@ describe('EventFormModal Component - Venue slots', () => {
     takenSeats: 7,
     totalSeats: 10,
     gameId: 1,
+    isCompetitiveAvailable: true,
+    tokenType: null,
+    passQuotaLeft: null,
   };
-  const SLOT_20H40 = { ...SLOT_20H, slotId: 'slot-20:40', startTime: '20:40', endTime: '21:20', convocationTime: '20:30' };
+  const SLOT_20H40: VenueSlot = { ...SLOT_20H, slotId: 'slot-20:40', startTime: '20:40', endTime: '21:20', convocationTime: '20:30' };
 
   function mountForm(props: Record<string, unknown> = {}) {
     return mount(EventFormModal, {

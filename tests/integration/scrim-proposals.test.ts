@@ -24,7 +24,7 @@ const DATE = '2030-06-10';
 const MONTH = '2030-06';
 
 function slot(slotId: string, startTime: string, endTime: string, arenaNumber = 1) {
-  return { slotId, startTime, endTime, convocationTime: startTime === '20:00' ? '19:50' : startTime, arenaNumber, gameId: 1, takenSeats: 0, totalSeats: 10, isCompetitiveAvailable: true };
+  return { slotId, startTime, endTime, convocationTime: startTime === '20:00' ? '19:50' : startTime, arenaNumber, gameId: 1, takenSeats: 0, totalSeats: 10, isCompetitiveAvailable: true, tokenType: null, passQuotaLeft: null };
 }
 
 // The searching team offers the whole evening on arena 1 of Nîmes, plus arena 2 from 20:00

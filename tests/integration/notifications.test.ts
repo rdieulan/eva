@@ -28,7 +28,7 @@ const BEFORE_THE_DAY = new Date('2030-06-01T12:00:00Z');
 const AFTER_THE_DAY = new Date('2030-06-12T12:00:00Z');
 
 function slot(slotId: string, startTime: string, endTime: string, takenSeats = 0) {
-  return { slotId, startTime, endTime, convocationTime: startTime, arenaNumber: 1, gameId: 1, takenSeats, totalSeats: 10, isCompetitiveAvailable: true };
+  return { slotId, startTime, endTime, convocationTime: startTime, arenaNumber: 1, gameId: 1, takenSeats, totalSeats: 10, isCompetitiveAvailable: true, tokenType: null, passQuotaLeft: null };
 }
 
 // The evening on arena 1 of Nîmes, five slots: room for two matches of two slots

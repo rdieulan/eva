@@ -51,6 +51,7 @@ describe('evaGraphql', () => {
     const error = await evaGraphql('query { ok }').catch(e => e);
 
     expect(error).toBeInstanceOf(EvaApiError);
+    if (!(error instanceof EvaApiError)) throw error;
     expect(error.status).toBe(403);
     expect(error.message).toContain('403');
   });
@@ -64,6 +65,7 @@ describe('evaGraphql', () => {
     const error = await evaGraphql('query { ok }').catch(e => e);
 
     expect(error).toBeInstanceOf(EvaApiError);
+    if (!(error instanceof EvaApiError)) throw error;
     expect(error.message).toContain('User not found');
     expect(error.hasCode('USER_NOT_FOUND')).toBe(true);
     expect(error.hasCode('FORBIDDEN')).toBe(false);

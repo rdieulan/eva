@@ -22,12 +22,12 @@ vi.mock('@/api', () => ({
 }));
 
 function slot(slotId: string, startTime: string, endTime: string): VenueSlot {
-  return { slotId, startTime, endTime, convocationTime: startTime, arenaNumber: 1, gameId: 1, takenSeats: 0, totalSeats: 10, isCompetitiveAvailable: true };
+  return { slotId, startTime, endTime, convocationTime: startTime, arenaNumber: 1, gameId: 1, takenSeats: 0, totalSeats: 10, isCompetitiveAvailable: true, tokenType: null, passQuotaLeft: null };
 }
 
 function venue(id: string, name: string): Venue {
   return {
-    id, name, city: name, address: '', phone: null, arenaCount: 1, hasEvaSlots: true,
+    id, slug: id, name, city: name, address: '', phone: null, arenaCount: 1, hasEvaSlots: true,
     website: null, discord: null, facebook: null, instagram: null, x: null, tiktok: null, youtube: null, twitch: null,
   };
 }
