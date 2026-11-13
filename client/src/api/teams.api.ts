@@ -234,6 +234,7 @@ export async function leaveTeam(): Promise<void> {
 
 // ========== Team Invitations ==========
 
+// A link of the team, the same whether just made or listed
 export interface TeamInvite {
   id: string;
   code: string;
@@ -241,8 +242,8 @@ export interface TeamInvite {
   expiresAt: string;
   maxUses: number;
   uses: number;
-  createdBy?: string;
-  createdAt?: string;
+  createdBy: string; // The name of who made it
+  createdAt: string;
 }
 
 export interface InviteValidation {

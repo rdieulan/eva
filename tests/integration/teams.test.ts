@@ -481,6 +481,22 @@ describe('Teams API', () => {
       expect(invite!.uses).toBe(0);
     });
 
+    it('describes a link the same way when it is made and when it is listed, with who made it', async () => {
+      const { token, team, user } = await createUserWithTeam();
+      // The app's public address, as in production: the links of both answers are built on it
+      process.env.APP_URL = 'https://scrim.example/';
+      try {
+        const created = await request(app).post(`/api/teams/${team.id}/invites`).set(authHeader(token)).send({ expiresInHours: 24, maxUses: 5 });
+        const listed = await request(app).get(`/api/teams/${team.id}/invites`).set(authHeader(token));
+
+        expect(created.status).toBe(201);
+        expect(created.body).toMatchObject({ createdBy: user.name, uses: 0, maxUses: 5 });
+        expect(listed.body).toEqual([created.body]);
+      } finally {
+        process.env.APP_URL = '';
+      }
+    });
+
     it('should reject without authentication', async () => {
       const { team } = await createUserWithTeam();
 

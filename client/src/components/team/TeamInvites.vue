@@ -2,6 +2,9 @@
 import type { TeamInvite } from '@/api';
 import SvgIcon from '@/components/common/SvgIcon.vue';
 
+// The links of the team, each told apart by who made it, when it runs out and
+// how many joined through it: its code says nothing to a reader, and the
+// button copies the link itself
 defineProps<{
   invites: TeamInvite[];
 }>();
@@ -11,24 +14,22 @@ defineEmits<{
   revoke: [inviteId: string];
 }>();
 
-// Format expiration date
-function formatExpiration(dateStr: string): string {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diff = date.getTime() - now.getTime();
-
+// When the link runs out, as a phrase: "Expire dans 23h 59min", or "Expiré"
+function describeExpiry(dateStr: string): string {
+  const diff = new Date(dateStr).getTime() - Date.now();
   if (diff < 0) return 'Expiré';
 
   const hours = Math.floor(diff / (1000 * 60 * 60));
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
 
-  if (hours > 24) {
-    const days = Math.floor(hours / 24);
-    return `${days}j ${hours % 24}h`;
-  }
+  if (hours > 24) return `Expire dans ${Math.floor(hours / 24)}j ${hours % 24}h`;
+  if (hours > 0) return `Expire dans ${hours}h ${minutes}min`;
+  return `Expire dans ${minutes}min`;
+}
 
-  if (hours > 0) return `${hours}h ${minutes}min`;
-  return `${minutes} min`;
+// How many joined through the link, out of how many it lets in
+function describeUses(invite: TeamInvite): string {
+  return `${invite.uses}/${invite.maxUses} utilisation${invite.maxUses > 1 ? 's' : ''}`;
 }
 </script>
 
@@ -38,11 +39,8 @@ function formatExpiration(dateStr: string): string {
     <div class="invites-list">
       <div v-for="invite in invites" :key="invite.id" class="invite-item">
         <div class="invite-info">
-          <code class="invite-code">{{ invite.code }}</code>
-          <span class="invite-details">
-            Expire dans {{ formatExpiration(invite.expiresAt) }} •
-            {{ invite.uses }}/{{ invite.maxUses }} utilisation(s)
-          </span>
+          <span class="invite-creator">Créé par {{ invite.createdBy }}</span>
+          <span class="invite-details"><span class="invite-detail">{{ describeExpiry(invite.expiresAt) }}</span> • <span class="invite-detail">{{ describeUses(invite) }}</span></span>
         </div>
         <div class="invite-actions">
           <button class="btn-copy" @click="$emit('copy', invite.url)" title="Copier le lien">
@@ -79,7 +77,7 @@ function formatExpiration(dateStr: string): string {
   gap: $spacing-sm;
 }
 
-// The code gives way on a narrow screen, the buttons never do
+// The text gives way on a narrow screen, the buttons never do
 .invite-item {
   display: flex;
   justify-content: space-between;
@@ -98,13 +96,10 @@ function formatExpiration(dateStr: string): string {
   min-width: 0;
 }
 
-.invite-code {
-  font-family: monospace;
+.invite-creator {
   font-size: $font-size-sm;
-  color: $color-accent;
-  background: $color-bg-tertiary;
-  padding: 2px $spacing-sm;
-  border-radius: $radius-sm;
+  font-weight: 600;
+  color: $color-white;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -113,6 +108,11 @@ function formatExpiration(dateStr: string): string {
 .invite-details {
   font-size: $font-size-xs;
   color: $color-text-secondary;
+}
+
+// A narrow row wraps between the two, never inside one
+.invite-detail {
+  white-space: nowrap;
 }
 
 .invite-actions {

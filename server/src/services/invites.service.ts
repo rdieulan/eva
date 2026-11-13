@@ -42,6 +42,37 @@ export function getInviteError(invite: { expiresAt: Date; uses: number; maxUses:
 // Re-export from player.service for convenience
 export { verifyPlayerBelongsToTeam } from '@services/player.service';
 
+// Who made a link, read with it
+const WITH_CREATOR = { createdBy: { select: { user: { select: { name: true } } } } } as const;
+
+type InviteRow = {
+  id: string;
+  code: string;
+  expiresAt: Date;
+  maxUses: number;
+  uses: number;
+  createdAt: Date;
+  createdBy: { user: { name: string } | null };
+};
+
+/**
+ * A link as the team page shows it, the same whether it was just made or is
+ * listed: who made it tells two links apart, its code saying nothing to a
+ * reader
+ */
+function toInviteView(invite: InviteRow, baseUrl: string) {
+  return {
+    id: invite.id,
+    code: invite.code,
+    url: buildInviteUrl(baseUrl, invite.code),
+    expiresAt: invite.expiresAt,
+    maxUses: invite.maxUses,
+    uses: invite.uses,
+    createdBy: invite.createdBy.user?.name ?? '',
+    createdAt: invite.createdAt,
+  };
+}
+
 // ============================================
 // Invite operations
 // ============================================
@@ -74,16 +105,10 @@ export async function createInvite(data: CreateInviteData) {
       expiresAt,
       maxUses,
     },
+    include: WITH_CREATOR,
   });
 
-  return {
-    id: invite.id,
-    code: invite.code,
-    url: buildInviteUrl(data.baseUrl, invite.code),
-    expiresAt: invite.expiresAt,
-    maxUses: invite.maxUses,
-    uses: invite.uses,
-  };
+  return toInviteView(invite, data.baseUrl);
 }
 
 /**
@@ -96,26 +121,13 @@ export async function getActiveInvites(teamId: string, baseUrl: string) {
       expiresAt: { gt: new Date() },
     },
     orderBy: { createdAt: 'desc' },
-    include: {
-      createdBy: {
-        include: { user: { select: { name: true } } }
-      },
-    },
+    include: WITH_CREATOR,
   });
 
   // Filter out fully used invites
   const activeInvites = invites.filter(invite => invite.uses < invite.maxUses);
 
-  return activeInvites.map(invite => ({
-    id: invite.id,
-    code: invite.code,
-    url: buildInviteUrl(baseUrl, invite.code),
-    expiresAt: invite.expiresAt,
-    maxUses: invite.maxUses,
-    uses: invite.uses,
-    createdBy: invite.createdBy.user!.name,
-    createdAt: invite.createdAt,
-  }));
+  return activeInvites.map(invite => toInviteView(invite, baseUrl));
 }
 
 /**
