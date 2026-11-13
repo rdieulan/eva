@@ -10,6 +10,7 @@ import routes from "@routes/index";
 import { logger } from '@utils/logger';
 import { venueBoardPage } from '@services/venue-board-page.service';
 import { sameOriginChanges } from '@middleware/same-origin.middleware';
+import { securityHeaders } from '@middleware/security-headers.middleware';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,7 +24,9 @@ const isProduction = process.env.NODE_ENV === 'production';
 app.set('trust proxy', 1);
 
 // Middleware. No CORS: the pages and the API share one address, and no other
-// site is to call the API from a browser.
+// site is to call the API from a browser. The security headers come first, so
+// every answer carries them, the pages, their files and the API alike.
+app.use(securityHeaders);
 app.use(express.json());
 app.use(cookieParser());
 app.use('/api', sameOriginChanges);

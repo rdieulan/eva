@@ -168,6 +168,11 @@ Composants génériques sans logique métier spécifique :
 - Une icône dessinée est un SVG de `client/src/assets/icons/`, affiché par `SvgIcon`.
 - Une icône reprise d'un jeu d'icônes se déclare dans `THIRD_PARTY_NOTICES.md`, dans le même commit : le jeu, le nom qu'elle y porte, la licence et la notice que celle-ci demande.
 
+### Ce qu'une page charge
+- Une page ne charge que ce qui vient de l'application : ses scripts, ses feuilles de style, ses images, son API. Ce qui va ailleurs (eva.gg, Discord) passe par un lien, jamais chargé dans la page.
+- Aucun script ni style écrit dans le HTML ou inséré comme markup (`v-html` est réservé aux icônes de `SvgIcon`) : la politique de sécurité du contenu les refuse (`server/src/middleware/security-headers.middleware.ts`). Les styles liés par Vue (`:style`, `v-bind()` en CSS) passent, ils ne sont pas du markup.
+- Une ressource d'un autre site (police, image, script) se déclare dans cette politique, dans le même commit, avec sa raison.
+
 ---
 
 ## 🎨 CSS/SCSS
