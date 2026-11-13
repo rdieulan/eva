@@ -16,6 +16,7 @@ import SvgIcon from '@/components/common/SvgIcon.vue';
 import AccountRolesSection from '@/components/profile/AccountRolesSection.vue';
 import EvaAccountSection from '@/components/profile/EvaAccountSection.vue';
 import ThemeSection from '@/components/profile/ThemeSection.vue';
+import LegalLinks from '@/components/legal/LegalLinks.vue';
 
 const router = useRouter();
 const { account, clearAuth, setAuth } = useAuth();
@@ -184,6 +185,8 @@ async function handleLogout() {
           Se déconnecter
         </button>
       </section>
+
+      <LegalLinks />
     </div>
   </div>
 </template>

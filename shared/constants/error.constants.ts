@@ -152,6 +152,7 @@ export const ERROR = {
   // Venues
   venueNotFound: 'Salle non trouvée',
   venueBoardFetchFailed: 'Erreur lors de la récupération des recherches de la salle',
+  publisherFetchFailed: 'Erreur lors de la lecture des informations sur l\'éditeur du site',
   venuesFetchFailed: 'Erreur lors de la récupération des salles',
   venueCreationFailed: 'Erreur lors de la création de la salle',
   venueUpdateFailed: 'Erreur lors de la mise à jour de la salle',

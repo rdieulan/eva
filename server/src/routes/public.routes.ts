@@ -1,11 +1,13 @@
 // Public routes: what anyone can read without an account, for a venue to
-// share on its own channels. Nothing here calls eva.gg.
+// share on its own channels, and who publishes the app. Nothing here calls
+// eva.gg.
 
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { getVenueBoard } from '@services/scrim-search.service';
 import { ERROR } from '@shared/constants';
 import { apiLogger } from '@utils/logger';
+import { publisher } from '@utils/publisher';
 
 const router = Router();
 
@@ -22,6 +24,11 @@ router.get('/venues/:slug/board', async (req: Request, res: Response) => {
     apiLogger.error('Error fetching venue board:', error);
     res.status(500).json({ errors: [ERROR.venueBoardFetchFailed] });
   }
+});
+
+// GET /api/public/legal - Who publishes the app, for its legal pages
+router.get('/legal', (_req: Request, res: Response) => {
+  res.json({ publisher: publisher() });
 });
 
 export default router;

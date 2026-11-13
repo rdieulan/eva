@@ -178,3 +178,5 @@ export type {
 export { VENUE_LINK_KEYS } from './venue.types';
 
 export type { EvaAccountLink, LinkEvaAccountRequest } from './eva.types';
+
+export type { Publisher } from './legal.types';

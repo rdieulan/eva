@@ -157,3 +157,6 @@ export {
   deleteVenueEvent,
   fetchVenueCalendar,
 } from '@/api/manager.api';
+
+// Legal pages API
+export { fetchPublisher } from '@/api/legal.api';

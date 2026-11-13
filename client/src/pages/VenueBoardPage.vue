@@ -3,6 +3,7 @@ import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import { useRoute } from 'vue-router';
 import type { RouteLocationRaw } from 'vue-router';
 import TeamLogo from '@/components/common/TeamLogo.vue';
+import LegalLinks from '@/components/legal/LegalLinks.vue';
 import ErrorDisplay from '@/components/common/error/ErrorDisplay.vue';
 import { fetchVenueBoard } from '@/api';
 import { ApiError } from '@/api/error';
@@ -156,6 +157,8 @@ onBeforeUnmount(() => {
         </ul>
       </section>
     </template>
+
+    <LegalLinks v-if="!isLoading" class="board-legal" />
   </div>
 </template>
 
@@ -174,6 +177,11 @@ onBeforeUnmount(() => {
   @include mobile-lg {
     padding: $spacing-md;
   }
+}
+
+// At the foot of the board, after its days
+.board-legal {
+  margin-top: $spacing-xl;
 }
 
 .loading {

@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import LegalLinks from '@/components/legal/LegalLinks.vue';
+
 // The card of the pages one reaches before being signed in: signing in, an
-// invitation to a role. Layout only: a title, then what the page puts in it.
+// invitation to a role. Layout only: a title, then what the page puts in it,
+// and at its foot the way to the legal pages, read before signing in.
 
 defineProps<{
   title: string;
@@ -12,6 +15,7 @@ defineProps<{
     <div class="auth-card">
       <h1>{{ title }}</h1>
       <slot />
+      <LegalLinks />
     </div>
   </div>
 </template>

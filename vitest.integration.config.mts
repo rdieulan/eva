@@ -20,6 +20,9 @@ export default defineConfig({
       // No Discord application unless a test sets one: a local .env.local stays out
       DISCORD_CLIENT_ID: '',
       DISCORD_CLIENT_SECRET: '',
+      // No publisher unless a test sets one: a local .env.local stays out
+      PUBLISHER_NAME: '',
+      PUBLISHER_EMAIL: '',
       // The development login, to test it: never mounted in production whatever is set
       DEV_LOGIN: 'true',
     },

@@ -173,6 +173,9 @@ Composants génériques sans logique métier spécifique :
 - Aucun script ni style écrit dans le HTML ou inséré comme markup (`v-html` est réservé aux icônes de `SvgIcon`) : la politique de sécurité du contenu les refuse (`server/src/middleware/security-headers.middleware.ts`). Les styles liés par Vue (`:style`, `v-bind()` en CSS) passent, ils ne sont pas du markup.
 - Une ressource d'un autre site (police, image, script) se déclare dans cette politique, dans le même commit, avec sa raison.
 
+### Données personnelles
+- La page Données personnelles (`client/src/pages/PrivacyPage.vue`) décrit ce que fait le code. Une donnée nouvelle sur une personne, un nouvel envoi vers un service extérieur, un cookie ou une durée de conservation qui change se reportent sur cette page dans le même commit, avec sa date de mise à jour (`PRIVACY_UPDATED`, `client/src/constants/legal.ts`).
+
 ---
 
 ## 🎨 CSS/SCSS

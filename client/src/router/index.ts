@@ -25,6 +25,8 @@ const ALLOWED_WITHOUT_TEAM = [
   'admin-admins',
   'admin-players',
   'admin-teams',
+  'legal-notice',
+  'privacy',
 ] as const;
 
 // Routes only meaningful for player accounts (admin/manager have no team)
@@ -55,6 +57,8 @@ const LoginPage = () => import('@/pages/LoginPage.vue');
 const WelcomePage = () => import('@/pages/WelcomePage.vue');
 const ActivatePage = () => import('@/pages/ActivatePage.vue');
 const VenueBoardPage = () => import('@/pages/VenueBoardPage.vue');
+const LegalNoticePage = () => import('@/pages/LegalNoticePage.vue');
+const PrivacyPage = () => import('@/pages/PrivacyPage.vue');
 const AdminLayout = () => import('@/pages/AdminLayout.vue');
 const AdminVenuesPage = () => import('@/pages/AdminVenuesPage.vue');
 const AdminManagersPage = () => import('@/pages/AdminManagersPage.vue');
@@ -164,6 +168,20 @@ const routes: RouteRecordRaw[] = [
     name: 'venue-board',
     component: VenueBoardPage,
     meta: { title: 'Scrims', requiresAuth: false, returnAfterLogin: true }
+  },
+  {
+    // Who publishes the app and who hosts it, as the law asks: open to anyone
+    path: '/mentions-legales',
+    name: 'legal-notice',
+    component: LegalNoticePage,
+    meta: { title: 'Mentions légales', requiresAuth: false }
+  },
+  {
+    // What the app does with personal data: open to anyone, before signing in too
+    path: '/donnees-personnelles',
+    name: 'privacy',
+    component: PrivacyPage,
+    meta: { title: 'Données personnelles', requiresAuth: false }
   },
   {
     path: '/admin',

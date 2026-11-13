@@ -89,6 +89,7 @@ L'app est disponible sur **http://localhost:5173**. Le backend tourne sur **http
 | `APP_URL` | Adresse publique du site : liens des notifications Discord, retour de la connexion par Discord, et seule origine d'où le serveur accepte des modifications. En production, toute autre adresse du serveur y renvoie | `http://localhost:5173` |
 | `DISCORD_CLIENT_ID` | Identifiant de l'application Discord de la connexion (dans `.env.local` en dev) | — |
 | `DISCORD_CLIENT_SECRET` | Secret de cette application : **jamais commité**, dans `.env.local` en dev | — |
+| `PUBLISHER_NAME`, `PUBLISHER_EMAIL` | Qui publie le site, tel que la page Données personnelles le montre : son prénom et son nom, l'e-mail où le joindre. Réglés sur le déploiement, **jamais commités** (le dépôt est public). Il en manque un en production : la page le dit et le serveur l'écrit au démarrage | — |
 | `DEV_LOGIN` | `true` : se connecter à n'importe quel compte local sans Discord, pour les vérifications. Jamais actif en production, quoi qu'on règle | `true` |
 
 ## Scripts npm
