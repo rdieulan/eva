@@ -21,6 +21,7 @@ Ce que fait l'application et pourquoi (calendrier, dispos, matchmaking, notifica
 | Agenda personnel | ⬜ à réfléchir | Ajouter un événement de la salle à son propre agenda (téléphone, Google), pour un joueur seul comme pour un joueur d'équipe. Une réflexion à mener, rien n'est décidé : pour l'instant, un événement se copie dans le calendrier de l'équipe. |
 | Salle : publier sur WhatsApp et Instagram | ⬜ à cadrer | Ce que le gérant publie part sur le Discord de la salle, par le salon relié dans Ma salle ; WhatsApp et Instagram viendraient ensuite, pour qu'il n'ait à le publier nulle part une seconde fois. |
 | Matchs de ligue joués | ⬜ à cadrer | Les matchs joués d'une équipe de ligue se lisent sans compte, avec leur division, leurs adversaires et leurs résultats (score, victoire ou défaite, forfait) ; leur date n'est que celle où le résultat a été saisi. Une piste pour l'équipe reliée, à cadrer quand le besoin viendra. |
+| Manager d'équipe | ⬜ à réfléchir | Un rôle d'encadrement d'une équipe, pour une version future : le mot « manager » lui est réservé, le responsable d'une salle s'appelle « gérant » dans tout ce que l'application affiche. Le code nomme encore `Manager` le gérant de salle (modèle, rôle, routes, pages) : à renommer avant d'introduire ce rôle, pour qu'un même mot ne désigne pas deux rôles. |
 
 ---
 
@@ -44,5 +45,4 @@ Ce que fait l'application et pourquoi (calendrier, dispos, matchmaking, notifica
 | Tâche | Statut | Notes |
 |-------|--------|-------|
 | Symboles du coin d'un jour trop bas sur petit écran | ⬜ | La coche et la croix sont des caractères de police dont le dessin est décalé vers le bas : à 768 px et moins, ils tombent environ 2 px sous le centre du triangle (mesuré), le micro, une icône dessinée, tombe juste. Les remplacer, avec le tilde et le point d'interrogation, par des icônes dessinées changerait un peu leur dessin. |
-| Le gérant s'appelle « manager » dans l'administration | ⬜ | L'onglet « Managers » et le bouton « Inviter un manager » de l'administration, quand le reste de l'application dit « Gérant » (la bascule de rôle, « Ma salle ») : un seul mot partout, à choisir. |
 | Emojis sur les boutons | ⬜ | La règle du calendrier exclut les emojis des commandes de son en-tête ; ailleurs, des boutons en portent encore (« ➕ Inviter », « ➕ Ajouter », « 💾 Sauvegarder », « 📋 Définir le plan de jeu »), d'autres une icône dessinée (« Modifier »). Trancher pour toute l'app. |

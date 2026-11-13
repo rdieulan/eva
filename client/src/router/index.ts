@@ -182,7 +182,7 @@ const routes: RouteRecordRaw[] = [
         path: 'managers',
         name: 'admin-managers',
         component: AdminManagersPage,
-        meta: { title: 'Administration · Managers', requiresAuth: true, requiresAdmin: true },
+        meta: { title: 'Administration · Gérants', requiresAuth: true, requiresAdmin: true },
       },
       {
         path: 'admins',

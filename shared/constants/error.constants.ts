@@ -165,11 +165,11 @@ export const ERROR = {
 
   // Admin
   adminRequired: 'Accès administrateur requis',
-  managersFetchFailed: 'Erreur lors de la récupération des managers',
-  managerNotFound: 'Manager non trouvé',
-  managerCreationFailed: 'Erreur lors de la création du manager',
-  managerUpdateFailed: 'Erreur lors de la mise à jour du manager',
-  managerDeleteFailed: 'Erreur lors de la suppression du manager',
+  managersFetchFailed: 'Erreur lors de la récupération des gérants',
+  managerNotFound: 'Gérant non trouvé',
+  managerCreationFailed: 'Erreur lors de la création du gérant',
+  managerUpdateFailed: 'Erreur lors de la mise à jour du gérant',
+  managerDeleteFailed: 'Erreur lors de la suppression du gérant',
   managerVenueIdsInvalid: 'Liste de salles invalide',
   adminsFetchFailed: 'Erreur lors de la récupération des administrateurs',
   adminNotFound: 'Administrateur non trouvé',
@@ -192,7 +192,7 @@ export const ERROR = {
   playerCannotDeleteLeader: 'Impossible de supprimer un joueur qui est leader d\'une équipe. Supprimez l\'équipe ou transférez la direction d\'abord.',
   playerCannotDeleteNoUser: 'Aucun compte utilisateur lié à ce joueur',
   playerCannotDeleteAdmin: 'Ce joueur est administrateur : retire-lui d\'abord ce rôle, depuis la liste des administrateurs.',
-  playerCannotDeleteManager: 'Ce joueur est manager : retire-lui d\'abord ce rôle, depuis la liste des managers.',
+  playerCannotDeleteManager: 'Ce joueur est gérant : retire-lui d\'abord ce rôle, depuis la liste des gérants.',
 
   // eva.gg account
   evaUsernameRequired: 'Indique ton tag eva.gg complet, avec le suffixe #123456',

@@ -246,7 +246,7 @@ router.delete(
     try {
       const deleted = await managerService.deleteManager(req.params.id);
       if (!deleted) return res.status(404).json({ errors: [ERROR.managerNotFound] });
-      res.json({ message: 'Manager supprimé' });
+      res.json({ message: 'Gérant supprimé' });
     } catch (error) {
       apiLogger.error('Admin: error deleting manager:', error);
       res.status(500).json({ errors: [ERROR.managerDeleteFailed] });

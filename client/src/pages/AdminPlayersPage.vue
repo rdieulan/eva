@@ -72,7 +72,7 @@ function showSuccess(message: string) {
 function deleteBlockedReason(player: PlayerAdminSummary): string {
   if (player.isLeader) return 'Impossible de supprimer un leader d’équipe. Supprimez l’équipe d’abord.';
   if (player.roles.includes('admin')) return 'Administrateur : retirez-lui d’abord ce rôle, dans la liste des administrateurs.';
-  if (player.roles.includes('manager')) return 'Manager : retirez-lui d’abord ce rôle, dans la liste des managers.';
+  if (player.roles.includes('manager')) return 'Gérant : retirez-lui d’abord ce rôle, dans la liste des gérants.';
   return '';
 }
 

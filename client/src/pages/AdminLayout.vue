@@ -16,7 +16,7 @@ const canManageAdmins = computed(() => {
       <h1>Administration</h1>
       <nav class="admin-nav">
         <RouterLink :to="{ name: 'admin-venues' }" class="admin-nav__link">Salles</RouterLink>
-        <RouterLink :to="{ name: 'admin-managers' }" class="admin-nav__link">Managers</RouterLink>
+        <RouterLink :to="{ name: 'admin-managers' }" class="admin-nav__link">Gérants</RouterLink>
         <RouterLink v-if="canManageAdmins" :to="{ name: 'admin-admins' }" class="admin-nav__link">Administrateurs</RouterLink>
         <RouterLink :to="{ name: 'admin-players' }" class="admin-nav__link">Joueurs</RouterLink>
         <RouterLink :to="{ name: 'admin-teams' }" class="admin-nav__link">Équipes</RouterLink>

@@ -125,7 +125,7 @@ async function submitEdit() {
     if (idx !== -1) managers.value[idx] = updated;
     showEditModal.value = false;
     editingManager.value = null;
-    showSuccess('Manager mis à jour');
+    showSuccess('Gérant mis à jour');
   } catch (e) {
     setErrorFromException(e, ERROR.managerUpdateFailed);
   } finally {
@@ -144,7 +144,7 @@ async function confirmDelete() {
     const removed = managerToDelete.value;
     await deleteAdminManager(removed.id);
     managers.value = managers.value.filter(m => m.id !== removed.id);
-    showSuccess(removed.activationPending ? 'Invitation annulée' : 'Rôle de manager retiré');
+    showSuccess(removed.activationPending ? 'Invitation annulée' : 'Rôle de gérant retiré');
   } catch (e) {
     setErrorFromException(e, ERROR.managerDeleteFailed);
   } finally {
@@ -159,8 +159,8 @@ onMounted(loadData);
 <template>
   <section class="admin-managers">
     <header class="page-header">
-      <h2>Managers</h2>
-      <button class="btn-primary" @click="openCreate">+ Inviter un manager</button>
+      <h2>Gérants</h2>
+      <button class="btn-primary" @click="openCreate">+ Inviter un gérant</button>
     </header>
 
     <ErrorDisplay :errors="errors" />
@@ -169,7 +169,7 @@ onMounted(loadData);
     <div v-if="isLoading" class="loading">Chargement...</div>
 
     <div v-else-if="managers.length === 0" class="empty">
-      Aucun manager pour le moment.
+      Aucun gérant pour le moment.
     </div>
 
     <table v-else class="managers-table">
@@ -204,7 +204,7 @@ onMounted(loadData);
     </table>
 
     <!-- Create modal -->
-    <Modal :open="showCreateModal" title="Inviter un manager" size="md" @close="showCreateModal = false">
+    <Modal :open="showCreateModal" title="Inviter un gérant" size="md" @close="showCreateModal = false">
       <form class="manager-form" @submit.prevent="submitCreate">
         <ErrorDisplay :errors="errors" />
 
@@ -234,7 +234,7 @@ onMounted(loadData);
       <div class="activation-info">
         <p>
           Envoie ce lien à <strong>{{ createdManagerName }}</strong> : il l'ouvre, se connecte avec
-          Discord, et devient manager de ses salles sur son propre compte.
+          Discord, et devient gérant de ses salles sur son propre compte.
         </p>
         <div class="activation-url">
           <input :value="activationUrl" readonly @focus="($event.target as HTMLInputElement).select()" />
@@ -266,11 +266,11 @@ onMounted(loadData);
 
     <ConfirmModal
       :open="showDeleteModal"
-      :title="managerToDelete?.activationPending ? 'Annuler l\'invitation' : 'Retirer le rôle de manager'"
+      :title="managerToDelete?.activationPending ? 'Annuler l\'invitation' : 'Retirer le rôle de gérant'"
       :message="managerToDelete
         ? (managerToDelete.activationPending
           ? `Le lien envoyé à '${managerToDelete.name}' ne servira plus.`
-          : `'${managerToDelete.name}' perd le rôle de manager et ses salles. Son compte reste, comme joueur.`)
+          : `'${managerToDelete.name}' perd le rôle de gérant et ses salles. Son compte reste, comme joueur.`)
         : ''"
       :confirm-text="managerToDelete?.activationPending ? 'Annuler l\'invitation' : 'Retirer'"
       require-input="retirer"

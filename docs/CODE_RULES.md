@@ -18,6 +18,7 @@ Ce document définit les conventions et règles à respecter pour le développem
 - **Messages d'erreur utilisateur** : français (`"Ce poste n'a aucun joueur"`)
 - **Textes affichés** : français (`'Disponible'`, `'Indisponible'`)
 - **Tooltips et aides** : français
+- **Rôles** : le responsable d'une salle est le **gérant** dans tout ce qui s'affiche ; « manager » est réservé à un futur rôle d'encadrement d'une équipe (voir la roadmap). Le code garde `Manager` pour le gérant tant que ce rôle n'existe pas.
 
 ---
 

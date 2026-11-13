@@ -13,7 +13,7 @@ import { useErrors } from '@/composables/useErrors';
 export const ROLE_LABELS: Record<AccountType, { label: string; hint: string }> = {
   player: { label: 'Joueur', hint: 'Ton équipe, son calendrier, le matchmaking' },
   manager: { label: 'Gérant', hint: 'Les salles que tu gères' },
-  admin: { label: 'Administrateur', hint: 'Les salles, les managers, les administrateurs' },
+  admin: { label: 'Administrateur', hint: 'Les salles, les gérants, les administrateurs' },
 };
 
 export function useRoleSwitch() {

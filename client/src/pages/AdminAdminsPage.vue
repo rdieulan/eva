@@ -245,7 +245,7 @@ onMounted(loadAdmins);
           </label>
           <label class="perm">
             <input type="checkbox" v-model="createForm.permissions.system.canManageManagers" />
-            <span>Gérer les managers</span>
+            <span>Gérer les gérants</span>
           </label>
           <label class="perm">
             <input type="checkbox" v-model="createForm.permissions.system.canManageAdmins" />
@@ -298,7 +298,7 @@ onMounted(loadAdmins);
           </label>
           <label class="perm">
             <input type="checkbox" v-model="editPermissions.system.canManageManagers" />
-            <span>Gérer les managers</span>
+            <span>Gérer les gérants</span>
           </label>
           <label class="perm">
             <input type="checkbox" v-model="editPermissions.system.canManageAdmins" />

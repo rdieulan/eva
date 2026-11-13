@@ -173,7 +173,7 @@ Un `User` est une personne, connectée avec son compte Discord : on garde le num
 
 - `Player` — toujours : joueur d'équipe (a un `teamId`, des permissions granulaires, des disponibilités).
 - `Manager` — gérant de salle (rattaché à une ou plusieurs `Venue` via `VenueManager`), donné par invitation.
-- `Admin` — administrateur (permissions système : gérer venues / managers / autres admins), donné par invitation.
+- `Admin` — administrateur (permissions système : gérer les salles, les gérants et les autres administrateurs), donné par invitation.
 
 Une invitation est un `Manager` ou un `Admin` sans compte : son lien (`/activate/:token`) s'ouvre, puis s'accepte en se connectant avec Discord, et le rôle rejoint le compte de la personne (`invitation.service.ts`). La session agit sous un rôle du compte (`Session.role`), un joueur au départ ; `PUT /api/auth/role` en change, pour cette session seulement. Seul l'identifiant du rôle joué est posé sur la requête : un admin qui agit en joueur n'a pas les droits d'admin, et l'inverse. Un rôle retiré fait agir la session en joueur.
 
