@@ -79,10 +79,12 @@ function formatExpiration(dateStr: string): string {
   gap: $spacing-sm;
 }
 
+// The code gives way on a narrow screen, the buttons never do
 .invite-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: $spacing-sm;
   padding: $spacing-sm $spacing-md;
   background: $color-bg-secondary;
   border: $border-thin solid $color-border-light;
@@ -93,6 +95,7 @@ function formatExpiration(dateStr: string): string {
   display: flex;
   flex-direction: column;
   gap: $spacing-xs;
+  min-width: 0;
 }
 
 .invite-code {
@@ -102,6 +105,9 @@ function formatExpiration(dateStr: string): string {
   background: $color-bg-tertiary;
   padding: 2px $spacing-sm;
   border-radius: $radius-sm;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .invite-details {
@@ -111,6 +117,7 @@ function formatExpiration(dateStr: string): string {
 
 .invite-actions {
   display: flex;
+  flex-shrink: 0;
   gap: $spacing-sm;
 }
 
