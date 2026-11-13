@@ -10,11 +10,24 @@ Le planificateur de postes est **parqué** (`PLANNER_ENABLED`, `shared/constants
 
 Ce que fait l'application et pourquoi (calendrier, dispos, matchmaking, notifications, accueil, tableau public des salles, adresse du site) : [docs/PRODUIT.md](docs/PRODUIT.md).
 
+### Mise en production ⬜
+
+De quelques joueurs à quelques centaines : Railway reste l'hébergeur, une seule instance (le passage horaire sur les recherches et les caches de créneaux vivent dans le serveur : deux copies doubleraient les lectures eva.gg). Le code est prêt ; restent ces étapes, dans l'ordre, la plupart dans les consoles :
+
+1. **Adresse de contact** : une boîte mail chez IONOS, par exemple `contact@scrim-calendar.com`. Une vraie boîte, pas une simple redirection : une réponse à une demande sur les données partirait sinon de l'adresse personnelle.
+2. **Éditeur, sur Railway** : `PUBLISHER_NAME` et `PUBLISHER_EMAIL`. L'identité complète de l'éditeur (nom, prénoms, domicile, téléphone) doit aussi figurer dans son compte Railway : c'est la condition de son anonymat (voir *Pages légales* dans [docs/PRODUIT.md](docs/PRODUIT.md)).
+3. **Sauvegarde de la base** : dans Railway, onglet Backups du service Postgres, une sauvegarde quotidienne (gardée 6 jours) et une hebdomadaire (gardée 27 jours). La doc de Railway ne dit pas quelles offres y ont droit : à vérifier sur la nôtre.
+4. **Application Discord de la prod**, nommée « Scrim Calendar », adresse de retour `https://scrim-calendar.com/api/auth/discord/callback` ; `DISCORD_CLIENT_ID` et `DISCORD_CLIENT_SECRET` sur Railway.
+5. **Domaines** : scrim-calendar.com et eva-calendar.com déclarés sur Railway, leurs DNS faits chez IONOS. Puis `APP_URL` sur `https://scrim-calendar.com`, une fois ce domaine en service seulement : le serveur y renvoie toute autre adresse, l'adresse Railway comprise (voir *L'adresse du site* dans [docs/PRODUIT.md](docs/PRODUIT.md)).
+6. **Fusion de dev dans main**, sur une base de prod remise à zéro (les migrations à partir de la 0016) : elle déploie l'application.
+7. **Premier administrateur**, invité par `npm run create-admin` depuis le shell Railway.
+
+Ensuite, la base de prod ne se remet plus à zéro : les migrations gardent les données. À surveiller : le volume de lectures eva.gg, la vraie limite à cette échelle.
+
 ### À cadrer avant construction
 
 | Sujet | État | Notes |
 |-------|------|-------|
-| Mise en production | ⬜ à cadrer | De quelques joueurs à quelques centaines : Railway reste l'hébergeur, une seule instance (le passage horaire sur les recherches et les caches de créneaux vivent dans le serveur : deux copies doubleraient les lectures eva.gg). Avant d'ouvrir : `PUBLISHER_NAME` et `PUBLISHER_EMAIL` sur Railway, et l'identité de l'éditeur (nom, prénoms, domicile, téléphone) donnée à Railway, condition de son anonymat (voir *Pages légales* dans [docs/PRODUIT.md](docs/PRODUIT.md)), sauvegarde quotidienne de la base, l'application Discord de la prod, nommée « Scrim Calendar » (adresse de retour https://scrim-calendar.com/api/auth/discord/callback, `DISCORD_CLIENT_ID` et `DISCORD_CLIENT_SECRET` sur Railway), les deux domaines déclarés sur Railway, puis `APP_URL` sur https://scrim-calendar.com une fois ce domaine en service : le serveur y renvoie toute autre adresse, l'adresse Railway comprise (voir *L'adresse du site* dans [docs/PRODUIT.md](docs/PRODUIT.md)), dev fusionné dans main (les migrations à partir de la 0016, sur une base de prod remise à zéro), le premier administrateur invité par `npm run create-admin`. Ensuite, la base de prod ne se remet plus à zéro : les migrations gardent les données. À surveiller : le volume de lectures eva.gg, la vraie limite à cette échelle. |
 | Prévenir sur WhatsApp | ⬜ à cadrer | Un compte Meta Business vérifié, un numéro dédié, des modèles de messages validés par Meta, un coût par message, et le numéro de chaque joueur avec son accord. Il se branche comme un canal de plus sur l'envoi des notifications, sans rien changer à ce qui les déclenche. |
 | Salle : vue publique du calendrier | ⬜ à cadrer | Le calendrier de la salle, que son gérant lit dans son espace, en lecture publique : les événements, ouverts à tous, s'y lisent sans compte ni équipe, et une équipe d'une autre salle, favorite comprise, les ajoute de là à son calendrier ; aujourd'hui, seules les équipes affiliées à la salle voient ses événements. Reste à décider ce que cette vue montre des matchs entre équipes, que le gérant y voit avec leurs noms. |
 | Agenda personnel | ⬜ à réfléchir | Ajouter un événement de la salle à son propre agenda (téléphone, Google), pour un joueur seul comme pour un joueur d'équipe. Une réflexion à mener, rien n'est décidé : pour l'instant, un événement se copie dans le calendrier de l'équipe. |
