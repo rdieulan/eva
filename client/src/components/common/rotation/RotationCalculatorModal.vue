@@ -140,7 +140,7 @@ const { errors, setError } = useErrors();
           class="btn-associate"
           @click="handleAssociate"
         >
-          🔗 Associer au match
+          Associer au match
         </button>
       </div>
     </div>

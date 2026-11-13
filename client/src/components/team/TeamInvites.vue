@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { TeamInvite } from '@/api';
+import SvgIcon from '@/components/common/SvgIcon.vue';
 
 defineProps<{
   invites: TeamInvite[];
@@ -45,10 +46,10 @@ function formatExpiration(dateStr: string): string {
         </div>
         <div class="invite-actions">
           <button class="btn-copy" @click="$emit('copy', invite.url)" title="Copier le lien">
-            📋
+            <SvgIcon name="copy" />
           </button>
           <button class="btn-revoke" @click="$emit('revoke', invite.id)" title="Révoquer">
-            ❌
+            <SvgIcon name="trash" />
           </button>
         </div>
       </div>

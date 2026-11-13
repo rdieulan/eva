@@ -49,6 +49,7 @@ These icons of `client/src/assets/icons/` are the Material Icons by Google named
 | `chevron-right.svg` | chevron_right |
 | `clock.svg` | schedule |
 | `close.svg` | close |
+| `copy.svg` | content_copy |
 | `edit.svg` | edit |
 | `headset.svg` | headset |
 | `home.svg` | home |

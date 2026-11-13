@@ -300,7 +300,7 @@ function handleCreateEvent() {
             Modifier
           </button>
           <button v-if="canCreateEvent" class="btn btn-accent" @click="handleCreateEvent" title="Ajouter un événement">
-            ➕ Ajouter
+            Ajouter
           </button>
         </div>
         <button class="btn btn-secondary" @click="emit('close')">

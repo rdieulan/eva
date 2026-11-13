@@ -62,7 +62,7 @@ const emit = defineEmits<{
 
     <!-- Delete button -->
     <button class="marker-delete-btn" @click="emit('delete')">
-      🗑️ Supprimer
+      Supprimer
     </button>
   </div>
 

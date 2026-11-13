@@ -65,7 +65,7 @@ defineExpose({ resetForm });
             class="invite-url"
           />
           <button class="btn-copy" @click="$emit('copy', generatedInvite.url)">
-            📋 Copier
+            Copier
           </button>
         </div>
         <p class="invite-info">

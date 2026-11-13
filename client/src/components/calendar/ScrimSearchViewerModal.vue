@@ -324,7 +324,7 @@ function decline(proposal: ScrimProposal) {
             <p class="proposal-run">{{ runSummary(proposal) }}</p>
             <p v-if="proposal.message" class="proposal-message">« {{ proposal.message }} »</p>
             <div v-if="canRespond" class="proposal-actions">
-              <button type="button" class="btn btn-accept" :disabled="isBusy" @click="accept(proposal)">✅ Accepter</button>
+              <button type="button" class="btn btn-accept" :disabled="isBusy" @click="accept(proposal)">Accepter</button>
               <button type="button" class="btn btn-decline" :disabled="isBusy" @click="decline(proposal)">Refuser</button>
             </div>
           </li>
@@ -360,7 +360,7 @@ function decline(proposal: ScrimProposal) {
           :title="!run ? 'Choisis d\'abord les créneaux du match' : undefined"
           @click="propose"
         >
-          {{ isBusy ? 'Envoi…' : '🤝 Proposer un match' }}
+          {{ isBusy ? 'Envoi…' : 'Proposer un match' }}
         </button>
         <button type="button" class="btn btn-secondary" :disabled="isBusy" @click="emit('close')">Fermer</button>
       </div>

@@ -24,7 +24,7 @@ defineEmits<{
     <div class="section-header">
       <h2>Membres ({{ members.length }})</h2>
       <button v-if="canInviteMembers" class="btn-invite" @click="$emit('invite')">
-        ➕ Inviter
+        Inviter
       </button>
     </div>
 

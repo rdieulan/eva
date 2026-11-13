@@ -581,11 +581,9 @@ function handleCancelLeave() {
       <template #footer>
         <div class="modal-actions">
           <button class="btn-stay" @click="handleCancelLeave">
-            <span class="btn-emoji">✏️</span>
             {{ modalTexts.btnStay }}
           </button>
           <button class="btn-leave" @click="handleLeaveWithoutSaving">
-            <span class="btn-emoji">✕</span>
             {{ modalTexts.btnLeave }}
           </button>
           <button
@@ -602,7 +600,6 @@ function handleCancelLeave() {
             <span v-else-if="modalSaveState === 'success'" class="btn-check">✓</span>
             <span v-else-if="modalSaveState === 'error'" class="btn-error">✕</span>
             <template v-else>
-              <span class="btn-emoji">💾</span>
               {{ modalTexts.btnSave }}
             </template>
           </button>

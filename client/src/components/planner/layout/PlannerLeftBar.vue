@@ -155,7 +155,7 @@ function getBalanceClass(map: MapConfig): string {
           <span v-if="saveState === 'saving'" class="btn-spinner"></span>
           <span v-else-if="saveState === 'success'" class="btn-check">✓</span>
           <span v-else-if="saveState === 'error'" class="btn-error">✕</span>
-          <span v-else>💾 Sauvegarder</span>
+          <span v-else>Sauvegarder</span>
         </button>
         <button
           class="btn-cancel"
@@ -163,7 +163,7 @@ function getBalanceClass(map: MapConfig): string {
           :disabled="!hasChanges"
           @click="$emit('cancel')"
         >
-          ✕ Annuler
+          Annuler
         </button>
       </div>
     </div>

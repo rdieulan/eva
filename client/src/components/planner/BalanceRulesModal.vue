@@ -146,7 +146,7 @@ function hasParams(rule: BalanceRule): boolean {
 
       <div class="modal-footer">
         <button class="btn-reset" @click="handleReset">
-          🔄 Réinitialiser
+          Réinitialiser
         </button>
         <button class="btn-close" @click="$emit('close')">
           Fermer

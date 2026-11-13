@@ -113,7 +113,7 @@ async function exportToPng() {
 
     <!-- Export button -->
     <button type="button" class="btn-export-png" @click="exportToPng">
-      🖼️ Télécharger (PNG)
+      Télécharger (PNG)
     </button>
   </div>
 </template>

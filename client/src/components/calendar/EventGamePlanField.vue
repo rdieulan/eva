@@ -17,12 +17,12 @@ const emit = defineEmits<{
 <template>
   <div v-if="gamePlan" class="game-plan-edit">
     <button type="button" class="btn-change-plan" @click="emit('edit')">
-      ✏️ Modifier le plan
+      Modifier le plan
     </button>
     <GamePlanViewer :gamePlan="gamePlan" @error="emit('error', $event)" />
   </div>
   <button v-else type="button" class="btn-set-gameplan" @click="emit('edit')">
-    📋 Définir le plan de jeu
+    Définir le plan de jeu
   </button>
 </template>
 
