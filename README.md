@@ -86,7 +86,7 @@ L'app est disponible sur **http://localhost:5173**. Le backend tourne sur **http
 | `DATABASE_URL` | URL Postgres (format `postgresql://user:pass@host:port/db`) | `postgresql://eva_user:eva_secret_password@localhost:5432/eva_db` |
 | `NODE_ENV` | `development` / `production` / `test` | — |
 | `PORT` | Port du backend | `3001` |
-| `APP_URL` | Adresse publique du site : liens des notifications Discord, retour de la connexion par Discord, et seule origine d'où le serveur accepte des modifications | `http://localhost:5173` |
+| `APP_URL` | Adresse publique du site : liens des notifications Discord, retour de la connexion par Discord, et seule origine d'où le serveur accepte des modifications. En production, toute autre adresse du serveur y renvoie | `http://localhost:5173` |
 | `DISCORD_CLIENT_ID` | Identifiant de l'application Discord de la connexion (dans `.env.local` en dev) | — |
 | `DISCORD_CLIENT_SECRET` | Secret de cette application : **jamais commité**, dans `.env.local` en dev | — |
 | `DEV_LOGIN` | `true` : se connecter à n'importe quel compte local sans Discord, pour les vérifications. Jamais actif en production, quoi qu'on règle | `true` |
