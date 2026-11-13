@@ -44,7 +44,7 @@ describe('DayCell in matchmaking mode', () => {
     expect(wrapper.classes()).toContain('team-availability--ready');
     expect(wrapper.classes()).not.toContain('availability--unavailable');
     expect(wrapper.find('.corner').classes()).toContain('availability--unavailable');
-    expect(wrapper.find('.corner').text()).toBe('✗');
+    expect(wrapper.find('.corner').findComponent({ name: 'SvgIcon' }).props('name')).toBe('cross');
   });
 
   it('turns shaky when the lineup leans on a player available at given hours, and says when it meets', () => {
@@ -75,7 +75,7 @@ describe('DayCell in matchmaking mode', () => {
     expect(wrapper.classes()).toContain('availability--unset');
     expect(wrapper.classes().some(c => c.startsWith('team-availability--'))).toBe(false);
     expect(wrapper.find('.corner').classes()).toContain('availability--unset');
-    expect(wrapper.find('.corner').text()).toBe('?');
+    expect(wrapper.find('.corner').findComponent({ name: 'SvgIcon' }).props('name')).toBe('question-mark');
   });
 
   it('reads the same in team mode: the lineup on the cell', () => {

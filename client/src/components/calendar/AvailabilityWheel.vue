@@ -200,8 +200,7 @@ onBeforeUnmount(() => {
           @click="event => keyboardPick(event, { kind: 'option', index: option.index })"
         >
           <span class="answer-symbol">
-            <SvgIcon v-if="'icon' in option.display.symbol" :name="option.display.symbol.icon" />
-            <template v-else>{{ option.display.symbol.text }}</template>
+            <SvgIcon :name="option.display.symbol.icon" />
           </span>
           <span class="answer-label">{{ option.display.label }}</span>
         </button>
@@ -322,9 +321,6 @@ $wheel-layer: 950; // Over the page and the bell's list, under any modal (Modal.
   align-items: center;
   justify-content: center;
   height: 1.1rem;
-  font-size: 1.05rem;
-  font-weight: 900;
-  line-height: 1;
 
   .svg-icon {
     width: 1.05rem;

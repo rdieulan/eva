@@ -377,7 +377,7 @@ describe('DayCell Component - Voice only availability', () => {
   it('should draw a new symbol for another answer, or other hours, so it springs in over the old one', async () => {
     const wrapper = mount(DayCell, { props: { ...baseProps, currentPlayerStatus: 'AVAILABLE' as const } });
     const before = wrapper.find('.corner-symbol');
-    expect(before.text()).toBe('✓');
+    expect(before.findComponent({ name: 'SvgIcon' }).props('name')).toBe('check');
 
     await wrapper.setProps({ currentPlayerStatus: 'PARTIAL' as const, currentPlayerHours: { startTime: '21:00', endTime: null } });
     const partial = wrapper.find('.corner-symbol');

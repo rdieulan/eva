@@ -25,12 +25,12 @@ describe('getAvailabilityDisplay', () => {
   it('names each answer as the wheel shows it', () => {
     expect(getAvailabilityDisplay('VOICE_ONLY')).toEqual({ label: 'En ligne', title: 'Dispo en ligne seulement, pas en salle', symbol: { icon: 'mic' } });
     expect(getAvailabilityDisplay('PARTIAL').symbol).toEqual({ icon: 'clock' });
-    expect(getAvailabilityDisplay(null)).toEqual({ label: 'Indéfini', title: 'Non renseigné', symbol: { text: '?' } });
+    expect(getAvailabilityDisplay(null)).toEqual({ label: 'Indéfini', title: 'Non renseigné', symbol: { icon: 'question-mark' } });
   });
 
-  it('keeps text glyphs for the plain answers', () => {
-    expect(getAvailabilityDisplay('AVAILABLE').symbol).toEqual({ text: '✓' });
-    expect(getAvailabilityDisplay('UNAVAILABLE').symbol).toEqual({ text: '✗' });
+  it('draws every answer, the plain ones included: a glyph of a font sits off the centre of the corner', () => {
+    expect(getAvailabilityDisplay('AVAILABLE').symbol).toEqual({ icon: 'check' });
+    expect(getAvailabilityDisplay('UNAVAILABLE').symbol).toEqual({ icon: 'cross' });
   });
 });
 

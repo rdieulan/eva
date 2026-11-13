@@ -18,6 +18,9 @@ import settingsIcon from '@/assets/icons/settings.svg?raw';
 import editIcon from '@/assets/icons/edit.svg?raw';
 import trashIcon from '@/assets/icons/trash.svg?raw';
 import copyIcon from '@/assets/icons/copy.svg?raw';
+import checkIcon from '@/assets/icons/check.svg?raw';
+import crossIcon from '@/assets/icons/cross.svg?raw';
+import questionMarkIcon from '@/assets/icons/question-mark.svg?raw';
 import micIcon from '@/assets/icons/mic.svg?raw';
 import headsetIcon from '@/assets/icons/headset.svg?raw';
 import starIcon from '@/assets/icons/star.svg?raw';
@@ -46,6 +49,9 @@ const icons: Record<string, string> = {
   edit: editIcon,
   trash: trashIcon,
   copy: copyIcon,
+  check: checkIcon,
+  cross: crossIcon,
+  'question-mark': questionMarkIcon,
   mic: micIcon,
   headset: headsetIcon,
   star: starIcon,

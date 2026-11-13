@@ -70,6 +70,18 @@ These icons of `client/src/assets/icons/` are the Material Icons by Google named
 
 Licensed under the Apache License, Version 2.0: https://www.apache.org/licenses/LICENSE-2.0
 
+## Material Symbols
+
+These icons of `client/src/assets/icons/` are the Material Symbols by Google named beside them, outlined style, weight 700: https://github.com/google/material-design-icons
+
+| File | Material symbol |
+|---|---|
+| `check.svg` | check |
+| `cross.svg` | close |
+| `question-mark.svg` | question_mark |
+
+Licensed under the Apache License, Version 2.0: https://www.apache.org/licenses/LICENSE-2.0
+
 ## Phosphor Icons
 
 `client/src/assets/icons/sword.svg` is the "sword" icon, fill weight, of Phosphor Icons 1.x: https://github.com/phosphor-icons/core

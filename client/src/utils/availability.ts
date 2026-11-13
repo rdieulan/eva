@@ -11,8 +11,10 @@ import {
   type TeamAvailabilityStatus,
 } from '@shared/utils';
 
-// Shown behind a day in edit mode: a text glyph, or an icon of SvgIcon
-export type AvailabilitySymbol = { text: string } | { icon: string };
+// The symbol of an answer, in the corner of a day and on the wheel: an icon of
+// SvgIcon, drawn, so it sits on the centre of its box at every size, where a
+// glyph of a font sits as its font draws it
+export type AvailabilitySymbol = { icon: string };
 
 export interface AvailabilityDisplay {
   label: string; // Short label, on the wheel of answers
@@ -23,13 +25,13 @@ export interface AvailabilityDisplay {
 // Keyed by AvailabilityStatus: a new status does not compile until it says how it is displayed.
 // Colours live alongside in $availability-styles (styles/_variables.scss).
 const AVAILABILITY_DISPLAY: Record<AvailabilityStatus, AvailabilityDisplay> = {
-  AVAILABLE: { label: 'Dispo', title: 'Dispo pour jouer', symbol: { text: '✓' } },
+  AVAILABLE: { label: 'Dispo', title: 'Dispo pour jouer', symbol: { icon: 'check' } },
   PARTIAL: { label: 'Horaires', title: 'Dispo pour jouer sur une partie de la journée', symbol: { icon: 'clock' } },
   VOICE_ONLY: { label: 'En ligne', title: 'Dispo en ligne seulement, pas en salle', symbol: { icon: 'mic' } },
-  UNAVAILABLE: { label: 'Indispo', title: 'Indisponible', symbol: { text: '✗' } },
+  UNAVAILABLE: { label: 'Indispo', title: 'Indisponible', symbol: { icon: 'cross' } },
 };
 
-const UNSET_DISPLAY: AvailabilityDisplay = { label: 'Indéfini', title: 'Non renseigné', symbol: { text: '?' } };
+const UNSET_DISPLAY: AvailabilityDisplay = { label: 'Indéfini', title: 'Non renseigné', symbol: { icon: 'question-mark' } };
 
 /**
  * Get the label, meaning and symbol of an availability status (null = not set)

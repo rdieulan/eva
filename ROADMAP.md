@@ -43,6 +43,5 @@ Ce que fait l'application et pourquoi (calendrier, dispos, matchmaking, notifica
 
 | Tâche | Statut | Notes |
 |-------|--------|-------|
-| Symboles du coin d'un jour trop bas sur petit écran | ⬜ | La coche et la croix sont des caractères de police dont le dessin est décalé vers le bas : à 768 px et moins, ils tombent environ 2 px sous le centre du triangle (mesuré), le micro, une icône dessinée, tombe juste. Les remplacer, avec le tilde et le point d'interrogation, par des icônes dessinées changerait un peu leur dessin. |
 | Boutons-icône du planificateur | ⬜ | Le planificateur, en pause, garde des emojis et des signes de police sur ses boutons-icône : renommer, dupliquer et supprimer un plan, calculateur de rotation, équilibre, marqueur et zone (seuls sur téléphone, leur texte masqué), fermer un panneau, valider un nom. Leur donner des icônes dessinées à son retour, selon la règle des commandes de [docs/CODE_RULES.md](docs/CODE_RULES.md). |
 | Code brut des liens d'invitation | ⬜ | La liste des invitations de la page équipe affiche le code de chaque lien, 32 caractères hexadécimaux qui ne disent rien à personne : un lien se reconnaît à son expiration et à ses utilisations, et se copie par son bouton. Montrer à la place ce qui le distingue (quand il a été créé, par qui) ou rien. |

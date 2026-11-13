@@ -36,8 +36,7 @@ const title = computed(() => `Ma disponibilité : ${describeAvailability(props.s
     <!-- Another answer: the new symbol springs in over the old -->
     <Transition name="symbol">
       <span :key="symbolKey" class="corner-symbol" :class="{ 'has-hours': hoursMark }">
-        <SvgIcon v-if="'icon' in symbol" :name="symbol.icon" />
-        <template v-else>{{ symbol.text }}</template>
+        <SvgIcon :name="symbol.icon" />
       </span>
     </Transition>
     <!-- A partial answer's hours, a line per bound, where the triangle has room for them -->
@@ -214,15 +213,14 @@ const title = computed(() => `Ma disponibilité : ${describeAvailability(props.s
   align-items: center;
   justify-content: center;
   z-index: 1;
-  font-size: calc(var(--drawn) * 0.34);
-  font-weight: 900;
-  line-height: 1;
   color: $corner-symbol-color;
 
+  // The icon fills the box, its drawing a flex item centred in it: as a
+  // block, the drawing would sit on a line of text, its baseline set by the
+  // font, and fall off the centre
   .svg-icon {
     width: 100%;
     height: 100%;
-    display: block;
   }
 
 }
