@@ -2,6 +2,7 @@
 // Home. A player of a team finds what they have to do soon, the most pressing
 // first; the tabs of the top bar, at the foot of the screen on a phone, lead to
 // the team's pages. A player with no team finds how to make or join one.
+import { APP_NAME } from '@shared/constants';
 import { useAuth } from '@/composables/useAuth';
 import HomeDashboard from '@/components/home/HomeDashboard.vue';
 import NoTeamMessage from '@/components/common/NoTeamMessage.vue';
@@ -18,7 +19,7 @@ const { hasTeam } = useAuth();
 
     <template v-else>
       <div class="hero">
-        <h1>EVA</h1>
+        <h1>{{ APP_NAME }}</h1>
         <p class="subtitle">Outil de gestion d'équipe FPS 4v4</p>
       </div>
       <NoTeamMessage />

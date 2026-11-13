@@ -1,4 +1,4 @@
-# EVA
+# Scrim Calendar
 
 Outil web pour faire jouer une équipe FPS 4v4 dans les salles eva.gg : le calendrier et les dispos de l'équipe, la recherche d'adversaires sur des créneaux réels, les notifications, et l'espace des gérants de salle. Ce que fait l'application et pourquoi, règle par règle : [docs/PRODUIT.md](docs/PRODUIT.md).
 

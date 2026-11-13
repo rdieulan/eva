@@ -9,13 +9,14 @@ import express from 'express';
 import request from 'supertest';
 import { prisma } from './helpers/db';
 import { venueBoardPage } from '../../server/src/services/venue-board-page.service';
+import { APP_NAME } from '@shared/constants';
 
 const INDEX_HTML = [
   '<!doctype html>',
   '<html lang="fr">',
   '  <head>',
   '    <meta charset="UTF-8" />',
-  '    <title>EVA - Planificateur d\'équipe</title>',
+  '    <title>Scrim Calendar</title>',
   '  </head>',
   '  <body><div id="app"></div></body>',
   '</html>',
@@ -39,7 +40,7 @@ describe('GET /salles/:slug (the page a board link serves)', () => {
 
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toContain('text/html');
-    expect(res.text).toContain('<title>EVA - Scrims à Nîmes</title>');
+    expect(res.text).toContain(`<title>${APP_NAME} - Scrims à Nîmes</title>`);
     expect(res.text).not.toContain('Planificateur d\'équipe');
     expect(res.text).toContain('<meta property="og:title" content="Scrims à Nîmes" />');
     expect(res.text).toContain('<meta property="og:description" content="Les équipes qui cherchent un adversaire, jour par jour." />');
@@ -51,7 +52,7 @@ describe('GET /salles/:slug (the page a board link serves)', () => {
     const res = await request(page).get('/salles/odd');
 
     expect(res.text).toContain('<meta property="og:title" content="Scrims à L&#39;Arène &quot;A&amp;B&quot; &lt;$&amp;&gt;" />');
-    expect(res.text).toContain('<title>EVA - Scrims à L&#39;Arène &quot;A&amp;B&quot; &lt;$&amp;&gt;</title>');
+    expect(res.text).toContain(`<title>${APP_NAME} - Scrims à L&#39;Arène &quot;A&amp;B&quot; &lt;$&amp;&gt;</title>`);
   });
 
   it('serves the page as it is for a venue it does not know, and says so', async () => {

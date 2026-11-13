@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import { CARD_COLORS, linkedMessage, notificationMessage, venueAnnouncementMessage } from '../../../server/src/services/helpers/discord-message.helper';
+import { APP_NAME } from '@shared/constants';
 import { buildEvaBookingUrl } from '@shared/utils';
 import type { ScrimMatchFacts } from '@shared/types';
 
@@ -24,7 +25,7 @@ describe('notificationMessage', () => {
     }, { base: BASE, logo: 'logo.png' });
     const link = `${BASE}/calendar?date=2026-11-25&mode=matchmaking&search=search-1`;
 
-    expect(message.username).toBe('EVA');
+    expect(message.username).toBe(APP_NAME);
     expect(message.embeds).toHaveLength(1);
     expect(message.embeds[0]).toMatchObject({
       author: { name: 'Les Rivaux' },
@@ -33,7 +34,7 @@ describe('notificationMessage', () => {
       // The logo goes with the message as a file
       thumbnail: { url: 'attachment://logo.png' },
       color: CARD_COLORS.matchmaking,
-      footer: { text: 'EVA · Matchmaking' },
+      footer: { text: `${APP_NAME} · Matchmaking` },
     });
     expect(Date.parse(message.embeds[0]!.timestamp!)).not.toBeNaN();
     // The title is no link: Discord would underline the gap after its icon
@@ -121,7 +122,7 @@ describe('notificationMessage', () => {
       // The # escaped, which Discord would read as a heading: it still shows as #
       description: `Compte eva.gg : RONxSib\\#177352\n\n👥${GAP}[Répondre](${BASE}/team)`,
       color: CARD_COLORS.team,
-      footer: { text: 'EVA · Équipe' },
+      footer: { text: `${APP_NAME} · Équipe` },
     });
   });
 
@@ -137,7 +138,7 @@ describe('notificationMessage', () => {
       description: `📅${GAP}**Jusqu'au dim. 29/11**\n\nL'équipe n'y est toujours pas inscrite.\n\n`
         + `👥${GAP}[Voir l'équipe](${BASE}/team)${LINKS_APART}🎟️${GAP}[S'inscrire sur competitive.eva.gg](https://competitive.eva.gg/fr/tournaments/2570489683180220415/registration)`,
       color: CARD_COLORS.competition,
-      footer: { text: 'EVA · Ligue' },
+      footer: { text: `${APP_NAME} · Ligue` },
     });
   });
 
@@ -152,7 +153,7 @@ describe('notificationMessage', () => {
       title: `🏆${GAP}Compétition proposée par la salle`,
       description: `📅${GAP}**sam. 28/11 · 14:00 – 19:00**\n\n📍${GAP}Nîmes\n\n> Convocation 13:30\n\n💬${GAP}[Répondre](${BASE}/)`,
       color: CARD_COLORS.competition,
-      footer: { text: 'EVA · Compétition' },
+      footer: { text: `${APP_NAME} · Compétition` },
     });
 
     // Withdrawn from the calendar it was in: called off, in red; before an answer: come to nothing, in grey
@@ -176,7 +177,7 @@ describe('notificationMessage', () => {
       description: `📅${GAP}**sam. 28/11 · 21:00 – 23:59**\n\n📍${GAP}Nîmes\n\nIl quitte le calendrier de l'équipe.\n\n`
         + `📆${GAP}[Ouvrir le calendrier](${BASE}/calendar?date=2026-11-28&mode=team)`,
       color: CARD_COLORS.refused,
-      footer: { text: 'EVA · Salle' },
+      footer: { text: `${APP_NAME} · Salle` },
     });
   });
 
@@ -197,13 +198,13 @@ describe('venueAnnouncementMessage', () => {
   it('lays an event the venue published out for its public: its title, when, and the venue\'s word', () => {
     const message = venueAnnouncementMessage({ subject: 'event', change: 'published', facts: NIGHT, kind: null });
 
-    expect(message.username).toBe('EVA');
+    expect(message.username).toBe(APP_NAME);
     expect(message.embeds[0]).toMatchObject({
       author: { name: 'Nocturne' },
       title: `📅${GAP}Nouvel événement`,
       description: `📅${GAP}**ven. 13/11 · 21:00 – 23:59**\n\n> Ouverte à tous,\n> 15 € la soirée`,
       color: CARD_COLORS.event,
-      footer: { text: 'EVA · Salle' },
+      footer: { text: `${APP_NAME} · Salle` },
     });
   });
 
@@ -245,11 +246,11 @@ describe('linkedMessage', () => {
       title: `🔗${GAP}Salon relié`,
       description: 'Les notifications de l\'équipe Les\\_Rivaux arriveront ici.',
       color: CARD_COLORS.good,
-      footer: { text: 'EVA · Équipe' },
+      footer: { text: `${APP_NAME} · Équipe` },
     });
     expect(linkedMessage('venue', 'Nîmes').embeds[0]).toMatchObject({
       description: 'Les publications de la salle Nîmes arriveront ici.',
-      footer: { text: 'EVA · Salle' },
+      footer: { text: `${APP_NAME} · Salle` },
     });
   });
 });

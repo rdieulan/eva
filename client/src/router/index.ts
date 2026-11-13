@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import type { RouteRecordRaw } from 'vue-router';
-import { PLANNER_ENABLED } from '@shared/constants';
+import { APP_NAME, PLANNER_ENABLED } from '@shared/constants';
 import { useAuth } from '@/composables/useAuth';
 import { landingPathForAccount, needsWalkThrough } from '@/utils/landing';
 
@@ -214,7 +214,7 @@ const router = createRouter({
 // Garde de navigation
 router.beforeEach(async (to, _from, next) => {
   // Update page title
-  document.title = `EVA - ${to.meta.title || 'App'}`;
+  document.title = `${APP_NAME} - ${to.meta.title || 'App'}`;
 
   const { isAuthenticated, isLoading, initAuth, hasTeam, account } = useAuth();
 

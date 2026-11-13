@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { reactive, ref } from 'vue';
 import { mount, flushPromises, RouterLinkStub } from '@vue/test-utils';
 import type { PublicScrimSearch, VenueBoard } from '@shared/types';
-import { ERROR } from '@shared/constants';
+import { APP_NAME, ERROR } from '@shared/constants';
 import { ApiError } from '@/api/error';
 
 const route = vi.hoisted(() => ({ params: { slug: 'nimes' } as Record<string, string>, fullPath: '/salles/nimes' }));
@@ -70,7 +70,7 @@ describe('VenueBoardPage', () => {
 
     expect(fetchVenueBoard).toHaveBeenCalledWith('nimes');
     expect(wrapper.find('h1').text()).toBe('Scrims à Nîmes');
-    expect(document.title).toBe('EVA - Scrims à Nîmes');
+    expect(document.title).toBe(`${APP_NAME} - Scrims à Nîmes`);
     expect(wrapper.findAll('.board-day-title').map(title => title.text())).toEqual(['lundi 10 juin 2030', 'mercredi 12 juin 2030']);
     const [first, second] = wrapper.findAll('.board-day')[0]!.findAll('.board-search');
     expect(first!.find('.board-team').text()).toBe('Équipe a');

@@ -1,4 +1,4 @@
-# EVA - Ce que fait l'application, et pourquoi
+# Scrim Calendar - Ce que fait l'application, et pourquoi
 
 Les règles du produit, décidées en construisant le calendrier, les dispos, le matchmaking, les notifications et le tableau public des salles. Elles restent révisables : une règle qui change se corrige ici. Ce qui reste à faire est dans la [roadmap](../ROADMAP.md).
 
@@ -68,3 +68,5 @@ Une salle se nomme partout par son nom seul (`formatVenueLabel`), celui qu'eva.g
 ## L'adresse du site
 
 Deux domaines (choisis le 2026-11-09). L'application vit sur scrim-calendar.com, sans « eva » : une demande d'accès est à venir chez eva.gg, et deux concurrents ont déjà « eva » dans leur nom. eva-calendar.com, le repère de la communauté, redirige vers scrim-calendar.com en gardant le chemin. Tout ce que l'application produit porte scrim-calendar.com (liens copiés, cartes Discord, connexion par Discord, demande d'accès à eva.gg) : lâcher le domaine eva ne casserait rien. Pas de redirection masquée, qui afficherait le site dans un cadre : les liens d'une page ne se partageraient plus et la connexion par Discord refuserait de s'y ouvrir. Pas d'application servie sur les deux domaines non plus : les liens copiés depuis l'adresse eva casseraient avec elle, et la connexion ne suivrait pas d'un domaine à l'autre.
+
+Le nom affiché (choisi le 2026-11-13) est celui du domaine, **Scrim Calendar**, dans les titres des pages, les aperçus des liens et les cartes Discord, qui partent sous ce nom (`APP_NAME`, `shared/constants`) : « EVA » ferait passer l'application pour un service d'eva.gg. Les noms d'eva.gg, l'EVA Pass, le jeu, ses salles, gardent le leur. Le nom de l'application Discord, que Discord montre en demandant l'accord de connexion, se règle dans son portail développeur.

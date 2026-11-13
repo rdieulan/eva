@@ -5,6 +5,7 @@
 
 import type { RequestHandler } from 'express';
 import { prisma } from '@db/prisma';
+import { APP_NAME } from '@shared/constants';
 import { describeVenueBoard } from '@shared/utils';
 
 const HTML_ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', '\'': '&#39;' };
@@ -22,14 +23,14 @@ export function withVenueBoardPreview(indexHtml: string, venueName: string): str
   const tags = [
     `<meta name="description" content="${escapeHtml(lead)}" />`,
     '<meta property="og:type" content="website" />',
-    '<meta property="og:site_name" content="EVA" />',
+    `<meta property="og:site_name" content="${escapeHtml(APP_NAME)}" />`,
     `<meta property="og:title" content="${escapeHtml(title)}" />`,
     `<meta property="og:description" content="${escapeHtml(lead)}" />`,
     '<meta name="twitter:card" content="summary" />',
   ];
   // Replaced through functions: a name holding "$&" stays as it is
   return indexHtml
-    .replace(/<title>[^<]*<\/title>/, () => `<title>EVA - ${escapeHtml(title)}</title>`)
+    .replace(/<title>[^<]*<\/title>/, () => `<title>${escapeHtml(APP_NAME)} - ${escapeHtml(title)}</title>`)
     .replace('</head>', () => `  ${tags.join('\n    ')}\n  </head>`);
 }
 

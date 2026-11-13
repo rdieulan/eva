@@ -9,7 +9,7 @@ import { ApiError } from '@/api/error';
 import { useAuth } from '@/composables/useAuth';
 import { useErrors } from '@/composables/useErrors';
 import type { PublicScrimSearch, VenueBoard } from '@shared/types';
-import { ERROR } from '@shared/constants';
+import { APP_NAME, ERROR } from '@shared/constants';
 import { describeVenueBoard } from '@shared/utils';
 import { calendarRoute, formatDateStr, formatLongDate } from '@/utils/calendar';
 import { describeMatchesWanted, formatOfferRange } from '@/utils/scrims';
@@ -38,11 +38,11 @@ async function load(slug: string) {
   clearErrors();
   try {
     board.value = await fetchVenueBoard(slug);
-    document.title = `EVA - ${describeVenueBoard(board.value.venue.name).title}`;
+    document.title = `${APP_NAME} - ${describeVenueBoard(board.value.venue.name).title}`;
   } catch (error) {
     if (error instanceof ApiError && error.errors.includes(ERROR.venueNotFound)) {
       notFound.value = true;
-      document.title = 'EVA - Salle introuvable';
+      document.title = `${APP_NAME} - Salle introuvable`;
     } else {
       setErrorFromException(error, ERROR.venueBoardFetchFailed);
     }

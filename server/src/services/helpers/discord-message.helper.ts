@@ -6,16 +6,17 @@
 
 import type { NotificationContent, NotificationKind, PublicationTiming, VenuePublicationFacts } from '@shared/types';
 import { dayAndHours, describeNotification, notificationLook, notificationTargetPath } from '@shared/utils';
+import { APP_NAME } from '@shared/constants';
 import { appUrl } from '@utils/app-url';
 import type { DiscordMessage } from '../../integrations/discord/discord-webhook';
 
 // The name the cards are posted under, whatever the team named its webhook
-const POSTED_AS = 'EVA';
-const MATCHMAKING_FOOTER = 'EVA · Matchmaking';
-const TEAM_FOOTER = 'EVA · Équipe';
-const LEAGUE_FOOTER = 'EVA · Ligue';
-const COMPETITION_FOOTER = 'EVA · Compétition';
-const VENUE_FOOTER = 'EVA · Salle';
+const POSTED_AS = APP_NAME;
+const MATCHMAKING_FOOTER = `${APP_NAME} · Matchmaking`;
+const TEAM_FOOTER = `${APP_NAME} · Équipe`;
+const LEAGUE_FOOTER = `${APP_NAME} · Ligue`;
+const COMPETITION_FOOTER = `${APP_NAME} · Compétition`;
+const VENUE_FOOTER = `${APP_NAME} · Salle`;
 
 // The part of the app each kind comes from, at the foot of its card
 const KIND_FOOTERS: Record<NotificationKind, string> = {
